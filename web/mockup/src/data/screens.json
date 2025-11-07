@@ -1,0 +1,227 @@
+{
+  "screens": [
+    {
+      "id": "info-overview",
+      "name": "Info Overview",
+      "description": "Instant flow telemetry with sensor readiness badges.",
+      "elements": [
+        {
+          "id": "title",
+          "kind": "text",
+          "x": 4,
+          "y": 4,
+          "content": "Instant Flow",
+          "emphasis": "strong"
+        },
+        {
+          "id": "value-total",
+          "kind": "value",
+          "x": 4,
+          "y": 20,
+          "content": "124.6 L/min"
+        },
+        {
+          "id": "badge-ready",
+          "kind": "badge",
+          "x": 4,
+          "y": 34,
+          "content": "All sensors ready"
+        },
+        {
+          "id": "box-left",
+          "kind": "box",
+          "x": 4,
+          "y": 48,
+          "width": 58,
+          "height": 60
+        },
+        {
+          "id": "box-right",
+          "kind": "box",
+          "x": 72,
+          "y": 48,
+          "width": 58,
+          "height": 60
+        },
+        {
+          "id": "sensor-1",
+          "kind": "text",
+          "x": 8,
+          "y": 52,
+          "content": "S1 15.2 L/min"
+        },
+        {
+          "id": "sensor-2",
+          "kind": "text",
+          "x": 8,
+          "y": 64,
+          "content": "S2 14.9 L/min"
+        },
+        {
+          "id": "sensor-3",
+          "kind": "text",
+          "x": 8,
+          "y": 76,
+          "content": "S3 13.4 L/min"
+        },
+        {
+          "id": "sensor-4",
+          "kind": "text",
+          "x": 8,
+          "y": 88,
+          "content": "S4 12.8 L/min"
+        },
+        {
+          "id": "sensor-5",
+          "kind": "text",
+          "x": 76,
+          "y": 52,
+          "content": "S5 11.6 L/min"
+        },
+        {
+          "id": "sensor-6",
+          "kind": "text",
+          "x": 76,
+          "y": 64,
+          "content": "S6 10.1 L/min"
+        },
+        {
+          "id": "sensor-7",
+          "kind": "text",
+          "x": 76,
+          "y": 76,
+          "content": "S7 09.4 L/min"
+        },
+        {
+          "id": "sensor-8",
+          "kind": "text",
+          "x": 76,
+          "y": 88,
+          "content": "S8 08.0 L/min"
+        }
+      ]
+    },
+    {
+      "id": "configuration",
+      "name": "Configuration Menu",
+      "description": "Entry point to sensor setup and LED tuning.",
+      "elements": [
+        {
+          "id": "title",
+          "kind": "text",
+          "x": 4,
+          "y": 4,
+          "content": "Configuration",
+          "emphasis": "strong"
+        },
+        {
+          "id": "info",
+          "kind": "text",
+          "x": 4,
+          "y": 16,
+          "content": "Select an option:",
+          "emphasis": "muted"
+        },
+        {
+          "id": "option-1",
+          "kind": "badge",
+          "x": 4,
+          "y": 32,
+          "content": "Sensors"
+        },
+        {
+          "id": "option-2",
+          "kind": "badge",
+          "x": 4,
+          "y": 46,
+          "content": "LED Pulse"
+        },
+        {
+          "id": "option-3",
+          "kind": "badge",
+          "x": 4,
+          "y": 60,
+          "content": "Nyquist Warnings"
+        },
+        {
+          "id": "decor",
+          "kind": "icon",
+          "x": 115,
+          "y": 16
+        }
+      ]
+    },
+    {
+      "id": "countdown",
+      "name": "Reset Countdown",
+      "description": "Factory reset hold overlay with progress indicator.",
+      "elements": [
+        {
+          "id": "title",
+          "kind": "text",
+          "x": 4,
+          "y": 4,
+          "content": "Factory Reset",
+          "emphasis": "strong"
+        },
+        {
+          "id": "message",
+          "kind": "text",
+          "x": 4,
+          "y": 20,
+          "content": "Hold buttons to continue...",
+          "emphasis": "muted"
+        },
+        {
+          "id": "timer-box",
+          "kind": "box",
+          "x": 18,
+          "y": 48,
+          "width": 100,
+          "height": 60
+        },
+        {
+          "id": "timer-value",
+          "kind": "value",
+          "x": 68,
+          "y": 72,
+          "content": "24 s",
+          "align": "center"
+        },
+        {
+          "id": "hint",
+          "kind": "text",
+          "x": 68,
+          "y": 90,
+          "content": "Release to cancel",
+          "align": "center",
+          "emphasis": "muted"
+        }
+      ]
+    }
+  ],
+  "theme": {
+    "name": "StampPLC Default",
+    "colors": {
+      "displayBackground": "#000a17",
+      "textPrimary": "#f5faff",
+      "textMuted": "#9caec6",
+      "textStrong": "#ffffff",
+      "value": "#56d2ff",
+      "badgeBackground": "#0f1e33",
+      "badgeBorder": "#80a8c9",
+      "icon": "#56d2ff",
+      "legend": "#85bbe8",
+      "gridMinor": "rgba(124, 162, 206, 0.28)",
+      "gridMajor": "rgba(124, 162, 206, 0.55)"
+    },
+    "typography": {
+      "base": 8,
+      "value": 10,
+      "badge": 8
+    },
+    "animation": {
+      "easing": "ease-in-out"
+    }
+  }
+}

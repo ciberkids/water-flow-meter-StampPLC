@@ -1,0 +1,63 @@
+%% UI State Machine
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Info : Any button press\n(backlight on)
+    Idle --> [*] : Power off
+
+    Info --> Idle : ENTER long-press 3 s\n(or inactivity timer 120 s)
+    Info --> Configuration : ENTER long-press on\n"Enter Configuration" page (3 s countdown)
+
+    Configuration --> Info : ENTER long-press 3 s\n(exit confirmation)
+    Configuration --> Configuration : SAVE_SUCCESS / validation ok
+    Configuration --> Configuration : SAVE_WARNING / user overrides\nNyquist warning (bit set in reg 30)
+
+    state Info {
+        [*] --> Page_P1
+        Page_P1 --> Page_P2 : DOWN
+        Page_P2 --> Page_P3 : DOWN
+        Page_P3 --> Page_P4 : DOWN
+        Page_P4 --> Page_P5 : DOWN
+        Page_P5 --> Page_P6 : DOWN
+        Page_P6 --> Page_P7 : DOWN
+        Page_P7 --> Page_P1 : DOWN
+
+        Page_P1 --> Page_P7 : UP
+        Page_P7 --> Page_P6 : UP
+        Page_P6 --> Page_P5 : UP
+        Page_P5 --> Page_P4 : UP
+        Page_P4 --> Page_P3 : UP
+        Page_P3 --> Page_P2 : UP
+        Page_P2 --> Page_P1 : UP
+    }
+
+    state Configuration {
+        [*] --> Dev_ModbusID
+        Dev_ModbusID --> Dev_Baud : DOWN
+        Dev_Baud --> Dev_Parity : DOWN
+        Dev_Parity --> Dev_StopBits : DOWN
+        Dev_StopBits --> Dev_LEDVolume : DOWN
+        Dev_LEDVolume --> Dev_LEDPulse : DOWN
+        Dev_LEDPulse --> Dev_SensorSelect : DOWN
+        Dev_SensorSelect --> Dev_ModbusID : DOWN
+
+        Dev_ModbusID --> Dev_SensorSelect : UP
+        Dev_SensorSelect --> Dev_LEDPulse : UP
+        Dev_LEDPulse --> Dev_LEDVolume : UP
+        Dev_LEDVolume --> Dev_StopBits : UP
+        Dev_StopBits --> Dev_Parity : UP
+        Dev_Parity --> Dev_Baud : UP
+        Dev_Baud --> Dev_ModbusID : UP
+
+        state SensorSubmenu {
+            [*] --> Sensor_Connected
+            Sensor_Connected --> Sensor_Multiplier : DOWN
+            Sensor_Multiplier --> Sensor_Adjust : DOWN
+            Sensor_Adjust --> Sensor_MaxFlow : DOWN
+            Sensor_MaxFlow --> Sensor_Connected : DOWN
+
+            Sensor_Connected --> Sensor_MaxFlow : UP
+            Sensor_MaxFlow --> Sensor_Adjust : UP
+            Sensor_Adjust --> Sensor_Multiplier : UP
+            Sensor_Multiplier --> Sensor_Connected : UP
+        }
+    }

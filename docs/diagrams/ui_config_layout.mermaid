@@ -1,0 +1,21 @@
+%% Configuration Mode Layout
+flowchart TB
+    subgraph Config_Screen["Configuration Screen"]
+        direction TB
+        header["Header: Configuration Mode"]
+        helper["Subheader: ENTER (long) exits • UP/DOWN navigate"]
+
+        subgraph List["Scrollable List"]
+            direction TB
+            item1["C1 Modbus ID"]
+            item2["C2 Baud Rate"]
+            item3["C3 Parity"]
+            item4["C4 Stop Bits"]
+            item5["C5 LED Pulse Volume"]
+            item6["C6 LED Pulse Period"]
+            item7["C7 Sensor Select"]
+        end
+
+        inspector["Hint Panel: validation state • Nyquist warning • LED preview"]
+        footer["Footer Buttons: ENTER = Edit • Long ENTER = Cancel Edit"]
+    end

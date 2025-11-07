@@ -1,0 +1,88 @@
+import type {
+  AnimationKeyframe,
+  ScreenAnimation,
+  ScreenDataset,
+  ScreenDefinition,
+  ScreenElement,
+  ScreenFlow,
+  ScreenSubmenu
+} from "../../src/types.js";
+import type { ThemeTokens } from "../../src/theme/types.js";
+
+export interface ValidatedInput {
+  dataset: ScreenDataset;
+  theme: ThemeTokens;
+}
+
+export interface IRNumberColor {
+  source: string;
+  argb8888: number;
+}
+
+export interface IRElementTextContent {
+  text: string;
+  emphasis: ScreenElement["emphasis"];
+  align: Exclude<ScreenElement["align"], undefined> | "left";
+}
+
+export type IRElementKind =
+  | { type: "text"; payload: IRElementTextContent }
+  | { type: "value"; payload: IRElementTextContent }
+  | { type: "badge"; payload: IRElementTextContent }
+  | { type: "box"; payload: { width: number; height: number } }
+  | { type: "icon"; payload: { assetId?: string } };
+
+export interface IRScreenElement {
+  id: string;
+  position: { x: number; y: number };
+  kind: IRElementKind;
+  size?: { width: number; height: number };
+}
+
+export interface IRFlow extends ScreenFlow {}
+
+export interface IRAsset {
+  id: string;
+  type: "svg-sequence" | "bitmap" | "icon";
+  source: string;
+  frames?: string[];
+  fps?: number;
+  palette?: string[];
+}
+
+export interface IRAnimation extends ScreenAnimation {}
+
+export interface IRSubmenu extends ScreenSubmenu {}
+
+export interface IRScreen {
+  id: string;
+  name: string;
+  description?: string;
+  elements: IRScreenElement[];
+  flows: IRFlow[];
+  assets: IRAsset[];
+  animations: IRAnimation[];
+  submenus: IRSubmenu[];
+}
+
+export interface IRTheme {
+  name: string;
+  colors: Record<string, IRNumberColor>;
+  typography: ThemeTokens["typography"];
+  animation: ThemeTokens["animation"];
+}
+
+export interface ExportIR {
+  generatedAt: string;
+  screenCount: number;
+  elementCount: number;
+  dataset: IRScreen[];
+  theme: IRTheme;
+}
+
+export interface ExportContext extends ValidatedInput {
+  projectRoot: string;
+  generatedDir: string;
+  backupDir: string;
+  ir: ExportIR;
+}

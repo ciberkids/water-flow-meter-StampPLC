@@ -1,0 +1,33 @@
+%% Info Mode Layout (135 × 240 px)
+flowchart TB
+    subgraph Info_Screen["Info Screen"]
+        direction LR
+        subgraph Header["Header (20 px)"]
+            title["Page Title\n+ Timestamp"]
+            legend["Button Hints\n(ENTER=Countdown)"]
+        end
+
+        subgraph Body["Body (200 px)"]
+            direction LR
+            subgraph Sensors_Left["Sensors 1-4 Column (81 px)"]
+                s1["Sensor 1\nMetric + Value\nStatus Icon"]
+                s2["Sensor 2"]
+                s3["Sensor 3"]
+                s4["Sensor 4"]
+            end
+            subgraph Sensors_Right["Sensors 5-8 Column (81 px)"]
+                s5["Sensor 5"]
+                s6["Sensor 6"]
+                s7["Sensor 7"]
+                s8["Sensor 8"]
+            end
+            subgraph Propeller["Propeller / LED Legend (50 px)"]
+                propeller["Animated Propeller\n(frame 48×48)"]
+                ledinfo["LED Legend:\nRed pulse every X L\nGreen = Ready\nBlue = Flow"]
+            end
+        end
+
+        subgraph Footer["Footer (20 px)"]
+            buttons["UP/DOWN = Pages • ENTER = Action • Long ENTER = Idle"]
+        end
+    end
