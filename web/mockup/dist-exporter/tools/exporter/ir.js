@@ -68,6 +68,9 @@ function convertElement(element) {
             height: element.height ?? 0
         };
     }
+    if (element.binding) {
+        base.binding = element.binding;
+    }
     return base;
 }
 function convertScreen(screen) {

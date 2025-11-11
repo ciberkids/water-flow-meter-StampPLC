@@ -31,6 +31,19 @@ enum class FlowTrigger : std::uint8_t {
   Data = 2
 };
 
+enum class FlowButton : std::uint8_t {
+  None = 0,
+  Up = 1,
+  Down = 2,
+  Enter = 3
+};
+
+enum class FlowGesture : std::uint8_t {
+  Short = 0,
+  Long = 1,
+  Hold = 2
+};
+
 enum class AnimationKind : std::uint8_t {
   FrameSequence = 0,
   Property = 1
@@ -51,6 +64,7 @@ struct Element {
   std::int16_t height;
   const TextPayload* text;
   const char* assetId;
+  const char* bindingId;
 };
 
 struct Flow {
@@ -58,7 +72,15 @@ struct Flow {
   const char* label;
   const char* targetScreenId;
   FlowTrigger trigger;
+  FlowButton button;
+  FlowGesture gesture;
+  std::uint32_t timeoutMs;
+  const char* dataSource;
+  const char* dataCondition;
   const char* guard;
+  const char* actionId;
+  const KeyValue* actionParams;
+  std::size_t actionParamCount;
 };
 
 struct KeyValue {

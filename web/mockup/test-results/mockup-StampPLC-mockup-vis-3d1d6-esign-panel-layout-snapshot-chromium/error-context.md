@@ -1,0 +1,190 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary [ref=e5]:
+    - generic [ref=e6]:
+      - heading "Workspace overview" [level=2] [ref=e7]
+      - generic [ref=e8]:
+        - paragraph [ref=e9]:
+          - strong [ref=e10]: "Validation:"
+          - text: Ready
+        - paragraph [ref=e11]:
+          - strong [ref=e12]: "Active screen:"
+          - text: Info Overview
+        - paragraph [ref=e13]:
+          - strong [ref=e14]: "Total screens:"
+          - text: "3"
+    - generic [ref=e15]:
+      - heading "Theme snapshot" [level=2] [ref=e16]
+      - generic [ref=e17]:
+        - paragraph [ref=e18]:
+          - strong [ref=e19]: "Name:"
+          - text: StampPLC Default
+        - paragraph [ref=e20]:
+          - strong [ref=e21]: "Value colour:"
+          - text: "#56d2ff"
+        - paragraph [ref=e22]:
+          - strong [ref=e23]: "Orientation:"
+          - text: landscape
+  - main [ref=e24]:
+    - generic [ref=e25]:
+      - button "Simulation" [ref=e26] [cursor=pointer]
+      - button "Design" [active] [ref=e27] [cursor=pointer]
+      - button "Import & Export" [ref=e28] [cursor=pointer]
+      - button "Help & Documentation" [ref=e29] [cursor=pointer]
+    - generic [ref=e31]:
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - heading "Screens" [level=2] [ref=e35]
+          - generic [ref=e36]:
+            - button "Info Overview Instant flow telemetry with sensor readiness badges." [ref=e37] [cursor=pointer]:
+              - strong [ref=e38]: Info Overview
+              - generic [ref=e39]: Instant flow telemetry with sensor readiness badges.
+            - button "Configuration Menu Entry point to sensor setup and LED tuning." [ref=e40] [cursor=pointer]:
+              - strong [ref=e41]: Configuration Menu
+              - generic [ref=e42]: Entry point to sensor setup and LED tuning.
+            - button "Reset Countdown Factory reset hold overlay with progress indicator." [ref=e43] [cursor=pointer]:
+              - strong [ref=e44]: Reset Countdown
+              - generic [ref=e45]: Factory reset hold overlay with progress indicator.
+        - generic [ref=e46]:
+          - heading "Screen details" [level=2] [ref=e47]
+          - generic [ref=e48]:
+            - paragraph [ref=e49]:
+              - strong [ref=e50]: "ID:"
+              - text: info-overview
+            - paragraph [ref=e51]: Instant flow telemetry with sensor readiness badges.
+            - paragraph [ref=e52]:
+              - strong [ref=e53]: "Elements:"
+              - text: "13"
+      - region "Design controls" [ref=e55]:
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - heading "Design system" [level=3] [ref=e58]
+            - paragraph [ref=e59]:
+              - text: Adjust palette, typography, and easing tokens. Updates sync instantly to the live preview and persist in
+              - code [ref=e60]: screens.json
+              - text: under
+              - code [ref=e61]: theme
+              - text: for the translator.
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - term [ref=e64]: Previewing
+              - definition [ref=e65]: Info Overview
+            - generic [ref=e66]:
+              - term [ref=e67]: Viewport
+              - definition [ref=e68]: 240 × 135px • landscape
+            - generic [ref=e69]:
+              - term [ref=e70]: Zoom
+              - definition [ref=e71]: 160% (clamped for preview)
+        - generic [ref=e72]:
+          - complementary [ref=e73]:
+            - heading "Live preview" [level=4] [ref=e74]
+            - generic [ref=e78]:
+              - generic [ref=e79]: Instant Flow
+              - generic [ref=e80]: 124.6 L/min
+              - generic [ref=e81]: All sensors ready
+              - generic [ref=e84]: S1 15.2 L/min
+              - generic [ref=e85]: S2 14.9 L/min
+              - generic [ref=e86]: S3 13.4 L/min
+              - generic [ref=e87]: S4 12.8 L/min
+              - generic [ref=e88]: S5 11.6 L/min
+              - generic [ref=e89]: S6 10.1 L/min
+              - generic [ref=e90]: S7 09.4 L/min
+              - generic [ref=e91]: S8 08.0 L/min
+              - generic:
+                - generic: Red pulses per X L
+                - generic: Green = Ready
+                - generic: Blue = Flow
+            - generic [ref=e93]:
+              - strong [ref=e94]: Live screen JSON
+              - paragraph [ref=e95]:
+                - text: Snapshot of
+                - code [ref=e96]: info-overview
+                - text: rendered from the dataset. Updates immediately when you switch screens or edit JSON.
+              - generic [ref=e97]: "{ \"id\": \"info-overview\", \"name\": \"Info Overview\", \"description\": \"Instant flow telemetry with sensor readiness badges.\", \"elements\": [ { \"id\": \"title\", \"kind\": \"text\", \"x\": 4, \"y\": 4, \"content\": \"Instant Flow\", \"emphasis\": \"strong\" }, { \"id\": \"value-total\", \"kind\": \"value\", \"x\": 4, \"y\": 20, \"content\": \"124.6 L/min\" }, { \"id\": \"badge-ready\", \"kind\": \"badge\", \"x\": 4, \"y\": 34, \"content\": \"All sensors ready\" }, { \"id\": \"box-left\", \"kind\": \"box\", \"x\": 4, \"y\": 48, \"width\": 58, \"height\": 60 }, { \"id\": \"box-right\", \"kind\": \"box\", \"x\": 72, \"y\": 48, \"width\": 58, \"height\": 60 }, { \"id\": \"sensor-1\", \"kind\": \"text\", \"x\": 8, \"y\": 52, \"content\": \"S1 15.2 L/min\" }, { \"id\": \"sensor-2\", \"kind\": \"text\", \"x\": 8, \"y\": 64, \"content\": \"S2 14.9 L/min\" }, { \"id\": \"sensor-3\", \"kind\": \"text\", \"x\": 8, \"y\": 76, \"content\": \"S3 13.4 L/min\" }, { \"id\": \"sensor-4\", \"kind\": \"text\", \"x\": 8, \"y\": 88, \"content\": \"S4 12.8 L/min\" }, { \"id\": \"sensor-5\", \"kind\": \"text\", \"x\": 76, \"y\": 52, \"content\": \"S5 11.6 L/min\" }, { \"id\": \"sensor-6\", \"kind\": \"text\", \"x\": 76, \"y\": 64, \"content\": \"S6 10.1 L/min\" }, { \"id\": \"sensor-7\", \"kind\": \"text\", \"x\": 76, \"y\": 76, \"content\": \"S7 09.4 L/min\" }, { \"id\": \"sensor-8\", \"kind\": \"text\", \"x\": 76, \"y\": 88, \"content\": \"S8 08.0 L/min\" } ] }"
+          - generic [ref=e98]:
+            - generic [ref=e99]:
+              - heading "Colours" [level=4] [ref=e100]
+              - generic [ref=e101]:
+                - generic [ref=e102]:
+                  - generic [ref=e103]: Display background
+                  - generic [ref=e104]:
+                    - 'textbox "Display background #000a17" [ref=e105] [cursor=pointer]': "#000a17"
+                    - textbox "Display background hex value" [ref=e106]: "#000a17"
+                - generic [ref=e107]:
+                  - generic [ref=e108]: Primary text
+                  - generic [ref=e109]:
+                    - 'textbox "Primary text #f5faff" [ref=e110] [cursor=pointer]': "#f5faff"
+                    - textbox "Primary text hex value" [ref=e111]: "#f5faff"
+                - generic [ref=e112]:
+                  - generic [ref=e113]: Muted text
+                  - generic [ref=e114]:
+                    - 'textbox "Muted text #9caec6" [ref=e115] [cursor=pointer]': "#9caec6"
+                    - textbox "Muted text hex value" [ref=e116]: "#9caec6"
+                - generic [ref=e117]:
+                  - generic [ref=e118]: Strong text
+                  - generic [ref=e119]:
+                    - 'textbox "Strong text #ffffff" [ref=e120] [cursor=pointer]': "#ffffff"
+                    - textbox "Strong text hex value" [ref=e121]: "#ffffff"
+                - generic [ref=e122]:
+                  - generic [ref=e123]: Accent value
+                  - generic [ref=e124]:
+                    - 'textbox "Accent value #56d2ff" [ref=e125] [cursor=pointer]': "#56d2ff"
+                    - textbox "Accent value hex value" [ref=e126]: "#56d2ff"
+                - generic [ref=e127]:
+                  - generic [ref=e128]: Badge background
+                  - generic [ref=e129]:
+                    - 'textbox "Badge background #0f1e33" [ref=e130] [cursor=pointer]': "#0f1e33"
+                    - textbox "Badge background hex value" [ref=e131]: "#0f1e33"
+                - generic [ref=e132]:
+                  - generic [ref=e133]: Badge border
+                  - generic [ref=e134]:
+                    - 'textbox "Badge border #80a8c9" [ref=e135] [cursor=pointer]': "#80a8c9"
+                    - textbox "Badge border hex value" [ref=e136]: "#80a8c9"
+                - generic [ref=e137]:
+                  - generic [ref=e138]: Icon colour
+                  - generic [ref=e139]:
+                    - 'textbox "Icon colour #56d2ff" [ref=e140] [cursor=pointer]': "#56d2ff"
+                    - textbox "Icon colour hex value" [ref=e141]: "#56d2ff"
+                - generic [ref=e142]:
+                  - generic [ref=e143]: Legend text
+                  - generic [ref=e144]:
+                    - 'textbox "Legend text #85bbe8" [ref=e145] [cursor=pointer]': "#85bbe8"
+                    - textbox "Legend text hex value" [ref=e146]: "#85bbe8"
+                - generic [ref=e147]:
+                  - generic [ref=e148]: Grid major line
+                  - generic [ref=e149]:
+                    - 'textbox "Grid major line #7CA2CE" [ref=e150] [cursor=pointer]': "#7ca2ce"
+                    - textbox "Grid major line hex value" [ref=e151]: "#7CA2CE"
+                - generic [ref=e152]:
+                  - generic [ref=e153]: Grid minor line
+                  - generic [ref=e154]:
+                    - 'textbox "Grid minor line #7CA2CE" [ref=e155] [cursor=pointer]': "#7ca2ce"
+                    - textbox "Grid minor line hex value" [ref=e156]: "#7CA2CE"
+            - generic [ref=e157]:
+              - heading "Typography" [level=4] [ref=e158]
+              - generic [ref=e159]:
+                - generic [ref=e160]:
+                  - generic [ref=e161]: Base font size (8px)
+                  - slider "Base font size (8px)" [ref=e162]: "8"
+                - generic [ref=e163]:
+                  - generic [ref=e164]: Value font size (10px)
+                  - slider "Value font size (10px)" [ref=e165]: "10"
+                - generic [ref=e166]:
+                  - generic [ref=e167]: Badge font size (8px)
+                  - slider "Badge font size (8px)" [ref=e168]: "8"
+            - generic [ref=e169]:
+              - heading "Animation" [level=4] [ref=e170]
+              - generic [ref=e171]:
+                - generic [ref=e172]: Transition easing
+                - combobox "Transition easing" [ref=e173]:
+                  - option "Linear"
+                  - option "Ease-in"
+                  - option "Ease-out"
+                  - option "Ease-in-out" [selected]
+                  - option "Smooth (cubic-bezier)"
+        - generic [ref=e174]:
+          - button "Apply warm preset" [ref=e175] [cursor=pointer]
+          - button "Reset design" [ref=e176] [cursor=pointer]
+```

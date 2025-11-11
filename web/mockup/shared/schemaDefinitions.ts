@@ -6,7 +6,10 @@ import type {
   ScreenFlow,
   ScreenGraphicAsset,
   ScreenAnimation,
-  ScreenSubmenu
+  ScreenSubmenu,
+  ButtonFlowTrigger,
+  TimeoutFlowTrigger,
+  DataFlowTrigger
 } from "../src/types.js";
 import type { ThemeTokens } from "../src/theme/types.js";
 
@@ -33,20 +36,68 @@ export const elementSchema: JSONSchemaType<ScreenElement> = {
       type: "string",
       enum: ["normal", "strong", "muted"],
       nullable: true
-    }
+    },
+    binding: { type: "string", nullable: true }
+  }
+};
+
+const buttonTriggerSchema: JSONSchemaType<ButtonFlowTrigger> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["type", "button"],
+  properties: {
+    type: { type: "string", const: "button" },
+    button: { type: "string", enum: ["up", "down", "enter"] },
+    gesture: { type: "string", enum: ["short", "long", "hold"], nullable: true }
+  }
+};
+
+const timeoutTriggerSchema: JSONSchemaType<TimeoutFlowTrigger> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["type", "durationMs"],
+  properties: {
+    type: { type: "string", const: "timeout" },
+    durationMs: { type: "integer", minimum: 1 }
+  }
+};
+
+const dataTriggerSchema: JSONSchemaType<DataFlowTrigger> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["type", "source", "condition"],
+  properties: {
+    type: { type: "string", const: "data" },
+    source: { type: "string", minLength: 1 },
+    condition: { type: "string", minLength: 1 }
   }
 };
 
 export const flowSchema: JSONSchemaType<ScreenFlow> = {
   type: "object",
   additionalProperties: false,
-  required: ["id", "label", "targetScreenId", "trigger"],
+  required: ["id", "label", "trigger"],
   properties: {
     id: { type: "string", minLength: 1 },
     label: { type: "string", minLength: 1 },
-    targetScreenId: { type: "string", minLength: 1 },
-    trigger: { type: "string", enum: ["button", "timeout", "data"] },
-    guard: { type: "string", nullable: true }
+    targetScreenId: { type: "string", minLength: 1, nullable: true },
+    trigger: {
+      oneOf: [
+        buttonTriggerSchema as JSONSchemaType<ScreenFlow["trigger"]>,
+        timeoutTriggerSchema as JSONSchemaType<ScreenFlow["trigger"]>,
+        dataTriggerSchema as JSONSchemaType<ScreenFlow["trigger"]>
+      ]
+    } as unknown as JSONSchemaType<ScreenFlow["trigger"]>,
+    guard: { type: "string", nullable: true },
+    actionId: { type: "string", minLength: 1, nullable: true },
+    actionParams: {
+      type: "object",
+      nullable: true,
+      required: [],
+      additionalProperties: {
+        oneOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }]
+      }
+    }
   }
 };
 

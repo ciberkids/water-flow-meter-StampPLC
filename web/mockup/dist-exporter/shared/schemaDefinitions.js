@@ -19,19 +19,64 @@ export const elementSchema = {
             type: "string",
             enum: ["normal", "strong", "muted"],
             nullable: true
-        }
+        },
+        binding: { type: "string", nullable: true }
+    }
+};
+const buttonTriggerSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["type", "button"],
+    properties: {
+        type: { type: "string", const: "button" },
+        button: { type: "string", enum: ["up", "down", "enter"] },
+        gesture: { type: "string", enum: ["short", "long", "hold"], nullable: true }
+    }
+};
+const timeoutTriggerSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["type", "durationMs"],
+    properties: {
+        type: { type: "string", const: "timeout" },
+        durationMs: { type: "integer", minimum: 1 }
+    }
+};
+const dataTriggerSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["type", "source", "condition"],
+    properties: {
+        type: { type: "string", const: "data" },
+        source: { type: "string", minLength: 1 },
+        condition: { type: "string", minLength: 1 }
     }
 };
 export const flowSchema = {
     type: "object",
     additionalProperties: false,
-    required: ["id", "label", "targetScreenId", "trigger"],
+    required: ["id", "label", "trigger"],
     properties: {
         id: { type: "string", minLength: 1 },
         label: { type: "string", minLength: 1 },
-        targetScreenId: { type: "string", minLength: 1 },
-        trigger: { type: "string", enum: ["button", "timeout", "data"] },
-        guard: { type: "string", nullable: true }
+        targetScreenId: { type: "string", minLength: 1, nullable: true },
+        trigger: {
+            oneOf: [
+                buttonTriggerSchema,
+                timeoutTriggerSchema,
+                dataTriggerSchema
+            ]
+        },
+        guard: { type: "string", nullable: true },
+        actionId: { type: "string", minLength: 1, nullable: true },
+        actionParams: {
+            type: "object",
+            nullable: true,
+            required: [],
+            additionalProperties: {
+                oneOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }]
+            }
+        }
     }
 };
 export const graphicAssetSchema = {

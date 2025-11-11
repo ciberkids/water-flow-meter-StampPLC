@@ -38,7 +38,7 @@ Implement automated validation that runs after each export to ensure generated f
 ## 4. Tasks & Checklist
 
 - [ ] Implement validation scripts (Node.js) covering structural checks and presence of critical UI elements.
-- [ ] Add compilation smoke test (PlatformIO or mocked build) to exporter pipeline.
+- [ ] Add compilation smoke test (PlatformIO) to exporter pipeline.
 - [ ] Update web UI to display validation summaries and allow download of detailed logs.
 - [ ] Provide documentation on interpreting validation warnings/errors.
 

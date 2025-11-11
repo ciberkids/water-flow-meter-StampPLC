@@ -104,7 +104,7 @@ function parseCliArgs(projectRoot: string, workspaceRoot: string): CliOptions {
   const themeDefault = "";
   const outDefaultPath = path.join(
     projectRoot,
-    "Water Flow Meter PlatformIO",
+    "Water-Flow-Meter-PlatformIO",
     "src",
     "ui",
     "generated"
@@ -133,7 +133,7 @@ function parseCliArgs(projectRoot: string, workspaceRoot: string): CliOptions {
 async function run() {
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
   const workspaceRoot = await resolveWorkspaceRoot(currentDir);
-  const projectRoot = path.resolve(workspaceRoot, "..");
+  const projectRoot = path.resolve(workspaceRoot, "..", "..");
   const options = parseCliArgs(projectRoot, workspaceRoot);
 
   try {

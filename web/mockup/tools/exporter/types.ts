@@ -37,6 +37,7 @@ export interface IRScreenElement {
   position: { x: number; y: number };
   kind: IRElementKind;
   size?: { width: number; height: number };
+  binding?: string;
 }
 
 export interface IRFlow extends ScreenFlow {}

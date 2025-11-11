@@ -11,21 +11,24 @@
                     "x": 4,
                     "y": 4,
                     "content": "Instant Flow",
-                    "emphasis": "strong"
+                    "emphasis": "strong",
+                    "binding": "page.title"
                 },
                 {
                     "id": "value-total",
                     "kind": "value",
                     "x": 4,
                     "y": 20,
-                    "content": "124.6 L/min"
+                    "content": "000.0 L/s",
+                    "binding": "telemetry.total"
                 },
                 {
                     "id": "badge-ready",
                     "kind": "badge",
                     "x": 4,
                     "y": 34,
-                    "content": "All sensors ready"
+                    "content": "All sensors ready",
+                    "binding": "telemetry.status"
                 },
                 {
                     "id": "box-left",
@@ -48,56 +51,116 @@
                     "kind": "text",
                     "x": 8,
                     "y": 52,
-                    "content": "S1 15.2 L/min"
+                    "content": "S1 00.0",
+                    "binding": "sensor.1"
                 },
                 {
                     "id": "sensor-2",
                     "kind": "text",
                     "x": 8,
                     "y": 64,
-                    "content": "S2 14.9 L/min"
+                    "content": "S2 00.0",
+                    "binding": "sensor.2"
                 },
                 {
                     "id": "sensor-3",
                     "kind": "text",
                     "x": 8,
                     "y": 76,
-                    "content": "S3 13.4 L/min"
+                    "content": "S3 00.0",
+                    "binding": "sensor.3"
                 },
                 {
                     "id": "sensor-4",
                     "kind": "text",
                     "x": 8,
                     "y": 88,
-                    "content": "S4 12.8 L/min"
+                    "content": "S4 00.0",
+                    "binding": "sensor.4"
                 },
                 {
                     "id": "sensor-5",
                     "kind": "text",
                     "x": 76,
                     "y": 52,
-                    "content": "S5 11.6 L/min"
+                    "content": "S5 00.0",
+                    "binding": "sensor.5"
                 },
                 {
                     "id": "sensor-6",
                     "kind": "text",
                     "x": 76,
                     "y": 64,
-                    "content": "S6 10.1 L/min"
+                    "content": "S6 00.0",
+                    "binding": "sensor.6"
                 },
                 {
                     "id": "sensor-7",
                     "kind": "text",
                     "x": 76,
                     "y": 76,
-                    "content": "S7 09.4 L/min"
+                    "content": "S7 00.0",
+                    "binding": "sensor.7"
                 },
                 {
                     "id": "sensor-8",
                     "kind": "text",
                     "x": 76,
                     "y": 88,
-                    "content": "S8 08.0 L/min"
+                    "content": "S8 00.0",
+                    "binding": "sensor.8"
+                },
+                {
+                    "id": "legend-led",
+                    "kind": "text",
+                    "x": 0,
+                    "y": 138,
+                    "content": "LED status legend",
+                    "binding": "legend.led"
+                },
+                {
+                    "id": "legend-warning",
+                    "kind": "text",
+                    "x": 0,
+                    "y": 150,
+                    "content": "Warnings",
+                    "binding": "legend.warning"
+                },
+                {
+                    "id": "propeller",
+                    "kind": "icon",
+                    "x": 210,
+                    "y": 48,
+                    "width": 44,
+                    "height": 44,
+                    "content": "propeller"
+                }
+            ],
+            "flows": [
+                {
+                    "id": "info-nav-prev",
+                    "label": "UP switches to previous page",
+                    "trigger": { "type": "button", "button": "up", "gesture": "short" },
+                    "actionId": "ui.action.page.previous"
+                },
+                {
+                    "id": "info-nav-next",
+                    "label": "DOWN switches to next page",
+                    "trigger": { "type": "button", "button": "down", "gesture": "short" },
+                    "actionId": "ui.action.page.next"
+                },
+                {
+                    "id": "info-enter-config",
+                    "label": "ENTER opens configuration",
+                    "trigger": { "type": "button", "button": "enter", "gesture": "short" },
+                    "targetScreenId": "configuration",
+                    "actionId": "ui.action.mode.configuration"
+                },
+                {
+                    "id": "info-enter-idle",
+                    "label": "ENTER long press idles display",
+                    "trigger": { "type": "button", "button": "enter", "gesture": "long" },
+                    "actionId": "ui.action.mode.idle"
                 }
             ]
         },
@@ -112,7 +175,8 @@
                     "x": 4,
                     "y": 4,
                     "content": "Configuration",
-                    "emphasis": "strong"
+                    "emphasis": "strong",
+                    "binding": "config.title"
                 },
                 {
                     "id": "info",
@@ -149,6 +213,34 @@
                     "x": 115,
                     "y": 16
                 }
+            ],
+            "flows": [
+                {
+                    "id": "config-nav-prev",
+                    "label": "UP selects previous field",
+                    "trigger": { "type": "button", "button": "up", "gesture": "short" },
+                    "actionId": "ui.action.page.previous"
+                },
+                {
+                    "id": "config-nav-next",
+                    "label": "DOWN selects next field",
+                    "trigger": { "type": "button", "button": "down", "gesture": "short" },
+                    "actionId": "ui.action.page.next"
+                },
+                {
+                    "id": "config-save",
+                    "label": "ENTER saves configuration",
+                    "trigger": { "type": "button", "button": "enter", "gesture": "short" },
+                    "actionId": "core.action.save-config",
+                    "actionParams": { "scope": "ui" }
+                },
+                {
+                    "id": "config-exit",
+                    "label": "ENTER hold returns to info",
+                    "trigger": { "type": "button", "button": "enter", "gesture": "long" },
+                    "targetScreenId": "info-overview",
+                    "actionId": "ui.action.mode.info"
+                }
             ]
         },
         {
@@ -162,7 +254,8 @@
                     "x": 4,
                     "y": 4,
                     "content": "Factory Reset",
-                    "emphasis": "strong"
+                    "emphasis": "strong",
+                    "binding": "countdown.title"
                 },
                 {
                     "id": "message",
@@ -170,7 +263,8 @@
                     "x": 4,
                     "y": 20,
                     "content": "Hold buttons to continue...",
-                    "emphasis": "muted"
+                    "emphasis": "muted",
+                    "binding": "countdown.message"
                 },
                 {
                     "id": "timer-box",
@@ -185,8 +279,9 @@
                     "kind": "value",
                     "x": 68,
                     "y": 72,
-                    "content": "24 s",
-                    "align": "center"
+                    "content": "30 s",
+                    "align": "center",
+                    "binding": "countdown.value"
                 },
                 {
                     "id": "hint",
@@ -195,7 +290,8 @@
                     "y": 90,
                     "content": "Release to cancel",
                     "align": "center",
-                    "emphasis": "muted"
+                    "emphasis": "muted",
+                    "binding": "countdown.hint"
                 }
             ]
         }

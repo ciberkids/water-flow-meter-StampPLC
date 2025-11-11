@@ -165,7 +165,8 @@ test.describe("StampPLC mockup visual regression", () => {
     await expect(helpPanel.locator(".help-panel__card").first()).toContainText("Total screens");
   });
 
-  test("workspace live JSON mirrors selection", async ({ page }) => {
+  test("design live JSON mirrors selection", async ({ page }) => {
+    await page.getByRole("button", { name: "Design", exact: true }).click();
     const livePanel = page.locator(".json-live");
     await expect(livePanel).toBeVisible();
     await expect(livePanel).toContainText('"id": "info-overview"');

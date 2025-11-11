@@ -12,7 +12,11 @@
     - ***Implemented stories _ IGNORE***: archive of completed narratives retained for history (do not use for current context).
     - ***hardware docs***: hardware references for the project.
 - ***Water Flow Meter PlatformIO*** — PlatformIO firmware workspace (authoritative source tree).
-    - ***src***: all firmware code, including `firmware.cpp`, device drivers, and the generated UI bundle under `ui/generated/`.
+    - ***src***: firmware entrypoint (`firmware.cpp`), high-level tasks, and the modular subsystems:
+        - `input/` — button processing and interaction helpers.
+        - `led/` — LED controller and animations.
+        - `modbus/` — Modbus server, register bank utilities, and diagnostics.
+        - `ui/` — UI runtime (`core`), exporter output (`generated`), and theme helpers.
     - ***include*** / ***lib*** / ***test***: PlatformIO headers, libraries, and test scaffolding.
     - ***platformio.ini***: build configuration and environment definitions.
 - ***water-flow-meter-StampPLC_Legacy*** — legacy project snapshot (kept for reference); contains the previous single-file `src/firmware.cpp` and `LICENSE`.

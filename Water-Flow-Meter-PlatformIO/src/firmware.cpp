@@ -6,14 +6,18 @@
 #include <cstdint>
 #include <cstdio>
 
-#include "button_input.h"
-#include "led_controller.h"
-#include "modbus_manager.h"
-#include "register_bank.h"
-#include "register_map.h"
-#include "sensor_types.h"
-#include "ui_controller.h"
-#include "ui_renderer.h"
+#include "input/button_input.h"
+#include "input/interaction_handler.h"
+#include "led/led_controller.h"
+#include "modbus/modbus_manager.h"
+#include "modbus/register_bank.h"
+#include "modbus/register_map.h"
+#include "modbus/sensor_types.h"
+#include "sensors/sensor_state_engine.h"
+#include "ui/core/ui_actions.h"
+#include "ui/core/ui_bindings.h"
+#include "ui/core/ui_module.h"
+#include "ui/core/ui_screen_router.h"
 
 using namespace plc;
 
@@ -54,26 +58,28 @@ ModbusDependencies modbusDeps{.sensors = sensors,
                               .sensorCount = kNumSensors};
 
 ModbusManager modbusManager(modbusDeps);
+const ui::UiAssets kUiAssets = ui::loadGeneratedAssets();
+ui::UiScreenRouter uiScreenRouter(kUiAssets);
+ui::UiBindingResolver uiBindingResolver;
+const ui::UiActionRegistry& kUiActionRegistry = ui::defaultActionRegistry();
 UiRenderer uiRenderer;
 UiController uiController;
 
-namespace {
-
-constexpr uint32_t kFactoryResetHoldMs = 30000;
-constexpr uint32_t kFactoryResetOverlayDelayMs = 3000;
-constexpr uint32_t kFactoryResetRestartDelayMs = 1000;
-constexpr uint32_t kEnterIdleHoldMs = 3000;
-
-struct FactoryResetState {
-  bool holdActive = false;
-  bool overlayActive = false;
-  uint32_t holdStartMs = 0;
-  bool restartScheduled = false;
-  uint32_t restartAtMs = 0;
+SensorStateEngine::Dependencies sensorEngineDeps{
+    .sensors = sensors,
+    .configs = configs,
+    .sensorCount = kNumSensors,
+    .registerBank = &registerBank,
+    .modbusManager = &modbusManager,
+    .totalSessionLitersCache = &totalSessionLitersCache,
+    .aggregateFlowLpsCache = &aggregateFlowLpsCache,
+    .allSensorsReadyCache = &allSensorsReadyCache,
+    .undersamplingFlags = &undersamplingFlags,
 };
+SensorStateEngine sensorStateEngine(sensorEngineDeps);
+InteractionHandler interactionHandler;
 
-FactoryResetState factoryResetState;
-bool enterIdleLatch = false;
+namespace {
 
 void saveCumulativeData(uint8_t index) {
   if (index >= kNumSensors) {
@@ -91,11 +97,6 @@ void loadCumulativeData(uint8_t index) {
   char key[8];
   std::snprintf(key, sizeof(key), "cml_%u", static_cast<unsigned>(index));
   sensors[index].cumulativeLiters = preferences.getDouble(key, 0.0);
-}
-
-void updateDiagnostics() {
-  modbusManager.evaluateSensorDiagnostics();
-  undersamplingFlags = registerBank.at(REG_UNDERSAMPLING_FLAGS);
 }
 
 void performFactoryReset() {
@@ -121,65 +122,7 @@ void performFactoryReset() {
   }
 
   modbusManager.syncGlobalRegisters();
-  updateDiagnostics();
-}
-
-void handleFactoryReset(uint32_t nowMs, UiCountdownState* countdown) {
-  if (!countdown) {
-    return;
-  }
-
-  const bool upPressed = buttonInput.isPressed(ButtonInputManager::Button::Up);
-  const bool downPressed = buttonInput.isPressed(ButtonInputManager::Button::Down);
-  const bool enterPressed = buttonInput.isPressed(ButtonInputManager::Button::Enter);
-
-  if (!factoryResetState.restartScheduled) {
-    if (!factoryResetState.holdActive) {
-      if (upPressed && downPressed && !enterPressed) {
-        factoryResetState.holdActive = true;
-        factoryResetState.overlayActive = false;
-        factoryResetState.holdStartMs = nowMs;
-        buttonInput.clearEvents();
-      }
-    } else {
-      if (!(upPressed && downPressed) || enterPressed) {
-        factoryResetState.holdActive = false;
-        factoryResetState.overlayActive = false;
-        buttonInput.clearEvents();
-      } else {
-        const uint32_t elapsedMs = nowMs - factoryResetState.holdStartMs;
-        if (!factoryResetState.overlayActive && elapsedMs >= kFactoryResetOverlayDelayMs) {
-          factoryResetState.overlayActive = true;
-        }
-        if (factoryResetState.overlayActive) {
-          const uint32_t remainingMs =
-              (elapsedMs >= kFactoryResetHoldMs) ? 0 : (kFactoryResetHoldMs - elapsedMs);
-          countdown->active = true;
-          countdown->secondsRemaining = (remainingMs + 999) / 1000;
-          countdown->label = "Hold UP+DOWN to factory reset (30->0)";
-        }
-        if (elapsedMs >= kFactoryResetHoldMs) {
-          performFactoryReset();
-          factoryResetState.holdActive = false;
-          factoryResetState.overlayActive = false;
-          factoryResetState.restartScheduled = true;
-          factoryResetState.restartAtMs = nowMs + kFactoryResetRestartDelayMs;
-          countdown->active = true;
-          countdown->secondsRemaining = 0;
-          countdown->label = "Factory reset complete";
-          buttonInput.clearEvents();
-        } else {
-          buttonInput.clearEvents();
-        }
-      }
-    }
-  }
-
-  if (factoryResetState.restartScheduled) {
-    countdown->active = true;
-    countdown->secondsRemaining = 0;
-    countdown->label = "Factory reset complete";
-  }
+  sensorStateEngine.refreshDiagnostics();
 }
 
 ModbusMessage handleReadHolding(ModbusMessage request) {
@@ -241,15 +184,20 @@ void logicTaskCode(void * pvParameters) {
   ledController.begin();
   uiController.begin(millis());
   buttonInput.begin(millis());
-  factoryResetState = FactoryResetState{};
-  enterIdleLatch = false;
+  InteractionHandler::Dependencies interactionDeps{};
+  interactionDeps.screenRouter = &uiScreenRouter;
+  interactionDeps.actions = &kUiActionRegistry;
+  interactionDeps.modbus = &modbusManager;
+  interactionDeps.ledController = &ledController;
+  interactionDeps.preferences = &preferences;
+  interactionHandler.begin(millis(), performFactoryReset, interactionDeps);
   for (std::size_t i = 0; i < kNumSensors; ++i) {
     loadCumulativeData(static_cast<uint8_t>(i));
     sensors[i].inUse = false;
     sensors[i].isReady = false;
     modbusManager.syncSensorToHolding(i);
   }
-  updateDiagnostics();
+  sensorStateEngine.refreshDiagnostics();
   modbusManager.syncGlobalRegisters();
 
   modbus.registerWorker(kDefaultModbusSlaveId, Modbus::READ_HOLD_REGISTER, handleReadHolding);
@@ -261,91 +209,13 @@ void logicTaskCode(void * pvParameters) {
     unsigned long now = millis();
     buttonInput.update(now);
 
-    UiCountdownState countdown{};
-    handleFactoryReset(now, &countdown);
-    if (!factoryResetState.holdActive && !factoryResetState.restartScheduled) {
-      ButtonInputManager::ButtonEvent event;
-      while (buttonInput.popEvent(&event)) {
-        switch (event.button) {
-          case ButtonInputManager::Button::Up:
-            uiController.previousPage(now);
-            break;
-          case ButtonInputManager::Button::Down:
-            uiController.nextPage(now);
-            break;
-          case ButtonInputManager::Button::Enter:
-            if (!event.isLongPress) {
-              uiController.notifyInteraction(now);
-            }
-            break;
-        }
-      }
-
-      if (buttonInput.isPressed(ButtonInputManager::Button::Enter)) {
-        const uint32_t heldMs = buttonInput.pressedDuration(ButtonInputManager::Button::Enter, now);
-        if (heldMs >= kEnterIdleHoldMs && !enterIdleLatch) {
-          uiController.enterIdle(now);
-          enterIdleLatch = true;
-        }
-      } else {
-        enterIdleLatch = false;
-      }
-    } else {
-      enterIdleLatch = false;
-      buttonInput.clearEvents();
-    }
+    const InteractionResult interactions =
+        interactionHandler.update(now, buttonInput, uiController);
 
     if (now - lastCalcTime >= 1000) {
-      float elapsedTime_s = (now - lastCalcTime) / 1000.0f;
+      const float elapsedTime_s = static_cast<float>(now - lastCalcTime) / 1000.0f;
       lastCalcTime = now;
-      double totalSessionLiters = 0.0;
-      double aggregateFlowLps = 0.0;
-      bool allReady = true;
-      std::size_t activeSensors = 0;
-      for (std::size_t i = 0; i < kNumSensors; ++i) {
-        if (sensors[i].inUse) {
-          ++activeSensors;
-          uint32_t pulses = sensors[i].pulseCount;
-          sensors[i].pulseCount = 0; // Reset for next interval
-
-          if (sensors[i].isReady && configs[i].f_multiplier != 0) {
-            float frequency = (float)pulses / elapsedTime_s;
-            // Formula: Q(L/min) = (Freq - Adjust) / Multiplier
-            float flowRate_L_min = (frequency - configs[i].adjust) / configs[i].f_multiplier;
-            if (flowRate_L_min < 0) flowRate_L_min = 0;
-            if (flowRate_L_min > configs[i].q_max) flowRate_L_min = configs[i].q_max;
-
-            sensors[i].instantFlow_L_s = flowRate_L_min / 60.0;
-            if (sensors[i].instantFlow_L_s > sensors[i].maxFlowSinceReset) {
-              sensors[i].maxFlowSinceReset = sensors[i].instantFlow_L_s;
-            }
-
-            double liters_in_interval = sensors[i].instantFlow_L_s * elapsedTime_s;
-            sensors[i].sessionLiters += liters_in_interval;
-            sensors[i].cumulativeLiters += liters_in_interval;
-          } else {
-            sensors[i].instantFlow_L_s = 0.0f;
-          }
-
-          totalSessionLiters += sensors[i].sessionLiters;
-          aggregateFlowLps += sensors[i].instantFlow_L_s;
-          if (!sensors[i].isReady) {
-            allReady = false;
-          }
-        } else {
-          sensors[i].instantFlow_L_s = 0.0f;
-          allReady = false;
-        }
-        modbusManager.syncSensorToHolding(i);
-      }
-      if (activeSensors == 0) {
-        allReady = false;
-      }
-      totalSessionLitersCache = totalSessionLiters;
-      aggregateFlowLpsCache = aggregateFlowLps;
-      allSensorsReadyCache = allReady;
-      updateDiagnostics();
-      modbusManager.syncGlobalRegisters();
+      sensorStateEngine.update(elapsedTime_s);
     }
 
     // Save cumulative data periodically to prevent excessive NVS writes
@@ -355,7 +225,7 @@ void logicTaskCode(void * pvParameters) {
       }
       lastSaveTime = now;
     }
-    const bool suspendLeds = factoryResetState.holdActive || factoryResetState.restartScheduled;
+    const bool suspendLeds = interactions.ledsSuspended;
     ledController.setSuspended(suspendLeds);
     ledController.update(now,
                          totalSessionLitersCache,
@@ -371,11 +241,11 @@ void logicTaskCode(void * pvParameters) {
                         totalSessionLitersCache,
                         aggregateFlowLpsCache,
                         ledController,
-                        countdown);
+                        interactions.countdown);
 
     uiRenderer.update(now, uiController.context());
 
-    if (factoryResetState.restartScheduled && now >= factoryResetState.restartAtMs) {
+    if (interactions.restartScheduled && now >= interactions.restartAtMs) {
       esp_restart();
     }
 
@@ -389,6 +259,9 @@ void logicTaskCode(void * pvParameters) {
 void setup() {
   M5StamPLC.begin();
   Serial.begin(115200);
+  uiRenderer.bindScreenRouter(&uiScreenRouter);
+  uiRenderer.bindBindingResolver(&uiBindingResolver);
+  uiRenderer.applyTheme(kUiAssets.palette);
   uiRenderer.begin();
 
   xTaskCreatePinnedToCore(pollingTaskCode, "PollingTask", 4096, NULL, 2, &PollingTask, 0);

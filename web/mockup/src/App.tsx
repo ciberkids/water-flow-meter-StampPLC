@@ -494,15 +494,6 @@ export function App() {
                   )}
                 </section>
 
-                <section className="json-live">
-                  <strong>Live screen JSON</strong>
-                  <p>
-                    Snapshot of <code>{selectedScreen?.id ?? "—"}</code> rendered from the dataset. Updates immediately when you
-                    switch screens or edit JSON.
-                  </p>
-                  <pre>{selectedScreen ? JSON.stringify(selectedScreen, null, 2) : "// Select a screen to view JSON."}</pre>
-                </section>
-
                 <div className="workspace-footer">
                   <span>
                     Data Source: <code>src/data/screens.json</code>
@@ -526,6 +517,16 @@ export function App() {
                   zoomPercent={zoom}
                   showGrid={showGrid}
                   screen={selectedScreen}
+                  previewFooter={
+                    <section className="json-live json-live--design">
+                      <strong>Live screen JSON</strong>
+                      <p>
+                        Snapshot of <code>{selectedScreen?.id ?? "—"}</code> rendered from the dataset. Updates immediately when you
+                        switch screens or edit JSON.
+                      </p>
+                      <pre>{selectedScreen ? JSON.stringify(selectedScreen, null, 2) : "// Select a screen to view JSON."}</pre>
+                    </section>
+                  }
                 />
               </div>
             </div>

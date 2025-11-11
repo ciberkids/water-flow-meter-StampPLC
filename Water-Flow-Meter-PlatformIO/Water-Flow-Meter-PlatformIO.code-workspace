@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "../../water flow meter/Water-Flow-Meter-PlatformIO"
+		},
+		{
+			"name": "Water-Flow-Meter-PlatformIO",
+			"path": "."
+		}
+	],
+	"settings": {}
+}

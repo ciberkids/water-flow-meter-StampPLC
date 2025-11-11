@@ -1,4 +1,4 @@
-import { ChangeEvent } from "react";
+import { ChangeEvent, ReactNode } from "react";
 import { DisplayViewport } from "./DisplayViewport";
 import type { LayoutReport } from "../utils/layout";
 import type { ScreenDefinition } from "../types";
@@ -106,9 +106,10 @@ interface ThemeEditorProps {
   zoomPercent: number;
   showGrid: boolean;
   screen?: ScreenDefinition;
+  previewFooter?: ReactNode;
 }
 
-export function ThemeEditor({ layout, zoomPercent, showGrid, screen }: ThemeEditorProps) {
+export function ThemeEditor({ layout, zoomPercent, showGrid, screen, previewFooter }: ThemeEditorProps) {
   const { theme, updateTheme, resetTheme } = useTheme();
   const previewZoom =
     layout?.bounds.orientation === "landscape" ? Math.min(zoomPercent, 160) : Math.min(zoomPercent, 200);
@@ -222,6 +223,7 @@ export function ThemeEditor({ layout, zoomPercent, showGrid, screen }: ThemeEdit
           ) : (
             <p className="theme-editor__empty">Select a screen to preview design changes.</p>
           )}
+          {previewFooter && <div className="theme-editor__preview-footer">{previewFooter}</div>}
         </aside>
 
         <div className="theme-editor__sections">

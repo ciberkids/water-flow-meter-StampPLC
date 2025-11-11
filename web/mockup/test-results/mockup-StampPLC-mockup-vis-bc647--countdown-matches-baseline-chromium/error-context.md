@@ -1,0 +1,107 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary [ref=e5]:
+    - generic [ref=e6]:
+      - heading "Workspace overview" [level=2] [ref=e7]
+      - generic [ref=e8]:
+        - paragraph [ref=e9]:
+          - strong [ref=e10]: "Validation:"
+          - text: Ready
+        - paragraph [ref=e11]:
+          - strong [ref=e12]: "Active screen:"
+          - text: Reset Countdown
+        - paragraph [ref=e13]:
+          - strong [ref=e14]: "Total screens:"
+          - text: "3"
+    - generic [ref=e15]:
+      - heading "Theme snapshot" [level=2] [ref=e16]
+      - generic [ref=e17]:
+        - paragraph [ref=e18]:
+          - strong [ref=e19]: "Name:"
+          - text: StampPLC Default
+        - paragraph [ref=e20]:
+          - strong [ref=e21]: "Value colour:"
+          - text: "#56d2ff"
+        - paragraph [ref=e22]:
+          - strong [ref=e23]: "Orientation:"
+          - text: landscape
+  - main [ref=e24]:
+    - generic [ref=e25]:
+      - button "Simulation" [ref=e26] [cursor=pointer]
+      - button "Design" [ref=e27] [cursor=pointer]
+      - button "Import & Export" [ref=e28] [cursor=pointer]
+      - button "Help & Documentation" [ref=e29] [cursor=pointer]
+    - generic [ref=e31]:
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - heading "Screens" [level=2] [ref=e35]
+          - generic [ref=e36]:
+            - button "Info Overview Instant flow telemetry with sensor readiness badges." [ref=e37] [cursor=pointer]:
+              - strong [ref=e38]: Info Overview
+              - generic [ref=e39]: Instant flow telemetry with sensor readiness badges.
+            - button "Configuration Menu Entry point to sensor setup and LED tuning." [ref=e40] [cursor=pointer]:
+              - strong [ref=e41]: Configuration Menu
+              - generic [ref=e42]: Entry point to sensor setup and LED tuning.
+            - button "Reset Countdown Factory reset hold overlay with progress indicator." [active] [ref=e43] [cursor=pointer]:
+              - strong [ref=e44]: Reset Countdown
+              - generic [ref=e45]: Factory reset hold overlay with progress indicator.
+        - generic [ref=e46]:
+          - heading "Screen details" [level=2] [ref=e47]
+          - generic [ref=e48]:
+            - paragraph [ref=e49]:
+              - strong [ref=e50]: "ID:"
+              - text: countdown
+            - paragraph [ref=e51]: Factory reset hold overlay with progress indicator.
+            - paragraph [ref=e52]:
+              - strong [ref=e53]: "Elements:"
+              - text: "5"
+      - generic [ref=e54]:
+        - generic [ref=e55]:
+          - generic [ref=e56]:
+            - generic [ref=e57]: Zoom (200%)
+            - slider "Zoom (200%)" [ref=e58]: "200"
+          - generic [ref=e60]:
+            - checkbox "Show grid overlay" [checked] [ref=e61]
+            - text: Show grid overlay
+          - generic [ref=e62]:
+            - generic [ref=e63]: Orientation
+            - generic [ref=e64]:
+              - button "Landscape" [ref=e65] [cursor=pointer]
+              - button "Portrait" [ref=e66] [cursor=pointer]
+        - generic [ref=e70]:
+          - generic [ref=e71]: Factory Reset
+          - generic [ref=e72]: Hold buttons to continue...
+          - generic [ref=e74]: 24 s
+          - generic [ref=e75]: Release to cancel
+          - generic:
+            - generic: Red pulses per X L
+            - generic: Green = Ready
+            - generic: Blue = Flow
+        - generic [ref=e76]:
+          - heading "StampPLC Buttons" [level=3] [ref=e77]
+          - button "BtnA • Up Cycles to previous page" [ref=e78] [cursor=pointer]:
+            - text: BtnA • Up
+            - generic [ref=e79]: Cycles to previous page
+          - button "BtnB • Down Cycles to next page" [ref=e80] [cursor=pointer]:
+            - text: BtnB • Down
+            - generic [ref=e81]: Cycles to next page
+          - button "BtnC • Enter Short = Config · Long = Reset countdown" [ref=e82] [cursor=pointer]:
+            - text: BtnC • Enter
+            - generic [ref=e83]: Short = Config · Long = Reset countdown
+        - generic [ref=e84]:
+          - strong [ref=e85]: Layout diagnostics
+          - list [ref=e86]:
+            - listitem [ref=e87]:
+              - code [ref=e88]: message
+              - text: "spills beyond the viewport (x: 20, y: -31, w: 8, h: 162)"
+        - generic [ref=e89]:
+          - strong [ref=e90]: Button events
+          - generic [ref=e91]: No simulated input yet.
+        - generic [ref=e92]:
+          - generic [ref=e93]:
+            - text: "Data Source:"
+            - code [ref=e94]: src/data/screens.json
+          - generic [ref=e95]: "Resolution: 240 × 135 px · Zoomed to 2.0×"
+```

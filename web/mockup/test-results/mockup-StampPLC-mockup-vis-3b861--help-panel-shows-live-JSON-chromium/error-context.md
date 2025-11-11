@@ -1,0 +1,65 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary [ref=e5]:
+    - generic [ref=e6]:
+      - heading "Workspace overview" [level=2] [ref=e7]
+      - generic [ref=e8]:
+        - paragraph [ref=e9]:
+          - strong [ref=e10]: "Validation:"
+          - text: Ready
+        - paragraph [ref=e11]:
+          - strong [ref=e12]: "Active screen:"
+          - text: Info Overview
+        - paragraph [ref=e13]:
+          - strong [ref=e14]: "Total screens:"
+          - text: "3"
+    - generic [ref=e15]:
+      - heading "Theme snapshot" [level=2] [ref=e16]
+      - generic [ref=e17]:
+        - paragraph [ref=e18]:
+          - strong [ref=e19]: "Name:"
+          - text: StampPLC Default
+        - paragraph [ref=e20]:
+          - strong [ref=e21]: "Value colour:"
+          - text: "#56d2ff"
+        - paragraph [ref=e22]:
+          - strong [ref=e23]: "Orientation:"
+          - text: landscape
+  - main [ref=e24]:
+    - generic [ref=e25]:
+      - button "Simulation" [ref=e26] [cursor=pointer]
+      - button "Design" [ref=e27] [cursor=pointer]
+      - button "Import & Export" [ref=e28] [cursor=pointer]
+      - button "Help & Documentation" [active] [ref=e29] [cursor=pointer]
+    - generic [ref=e30]:
+      - generic [ref=e31]:
+        - heading "Help & explanation" [level=3] [ref=e32]
+        - paragraph [ref=e33]: Reference the expected JSON structure and inspect the live data for the currently selected screen. Use this view when preparing exports or cross-checking translator output.
+      - article [ref=e34]:
+        - heading "Dataset summary" [level=4] [ref=e35]
+        - generic [ref=e36]:
+          - generic [ref=e37]:
+            - term [ref=e38]: Total screens
+            - definition [ref=e39]: "3"
+          - generic [ref=e40]:
+            - term [ref=e41]: Screen IDs
+            - definition [ref=e42]: info-overview, configuration, countdown
+      - article [ref=e43]:
+        - heading "Schema reference" [level=4] [ref=e44]
+        - paragraph [ref=e45]:
+          - text: Each entry in
+          - code [ref=e46]: screens
+          - text: defines layout elements, navigation flows, assets, and animations. Use the dataset tools in the sidebar to import new JSON and validate it against this structure before exporting. The design tokens that drive colours and typography live under the dataset's top-level
+          - code [ref=e47]: theme
+          - text: key and stay aligned with the Design tab preview.
+        - generic [ref=e48]: "{ \"screens\": [ { \"id\": \"unique-id\", \"name\": \"UI label\", \"description\": \"Optional helper text\", \"elements\": [ { \"id\": \"element-id\", \"kind\": \"text | value | badge | box | icon\", \"x\": 0, \"y\": 0, \"width\": 50, \"height\": 12, \"content\": \"Rendered string\", \"align\": \"left | center | right\", \"emphasis\": \"normal | strong | muted\" } ], \"submenus\": [ { \"id\": \"submenu-id\", \"label\": \"Maintenance\", \"screenId\": \"target-screen-id\", \"iconAssetId\": \"optional-asset\" } ], \"flows\": [ { \"id\": \"flow-id\", \"label\": \"Go to maintenance\", \"targetScreenId\": \"target-screen-id\", \"trigger\": \"button | timeout | data\", \"guard\": \"optional boolean expression\" } ], \"assets\": [ { \"id\": \"countdown-ring\", \"type\": \"svg-sequence | bitmap | icon\", \"source\": \"relative/path/to/asset.svg\", \"frames\": [\"frame0.svg\", \"frame1.svg\"], \"fps\": 15, \"palette\": [\"#000000\", \"#00FF00\"] } ], \"animations\": [ { \"id\": \"animation-id\", \"targetElementId\": \"element-id\", \"kind\": \"frame-sequence | property\", \"easing\": \"linear | ease-in | ease-out | ease-in-out\", \"loop\": false, \"frames\": [ { \"at\": 0, \"state\": { \"content\": \"3\" }, \"assetFrameIndex\": 0 }, { \"at\": 1, \"state\": { \"content\": \"2\" }, \"assetFrameIndex\": 1 }, { \"at\": 2, \"state\": { \"content\": \"1\" }, \"assetFrameIndex\": 2 } ] } ] } ], \"theme\": { \"name\": \"Preset label\", \"colors\": { \"displayBackground\": \"#000a17\", \"textPrimary\": \"#f5faff\", \"textMuted\": \"#9caec6\", \"textStrong\": \"#ffffff\", \"value\": \"#56d2ff\", \"badgeBackground\": \"#0f1e33\", \"badgeBorder\": \"#80a8c9\", \"icon\": \"#56d2ff\", \"legend\": \"#85bbe8\", \"gridMinor\": \"rgba(124, 162, 206, 0.28)\", \"gridMajor\": \"rgba(124, 162, 206, 0.55)\" }, \"typography\": { \"base\": 8, \"value\": 10, \"badge\": 8 }, \"animation\": { \"easing\": \"ease-in-out\" } } }"
+      - article [ref=e49]:
+        - heading "Live screen JSON" [level=4] [ref=e50]
+        - paragraph [ref=e51]:
+          - text: Rendered from
+          - code [ref=e52]: info-overview
+          - text: . Changes to the data source update this view automatically.
+        - generic [ref=e53]: "{ \"id\": \"info-overview\", \"name\": \"Info Overview\", \"description\": \"Instant flow telemetry with sensor readiness badges.\", \"elements\": [ { \"id\": \"title\", \"kind\": \"text\", \"x\": 4, \"y\": 4, \"content\": \"Instant Flow\", \"emphasis\": \"strong\" }, { \"id\": \"value-total\", \"kind\": \"value\", \"x\": 4, \"y\": 20, \"content\": \"124.6 L/min\" }, { \"id\": \"badge-ready\", \"kind\": \"badge\", \"x\": 4, \"y\": 34, \"content\": \"All sensors ready\" }, { \"id\": \"box-left\", \"kind\": \"box\", \"x\": 4, \"y\": 48, \"width\": 58, \"height\": 60 }, { \"id\": \"box-right\", \"kind\": \"box\", \"x\": 72, \"y\": 48, \"width\": 58, \"height\": 60 }, { \"id\": \"sensor-1\", \"kind\": \"text\", \"x\": 8, \"y\": 52, \"content\": \"S1 15.2 L/min\" }, { \"id\": \"sensor-2\", \"kind\": \"text\", \"x\": 8, \"y\": 64, \"content\": \"S2 14.9 L/min\" }, { \"id\": \"sensor-3\", \"kind\": \"text\", \"x\": 8, \"y\": 76, \"content\": \"S3 13.4 L/min\" }, { \"id\": \"sensor-4\", \"kind\": \"text\", \"x\": 8, \"y\": 88, \"content\": \"S4 12.8 L/min\" }, { \"id\": \"sensor-5\", \"kind\": \"text\", \"x\": 76, \"y\": 52, \"content\": \"S5 11.6 L/min\" }, { \"id\": \"sensor-6\", \"kind\": \"text\", \"x\": 76, \"y\": 64, \"content\": \"S6 10.1 L/min\" }, { \"id\": \"sensor-7\", \"kind\": \"text\", \"x\": 76, \"y\": 76, \"content\": \"S7 09.4 L/min\" }, { \"id\": \"sensor-8\", \"kind\": \"text\", \"x\": 76, \"y\": 88, \"content\": \"S8 08.0 L/min\" } ] }"
+```

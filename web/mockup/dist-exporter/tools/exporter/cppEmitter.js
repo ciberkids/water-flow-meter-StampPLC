@@ -31,6 +31,19 @@ enum class FlowTrigger : std::uint8_t {
   Data = 2
 };
 
+enum class FlowButton : std::uint8_t {
+  None = 0,
+  Up = 1,
+  Down = 2,
+  Enter = 3
+};
+
+enum class FlowGesture : std::uint8_t {
+  Short = 0,
+  Long = 1,
+  Hold = 2
+};
+
 enum class AnimationKind : std::uint8_t {
   FrameSequence = 0,
   Property = 1
@@ -51,6 +64,7 @@ struct Element {
   std::int16_t height;
   const TextPayload* text;
   const char* assetId;
+  const char* bindingId;
 };
 
 struct Flow {
@@ -58,7 +72,15 @@ struct Flow {
   const char* label;
   const char* targetScreenId;
   FlowTrigger trigger;
+  FlowButton button;
+  FlowGesture gesture;
+  std::uint32_t timeoutMs;
+  const char* dataSource;
+  const char* dataCondition;
   const char* guard;
+  const char* actionId;
+  const KeyValue* actionParams;
+  std::size_t actionParamCount;
 };
 
 struct KeyValue {
@@ -215,7 +237,10 @@ function emphasisLiteral(kind) {
     }
 }
 function flowTriggerLiteral(trigger) {
-    switch (trigger) {
+    if (!trigger) {
+        return "ui_exporter::FlowTrigger::Button";
+    }
+    switch (trigger.type) {
         case "timeout":
             return "ui_exporter::FlowTrigger::Timeout";
         case "data":
@@ -224,6 +249,53 @@ function flowTriggerLiteral(trigger) {
         default:
             return "ui_exporter::FlowTrigger::Button";
     }
+}
+function flowButtonLiteral(trigger) {
+    if (!trigger || trigger.type !== "button") {
+        return "ui_exporter::FlowButton::None";
+    }
+    switch (trigger.button) {
+        case "up":
+            return "ui_exporter::FlowButton::Up";
+        case "down":
+            return "ui_exporter::FlowButton::Down";
+        case "enter":
+        default:
+            return "ui_exporter::FlowButton::Enter";
+    }
+}
+function flowGestureLiteral(trigger) {
+    if (!trigger || trigger.type !== "button") {
+        return "ui_exporter::FlowGesture::Short";
+    }
+    switch (trigger.gesture) {
+        case "long":
+            return "ui_exporter::FlowGesture::Long";
+        case "hold":
+            return "ui_exporter::FlowGesture::Hold";
+        case "short":
+        case undefined:
+        default:
+            return "ui_exporter::FlowGesture::Short";
+    }
+}
+function flowTimeoutLiteral(trigger) {
+    if (!trigger || trigger.type !== "timeout") {
+        return "0";
+    }
+    return `${Math.max(0, Math.floor(trigger.durationMs ?? 0))}`;
+}
+function flowDataLiteral(trigger) {
+    if (!trigger || trigger.type !== "data") {
+        return { source: "nullptr", condition: "nullptr" };
+    }
+    const sourceLiteral = trigger.source
+        ? `"${escapeStringLiteral(trigger.source)}"`
+        : "nullptr";
+    const conditionLiteral = trigger.condition
+        ? `"${escapeStringLiteral(trigger.condition)}"`
+        : "nullptr";
+    return { source: sourceLiteral, condition: conditionLiteral };
 }
 function animationKindLiteral(kind) {
     switch (kind) {
@@ -278,7 +350,10 @@ export function emitCpp(ir) {
             const assetId = element.kind.type === "icon" && element.kind.payload.assetId
                 ? `"${escapeStringLiteral(element.kind.payload.assetId)}"`
                 : "nullptr";
-            elementLines.push(`{ "${escapeStringLiteral(element.id)}", ${typeLiteral}, ${element.position.x}, ${element.position.y}, ${width}, ${height}, ${textPointer}, ${assetId} }`);
+            const bindingLiteral = element.binding
+                ? `"${escapeStringLiteral(element.binding)}"`
+                : "nullptr";
+            elementLines.push(`{ "${escapeStringLiteral(element.id)}", ${typeLiteral}, ${element.position.x}, ${element.position.y}, ${width}, ${height}, ${textPointer}, ${assetId}, ${bindingLiteral} }`);
         });
         const elementArrayName = `k${screenLabel}Elements`;
         if (textPayloadLines.length > 0) {
@@ -293,9 +368,28 @@ export function emitCpp(ir) {
         let flowCountExpr = "0";
         if (screen.flows.length > 0) {
             flowArrayName = `k${screenLabel}Flows`;
-            const flowLines = screen.flows.map((flow, flowIndex) => {
+            const flowLines = [];
+            screen.flows.forEach((flow, flowIndex) => {
                 const guardLiteral = flow.guard ? `"${escapeStringLiteral(flow.guard)}"` : "nullptr";
-                return `    { "${escapeStringLiteral(flow.id)}", "${escapeStringLiteral(flow.label)}", "${escapeStringLiteral(flow.targetScreenId)}", ${flowTriggerLiteral(flow.trigger)}, ${guardLiteral} }`;
+                const targetLiteral = flow.targetScreenId
+                    ? `"${escapeStringLiteral(flow.targetScreenId)}"`
+                    : "nullptr";
+                const actionLiteral = flow.actionId ? `"${escapeStringLiteral(flow.actionId)}"` : "nullptr";
+                let actionParamsName = "nullptr";
+                let actionParamsCount = "0";
+                const actionParamEntries = flow.actionParams ? Object.entries(flow.actionParams) : [];
+                if (actionParamEntries.length > 0) {
+                    actionParamsName = `k${screenLabel}_Flow${flowIndex}ActionParams`;
+                    const kvLines = actionParamEntries.map(([key, value]) => `    { "${escapeStringLiteral(key)}", ${stringLiteralForStateValue(value)} }`);
+                    sourceLines.push("");
+                    sourceLines.push(`static constexpr ui_exporter::KeyValue ${actionParamsName}[] = {`);
+                    sourceLines.push(kvLines.join(",\n"));
+                    sourceLines.push("};");
+                    actionParamsCount = `sizeof(${actionParamsName}) / sizeof(${actionParamsName}[0])`;
+                }
+                const timeoutLiteral = flowTimeoutLiteral(flow.trigger);
+                const { source: dataSourceLiteral, condition: dataConditionLiteral } = flowDataLiteral(flow.trigger);
+                flowLines.push(`    { "${escapeStringLiteral(flow.id)}", "${escapeStringLiteral(flow.label)}", ${targetLiteral}, ${flowTriggerLiteral(flow.trigger)}, ${flowButtonLiteral(flow.trigger)}, ${flowGestureLiteral(flow.trigger)}, ${timeoutLiteral}, ${dataSourceLiteral}, ${dataConditionLiteral}, ${guardLiteral}, ${actionLiteral}, ${actionParamsName}, ${actionParamsCount} }`);
             });
             sourceLines.push("");
             sourceLines.push(`static constexpr ui_exporter::Flow ${flowArrayName}[] = {`);

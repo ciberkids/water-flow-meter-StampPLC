@@ -46,7 +46,7 @@ Define the functional requirements for leveraging the StampPLC’s integrated di
 ### 4.2. Propeller Indicator
 
 - Right-hand side renders an SVG propeller.
-- Animation cycles through pre-rendered frames at 6 fps while any sensor satisfies `isReady == true` AND `instantFlow_L_s > 0.0`.
+- Animation cycles through pre-rendered frames at 1 fps while any sensor satisfies `isReady == true` AND `instantFlow_L_s > 0.0`.
 - When all sensors report zero flow, show static “stopped” frame.
 
 ### 4.3. Telemetry Pages

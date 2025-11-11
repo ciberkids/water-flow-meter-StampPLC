@@ -13,14 +13,39 @@ export interface ScreenElement {
   content?: string;
   align?: "left" | "center" | "right";
   emphasis?: "normal" | "strong" | "muted";
+  binding?: string;
 }
+
+export type ButtonName = "up" | "down" | "enter";
+export type ButtonGesture = "short" | "long" | "hold";
+
+export interface ButtonFlowTrigger {
+  type: "button";
+  button: ButtonName;
+  gesture?: ButtonGesture;
+}
+
+export interface TimeoutFlowTrigger {
+  type: "timeout";
+  durationMs: number;
+}
+
+export interface DataFlowTrigger {
+  type: "data";
+  source: string;
+  condition: string;
+}
+
+export type FlowTrigger = ButtonFlowTrigger | TimeoutFlowTrigger | DataFlowTrigger;
 
 export interface ScreenFlow {
   id: string;
   label: string;
-  targetScreenId: string;
-  trigger: "button" | "timeout" | "data";
+  targetScreenId?: string;
+  trigger: FlowTrigger;
   guard?: string;
+  actionId?: string;
+  actionParams?: Record<string, string | number | boolean>;
 }
 
 export interface ScreenGraphicAsset {

@@ -85,7 +85,7 @@ function parseCliArgs(projectRoot, workspaceRoot) {
     const screensDefaultPath = path.join(workspaceRoot, "src", "data", "screens.json");
     const screensDefault = path.relative(projectRoot, screensDefaultPath);
     const themeDefault = "";
-    const outDefaultPath = path.join(projectRoot, "Water Flow Meter PlatformIO", "src", "ui", "generated");
+    const outDefaultPath = path.join(projectRoot, "Water-Flow-Meter-PlatformIO", "src", "ui", "generated");
     const outDefault = path.relative(projectRoot, outDefaultPath);
     const { values } = parseArgs({
         options: {
@@ -106,7 +106,7 @@ function parseCliArgs(projectRoot, workspaceRoot) {
 async function run() {
     const currentDir = path.dirname(fileURLToPath(import.meta.url));
     const workspaceRoot = await resolveWorkspaceRoot(currentDir);
-    const projectRoot = path.resolve(workspaceRoot, "..");
+    const projectRoot = path.resolve(workspaceRoot, "..", "..");
     const options = parseCliArgs(projectRoot, workspaceRoot);
     try {
         const dataset = ensureValidDataset(await readJsonFile(options.screens));

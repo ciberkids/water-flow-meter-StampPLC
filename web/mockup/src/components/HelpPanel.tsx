@@ -22,7 +22,8 @@ const structureReference = `{
           "height": 12,
           "content": "Rendered string",
           "align": "left | center | right",
-          "emphasis": "normal | strong | muted"
+          "emphasis": "normal | strong | muted",
+          "binding": "optional.binding.id"
         }
       ],
       "submenus": [
@@ -38,7 +39,15 @@ const structureReference = `{
           "id": "flow-id",
           "label": "Go to maintenance",
           "targetScreenId": "target-screen-id",
-          "trigger": "button | timeout | data",
+          "trigger": {
+            "type": "button",
+            "button": "up | down | enter",
+            "gesture": "short | long | hold"
+          },
+          "actionId": "ui.navigate.page.next",
+          "actionParams": {
+            "durationMs": 3000
+          },
           "guard": "optional boolean expression"
         }
       ],

@@ -1,0 +1,123 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary [ref=e5]:
+    - generic [ref=e6]:
+      - heading "Workspace overview" [level=2] [ref=e7]
+      - generic [ref=e8]:
+        - paragraph [ref=e9]:
+          - strong [ref=e10]: "Validation:"
+          - text: Ready
+        - paragraph [ref=e11]:
+          - strong [ref=e12]: "Active screen:"
+          - text: Info Overview
+        - paragraph [ref=e13]:
+          - strong [ref=e14]: "Total screens:"
+          - text: "3"
+    - generic [ref=e15]:
+      - heading "Theme snapshot" [level=2] [ref=e16]
+      - generic [ref=e17]:
+        - paragraph [ref=e18]:
+          - strong [ref=e19]: "Name:"
+          - text: StampPLC Default
+        - paragraph [ref=e20]:
+          - strong [ref=e21]: "Value colour:"
+          - text: "#56d2ff"
+        - paragraph [ref=e22]:
+          - strong [ref=e23]: "Orientation:"
+          - text: landscape
+  - main [ref=e24]:
+    - generic [ref=e25]:
+      - button "Simulation" [ref=e26] [cursor=pointer]
+      - button "Design" [ref=e27] [cursor=pointer]
+      - button "Import & Export" [ref=e28] [cursor=pointer]
+      - button "Help & Documentation" [ref=e29] [cursor=pointer]
+    - generic [ref=e31]:
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - heading "Screens" [level=2] [ref=e35]
+          - generic [ref=e36]:
+            - button "Info Overview Instant flow telemetry with sensor readiness badges." [ref=e37] [cursor=pointer]:
+              - strong [ref=e38]: Info Overview
+              - generic [ref=e39]: Instant flow telemetry with sensor readiness badges.
+            - button "Configuration Menu Entry point to sensor setup and LED tuning." [ref=e40] [cursor=pointer]:
+              - strong [ref=e41]: Configuration Menu
+              - generic [ref=e42]: Entry point to sensor setup and LED tuning.
+            - button "Reset Countdown Factory reset hold overlay with progress indicator." [ref=e43] [cursor=pointer]:
+              - strong [ref=e44]: Reset Countdown
+              - generic [ref=e45]: Factory reset hold overlay with progress indicator.
+        - generic [ref=e46]:
+          - heading "Screen details" [level=2] [ref=e47]
+          - generic [ref=e48]:
+            - paragraph [ref=e49]:
+              - strong [ref=e50]: "ID:"
+              - text: info-overview
+            - paragraph [ref=e51]: Instant flow telemetry with sensor readiness badges.
+            - paragraph [ref=e52]:
+              - strong [ref=e53]: "Elements:"
+              - text: "13"
+      - generic [ref=e54]:
+        - generic [ref=e55]:
+          - generic [ref=e56]:
+            - generic [ref=e57]: Zoom (200%)
+            - slider "Zoom (200%)" [ref=e58]: "200"
+          - generic [ref=e60]:
+            - checkbox "Show grid overlay" [checked] [ref=e61]
+            - text: Show grid overlay
+          - generic [ref=e62]:
+            - generic [ref=e63]: Orientation
+            - generic [ref=e64]:
+              - button "Landscape" [active] [ref=e65] [cursor=pointer]
+              - button "Portrait" [ref=e66] [cursor=pointer]
+        - generic [ref=e70]:
+          - generic [ref=e71]: Instant Flow
+          - generic [ref=e72]: 124.6 L/min
+          - generic [ref=e73]: All sensors ready
+          - generic [ref=e76]: S1 15.2 L/min
+          - generic [ref=e77]: S2 14.9 L/min
+          - generic [ref=e78]: S3 13.4 L/min
+          - generic [ref=e79]: S4 12.8 L/min
+          - generic [ref=e80]: S5 11.6 L/min
+          - generic [ref=e81]: S6 10.1 L/min
+          - generic [ref=e82]: S7 09.4 L/min
+          - generic [ref=e83]: S8 08.0 L/min
+          - generic:
+            - generic: Red pulses per X L
+            - generic: Green = Ready
+            - generic: Blue = Flow
+        - generic [ref=e84]:
+          - heading "StampPLC Buttons" [level=3] [ref=e85]
+          - button "BtnA • Up Cycles to previous page" [ref=e86] [cursor=pointer]:
+            - text: BtnA • Up
+            - generic [ref=e87]: Cycles to previous page
+          - button "BtnB • Down Cycles to next page" [ref=e88] [cursor=pointer]:
+            - text: BtnB • Down
+            - generic [ref=e89]: Cycles to next page
+          - button "BtnC • Enter Short = Config · Long = Reset countdown" [ref=e90] [cursor=pointer]:
+            - text: BtnC • Enter
+            - generic [ref=e91]: Short = Config · Long = Reset countdown
+        - generic [ref=e92]:
+          - strong [ref=e93]: Layout diagnostics
+          - list [ref=e94]:
+            - listitem [ref=e95]:
+              - code [ref=e96]: sensor-5
+              - text: "spills beyond the viewport (x: 52, y: -19, w: 8, h: 78)"
+            - listitem [ref=e97]:
+              - code [ref=e98]: sensor-6
+              - text: "spills beyond the viewport (x: 64, y: -19, w: 8, h: 78)"
+            - listitem [ref=e99]:
+              - code [ref=e100]: sensor-7
+              - text: "spills beyond the viewport (x: 76, y: -19, w: 8, h: 78)"
+            - listitem [ref=e101]:
+              - code [ref=e102]: sensor-8
+              - text: "spills beyond the viewport (x: 88, y: -19, w: 8, h: 78)"
+        - generic [ref=e103]:
+          - strong [ref=e104]: Button events
+          - generic [ref=e105]: No simulated input yet.
+        - generic [ref=e106]:
+          - generic [ref=e107]:
+            - text: "Data Source:"
+            - code [ref=e108]: src/data/screens.json
+          - generic [ref=e109]: "Resolution: 240 × 135 px · Zoomed to 2.0×"
+```

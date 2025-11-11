@@ -45,8 +45,8 @@ npm run test:exporter     # Schema + IR unit tests (AJV + translator)
 
 Manage the mockup dataset directly inside the UI:
 
-- **Simulation** — load screens through the selector, inspect live JSON, and exercise the simulated hardware controls.
-- **Design** — adjust layout tokens visually or via JSON, with the same screen selector/context cards embedded beside the editor.
+- **Simulation** — load screens through the selector and exercise the simulated hardware controls.
+- **Design** — adjust layout tokens visually or via JSON, inspect the live screen JSON, and use the shared screen selector/context cards beside the editor.
 - **Import & Export** — load or validate `screens.json`, download the current dataset, and run the firmware translator once validation succeeds.
 - **Help & Documentation** — reference the schema, learn how the tool works, and review dataset metadata.
 - Design tokens travel with `screens.json`; the translator reads them directly from the dataset so firmware mirrors what you preview.
