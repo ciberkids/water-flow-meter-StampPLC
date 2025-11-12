@@ -3,7 +3,7 @@ import "./App.css";
 import { DisplayViewport } from "./components/DisplayViewport";
 import { ScreenSelector } from "./components/ScreenSelector";
 import screensData from "./data/screens.json";
-import { DisplayOrientation, ScreenDataset, ScreenDefinition } from "./types";
+import { DisplayOrientation, ScreenDataset, ScreenDefinition, ScreenElement } from "./types";
 import { ButtonPanel } from "./components/ButtonPanel";
 import { ThemeEditor } from "./components/ThemeEditor";
 import { HelpPanel } from "./components/HelpPanel";
@@ -15,6 +15,10 @@ import { SimulatedButton, SimulatedButtonEvent } from "./types/buttonSimulation"
 import { computeLayout } from "./utils/layout";
 import { SchemaValidationError, validateDataset } from "./schema/validation";
 import { ExporterPanel } from "./components/ExporterPanel";
+import { SimulationTracePanel } from "./components/SimulationTracePanel";
+import { ValuePlaceholderPanel } from "./components/ValuePlaceholderPanel";
+import { SimulationTraceEntry } from "./types/simulationTrace";
+import { findMatchingButtonFlows } from "./utils/flowMatching";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -82,6 +86,10 @@ export function App() {
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [orientation, setOrientation] = useState<DisplayOrientation>("landscape");
   const [interactionLog, setInteractionLog] = useState<string[]>([]);
+  const [traceEntries, setTraceEntries] = useState<SimulationTraceEntry[]>([]);
+  const [traceFilter, setTraceFilter] = useState<string>("");
+  const [transitionPreview, setTransitionPreview] = useState<{ screenId: string; screenName?: string } | null>(null);
+  const [valueOverrides, setValueOverrides] = useState<Record<string, Record<string, string>>>({});
   const [activePanel, setActivePanel] = useState<"simulation" | "design" | "importExport" | "help">("simulation");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const screenJsonDownload = useCallback(() => {
@@ -111,6 +119,7 @@ export function App() {
     [screens, selectedScreenId]
   );
   const totalScreens = screens.length;
+  const selectedScreenOverrides = selectedScreen ? valueOverrides[selectedScreen.id] ?? {} : {};
 
   const validateDatasetSafe = useCallback((raw: unknown) => {
     try {
@@ -199,6 +208,14 @@ export function App() {
   }, [dataset.theme, theme, updateTheme]);
 
   useEffect(() => {
+    if (!transitionPreview) {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setTransitionPreview(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [transitionPreview]);
+
+  useEffect(() => {
     setDataset((current) => {
       if (themesEqual(current.theme, theme)) {
         return current;
@@ -216,6 +233,102 @@ export function App() {
       return next.slice(0, 6);
     });
   }, []);
+
+  const recordTraceEntry = useCallback(
+    (entry: Omit<SimulationTraceEntry, "timestamp"> & { timestamp?: number }) => {
+      setTraceEntries((current) => {
+        const next = [{ ...entry, timestamp: entry.timestamp ?? Date.now() }, ...current];
+        return next.slice(0, 25);
+      });
+    },
+    []
+  );
+
+  const handleTraceReplay = useCallback(
+    (entry: SimulationTraceEntry) => {
+      recordTraceEntry({
+        ...entry,
+        timestamp: Date.now(),
+        notes: entry.notes ? `${entry.notes} • replay` : "replay"
+      });
+    },
+    [recordTraceEntry]
+  );
+
+  const handleTraceClear = useCallback(() => {
+    setTraceEntries([]);
+  }, []);
+
+  const handleValueChange = useCallback(
+    (screenId: string, element: ScreenElement, nextValue: string) => {
+      const baseValue = element.content ?? "";
+      const currentOverride = valueOverrides[screenId]?.[element.id];
+      const previousValue = currentOverride ?? baseValue;
+      if (previousValue === baseValue && nextValue !== baseValue) {
+        recordTraceEntry({
+          id: "ui.mock.value-edit",
+          label: "Value edited",
+          trigger: `value.edit.${element.id}`,
+          screenId,
+          screenName: selectedScreen?.name,
+          actionParams: { elementId: element.id, value: nextValue }
+        });
+      }
+      setValueOverrides((current) => {
+        const existing = current[screenId] ?? {};
+        return {
+          ...current,
+          [screenId]: {
+            ...existing,
+            [element.id]: nextValue
+          }
+        };
+      });
+    },
+    [recordTraceEntry, selectedScreen?.name, valueOverrides]
+  );
+
+  const handleValueRevert = useCallback((screenId: string, element: ScreenElement) => {
+    setValueOverrides((current) => {
+      const existing = current[screenId];
+      if (!existing) {
+        return current;
+      }
+      const { [element.id]: _removed, ...rest } = existing;
+      const next = { ...current };
+      if (Object.keys(rest).length === 0) {
+        delete next[screenId];
+      } else {
+        next[screenId] = rest;
+      }
+      return next;
+    });
+  }, []);
+
+  const handleValueSave = useCallback(
+    (screenId: string, element: ScreenElement, value: string) => {
+      recordTraceEntry({
+        id: "core.action.save-config",
+        label: "Save configuration",
+        trigger: `value.save.${element.id}`,
+        screenId,
+        screenName: selectedScreen?.name,
+        actionParams: { elementId: element.id, value }
+      });
+    },
+    [recordTraceEntry, selectedScreen?.name]
+  );
+
+  const previewTransition = useCallback(
+    (targetScreenId?: string) => {
+      if (!targetScreenId) {
+        return;
+      }
+      const targetScreen = dataset.screens.find((candidate) => candidate.id === targetScreenId);
+      setTransitionPreview({ screenId: targetScreenId, screenName: targetScreen?.name });
+    },
+    [dataset.screens]
+  );
 
   const selectByOffset = useCallback(
     (offset: number): string | undefined => {
@@ -244,6 +357,16 @@ export function App() {
     [screens]
   );
 
+  const handleNavigateFromValidation = useCallback(
+    (screenId: string) => {
+      const resolved = selectById(screenId);
+      if (resolved) {
+        setActivePanel("design");
+      }
+    },
+    [selectById]
+  );
+
   const handleButtonEvent = useCallback(
     (event: SimulatedButtonEvent) => {
       const label = `${event.button.toUpperCase()} • ${event.kind}`;
@@ -261,8 +384,32 @@ export function App() {
       appendLog(
         `[${new Date(event.timestamp).toLocaleTimeString()}] ${label} → ${activeScreen}`
       );
+
+      const resolvedFlows = findMatchingButtonFlows(selectedScreen, event);
+      if (resolvedFlows.length > 0) {
+        resolvedFlows.forEach((flow) => {
+          recordTraceEntry({
+            id: flow.actionId ?? "ui.action.unassigned",
+            label: flow.label,
+            trigger: `${event.button}.${event.kind}`,
+            screenId: selectedScreen?.id ?? "unknown",
+            screenName: selectedScreen?.name,
+            actionParams: flow.actionParams ?? null,
+            targetScreenId: flow.targetScreenId
+          });
+          previewTransition(flow.targetScreenId);
+        });
+      } else {
+        recordTraceEntry({
+          id: "ui.action.unmapped",
+          label: "No matching flow",
+          trigger: `${event.button}.${event.kind}`,
+          screenId: selectedScreen?.id ?? "unknown",
+          screenName: selectedScreen?.name
+        });
+      }
     },
-    [appendLog, selectById, selectByOffset, selectedScreen, screens]
+    [appendLog, previewTransition, recordTraceEntry, selectById, selectByOffset, selectedScreen, screens]
   );
 
   const { pressed, press, release, cancelAll } = useSimulatedButtons(handleButtonEvent);
@@ -327,7 +474,18 @@ export function App() {
     };
   }, [cancelAll, mapKeyToButton, press, release]);
 
-  const screenContext = (
+  const themeSnapshotSection = (
+    <section className="theme-snapshot">
+      <h2>Theme snapshot</h2>
+      <div className="screen-details">
+        <p><strong>Name:</strong> {dataset.theme.name}</p>
+        <p><strong>Value colour:</strong> {dataset.theme.colors.value}</p>
+        <p><strong>Orientation:</strong> {orientation}</p>
+      </div>
+    </section>
+  );
+
+  const renderScreenContext = (options?: { showThemeSnapshot?: boolean }) => (
     <div className="screen-context">
       <section>
         <h2>Screens</h2>
@@ -343,8 +501,21 @@ export function App() {
           <p><strong>ID:</strong> {selectedScreen?.id}</p>
           <p>{selectedScreen?.description}</p>
           <p><strong>Elements:</strong> {selectedScreen?.elements.length}</p>
+          <hr />
+          <p><strong>Validation:</strong> {validationLabel}</p>
+          <p><strong>Active screen:</strong> {selectedScreen?.name ?? "—"}</p>
+          <p><strong>Total screens:</strong> {datasetSummary.screenCount}</p>
         </div>
       </section>
+      <section className="interaction-log">
+        <h2>Button events</h2>
+        {interactionLog.length === 0 ? (
+          <span>No simulated input yet.</span>
+        ) : (
+          interactionLog.map((entry, index) => <span key={index}>{entry}</span>)
+        )}
+      </section>
+      {options?.showThemeSnapshot ? themeSnapshotSection : null}
     </div>
   );
 
@@ -357,25 +528,6 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <section>
-          <h2>Workspace overview</h2>
-          <div className="screen-details">
-            <p><strong>Validation:</strong> {validationLabel}</p>
-            <p><strong>Active screen:</strong> {selectedScreen?.name ?? "—"}</p>
-            <p><strong>Total screens:</strong> {datasetSummary.screenCount}</p>
-          </div>
-        </section>
-        <section>
-          <h2>Theme snapshot</h2>
-          <div className="screen-details">
-            <p><strong>Name:</strong> {dataset.theme.name}</p>
-            <p><strong>Value colour:</strong> {dataset.theme.colors.value}</p>
-            <p><strong>Orientation:</strong> {orientation}</p>
-          </div>
-        </section>
-      </aside>
-
       <main className="workspace">
         <div className="workspace-tabs">
           <button
@@ -410,8 +562,8 @@ export function App() {
 
         {activePanel === "simulation" && (
           <section className="panel simulation-view">
-            <div className="panel-grid">
-              <div className="panel-column panel-column--context">{screenContext}</div>
+            <div className="panel-grid panel-grid--simulation">
+              <div className="panel-column panel-column--context">{renderScreenContext()}</div>
               <div className="panel-column panel-column--main">
                 <section className="controls">
                   <div className="labelled-control">
@@ -462,13 +614,27 @@ export function App() {
                       layout={layoutReport}
                       zoomPercent={zoom}
                       showGrid={showGrid}
+                      valueOverrides={selectedScreenOverrides}
                     />
                   ) : (
                     <p>No screen selected.</p>
                   )}
+                  {transitionPreview && (
+                    <div className="transition-preview-banner">
+                      <strong>Transition preview:</strong> {transitionPreview.screenName ?? transitionPreview.screenId}
+                    </div>
+                  )}
                 </section>
 
                 <ButtonPanel pressed={pressed} onPressStart={press} onPressEnd={release} />
+
+                <ValuePlaceholderPanel
+                  screen={selectedScreen}
+                  overrides={selectedScreenOverrides}
+                  onChange={handleValueChange}
+                  onRevert={handleValueRevert}
+                  onSave={handleValueSave}
+                />
 
                 <section className="layout-warnings">
                   <strong>Layout diagnostics</strong>
@@ -485,15 +651,6 @@ export function App() {
                   )}
                 </section>
 
-                <section className="interaction-log">
-                  <strong>Button events</strong>
-                  {interactionLog.length === 0 ? (
-                    <span>No simulated input yet.</span>
-                  ) : (
-                    interactionLog.map((entry, index) => <span key={index}>{entry}</span>)
-                  )}
-                </section>
-
                 <div className="workspace-footer">
                   <span>
                     Data Source: <code>src/data/screens.json</code>
@@ -503,6 +660,15 @@ export function App() {
                   </span>
                 </div>
               </div>
+              <div className="panel-column panel-column--trace">
+                <SimulationTracePanel
+                  entries={traceEntries}
+                  filter={traceFilter}
+                  onFilterChange={setTraceFilter}
+                  onReplay={handleTraceReplay}
+                  onClear={handleTraceClear}
+                />
+              </div>
             </div>
           </section>
         )}
@@ -510,7 +676,7 @@ export function App() {
         {activePanel === "design" && (
           <section className="panel design-view">
             <div className="panel-grid panel-grid--design">
-              <div className="panel-column panel-column--context">{screenContext}</div>
+              <div className="panel-column panel-column--context">{renderScreenContext({ showThemeSnapshot: true })}</div>
               <div className="panel-column panel-column--main">
                 <ThemeEditor
                   layout={layoutReport}
@@ -603,14 +769,24 @@ export function App() {
                     <strong>IDs:</strong> {datasetSummary.ids.join(", ") || "—"}
                   </div>
                 </div>
-                <ExporterPanel disabled={validationFeedback.status === "error"} />
+                <ExporterPanel
+                  disabled={validationFeedback.status === "error"}
+                  onNavigateToScreen={handleNavigateFromValidation}
+                />
               </div>
             </div>
           </section>
         )}
 
         {activePanel === "help" && (
-          <HelpPanel dataset={dataset} selectedScreen={selectedScreen} />
+          <section className="panel help-view">
+            <div className="panel-grid">
+              <div className="panel-column panel-column--context">{renderScreenContext()}</div>
+              <div className="panel-column panel-column--main">
+                <HelpPanel dataset={dataset} selectedScreen={selectedScreen} />
+              </div>
+            </div>
+          </section>
         )}
       </main>
     </div>

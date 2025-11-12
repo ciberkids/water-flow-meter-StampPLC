@@ -100,7 +100,7 @@ ENTER long press on any device-level page exits configuration mode and returns t
 
 ### 5.3. Sensor Sub-Menu
 
-Once a sensor is selected from C5, the UI enters a scoped sub-menu with the following pages:
+Once a sensor is selected from C5, the UI enters a scoped sub-menu, the number selected in the previous menu is used as index to set up the correspondent sensor each sensor has the following pages:
 
 | Page | Label | Data Type | Range / Step | Behaviour |
 | :--- | :----- | :-------- | :----------- | :-------- |

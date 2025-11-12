@@ -1,0 +1,614 @@
+{
+  "generatedAt": "2025-11-11T14:29:45.928Z",
+  "screenCount": 3,
+  "elementCount": 27,
+  "dataset": [
+    {
+      "id": "info-overview",
+      "name": "Info Overview",
+      "description": "Instant flow telemetry with sensor readiness badges.",
+      "elements": [
+        {
+          "id": "title",
+          "position": {
+            "x": 4,
+            "y": 4
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Instant Flow",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "page.title"
+        },
+        {
+          "id": "value-total",
+          "position": {
+            "x": 4,
+            "y": 20
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "000.0 L/s",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "telemetry.total"
+        },
+        {
+          "id": "badge-ready",
+          "position": {
+            "x": 4,
+            "y": 34
+          },
+          "kind": {
+            "type": "badge",
+            "payload": {
+              "text": "All sensors ready",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "telemetry.status"
+        },
+        {
+          "id": "box-left",
+          "position": {
+            "x": 4,
+            "y": 48
+          },
+          "kind": {
+            "type": "box",
+            "payload": {
+              "width": 58,
+              "height": 60
+            }
+          },
+          "size": {
+            "width": 58,
+            "height": 60
+          }
+        },
+        {
+          "id": "box-right",
+          "position": {
+            "x": 72,
+            "y": 48
+          },
+          "kind": {
+            "type": "box",
+            "payload": {
+              "width": 58,
+              "height": 60
+            }
+          },
+          "size": {
+            "width": 58,
+            "height": 60
+          }
+        },
+        {
+          "id": "sensor-1",
+          "position": {
+            "x": 8,
+            "y": 52
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "S1 00.0",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.1"
+        },
+        {
+          "id": "sensor-2",
+          "position": {
+            "x": 8,
+            "y": 64
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "S2 00.0",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.2"
+        },
+        {
+          "id": "sensor-3",
+          "position": {
+            "x": 8,
+            "y": 76
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "S3 00.0",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.3"
+        },
+        {
+          "id": "sensor-4",
+          "position": {
+            "x": 8,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "S4 00.0",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.4"
+        },
+        {
+          "id": "sensor-5",
+          "position": {
+            "x": 76,
+            "y": 52
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "S5 00.0",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.5"
+        },
+        {
+          "id": "sensor-6",
+          "position": {
+            "x": 76,
+            "y": 64
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "S6 00.0",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.6"
+        },
+        {
+          "id": "sensor-7",
+          "position": {
+            "x": 76,
+            "y": 76
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "S7 00.0",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.7"
+        },
+        {
+          "id": "sensor-8",
+          "position": {
+            "x": 76,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "S8 00.0",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.8"
+        },
+        {
+          "id": "legend-led",
+          "position": {
+            "x": 0,
+            "y": 138
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "LED status legend",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "legend.led"
+        },
+        {
+          "id": "legend-warning",
+          "position": {
+            "x": 0,
+            "y": 150
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Warnings",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "legend.warning"
+        },
+        {
+          "id": "propeller",
+          "position": {
+            "x": 210,
+            "y": 48
+          },
+          "kind": {
+            "type": "icon",
+            "payload": {
+              "assetId": "propeller"
+            }
+          },
+          "size": {
+            "width": 44,
+            "height": 44
+          }
+        }
+      ],
+      "flows": [
+        {
+          "id": "info-nav-prev",
+          "label": "UP switches to previous page",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "info-nav-next",
+          "label": "DOWN switches to next page",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "info-enter-config",
+          "label": "ENTER opens configuration",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "configuration",
+          "actionId": "ui.action.mode.configuration"
+        },
+        {
+          "id": "info-enter-idle",
+          "label": "ENTER long press idles display",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "actionId": "ui.action.mode.idle"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "configuration",
+      "name": "Configuration Menu",
+      "description": "Entry point to sensor setup and LED tuning.",
+      "elements": [
+        {
+          "id": "title",
+          "position": {
+            "x": 4,
+            "y": 4
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Configuration",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.title"
+        },
+        {
+          "id": "info",
+          "position": {
+            "x": 4,
+            "y": 16
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Select an option:",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "option-1",
+          "position": {
+            "x": 4,
+            "y": 32
+          },
+          "kind": {
+            "type": "badge",
+            "payload": {
+              "text": "Sensors",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "option-2",
+          "position": {
+            "x": 4,
+            "y": 46
+          },
+          "kind": {
+            "type": "badge",
+            "payload": {
+              "text": "LED Pulse",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "option-3",
+          "position": {
+            "x": 4,
+            "y": 60
+          },
+          "kind": {
+            "type": "badge",
+            "payload": {
+              "text": "Nyquist Warnings",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "decor",
+          "position": {
+            "x": 115,
+            "y": 16
+          },
+          "kind": {
+            "type": "icon",
+            "payload": {}
+          }
+        }
+      ],
+      "flows": [
+        {
+          "id": "config-nav-prev",
+          "label": "UP selects previous field",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "config-nav-next",
+          "label": "DOWN selects next field",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "config-save",
+          "label": "ENTER saves configuration",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "actionId": "core.action.save-config",
+          "actionParams": {
+            "scope": "ui"
+          }
+        },
+        {
+          "id": "config-exit",
+          "label": "ENTER hold returns to info",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-overview",
+          "actionId": "ui.action.mode.info"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "countdown",
+      "name": "Reset Countdown",
+      "description": "Factory reset hold overlay with progress indicator.",
+      "elements": [
+        {
+          "id": "title",
+          "position": {
+            "x": 4,
+            "y": 4
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Factory Reset",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "countdown.title"
+        },
+        {
+          "id": "message",
+          "position": {
+            "x": 4,
+            "y": 20
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Hold buttons to continue...",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "countdown.message"
+        },
+        {
+          "id": "timer-box",
+          "position": {
+            "x": 18,
+            "y": 48
+          },
+          "kind": {
+            "type": "box",
+            "payload": {
+              "width": 100,
+              "height": 60
+            }
+          },
+          "size": {
+            "width": 100,
+            "height": 60
+          }
+        },
+        {
+          "id": "timer-value",
+          "position": {
+            "x": 68,
+            "y": 72
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "30 s",
+              "emphasis": "normal",
+              "align": "center"
+            }
+          },
+          "binding": "countdown.value"
+        },
+        {
+          "id": "hint",
+          "position": {
+            "x": 68,
+            "y": 90
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Release to cancel",
+              "emphasis": "muted",
+              "align": "center"
+            }
+          },
+          "binding": "countdown.hint"
+        }
+      ],
+      "flows": [],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    }
+  ],
+  "theme": {
+    "name": "StampPLC Default",
+    "colors": {
+      "displayBackground": {
+        "source": "#000a17",
+        "argb8888": 4278192663
+      },
+      "textPrimary": {
+        "source": "#f5faff",
+        "argb8888": 4294310655
+      },
+      "textMuted": {
+        "source": "#9caec6",
+        "argb8888": 4288458438
+      },
+      "textStrong": {
+        "source": "#ffffff",
+        "argb8888": 4294967295
+      },
+      "value": {
+        "source": "#56d2ff",
+        "argb8888": 4283880191
+      },
+      "badgeBackground": {
+        "source": "#0f1e33",
+        "argb8888": 4279180851
+      },
+      "badgeBorder": {
+        "source": "#80a8c9",
+        "argb8888": 4286621897
+      },
+      "icon": {
+        "source": "#56d2ff",
+        "argb8888": 4283880191
+      },
+      "legend": {
+        "source": "#85bbe8",
+        "argb8888": 4286954472
+      },
+      "gridMinor": {
+        "source": "rgba(124, 162, 206, 0.28)",
+        "argb8888": 1199350478
+      },
+      "gridMajor": {
+        "source": "rgba(124, 162, 206, 0.55)",
+        "argb8888": 2356978382
+      }
+    },
+    "typography": {
+      "base": 8,
+      "value": 10,
+      "badge": 8
+    },
+    "animation": {
+      "easing": "ease-in-out"
+    }
+  }
+}

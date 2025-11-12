@@ -260,7 +260,7 @@ test.describe("StampPLC mockup visual regression", () => {
     };
     const irPath = path.resolve(
       projectRoot,
-      "Water Flow Meter PlatformIO",
+      "Water-Flow-Meter-PlatformIO",
       "src",
       "ui",
       "generated",

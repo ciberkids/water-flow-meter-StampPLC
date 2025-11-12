@@ -4,16 +4,30 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { parseArgs } from "node:util";
+import { spawn } from "node:child_process";
 import { ensureValidDataset, ensureValidTheme, ExportValidationError } from "./schema.js";
 import { buildIntermediateRepresentation } from "./ir.js";
 import { emitCpp } from "./cppEmitter.js";
-import type { ExportIR } from "./types.js";
+import { runExportValidations } from "./validation.js";
+import type {
+  AutomationCheck,
+  BackupSummary,
+  ExportIR,
+  ValidationReport
+} from "./types.js";
 
 interface CliOptions {
   screens: string;
   theme?: string;
   out: string;
   dryRun: boolean;
+}
+
+interface CommandResult {
+  code: number;
+  stdout: string;
+  stderr: string;
+  command: string;
 }
 
 async function resolveWorkspaceRoot(startDir: string): Promise<string> {
@@ -78,6 +92,12 @@ async function backupGeneratedAssets(generatedDir: string, projectRoot: string):
   return backupDir;
 }
 
+async function restoreGeneratedAssets(sourceDir: string, destinationDir: string) {
+  await fs.rm(destinationDir, { recursive: true, force: true });
+  await fs.mkdir(destinationDir, { recursive: true });
+  await fs.cp(sourceDir, destinationDir, { recursive: true });
+}
+
 async function prepareOutputDirectory(outDir: string) {
   await fs.rm(outDir, { recursive: true, force: true });
   await fs.mkdir(outDir, { recursive: true });
@@ -120,14 +140,108 @@ function parseCliArgs(projectRoot: string, workspaceRoot: string): CliOptions {
     }
   });
 
-  const baseDir = projectRoot;
-
   return {
     screens: resolvePath(projectRoot, values.screens as string),
     theme: values.theme ? resolvePath(projectRoot, values.theme as string) : undefined,
     out: resolvePath(projectRoot, values.out as string),
     dryRun: Boolean(values["dry-run"])
   };
+}
+
+function collectOutput(stdout: string, stderr: string): string {
+  return [stdout.trim(), stderr.trim()].filter(Boolean).join("\n");
+}
+
+async function runCommand(command: string, args: string[], cwd: string): Promise<CommandResult> {
+  return await new Promise<CommandResult>((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: process.env
+    });
+
+    const stdoutChunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
+
+    child.stdout?.on("data", (chunk) => stdoutChunks.push(Buffer.from(chunk)));
+    child.stderr?.on("data", (chunk) => stderrChunks.push(Buffer.from(chunk)));
+
+    child.once("error", reject);
+    child.once("close", (code) => {
+      resolve({
+        code: code ?? 0,
+        stdout: Buffer.concat(stdoutChunks).toString("utf-8"),
+        stderr: Buffer.concat(stderrChunks).toString("utf-8"),
+        command: [command, ...args].join(" ").trim()
+      });
+    });
+  });
+}
+
+async function runPlatformioCheck(projectRoot: string): Promise<AutomationCheck> {
+  const firmwareDir = path.join(projectRoot, "Water-Flow-Meter-PlatformIO");
+  const candidates = ["platformio", "pio"];
+  let missingExecutables = 0;
+
+  for (const executable of candidates) {
+    try {
+      const start = process.hrtime.bigint();
+      const result = await runCommand(executable, ["run", "-e", "m5stack-stamplc"], firmwareDir);
+      const durationMs = Number(process.hrtime.bigint() - start) / 1_000_000;
+      const log = collectOutput(result.stdout, result.stderr);
+      if (result.code === 0) {
+        return {
+          id: "platformio-compile",
+          title: "PlatformIO compile check",
+          status: "pass",
+          message: "Generated UI assets compile with the firmware target.",
+          command: result.command,
+          durationMs,
+          log
+        };
+      }
+      return {
+        id: "platformio-compile",
+        title: "PlatformIO compile check",
+        status: "fail",
+        message: "PlatformIO compile failed. See log for details.",
+        command: result.command,
+        durationMs,
+        log: log || "(no compiler output)"
+      };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        missingExecutables += 1;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  const message =
+    missingExecutables === candidates.length
+      ? "PlatformIO CLI not found in PATH. Install platformio to enable compile checks."
+      : "PlatformIO command was not available.";
+
+  return {
+    id: "platformio-compile",
+    title: "PlatformIO compile check",
+    status: "warning",
+    message,
+    command: "platformio run -e m5stack-stamplc",
+    details: message
+  };
+}
+
+function validationFailurePayload(report?: ValidationReport) {
+  return (
+    report ?? {
+      status: "fail",
+      checks: [],
+      issues: ["Validation failed"],
+      log: ""
+    }
+  );
 }
 
 async function run() {
@@ -142,13 +256,72 @@ async function run() {
       ? ensureValidTheme(await readJsonFile(options.theme))
       : dataset.theme;
     const ir = buildIntermediateRepresentation(dataset, themeTokens);
+    const validationReport = runExportValidations(dataset, ir);
+
+    if (validationReport.status === "fail") {
+      throw new ExportValidationError(
+        "Post-export validation failed",
+        validationReport.issues,
+        validationReport
+      );
+    }
 
     let backupLocation: string | null = null;
+    let backupSummary: BackupSummary = {
+      attempted: !options.dryRun,
+      created: false,
+      location: null
+    };
+
     if (!options.dryRun) {
       backupLocation = await backupGeneratedAssets(options.out, projectRoot);
+      backupSummary = {
+        attempted: true,
+        created: Boolean(backupLocation),
+        location: backupLocation
+      };
     }
 
     await writeOutputs(ir, options.out, options.dryRun);
+
+    let compilationReport: AutomationCheck;
+    if (!options.dryRun) {
+      compilationReport = await runPlatformioCheck(projectRoot);
+      if (compilationReport.status === "fail") {
+        if (backupLocation) {
+          await restoreGeneratedAssets(backupLocation, options.out);
+          backupSummary.restored = true;
+          backupSummary.reason = "Compilation failed; restored previous export.";
+        } else {
+          await fs.rm(options.out, { recursive: true, force: true });
+          backupSummary.reason = "Compilation failed; removed incomplete assets because no backup was available.";
+        }
+        console.error(
+          JSON.stringify(
+            {
+              status: "automation-error",
+              message: compilationReport.message,
+              validation: validationReport,
+              compilation: compilationReport,
+              backup: backupSummary
+            },
+            null,
+            2
+          )
+        );
+        process.exitCode = 3;
+        return;
+      }
+    } else {
+      compilationReport = {
+        id: "platformio-compile",
+        title: "PlatformIO compile check",
+        status: "warning",
+        message: "Skipping compilation because --dry-run was provided.",
+        command: "platformio run -e m5stack-stamplc",
+        details: "Re-run without --dry-run to ensure the firmware compiles with generated assets."
+      };
+    }
 
     const summary = {
       generatedAt: ir.generatedAt,
@@ -157,14 +330,30 @@ async function run() {
       output: options.dryRun ? "(dry-run)" : options.out,
       backup: options.dryRun ? null : backupLocation
     };
-    // eslint-disable-next-line no-console
-    console.log(JSON.stringify({ status: "ok", summary }, null, 2));
+
+    console.log(
+      JSON.stringify(
+        {
+          status: "ok",
+          summary,
+          validation: validationReport,
+          backup: backupSummary,
+          compilation: compilationReport
+        },
+        null,
+        2
+      )
+    );
   } catch (error: unknown) {
     if (error instanceof ExportValidationError) {
-      // eslint-disable-next-line no-console
       console.error(
         JSON.stringify(
-          { status: "validation-error", message: error.message, issues: error.issues },
+          {
+            status: "validation-error",
+            message: error.message,
+            issues: error.issues,
+            validation: validationFailurePayload(error.report)
+          },
           null,
           2
         )
@@ -173,7 +362,6 @@ async function run() {
       return;
     }
     const message = error instanceof Error ? error.message : String(error);
-    // eslint-disable-next-line no-console
     console.error(JSON.stringify({ status: "error", message }, null, 2));
     process.exitCode = 1;
   }
@@ -181,7 +369,6 @@ async function run() {
 
 run().catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
-  // eslint-disable-next-line no-console
   console.error(JSON.stringify({ status: "error", message }, null, 2));
   process.exitCode = 1;
 });

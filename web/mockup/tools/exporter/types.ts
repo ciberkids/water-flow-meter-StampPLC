@@ -87,3 +87,41 @@ export interface ExportContext extends ValidatedInput {
   backupDir: string;
   ir: ExportIR;
 }
+
+export type ValidationStatus = "pass" | "warning" | "fail";
+
+export interface ValidationCheck {
+  id: string;
+  title: string;
+  status: ValidationStatus;
+  message: string;
+  screenId?: string;
+  elementId?: string;
+  recommendation?: string;
+}
+
+export interface ValidationReport {
+  status: ValidationStatus;
+  checks: ValidationCheck[];
+  issues: string[];
+  log: string;
+}
+
+export interface AutomationCheck {
+  id: string;
+  title: string;
+  status: ValidationStatus;
+  message: string;
+  details?: string;
+  durationMs?: number;
+  command?: string;
+  log?: string;
+}
+
+export interface BackupSummary {
+  attempted: boolean;
+  created: boolean;
+  location?: string | null;
+  restored?: boolean;
+  reason?: string;
+}

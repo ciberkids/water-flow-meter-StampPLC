@@ -14,9 +14,10 @@ addFormats(ajv);
 const datasetValidator = ajv.compile(datasetSchema);
 const themeValidator = ajv.compile(themeTokensSchema);
 export class ExportValidationError extends Error {
-    constructor(message, issues) {
+    constructor(message, issues, report) {
         super(message);
         this.issues = issues;
+        this.report = report;
         this.name = "ExportValidationError";
     }
 }

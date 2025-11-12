@@ -8,12 +8,13 @@ interface DisplayViewportProps {
   layout: LayoutReport;
   zoomPercent: number;
   showGrid: boolean;
+  valueOverrides?: Record<string, string>;
 }
 
 const FRAME_PADDING = 8;
 const DEVICE_FONT = "\"StampPLC-Pixel\", \"Press Start 2P\", monospace";
 
-export function DisplayViewport({ layout, zoomPercent, showGrid }: DisplayViewportProps) {
+export function DisplayViewport({ layout, zoomPercent, showGrid, valueOverrides }: DisplayViewportProps) {
   const { theme } = useTheme();
   const orientation = layout.bounds.orientation;
   const scale = useMemo(() => Math.max(zoomPercent / 100, 1), [zoomPercent]);
@@ -139,10 +140,18 @@ export function DisplayViewport({ layout, zoomPercent, showGrid }: DisplayViewpo
               style.display = "block";
             }
 
+            const displayContent =
+              element.kind === "value" && valueOverrides && valueOverrides[element.id] !== undefined
+                ? valueOverrides[element.id]
+                : element.content;
+
+            const isOverridden = element.kind === "value" && displayContent !== element.content;
+
             const className = [
               "display-element",
               `kind-${element.kind}`,
-              item.outOfBounds ? "overflow" : ""
+              item.outOfBounds ? "overflow" : "",
+              isOverridden ? "value-overridden" : ""
             ]
               .filter(Boolean)
               .join(" ");
@@ -153,7 +162,7 @@ export function DisplayViewport({ layout, zoomPercent, showGrid }: DisplayViewpo
               case "badge":
                 return (
                   <div key={element.id} className={className} style={style}>
-                    {element.content}
+                    {displayContent}
                   </div>
                 );
               case "box":

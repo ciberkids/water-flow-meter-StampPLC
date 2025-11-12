@@ -4,6 +4,7 @@ import addFormatsModule from "ajv-formats";
 import type { ScreenDataset } from "../../src/types.js";
 import type { ThemeTokens } from "../../src/theme/types.js";
 import { datasetSchema, themeTokensSchema } from "../../shared/schemaDefinitions.js";
+import type { ValidationReport } from "./types.js";
 
 type AjvInstance = import("ajv").default;
 
@@ -25,7 +26,7 @@ const datasetValidator = ajv.compile<ScreenDataset>(datasetSchema);
 const themeValidator = ajv.compile<ThemeTokens>(themeTokensSchema);
 
 export class ExportValidationError extends Error {
-  constructor(message: string, readonly issues: string[]) {
+  constructor(message: string, readonly issues: string[], readonly report?: ValidationReport) {
     super(message);
     this.name = "ExportValidationError";
   }
