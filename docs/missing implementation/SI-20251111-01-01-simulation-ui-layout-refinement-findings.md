@@ -34,7 +34,7 @@
 - [x] Update Simulation layout grid to include a right-side column housing the function trace panel (with max height, scrollbar, and clear button).
 - [x] Relocate the value editor under the StampPLC buttons block; ensure styling matches surrounding controls.
 - [x] Move the button events log into the screen-context column beneath “Screen details”.
-- [ ] Add tests/documentation screenshots reflecting the new layout arrangement.
+- [x] Add tests/documentation screenshots reflecting the new layout arrangement. *(Playwright snapshots regenerated via `npm run test:visual:update` on 2025-11-12.)*
 
 ---
 

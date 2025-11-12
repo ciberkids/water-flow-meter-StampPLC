@@ -9,3 +9,4 @@ ALWAYS USE PODMAN AND CONTAINERs when testing web code
 ALWAYS CREATE TESTS for the UI and run it
 when you make any modification to the ui, and the container is running, remember to restart it so i can view the differences
 ask questions when you are unsure on how to proceed or when you need more requirements.
+WHEN A STORY OR FINDINGS REPORT IS COMPLETE, COMMIT ALL RELATED CHANGES TO GIT (ONLY commit, no push).

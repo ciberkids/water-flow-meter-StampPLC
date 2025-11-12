@@ -53,10 +53,11 @@ export function SimulationTracePanel({ entries, filter, onFilterChange, onReplay
               <li key={`${entry.timestamp}-${entry.id}`}>
                 <div className="trace-row">
                   <div>
-                    <strong>{entry.id}</strong>
-                  {entry.label ? <span className="trace-label">{entry.label}</span> : null}
-                  <div className="trace-meta">
-                    <span>{formatTimestamp(entry.timestamp)}</span>
+                    <strong>{entry.functionName ?? entry.id}</strong>
+                    {entry.functionName ? <span className="trace-id">{entry.id}</span> : null}
+                    {entry.label ? <span className="trace-label">{entry.label}</span> : null}
+                    <div className="trace-meta">
+                      <span>{formatTimestamp(entry.timestamp)}</span>
                     <span>{entry.trigger}</span>
                     <span>{entry.screenName ?? entry.screenId}</span>
                     {entry.targetScreenId ? <span>→ {entry.targetScreenId}</span> : null}
@@ -71,7 +72,7 @@ export function SimulationTracePanel({ entries, filter, onFilterChange, onReplay
                 <pre className="trace-params">{JSON.stringify(entry.actionParams, null, 2)}</pre>
               ) : null}
             </li>
-              ))}
+          ))}
           </ul>
         </div>
       )}

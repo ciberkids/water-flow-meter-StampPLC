@@ -43,6 +43,45 @@ Define the functional requirements for leveraging the StampPLC’s integrated di
 | `Idle` | No button activity for 120 s | Any button press | Turns the display backlight off to prevent burn-in. |
 | `Info` | Any button press while idle or at power-up | 3 s long-press ENTER (forces immediate idle) or explicit transition to Configuration Mode | Shows paged telemetry summaries. |
 
+```mermaid
+stateDiagram-v2
+    direction LR
+    Idle --> Info: any button
+    Info --> Idle: ENTER long (3s)
+    Info --> ConfigCountdown: ENTER short on "Enter Configuration" page
+    ConfigCountdown --> Info: released early
+    ConfigCountdown --> Configuration: timer == 0
+    Info --> ResetCountdown: ENTER short on reset pages
+    ResetCountdown --> Info: released early
+    ResetCountdown --> ResetAction: timer == 0
+    ResetAction --> Info: completion toast
+    state Info {
+        [*] --> P1
+        P1 --> P2: DOWN
+        P2 --> P3: DOWN
+        P3 --> P4: DOWN
+        P4 --> P5: DOWN
+        P5 --> P6: DOWN
+        P6 --> P7: DOWN
+        P7 --> P1: DOWN
+        P1 --> P7: UP
+        P7 --> P6: UP
+        P6 --> P5: UP
+        P5 --> P4: UP
+        P4 --> P3: UP
+        P3 --> P2: UP
+        P2 --> P1: UP
+    }
+    state Configuration {
+        [*] --> DeviceSettings
+        DeviceSettings --> SensorSettings: DOWN
+        SensorSettings --> DeviceSettings: UP
+        Configuration --> Info: ENTER long (3s)
+        Configuration --> SaveToast: ENTER short (save)
+        SaveToast --> Configuration: confirmation
+    }
+```
+
 ### 4.2. Propeller Indicator
 
 - Right-hand side renders an SVG propeller.

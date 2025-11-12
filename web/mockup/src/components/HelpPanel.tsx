@@ -144,6 +144,19 @@ export function HelpPanel({ dataset, selectedScreen }: HelpPanelProps) {
       </article>
 
       <article className="help-panel__card">
+        <h4>Simulation workflow</h4>
+        <p>
+          Use the Simulation tab to emulate firmware behaviour before exporting. Recommended steps:
+        </p>
+        <ol>
+          <li>Import the firmware action manifest so function traces display friendly names and parameter schemas.</li>
+          <li>Drive the UI with the StampPLC buttons (or keyboard arrows/ENTER) to move between info pages and configuration.</li>
+          <li>Modify value placeholders inline; overrides are highlighted until saved and each edit/save is logged.</li>
+          <li>Review the Function Trace panel to confirm the dispatcher triggers the expected firmware action IDs.</li>
+        </ol>
+      </article>
+
+      <article className="help-panel__card">
         <h4>Schema reference</h4>
         <p>
           Each entry in <code>screens</code> defines layout elements, navigation flows, assets, and animations.

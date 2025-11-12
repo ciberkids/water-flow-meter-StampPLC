@@ -34,14 +34,14 @@
 - [x] Redesign the trace header to keep filter and clear button contained (stack on small widths, enlarge card padding/margins).
 - [x] Widen trace column / increase `.panel-grid--simulation` third column width and adjust scroll container padding so JSON entries fit comfortably.
 - [x] Relocate “Theme snapshot” content into the Design tab; convert “Workspace overview” into a top-of-workspace banner with inline stats to free sidebar height.
-- [ ] Update snapshots/docs once layout polish is applied.
+- [x] Update snapshots/docs once layout polish is applied. *(Visual suite expanded to cover all tabs/resolutions; snapshots refreshed via `npm run test:visual:update` on 2025-11-12.)*
 
 ---
 
 ## 4. Dependencies & Questions
 - **Upstream Impact:** None; layout-only adjustments.
 - **Open Questions:** Preferred max width for the trace column? Should the global banner mirror the existing sidebar content or add new metrics?
-- **Testing Gaps:** Need refreshed Playwright snapshots (Simulation + Design tabs) after layout tweaks.
+- **Testing Gaps:** None — Playwright visual suite now captures every tab across 1440×900, 1080p, and 2K viewports.
 
 ---
 

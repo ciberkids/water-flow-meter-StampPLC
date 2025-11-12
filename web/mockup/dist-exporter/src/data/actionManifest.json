@@ -1,0 +1,56 @@
+{
+    "updatedAt": "2025-11-12T00:00:00.000Z",
+    "actions": [
+        {
+            "id": "ui.action.page.next",
+            "label": "Next page",
+            "description": "Advances to the next UI page"
+        },
+        {
+            "id": "ui.action.page.previous",
+            "label": "Previous page",
+            "description": "Returns to the previous UI page"
+        },
+        {
+            "id": "ui.action.mode.configuration",
+            "label": "Enter configuration mode",
+            "description": "Switches the firmware into configuration mode"
+        },
+        {
+            "id": "ui.action.mode.info",
+            "label": "Return to info mode",
+            "description": "Leaves configuration and resumes info pages"
+        },
+        {
+            "id": "ui.action.mode.idle",
+            "label": "Enter idle",
+            "description": "Dims the display and enters idle mode"
+        },
+        {
+            "id": "core.action.save-config",
+            "label": "Save configuration",
+            "description": "Persists the current configuration block",
+            "params": [
+                { "name": "scope", "type": "string", "description": "Target scope (device/sensor)" }
+            ]
+        },
+        {
+            "id": "ui.mock.value-edit",
+            "label": "Value edited",
+            "description": "Simulation-only event fired when a value placeholder is modified",
+            "params": [
+                { "name": "elementId", "type": "string" },
+                { "name": "value", "type": "string" }
+            ]
+        },
+        {
+            "id": "ui.mock.value-save",
+            "label": "Value saved",
+            "description": "Simulation-only event fired when a value override is saved",
+            "params": [
+                { "name": "elementId", "type": "string" },
+                { "name": "value", "type": "string" }
+            ]
+        }
+    ]
+}

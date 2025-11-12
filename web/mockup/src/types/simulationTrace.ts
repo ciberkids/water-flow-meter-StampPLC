@@ -4,6 +4,7 @@ export interface SimulationTraceEntry {
   trigger: string;
   screenId: string;
   screenName?: string;
+  functionName?: string;
   timestamp: number;
   actionParams?: Record<string, unknown> | null;
   targetScreenId?: string;
