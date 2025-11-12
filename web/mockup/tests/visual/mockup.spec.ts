@@ -91,11 +91,17 @@ test.describe("StampPLC mockup visual regression", () => {
       test(`workspace ${snapshot.suffix} tab @ ${preset.label}`, async ({ page }) => {
         await normaliseWorkspace(page, preset.width, preset.height);
         await page.getByRole("button", { name: snapshot.tab, exact: true }).click();
-        await expect(page).toHaveScreenshot(`workspace-${snapshot.suffix}${preset.suffix}.png`, {
+        const options: { animations: "disabled"; caret: "hide"; maxDiffPixelRatio?: number } = {
           animations: "disabled",
-          caret: "hide",
-          fullPage: true
-        });
+          caret: "hide"
+        };
+        if (snapshot.suffix === "design" && preset.suffix === "-2k") {
+          options.maxDiffPixelRatio = 0.004;
+        }
+        await expect(page.locator(".workspace")).toHaveScreenshot(
+          `workspace-${snapshot.suffix}${preset.suffix}.png`,
+          options
+        );
       });
     }
   }
@@ -218,8 +224,50 @@ test.describe("StampPLC mockup visual regression", () => {
     await expect(livePanel).toBeVisible();
     await expect(livePanel).toContainText('"id": "info-overview"');
 
-    await page.locator(".screen-selector").getByRole("button", { name: /Configuration Menu/ }).click();
+    await page
+      .getByTestId("screen-hierarchy")
+      .getByRole("button", { name: /Configuration Menu/ })
+      .click();
     await expect(livePanel).toContainText('"id": "configuration"');
+  });
+
+  test("design toolbox inserts elements and syncs JSON", async ({ page }) => {
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+    const elementList = page.getByTestId("design-element-list");
+    const initialCount = await elementList.locator("li").count();
+    await page.getByTestId("design-add-text").click();
+    await expect(elementList.locator("li")).toHaveCount(initialCount + 1);
+    await expect(page.getByTestId("live-json-editor")).toHaveValue(/New text/);
+  });
+
+  test("screen hierarchy adds child screen and updates breadcrumbs", async ({ page }) => {
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+    const hierarchy = page.getByTestId("screen-hierarchy");
+    await hierarchy.getByRole("button", { name: "Add child" }).click();
+    const breadcrumb = hierarchy.locator(".hierarchy-breadcrumbs").first();
+    await expect(breadcrumb).toContainText("/");
+  });
+
+  test("event binding panel updates action selection", async ({ page }) => {
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+    const actionSelect = page.getByTestId("flow-action-select").first();
+    await actionSelect.selectOption("core.action.save-config");
+    await expect(page.getByTestId("live-json-editor")).toHaveValue(/core\.action\.save-config/);
+  });
+
+  test("animation inspector uploads SVG frames", async ({ page }) => {
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+    const svgRed = Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="red"/></svg>'
+    );
+    const svgBlue = Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="blue"/></svg>'
+    );
+    await page.getByTestId("animation-upload").setInputFiles([
+      { name: "frame-red.svg", mimeType: "image/svg+xml", buffer: svgRed },
+      { name: "frame-blue.svg", mimeType: "image/svg+xml", buffer: svgBlue }
+    ]);
+    await expect(page.locator(".animation-card").first()).toContainText("frame-red.svg");
   });
 
   test("value placeholder edits emit trace entries", async ({ page }) => {

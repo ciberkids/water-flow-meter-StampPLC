@@ -24,7 +24,7 @@ export const elementSchema: JSONSchemaType<ScreenElement> = {
     id: { type: "string", minLength: 1 },
     kind: {
       type: "string",
-      enum: ["text", "value", "badge", "box", "icon"]
+      enum: ["text", "value", "badge", "box", "icon", "animation", "scrollbar"]
     },
     x: { type: "integer" },
     y: { type: "integer" },
@@ -37,7 +37,15 @@ export const elementSchema: JSONSchemaType<ScreenElement> = {
       enum: ["normal", "strong", "muted"],
       nullable: true
     },
-    binding: { type: "string", nullable: true }
+    binding: { type: "string", nullable: true },
+    metadata: {
+      type: "object",
+      nullable: true,
+      required: [],
+      additionalProperties: {
+        oneOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }]
+      }
+    }
   }
 };
 
@@ -119,6 +127,11 @@ export const graphicAssetSchema: JSONSchemaType<ScreenGraphicAsset> = {
       type: "array",
       nullable: true,
       items: { type: "string", pattern: colorPattern }
+    },
+    embeddedFrames: {
+      type: "array",
+      nullable: true,
+      items: { type: "string", minLength: 1 }
     }
   }
 };

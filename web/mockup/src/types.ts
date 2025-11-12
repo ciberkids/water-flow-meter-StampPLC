@@ -1,7 +1,15 @@
 import type { ThemeTokens } from "./theme/types.js";
 
-export type ElementKind = "text" | "value" | "badge" | "box" | "icon";
+export type ElementKind = "text" | "value" | "badge" | "box" | "icon" | "animation" | "scrollbar";
 export type DisplayOrientation = "portrait" | "landscape";
+
+export type ElementMetadataValue = string | number | boolean;
+
+export interface ScreenElementMetadata {
+  assetId?: string;
+  autoScrollIndex?: boolean;
+  [key: string]: ElementMetadataValue | undefined;
+}
 
 export interface ScreenElement {
   id: string;
@@ -14,6 +22,7 @@ export interface ScreenElement {
   align?: "left" | "center" | "right";
   emphasis?: "normal" | "strong" | "muted";
   binding?: string;
+  metadata?: ScreenElementMetadata;
 }
 
 export type ButtonName = "up" | "down" | "enter";
@@ -55,6 +64,7 @@ export interface ScreenGraphicAsset {
   frames?: string[];
   fps?: number;
   palette?: string[];
+  embeddedFrames?: string[];
 }
 
 export interface AnimationKeyframe {

@@ -30,7 +30,9 @@ export type IRElementKind =
   | { type: "value"; payload: IRElementTextContent }
   | { type: "badge"; payload: IRElementTextContent }
   | { type: "box"; payload: { width: number; height: number } }
-  | { type: "icon"; payload: { assetId?: string } };
+  | { type: "icon"; payload: { assetId?: string } }
+  | { type: "animation"; payload: { assetId?: string } }
+  | { type: "scrollbar"; payload: { label?: string; autoIndex?: boolean } };
 
 export interface IRScreenElement {
   id: string;
@@ -49,6 +51,7 @@ export interface IRAsset {
   frames?: string[];
   fps?: number;
   palette?: string[];
+  embeddedFrames?: string[];
 }
 
 export interface IRAnimation extends ScreenAnimation {}

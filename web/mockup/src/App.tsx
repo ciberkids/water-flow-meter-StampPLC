@@ -4,7 +4,14 @@ import { DisplayViewport } from "./components/DisplayViewport";
 import { ScreenSelector } from "./components/ScreenSelector";
 import screensData from "./data/screens.json";
 import actionManifestJson from "./data/actionManifest.json";
-import { DisplayOrientation, ScreenDataset, ScreenDefinition, ScreenElement } from "./types";
+import {
+  DisplayOrientation,
+  ScreenDataset,
+  ScreenDefinition,
+  ScreenElement,
+  ScreenFlow,
+  ElementKind
+} from "./types";
 import { ButtonPanel } from "./components/ButtonPanel";
 import { ThemeEditor } from "./components/ThemeEditor";
 import { HelpPanel } from "./components/HelpPanel";
@@ -22,6 +29,12 @@ import { SimulationTraceEntry } from "./types/simulationTrace";
 import { FirmwareActionManifest, FirmwareActionDefinition } from "./types/firmwareActions";
 import { TransitionEffect, TransitionPreviewState } from "./types/transitionPreview";
 import { findMatchingButtonFlows } from "./utils/flowMatching";
+import { ScreenHierarchyPanel } from "./components/design/ScreenHierarchyPanel";
+import { buildScreenHierarchy } from "./utils/screenHierarchy";
+import { DesignToolbox } from "./components/design/DesignToolbox";
+import { EventBindingPanel } from "./components/design/EventBindingPanel";
+import { LiveJsonEditorPanel } from "./components/design/LiveJsonEditorPanel";
+import { AnimationInspector } from "./components/design/AnimationInspector";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -36,6 +49,89 @@ const themesEqual = (a?: ThemeTokens, b?: ThemeTokens): boolean => {
     return a === b;
   }
   return JSON.stringify(a) === JSON.stringify(b);
+};
+
+const createId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 8)}`;
+
+const createScreenTemplate = (name: string): ScreenDefinition => ({
+  id: createId("screen"),
+  name,
+  description: "",
+  elements: [
+    {
+      id: createId("element"),
+      kind: "text",
+      x: 4,
+      y: 4,
+      content: name,
+      emphasis: "strong"
+    }
+  ],
+  flows: [],
+  submenus: []
+});
+
+const createElementTemplate = (kind: ElementKind, screen: ScreenDefinition): ScreenElement => {
+  const offset = screen.elements.length * 12 + 20;
+  const baseElement: ScreenElement = {
+    id: createId("element"),
+    kind,
+    x: 4,
+    y: offset,
+    content: undefined
+  };
+
+  switch (kind) {
+    case "text":
+      return { ...baseElement, content: "New text", emphasis: "normal" };
+    case "value":
+      return { ...baseElement, content: "VALUE 00", emphasis: "strong" };
+    case "box":
+      return { ...baseElement, width: 60, height: 18, content: " ", kind: "box" };
+    case "badge":
+      return { ...baseElement, content: "Badge" };
+    case "icon":
+      return {
+        ...baseElement,
+        width: 12,
+        height: 12,
+        metadata: { assetId: screen.assets?.[0]?.id }
+      };
+    case "animation":
+      return {
+        ...baseElement,
+        width: 50,
+        height: 24,
+        metadata: { assetId: screen.assets?.[0]?.id }
+      };
+    case "scrollbar":
+      return {
+        ...baseElement,
+        width: 10,
+        height: 80,
+        metadata: { autoScrollIndex: true },
+        content: "Scroll"
+      };
+    default:
+      return baseElement;
+  }
+};
+
+const fileToDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
+
+const findParentScreenId = (screens: ScreenDefinition[], childId: string): string | null => {
+  for (const screen of screens) {
+    if (screen.submenus?.some((submenu) => submenu.screenId === childId)) {
+      return screen.id;
+    }
+  }
+  return null;
 };
 
 type ValidationFeedback = {
@@ -155,6 +251,358 @@ export function App() {
   );
   const totalScreens = screens.length;
   const selectedScreenOverrides = selectedScreen ? valueOverrides[selectedScreen.id] ?? {} : {};
+  const hierarchy = useMemo(() => buildScreenHierarchy(screens), [screens]);
+  const breadcrumbs = useMemo(
+    () =>
+      hierarchy.breadcrumbsMap.get(selectedScreenId) ??
+      (selectedScreen ? [selectedScreen.name] : []),
+    [hierarchy, selectedScreen, selectedScreenId]
+  );
+  const scrollIndicator = hierarchy.pathMap.get(selectedScreenId);
+  const canDeleteScreen = totalScreens > 1;
+
+  const handleAddScreen = useCallback(
+    (mode: "root" | "child") => {
+      setDataset((current) => {
+        const name =
+          mode === "child" ? "Child screen" : `Screen ${current.screens.length + 1}`;
+        const newScreen = createScreenTemplate(name);
+        const nextScreens = [...current.screens, newScreen];
+        if (mode === "child" && selectedScreenId) {
+          const parentIndex = nextScreens.findIndex((screen) => screen.id === selectedScreenId);
+          if (parentIndex >= 0) {
+            const parent = nextScreens[parentIndex];
+            const nextSubmenus = [
+              ...(parent.submenus ?? []),
+              { id: createId("submenu"), label: newScreen.name, screenId: newScreen.id }
+            ];
+            nextScreens[parentIndex] = { ...parent, submenus: nextSubmenus };
+          }
+        }
+        setSelectedScreenId(newScreen.id);
+        return { ...current, screens: nextScreens };
+      });
+    },
+    [selectedScreenId]
+  );
+
+  const handleDuplicateScreen = useCallback(() => {
+    if (!selectedScreen) {
+      return;
+    }
+    setDataset((current) => {
+      const index = current.screens.findIndex((screen) => screen.id === selectedScreen.id);
+      if (index === -1) {
+        return current;
+      }
+      const clone: ScreenDefinition = {
+        ...selectedScreen,
+        id: createId("screen"),
+        name: `${selectedScreen.name} Copy`,
+        elements: selectedScreen.elements.map((element) => ({
+          ...element,
+          id: createId("element")
+        })),
+        flows: selectedScreen.flows?.map((flow) => ({
+          ...flow,
+          id: createId("flow")
+        })),
+        submenus: []
+      };
+      const nextScreens = [...current.screens];
+      nextScreens.splice(index + 1, 0, clone);
+      setSelectedScreenId(clone.id);
+      return { ...current, screens: nextScreens };
+    });
+  }, [selectedScreen]);
+
+  const handleDeleteScreen = useCallback(() => {
+    if (!selectedScreenId || !canDeleteScreen) {
+      return;
+    }
+    setDataset((current) => {
+      if (current.screens.length <= 1) {
+        return current;
+      }
+      const nextScreens = current.screens
+        .filter((screen) => screen.id !== selectedScreenId)
+        .map((screen) => ({
+          ...screen,
+          submenus: screen.submenus?.filter((submenu) => submenu.screenId !== selectedScreenId)
+        }));
+      const nextId = nextScreens[0]?.id ?? "";
+      setSelectedScreenId(nextId);
+      return { ...current, screens: nextScreens };
+    });
+  }, [canDeleteScreen, selectedScreenId]);
+
+  const handleReorderScreen = useCallback(
+    (direction: "up" | "down") => {
+      if (!selectedScreenId) {
+        return;
+      }
+      setDataset((current) => {
+        const parentId = findParentScreenId(current.screens, selectedScreenId);
+        if (!parentId) {
+          const index = current.screens.findIndex((screen) => screen.id === selectedScreenId);
+          const targetIndex = direction === "up" ? index - 1 : index + 1;
+          if (index === -1 || targetIndex < 0 || targetIndex >= current.screens.length) {
+            return current;
+          }
+          const nextScreens = [...current.screens];
+          const [screen] = nextScreens.splice(index, 1);
+          nextScreens.splice(targetIndex, 0, screen);
+          return { ...current, screens: nextScreens };
+        }
+        const parentIndex = current.screens.findIndex((screen) => screen.id === parentId);
+        if (parentIndex === -1) {
+          return current;
+        }
+        const parent = current.screens[parentIndex];
+        const submenus = parent.submenus ?? [];
+        const index = submenus.findIndex((submenu) => submenu.screenId === selectedScreenId);
+        const targetIndex = direction === "up" ? index - 1 : index + 1;
+        if (index === -1 || targetIndex < 0 || targetIndex >= submenus.length) {
+          return current;
+        }
+        const nextSubmenus = [...submenus];
+        const [entry] = nextSubmenus.splice(index, 1);
+        nextSubmenus.splice(targetIndex, 0, entry);
+        const nextScreens = [...current.screens];
+        nextScreens[parentIndex] = { ...parent, submenus: nextSubmenus };
+        return { ...current, screens: nextScreens };
+      });
+    },
+    [selectedScreenId]
+  );
+
+  const handleAddElement = useCallback(
+    (kind: ElementKind) => {
+      if (!selectedScreenId) {
+        return;
+      }
+      setDataset((current) => {
+        const index = current.screens.findIndex((screen) => screen.id === selectedScreenId);
+        if (index === -1) {
+          return current;
+        }
+        const screen = current.screens[index];
+        const newElement = createElementTemplate(kind, screen);
+        const nextScreen = { ...screen, elements: [...screen.elements, newElement] };
+        const nextScreens = [...current.screens];
+        nextScreens[index] = nextScreen;
+        return { ...current, screens: nextScreens };
+      });
+    },
+    [selectedScreenId]
+  );
+
+  const handleRemoveElement = useCallback(
+    (elementId: string) => {
+      if (!selectedScreenId) {
+        return;
+      }
+      setDataset((current) => {
+        const index = current.screens.findIndex((screen) => screen.id === selectedScreenId);
+        if (index === -1) {
+          return current;
+        }
+        const screen = current.screens[index];
+        if (screen.elements.length <= 1) {
+          return current;
+        }
+        const nextScreen = {
+          ...screen,
+          elements: screen.elements.filter((element) => element.id !== elementId)
+        };
+        const nextScreens = [...current.screens];
+        nextScreens[index] = nextScreen;
+        return { ...current, screens: nextScreens };
+      });
+    },
+    [selectedScreenId]
+  );
+
+  const handleUpdateElement = useCallback(
+    (elementId: string, updates: Partial<ScreenElement>) => {
+      if (!selectedScreenId) {
+        return;
+      }
+      setDataset((current) => {
+        const index = current.screens.findIndex((screen) => screen.id === selectedScreenId);
+        if (index === -1) {
+          return current;
+        }
+        const screen = current.screens[index];
+        const elements = screen.elements.map((element) =>
+          element.id === elementId ? { ...element, ...updates } : element
+        );
+        const nextScreens = [...current.screens];
+        nextScreens[index] = { ...screen, elements };
+        return { ...current, screens: nextScreens };
+      });
+    },
+    [selectedScreenId]
+  );
+
+  const handleAddFlow = useCallback(() => {
+    if (!selectedScreenId) {
+      return;
+    }
+    setDataset((current) => {
+      const index = current.screens.findIndex((screen) => screen.id === selectedScreenId);
+      if (index === -1) {
+        return current;
+      }
+      const screen = current.screens[index];
+      const newFlow: ScreenFlow = {
+        id: createId("flow"),
+        label: "New button event",
+        trigger: { type: "button", button: "up", gesture: "short" }
+      };
+      const nextScreen = { ...screen, flows: [...(screen.flows ?? []), newFlow] };
+      const nextScreens = [...current.screens];
+      nextScreens[index] = nextScreen;
+      return { ...current, screens: nextScreens };
+    });
+  }, [selectedScreenId]);
+
+  const handleUpdateFlow = useCallback(
+    (flowId: string, updates: Partial<ScreenFlow>) => {
+      if (!selectedScreenId) {
+        return;
+      }
+      setDataset((current) => {
+        const index = current.screens.findIndex((screen) => screen.id === selectedScreenId);
+        if (index === -1) {
+          return current;
+        }
+        const screen = current.screens[index];
+        const flows = (screen.flows ?? []).map((flow) =>
+          flow.id === flowId ? { ...flow, ...updates } : flow
+        );
+        const nextScreens = [...current.screens];
+        nextScreens[index] = { ...screen, flows };
+        return { ...current, screens: nextScreens };
+      });
+    },
+    [selectedScreenId]
+  );
+
+  const handleDeleteFlow = useCallback(
+    (flowId: string) => {
+      if (!selectedScreenId) {
+        return;
+      }
+      setDataset((current) => {
+        const index = current.screens.findIndex((screen) => screen.id === selectedScreenId);
+        if (index === -1) {
+          return current;
+        }
+        const screen = current.screens[index];
+        const nextScreen = {
+          ...screen,
+          flows: (screen.flows ?? []).filter((flow) => flow.id !== flowId)
+        };
+        const nextScreens = [...current.screens];
+        nextScreens[index] = nextScreen;
+        return { ...current, screens: nextScreens };
+      });
+    },
+    [selectedScreenId]
+  );
+
+  const handleApplyDatasetFromJson = useCallback(
+    (nextDataset: ScreenDataset) => {
+      setDataset(ensureDatasetTheme(nextDataset));
+      setValidationFeedback({
+        status: "success",
+        message: "Dataset updated from JSON editor.",
+        issues: []
+      });
+    },
+    []
+  );
+
+  const handleUploadFrames = useCallback(
+    (files: FileList) => {
+      if (!selectedScreenId || files.length === 0) {
+        return;
+      }
+      const run = async () => {
+        const fileArray = Array.from(files);
+        const embeddedFrames = await Promise.all(fileArray.map((file) => fileToDataUrl(file)));
+        const frameNames = fileArray.map((file) => file.name);
+        setDataset((current) => {
+          const index = current.screens.findIndex((screen) => screen.id === selectedScreenId);
+          if (index === -1) {
+            return current;
+          }
+          const screen = current.screens[index];
+          const newAsset = {
+            id: createId("asset"),
+            type: "svg-sequence" as const,
+            source: frameNames[0],
+            frames: frameNames,
+            fps: 12,
+            embeddedFrames
+          };
+          const nextScreen = {
+            ...screen,
+            assets: [...(screen.assets ?? []), newAsset]
+          };
+          const nextScreens = [...current.screens];
+          nextScreens[index] = nextScreen;
+          return { ...current, screens: nextScreens };
+        });
+      };
+      run().catch((error) => console.error("Failed to upload frames", error));
+    },
+    [selectedScreenId]
+  );
+
+  const handleReorderFrame = useCallback(
+    (assetId: string, frameIndex: number, direction: "up" | "down") => {
+      if (!selectedScreenId) {
+        return;
+      }
+      setDataset((current) => {
+        const screenIndex = current.screens.findIndex((screen) => screen.id === selectedScreenId);
+        if (screenIndex === -1) {
+          return current;
+        }
+        const screen = current.screens[screenIndex];
+        const assets = screen.assets ?? [];
+        const assetIndex = assets.findIndex((asset) => asset.id === assetId);
+        if (assetIndex === -1) {
+          return current;
+        }
+        const asset = assets[assetIndex];
+        const frames = asset.frames ?? [];
+        const targetIndex = direction === "up" ? frameIndex - 1 : frameIndex + 1;
+        if (targetIndex < 0 || targetIndex >= frames.length) {
+          return current;
+        }
+        const nextFrames = [...frames];
+        const [moved] = nextFrames.splice(frameIndex, 1);
+        nextFrames.splice(targetIndex, 0, moved);
+        let nextEmbedded = asset.embeddedFrames;
+        if (asset.embeddedFrames && asset.embeddedFrames.length === frames.length) {
+          nextEmbedded = [...asset.embeddedFrames];
+          const [frameData] = nextEmbedded.splice(frameIndex, 1);
+          nextEmbedded.splice(targetIndex, 0, frameData);
+        }
+        const updatedAsset = { ...asset, frames: nextFrames, embeddedFrames: nextEmbedded };
+        const nextAssets = [...assets];
+        nextAssets[assetIndex] = updatedAsset;
+        const nextScreen = { ...screen, assets: nextAssets };
+        const nextScreens = [...current.screens];
+        nextScreens[screenIndex] = nextScreen;
+        return { ...current, screens: nextScreens };
+      });
+    },
+    [selectedScreenId]
+  );
 
   const validateDatasetSafe = useCallback((raw: unknown) => {
     try {
@@ -630,17 +1078,19 @@ export function App() {
     </section>
   );
 
-  const renderScreenContext = (options?: { showThemeSnapshot?: boolean }) => (
+  const renderScreenContext = (options?: { showThemeSnapshot?: boolean; hideSelector?: boolean }) => (
     <div className="screen-context">
-      <section>
-        <h2>Screens</h2>
-        <ScreenSelector
-          screens={screens}
-          activeId={selectedScreen?.id ?? ""}
-          previewId={transitionPreview?.screenId}
-          onSelect={setSelectedScreenId}
-        />
-      </section>
+      {options?.hideSelector ? null : (
+        <section>
+          <h2>Screens</h2>
+          <ScreenSelector
+            screens={screens}
+            activeId={selectedScreen?.id ?? ""}
+            previewId={transitionPreview?.screenId}
+            onSelect={setSelectedScreenId}
+          />
+        </section>
+      )}
       <section>
         <h2>Screen details</h2>
         <div className="screen-details">
@@ -762,6 +1212,7 @@ export function App() {
                       showGrid={showGrid}
                       valueOverrides={selectedScreenOverrides}
                       pendingTransition={transitionPreview}
+                      scrollIndicator={scrollIndicator}
                     />
                   ) : (
                     <p>No screen selected.</p>
@@ -818,7 +1269,22 @@ export function App() {
         {activePanel === "design" && (
           <section className="panel design-view">
             <div className="panel-grid panel-grid--design">
-              <div className="panel-column panel-column--context">{renderScreenContext({ showThemeSnapshot: true })}</div>
+              <div className="panel-column panel-column--context">
+                <ScreenHierarchyPanel
+                  nodes={hierarchy.roots}
+                  selectedId={selectedScreenId}
+                  breadcrumbs={breadcrumbs}
+                  pathLabel={scrollIndicator}
+                  onSelect={setSelectedScreenId}
+                  onAddRoot={() => handleAddScreen("root")}
+                  onAddChild={() => handleAddScreen("child")}
+                  onDuplicate={handleDuplicateScreen}
+                  onDelete={handleDeleteScreen}
+                  onReorder={handleReorderScreen}
+                  canDelete={canDeleteScreen}
+                />
+                {renderScreenContext({ showThemeSnapshot: true, hideSelector: true })}
+              </div>
               <div className="panel-column panel-column--main">
                 <ThemeEditor
                   layout={layoutReport}
@@ -835,6 +1301,30 @@ export function App() {
                       <pre>{selectedScreen ? JSON.stringify(selectedScreen, null, 2) : "// Select a screen to view JSON."}</pre>
                     </section>
                   }
+                />
+                <DesignToolbox
+                  screen={selectedScreen}
+                  onAddElement={handleAddElement}
+                  onRemoveElement={handleRemoveElement}
+                  onUpdateElement={handleUpdateElement}
+                />
+                <EventBindingPanel
+                  screen={selectedScreen}
+                  actions={firmwareManifest.actions}
+                  screens={screens}
+                  onAddFlow={handleAddFlow}
+                  onDeleteFlow={handleDeleteFlow}
+                  onUpdateFlow={handleUpdateFlow}
+                />
+                <AnimationInspector
+                  screen={selectedScreen}
+                  onUploadFrames={handleUploadFrames}
+                  onReorderFrame={handleReorderFrame}
+                />
+                <LiveJsonEditorPanel
+                  dataset={dataset}
+                  onApplyDataset={handleApplyDatasetFromJson}
+                  validateDatasetSafe={validateDatasetSafe}
                 />
               </div>
             </div>

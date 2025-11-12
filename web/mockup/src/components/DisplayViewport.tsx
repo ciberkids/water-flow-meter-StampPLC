@@ -11,13 +11,21 @@ interface DisplayViewportProps {
   showGrid: boolean;
   valueOverrides?: Record<string, string>;
   pendingTransition?: TransitionPreviewState | null;
+  scrollIndicator?: string;
 }
 
 const FRAME_PADDING = 8;
 const MINI_PREVIEW_SCALE = 0.45;
 const DEVICE_FONT = "\"StampPLC-Pixel\", \"Press Start 2P\", monospace";
 
-export function DisplayViewport({ layout, zoomPercent, showGrid, valueOverrides, pendingTransition }: DisplayViewportProps) {
+export function DisplayViewport({
+  layout,
+  zoomPercent,
+  showGrid,
+  valueOverrides,
+  pendingTransition,
+  scrollIndicator
+}: DisplayViewportProps) {
   const { theme } = useTheme();
   const orientation = layout.bounds.orientation;
   const scale = useMemo(() => Math.max(zoomPercent / 100, 1), [zoomPercent]);
@@ -68,6 +76,29 @@ export function DisplayViewport({ layout, zoomPercent, showGrid, valueOverrides,
       },
       icon: {
         backgroundColor: theme.colors.icon
+      },
+      animation: {
+        border: `1px dashed ${theme.colors.legend}`,
+        backgroundColor: "rgba(133, 187, 232, 0.08)",
+        color: theme.colors.legend,
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+        fontSize: "0.6rem",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      },
+      scrollbar: {
+        border: `1px solid ${theme.colors.badgeBorder}`,
+        backgroundColor: "rgba(255, 255, 255, 0.04)",
+        color: theme.colors.textStrong,
+        fontSize: `${theme.typography.badge}px`,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "2px",
+        letterSpacing: "0.1em"
       }
     }),
     [theme]
@@ -83,7 +114,11 @@ export function DisplayViewport({ layout, zoomPercent, showGrid, valueOverrides,
   );
 
   const renderElementsForLayout = useCallback(
-    (layoutToRender: LayoutReport, overrides?: Record<string, string>) =>
+    (
+      layoutToRender: LayoutReport,
+      overrides?: Record<string, string>,
+      options?: { scrollIndicator?: string }
+    ) =>
       layoutToRender.elements.map((item) => {
         const { element } = item;
         const style: CSSProperties = {
@@ -133,6 +168,19 @@ export function DisplayViewport({ layout, zoomPercent, showGrid, valueOverrides,
           case "box":
           case "icon":
             return <div key={element.id} className={className} style={style} />;
+          case "animation":
+            return (
+              <div key={element.id} className={`${className} animation-block`} style={style}>
+                <span>{element.metadata?.assetId ?? "Animation"}</span>
+              </div>
+            );
+          case "scrollbar":
+            return (
+              <div key={element.id} className={`${className} scrollbar-block`} style={style}>
+                <span className="scrollbar-indicator">{options?.scrollIndicator ?? "—"}</span>
+                <span className="scrollbar-label">{element.content ?? "Screen"}</span>
+              </div>
+            );
           default:
             return null;
         }
@@ -180,7 +228,7 @@ export function DisplayViewport({ layout, zoomPercent, showGrid, valueOverrides,
             minorColor={theme.colors.gridMinor}
             majorColor={theme.colors.gridMajor}
           />
-          {renderElementsForLayout(layout, valueOverrides)}
+          {renderElementsForLayout(layout, valueOverrides, { scrollIndicator })}
           <div className="legend" style={{ color: theme.colors.legend }}>
             <span>Red pulses per X L</span>
             <span>Green = Ready</span>

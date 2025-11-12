@@ -8,7 +8,9 @@ const DEFAULT_METRICS: Record<ScreenElement["kind"], { charWidth: number; height
   value: { charWidth: 7, height: 10 },
   badge: { charWidth: 6, height: 12, padding: 6 },
   box: { charWidth: 0, height: 0 },
-  icon: { charWidth: 0, height: 10 }
+  icon: { charWidth: 0, height: 10 },
+  animation: { charWidth: 6, height: 18, padding: 6 },
+  scrollbar: { charWidth: 4, height: 60 }
 };
 
 export interface LayoutBounds {
