@@ -20,7 +20,7 @@ import { cloneTheme, type ThemeTokens } from "./theme/types";
 import { defaultTheme } from "./theme/defaultTheme";
 import { useSimulatedButtons } from "./hooks/useSimulatedButtons";
 import { SimulatedButton, SimulatedButtonEvent } from "./types/buttonSimulation";
-import { computeLayout } from "./utils/layout";
+import { computeLayout, DISPLAY_WIDTH, DISPLAY_HEIGHT } from "./utils/layout";
 import { SchemaValidationError, validateDataset } from "./schema/validation";
 import { ExporterPanel } from "./components/ExporterPanel";
 import { SimulationTracePanel } from "./components/SimulationTracePanel";
@@ -52,6 +52,11 @@ const themesEqual = (a?: ThemeTokens, b?: ThemeTokens): boolean => {
 };
 
 const createId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 8)}`;
+const MAX_COORD_X = DISPLAY_WIDTH;
+const MAX_COORD_Y = DISPLAY_HEIGHT;
+const MAX_SIZE = DISPLAY_HEIGHT;
+const MAX_INPUT_LENGTH = 4;
+const NUDGE_STEP = 1;
 
 const createScreenTemplate = (name: string): ScreenDefinition => ({
   id: createId("screen"),
@@ -134,6 +139,41 @@ const findParentScreenId = (screens: ScreenDefinition[], childId: string): strin
   return null;
 };
 
+const clampCoordinate = (value: number, axis: "x" | "y"): number => {
+  const max = axis === "x" ? MAX_COORD_X : MAX_COORD_Y;
+  if (Number.isNaN(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(max, value));
+};
+
+const clampSize = (value: number): number => {
+  if (Number.isNaN(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(MAX_SIZE, value));
+};
+
+const normalizeElementUpdate = (
+  element: ScreenElement,
+  updates: Partial<ScreenElement>
+): ScreenElement => {
+  const next: Partial<ScreenElement> = { ...updates };
+  if (updates.x !== undefined) {
+    next.x = clampCoordinate(updates.x, "x");
+  }
+  if (updates.y !== undefined) {
+    next.y = clampCoordinate(updates.y, "y");
+  }
+  if (updates.width !== undefined) {
+    next.width = clampSize(updates.width);
+  }
+  if (updates.height !== undefined) {
+    next.height = clampSize(updates.height);
+  }
+  return { ...element, ...next };
+};
+
 type ValidationFeedback = {
   status: "idle" | "success" | "error";
   message: string;
@@ -199,6 +239,9 @@ export function App() {
     }),
     [dataset]
   );
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(
+    initialScreens[0]?.elements[0]?.id ?? null
+  );
   const actionCatalog = useMemo(() => {
     const map = new Map<string, FirmwareActionDefinition>();
     firmwareManifest.actions.forEach((action) => {
@@ -251,6 +294,17 @@ export function App() {
   );
   const totalScreens = screens.length;
   const selectedScreenOverrides = selectedScreen ? valueOverrides[selectedScreen.id] ?? {} : {};
+  useEffect(() => {
+    if (!selectedScreen) {
+      if (selectedElementId !== null) {
+        setSelectedElementId(null);
+      }
+      return;
+    }
+    if (!selectedScreen.elements.some((element) => element.id === selectedElementId)) {
+      setSelectedElementId(selectedScreen.elements[0]?.id ?? null);
+    }
+  }, [selectedScreen, selectedElementId]);
   const hierarchy = useMemo(() => buildScreenHierarchy(screens), [screens]);
   const breadcrumbs = useMemo(
     () =>
@@ -280,6 +334,7 @@ export function App() {
           }
         }
         setSelectedScreenId(newScreen.id);
+        setSelectedElementId(newScreen.elements[0]?.id ?? null);
         return { ...current, screens: nextScreens };
       });
     },
@@ -312,6 +367,7 @@ export function App() {
       const nextScreens = [...current.screens];
       nextScreens.splice(index + 1, 0, clone);
       setSelectedScreenId(clone.id);
+      setSelectedElementId(clone.elements[0]?.id ?? null);
       return { ...current, screens: nextScreens };
     });
   }, [selectedScreen]);
@@ -332,6 +388,9 @@ export function App() {
         }));
       const nextId = nextScreens[0]?.id ?? "";
       setSelectedScreenId(nextId);
+      const nextElements =
+        nextScreens.find((screen) => screen.id === nextId)?.elements ?? [];
+      setSelectedElementId(nextElements[0]?.id ?? null);
       return { ...current, screens: nextScreens };
     });
   }, [canDeleteScreen, selectedScreenId]);
@@ -391,6 +450,7 @@ export function App() {
         const nextScreen = { ...screen, elements: [...screen.elements, newElement] };
         const nextScreens = [...current.screens];
         nextScreens[index] = nextScreen;
+        setSelectedElementId(newElement.id);
         return { ...current, screens: nextScreens };
       });
     },
@@ -417,6 +477,7 @@ export function App() {
         };
         const nextScreens = [...current.screens];
         nextScreens[index] = nextScreen;
+        setSelectedElementId(nextScreen.elements[0]?.id ?? null);
         return { ...current, screens: nextScreens };
       });
     },
@@ -435,7 +496,7 @@ export function App() {
         }
         const screen = current.screens[index];
         const elements = screen.elements.map((element) =>
-          element.id === elementId ? { ...element, ...updates } : element
+          element.id === elementId ? normalizeElementUpdate(element, updates) : element
         );
         const nextScreens = [...current.screens];
         nextScreens[index] = { ...screen, elements };
@@ -443,6 +504,37 @@ export function App() {
       });
     },
     [selectedScreenId]
+  );
+
+  const handleNudgeSelectedElement = useCallback(
+    (direction: "up" | "down" | "left" | "right") => {
+      if (!selectedScreenId || !selectedElementId) {
+        return;
+      }
+      const deltaX = direction === "left" ? -NUDGE_STEP : direction === "right" ? NUDGE_STEP : 0;
+      const deltaY = direction === "up" ? -NUDGE_STEP : direction === "down" ? NUDGE_STEP : 0;
+      setDataset((current) => {
+        const index = current.screens.findIndex((screen) => screen.id === selectedScreenId);
+        if (index === -1) {
+          return current;
+        }
+        const screen = current.screens[index];
+        const elements = screen.elements.map((element) => {
+          if (element.id !== selectedElementId) {
+            return element;
+          }
+          return {
+            ...element,
+            x: clampCoordinate(element.x + deltaX, "x"),
+            y: clampCoordinate(element.y + deltaY, "y")
+          };
+        });
+        const nextScreens = [...current.screens];
+        nextScreens[index] = { ...screen, elements };
+        return { ...current, screens: nextScreens };
+      });
+    },
+    [selectedElementId, selectedScreenId]
   );
 
   const handleAddFlow = useCallback(() => {
@@ -1020,8 +1112,34 @@ export function App() {
     }
   }, []);
 
+  const mapArrowKeyToDirection = useCallback(
+    (key: string): ("up" | "down" | "left" | "right") | null => {
+      switch (key) {
+        case "ArrowUp":
+          return "up";
+        case "ArrowDown":
+          return "down";
+        case "ArrowLeft":
+          return "left";
+        case "ArrowRight":
+          return "right";
+        default:
+          return null;
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      const arrowDirection = mapArrowKeyToDirection(event.key);
+      if (arrowDirection && activePanel === "design") {
+        event.preventDefault();
+        if (!event.repeat && selectedElementId) {
+          handleNudgeSelectedElement(arrowDirection);
+        }
+        return;
+      }
       const button = mapKeyToButton(event.key);
       if (!button) {
         return;
@@ -1035,6 +1153,11 @@ export function App() {
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
+      const arrowDirection = mapArrowKeyToDirection(event.key);
+      if (arrowDirection && activePanel === "design") {
+        event.preventDefault();
+        return;
+      }
       const button = mapKeyToButton(event.key);
       if (!button) {
         return;
@@ -1065,7 +1188,16 @@ export function App() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       cancelAll();
     };
-  }, [cancelAll, mapKeyToButton, press, release]);
+  }, [
+    activePanel,
+    cancelAll,
+    handleNudgeSelectedElement,
+    mapArrowKeyToDirection,
+    mapKeyToButton,
+    press,
+    release,
+    selectedElementId
+  ]);
 
   const themeSnapshotSection = (
     <section className="theme-snapshot">
@@ -1307,6 +1439,13 @@ export function App() {
                   onAddElement={handleAddElement}
                   onRemoveElement={handleRemoveElement}
                   onUpdateElement={handleUpdateElement}
+                  selectedElementId={selectedElementId}
+                  onSelectElement={setSelectedElementId}
+                  onNudgeElement={handleNudgeSelectedElement}
+                  maxCoordinateX={MAX_COORD_X}
+                  maxCoordinateY={MAX_COORD_Y}
+                  maxDimension={MAX_SIZE}
+                  maxInputLength={MAX_INPUT_LENGTH}
                 />
                 <EventBindingPanel
                   screen={selectedScreen}

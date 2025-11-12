@@ -240,6 +240,31 @@ test.describe("StampPLC mockup visual regression", () => {
     await expect(page.getByTestId("live-json-editor")).toHaveValue(/New text/);
   });
 
+  test("box elements expose width and height inputs with bounded values", async ({ page }) => {
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+    await page.getByTestId("element-select-sensor-grid-left").check();
+    const widthInput = page.locator('[data-element-id="sensor-grid-left"][data-field="width"]');
+    await widthInput.fill("9999");
+    await expect(widthInput).toHaveValue("240");
+  });
+
+  test("element selection radio with arrow buttons nudges coordinates", async ({ page }) => {
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+    await page.getByTestId("element-select-title").check();
+    const xInput = page.locator('[data-element-id="title"][data-field="x"]');
+    await expect(xInput).toHaveValue("4");
+    await page.getByTestId("element-nudge-right").click();
+    await expect(xInput).toHaveValue("5");
+  });
+
+  test("keyboard arrows move the selected element in design tab", async ({ page }) => {
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+    await page.getByTestId("element-select-title").check();
+    const xInput = page.locator('[data-element-id="title"][data-field="x"]');
+    await page.keyboard.press("ArrowRight");
+    await expect(xInput).toHaveValue("5");
+  });
+
   test("screen hierarchy adds child screen and updates breadcrumbs", async ({ page }) => {
     await page.getByRole("button", { name: "Design", exact: true }).click();
     const hierarchy = page.getByTestId("screen-hierarchy");

@@ -27,6 +27,7 @@
 
 - [x] SI-20251111-01 Simulation function trace & editing ([details](../missing%20implementation/SI-20251111-01-simulation-instrumentation.md))
 - [x] SI-20251111-02 Design authoring & hierarchy tools ([details](../missing%20implementation/SI-20251111-02-design-authoring.md))
+- [x] SI-20251111-02-01 Design authoring editor refinement findings ([details](../missing%20implementation/SI-20251111-02-01-design-authoring-editor-refinement-findings.md))
 - [ ] SI-20251111-03 Exporter schema + firmware manifest ([details](../missing%20implementation/SI-20251111-03-exporter-schema-manifest.md))
 - [ ] SI-20251111-04 Help tab documentation overhaul ([details](../missing%20implementation/SI-20251111-04-help-docs.md))
 - [ ] SI-20251111-05 Spike: firmware manifest pattern ([details](../missing%20implementation/SI-20251111-05-spike-firmware-manifest-pattern.md))
