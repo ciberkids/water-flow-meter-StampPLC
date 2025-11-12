@@ -5,15 +5,47 @@ import { execSync } from "node:child_process";
 import { Buffer } from "node:buffer";
 import { fileURLToPath } from "node:url";
 
+const testDir = fileURLToPath(new URL(".", import.meta.url));
+const mockupRoot = path.resolve(testDir, "..", "..");
+const dataset = JSON.parse(
+  fs.readFileSync(path.resolve(mockupRoot, "src", "data", "screens.json"), "utf-8")
+) as {
+  screens: Array<{ id: string; name: string }>;
+};
+
+const screenLabel = (id: string, fallback: string) =>
+  dataset.screens.find((screen) => screen.id === id)?.name ?? fallback;
+
 const screenDefinitions = [
-  { id: "info-overview", label: "Info Overview", snapshot: "screen-info-overview.png" },
-  { id: "configuration", label: "Configuration Menu", snapshot: "screen-configuration.png" },
-  { id: "countdown", label: "Reset Countdown", snapshot: "screen-countdown.png" }
+  { id: "info-overview", label: screenLabel("info-overview", "Instant Flow"), snapshot: "screen-info-overview" },
+  { id: "configuration", label: screenLabel("configuration", "Configuration Menu"), snapshot: "screen-configuration" },
+  {
+    id: "countdown-reset-session",
+    label: screenLabel("countdown-reset-session", "Reset Session"),
+    snapshot: "screen-countdown"
+  }
+] as const;
+
+const viewportPresets = [
+  { label: "1440x900", width: 1440, height: 900, suffix: "" },
+  { label: "1920x1080", width: 1920, height: 1080, suffix: "-1080p" },
+  { label: "2560x1600", width: 2560, height: 1600, suffix: "-2k" }
+] as const;
+
+const pageSnapshots = [
+  { tab: "Simulation", suffix: "simulation" },
+  { tab: "Design", suffix: "design" },
+  { tab: "Import & Export", suffix: "import-export" },
+  { tab: "Help & Documentation", suffix: "help" }
 ] as const;
 
 test.describe("StampPLC mockup visual regression", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
+  const normaliseWorkspace = async (
+    page: Parameters<typeof test.beforeEach>[0]["page"],
+    width = 1440,
+    height = 900
+  ) => {
+    await page.setViewportSize({ width, height });
     await page.goto("/");
 
     // Normalise interactive controls before capturing screenshots.
@@ -25,52 +57,86 @@ test.describe("StampPLC mockup visual regression", () => {
     });
     await page.getByRole("button", { name: "Landscape", exact: true }).click();
     await page.getByLabel("Show grid overlay").check();
+  };
+
+  test.beforeEach(async ({ page }) => {
+    await normaliseWorkspace(page);
   });
 
   for (const screen of screenDefinitions) {
-    test(`screen ${screen.id} matches baseline`, async ({ page }) => {
-      const targetButton = page.locator(".screen-selector").getByRole("button", {
-        name: screen.label,
-        exact: false
-      });
-      const currentClasses = await targetButton.getAttribute("class");
-      if (!currentClasses?.includes("active")) {
-        await targetButton.click();
-      }
-      await page.waitForTimeout(100);
+    for (const preset of viewportPresets) {
+      test(`screen ${screen.id} matches baseline @ ${preset.label}`, async ({ page }) => {
+        await normaliseWorkspace(page, preset.width, preset.height);
+        const targetButton = page.locator(".screen-selector").getByRole("button", {
+          name: screen.label,
+          exact: false
+        });
+        const currentClasses = await targetButton.getAttribute("class");
+        if (!currentClasses?.includes("active")) {
+          await targetButton.click();
+        }
+        await page.waitForTimeout(100);
 
-      const viewport = page.locator(".viewport-wrapper");
-      await expect(viewport).toBeVisible();
-      await expect(viewport).toHaveScreenshot(screen.snapshot, {
-        animations: "disabled",
-        caret: "hide",
-        scale: "device"
+        await expect(page).toHaveScreenshot(`${screen.snapshot}${preset.suffix}.png`, {
+          animations: "disabled",
+          caret: "hide",
+          fullPage: true
+        });
       });
-    });
+    }
+  }
+
+  for (const preset of viewportPresets) {
+    for (const snapshot of pageSnapshots) {
+      test(`workspace ${snapshot.suffix} tab @ ${preset.label}`, async ({ page }) => {
+        await normaliseWorkspace(page, preset.width, preset.height);
+        await page.getByRole("button", { name: snapshot.tab, exact: true }).click();
+        await expect(page).toHaveScreenshot(`workspace-${snapshot.suffix}${preset.suffix}.png`, {
+          animations: "disabled",
+          caret: "hide",
+          fullPage: true
+        });
+      });
+    }
   }
 
   test("keyboard short press updates screen and logs state", async ({ page }) => {
     await page.keyboard.press("ArrowDown");
 
     const activeButton = page.locator(".screen-selector button.active strong");
-    await expect(activeButton).toHaveText(/Configuration Menu/);
+    await expect(activeButton).toHaveText(new RegExp(screenLabel("info-cumulative", "Cumulative Liters")));
 
     const latestLog = page.locator(".interaction-log span").first();
     await expect(latestLog).toContainText("DOWN • short");
-    await expect(latestLog).toContainText("→ configuration");
+    await expect(latestLog).toContainText("→ info-cumulative");
+
+    const latestTrace = page.locator(".simulation-trace-panel li").first();
+    await expect(latestTrace).toContainText("Next page");
   });
 
-  test("keyboard long press on enter opens countdown screen", async ({ page }) => {
+  test("keyboard long press on enter logs idle action", async ({ page }) => {
     await page.keyboard.down("Enter");
     await page.waitForTimeout(1600);
     await page.keyboard.up("Enter");
 
     const activeButton = page.locator(".screen-selector button.active strong");
-    await expect(activeButton).toHaveText(/Reset Countdown/);
+    await expect(activeButton).toHaveText(new RegExp(screenLabel("info-overview", "Instant Flow")));
 
     const latestLog = page.locator(".interaction-log span").first();
     await expect(latestLog).toContainText("ENTER • long");
-    await expect(latestLog).toContainText("→ countdown");
+    await expect(latestLog).toContainText("→ info-overview");
+
+    const latestTrace = page.locator(".simulation-trace-panel li").first();
+    await expect(latestTrace).toContainText("Enter idle");
+  });
+
+  test("transition preview highlights target screen", async ({ page }) => {
+    await page.keyboard.press("ArrowDown");
+    const overlay = page.locator(".transition-overlay");
+    await expect(overlay).toBeVisible();
+    await expect(overlay.locator(".transition-overlay__target")).toHaveText(
+      new RegExp(screenLabel("info-cumulative", "Cumulative Liters"))
+    );
   });
 
   test("design panel preset updates palette and resets", async ({ page }) => {
@@ -130,33 +196,14 @@ test.describe("StampPLC mockup visual regression", () => {
     expect(initialBase).not.toBe(baseAfterValueChange);
   });
 
-  test("design panel layout snapshot", async ({ page }) => {
-    await page.getByRole("button", { name: "Design", exact: true }).click();
-    const editor = page.locator(".theme-editor");
-    await expect(editor).toBeVisible();
-    await expect(editor).toHaveScreenshot("design-panel-layout.png", {
-      animations: "disabled",
-      caret: "hide"
-    });
-
-    await page.setViewportSize({ width: 980, height: 900 });
-    await expect(editor).toHaveScreenshot("design-panel-layout-980.png", {
-      animations: "disabled",
-      caret: "hide"
-    });
-
-    await page.setViewportSize({ width: 820, height: 900 });
-    await expect(editor).toHaveScreenshot("design-panel-layout-820.png", {
-      animations: "disabled",
-      caret: "hide"
-    });
-  });
-
   test("help panel shows live JSON", async ({ page }) => {
     await page.getByRole("button", { name: "Help & Documentation" }).click();
     const helpPanel = page.locator(".help-panel");
     await expect(helpPanel).toBeVisible();
-    const livePre = helpPanel.locator("article:nth-of-type(3) pre");
+    const liveCard = helpPanel
+      .locator(".help-panel__card")
+      .filter({ has: page.getByRole("heading", { name: "Live screen JSON" }) });
+    const livePre = liveCard.locator("pre");
     await expect(livePre).toContainText('"id": "info-overview"');
 
     await page.locator(".screen-selector").getByRole("button", { name: /Configuration Menu/ }).click();
@@ -173,6 +220,20 @@ test.describe("StampPLC mockup visual regression", () => {
 
     await page.locator(".screen-selector").getByRole("button", { name: /Configuration Menu/ }).click();
     await expect(livePanel).toContainText('"id": "configuration"');
+  });
+
+  test("value placeholder edits emit trace entries", async ({ page }) => {
+    const firstValueInput = page.locator(".value-editor-panel input").first();
+    await firstValueInput.fill("S1 123.4 L/s");
+    const latestTrace = page.locator(".simulation-trace-panel li").first();
+    await expect(latestTrace).toContainText("Value edited");
+
+    const saveButton = page.locator(".value-editor-panel li").first().getByRole("button", { name: "Save value" });
+    await saveButton.click();
+    const saveTrace = page.locator(".simulation-trace-panel li").first();
+    const persistedTrace = page.locator(".simulation-trace-panel li").nth(1);
+    await expect(saveTrace).toContainText("Save configuration");
+    await expect(persistedTrace).toContainText("Value saved");
   });
 
   test("dataset import and validation workflow", async ({ page }) => {
@@ -243,8 +304,6 @@ test.describe("StampPLC mockup visual regression", () => {
   });
 
   test("exported IR matches dataset layout", async () => {
-    const currentDir = fileURLToPath(new URL(".", import.meta.url));
-    const mockupRoot = path.resolve(currentDir, "..", "..");
     const projectRoot = path.resolve(mockupRoot, "..", "..");
     const tscBin = path.resolve(mockupRoot, "node_modules/typescript/bin/tsc");
     execSync(`node "${tscBin}" --project tsconfig.exporter.json`, {

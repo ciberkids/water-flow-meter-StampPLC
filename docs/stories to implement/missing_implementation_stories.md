@@ -25,7 +25,7 @@
 - [x] SI-20250517-05-02 Firmware modularity refinement findings ([details](../Implemented%20stories%20_%20IGNORE/SI-20250517-05-02-firmware-modularity-refinement-findings.md))
 - [x] SI-20250517-06 Export validation and automation tooling ([details](../Implemented%20stories%20_%20IGNORE/SI-20250517-06-validation-tooling.md))
 
-- [ ] SI-20251111-01 Simulation function trace & editing ([details](../missing%20implementation/SI-20251111-01-simulation-instrumentation.md))
+- [x] SI-20251111-01 Simulation function trace & editing ([details](../missing%20implementation/SI-20251111-01-simulation-instrumentation.md))
 - [ ] SI-20251111-02 Design authoring & hierarchy tools ([details](../missing%20implementation/SI-20251111-02-design-authoring.md))
 - [ ] SI-20251111-03 Exporter schema + firmware manifest ([details](../missing%20implementation/SI-20251111-03-exporter-schema-manifest.md))
 - [ ] SI-20251111-04 Help tab documentation overhaul ([details](../missing%20implementation/SI-20251111-04-help-docs.md))

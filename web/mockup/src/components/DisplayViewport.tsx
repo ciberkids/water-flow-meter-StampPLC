@@ -1,20 +1,23 @@
-import { CSSProperties, useMemo } from "react";
+import { CSSProperties, useCallback, useMemo } from "react";
 import { ScreenElement } from "../types";
 import { LayoutReport } from "../utils/layout";
 import { useTheme } from "../theme/ThemeProvider";
 import { DeviceGrid } from "./DeviceGrid";
+import { TransitionPreviewState } from "../types/transitionPreview";
 
 interface DisplayViewportProps {
   layout: LayoutReport;
   zoomPercent: number;
   showGrid: boolean;
   valueOverrides?: Record<string, string>;
+  pendingTransition?: TransitionPreviewState | null;
 }
 
 const FRAME_PADDING = 8;
+const MINI_PREVIEW_SCALE = 0.45;
 const DEVICE_FONT = "\"StampPLC-Pixel\", \"Press Start 2P\", monospace";
 
-export function DisplayViewport({ layout, zoomPercent, showGrid, valueOverrides }: DisplayViewportProps) {
+export function DisplayViewport({ layout, zoomPercent, showGrid, valueOverrides, pendingTransition }: DisplayViewportProps) {
   const { theme } = useTheme();
   const orientation = layout.bounds.orientation;
   const scale = useMemo(() => Math.max(zoomPercent / 100, 1), [zoomPercent]);
@@ -79,6 +82,64 @@ export function DisplayViewport({ layout, zoomPercent, showGrid, valueOverrides 
     [theme]
   );
 
+  const renderElementsForLayout = useCallback(
+    (layoutToRender: LayoutReport, overrides?: Record<string, string>) =>
+      layoutToRender.elements.map((item) => {
+        const { element } = item;
+        const style: CSSProperties = {
+          ...baseStyle,
+          ...(elementStyles[element.kind] ?? {}),
+          ...(emphasisStyles[element.emphasis ?? "normal"] ?? {}),
+          left: `${item.left}px`,
+          top: `${item.top}px`
+        };
+
+        if (item.width > 0) {
+          style.width = `${item.width}px`;
+        }
+        if (item.height > 0) {
+          style.height = `${item.height}px`;
+        }
+
+        if (element.kind === "box" || element.kind === "icon") {
+          style.display = "block";
+        }
+
+        const overrideValue = overrides ? overrides[element.id] : undefined;
+        const displayContent =
+          element.kind === "value" && overrideValue !== undefined ? overrideValue : element.content;
+
+        const isOverridden =
+          element.kind === "value" && overrideValue !== undefined && displayContent !== element.content;
+
+        const className = [
+          "display-element",
+          `kind-${element.kind}`,
+          item.outOfBounds ? "overflow" : "",
+          isOverridden ? "value-overridden" : ""
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        switch (element.kind) {
+          case "text":
+          case "value":
+          case "badge":
+            return (
+              <div key={element.id} className={className} style={style}>
+                {displayContent}
+              </div>
+            );
+          case "box":
+          case "icon":
+            return <div key={element.id} className={className} style={style} />;
+          default:
+            return null;
+        }
+      }),
+    [baseStyle, elementStyles, emphasisStyles]
+  );
+
   const wrapperStyle: CSSProperties = {
     width: `${scaledWidth + FRAME_PADDING * 2}px`,
     height: `${scaledHeight + FRAME_PADDING * 2}px`,
@@ -119,64 +180,62 @@ export function DisplayViewport({ layout, zoomPercent, showGrid, valueOverrides 
             minorColor={theme.colors.gridMinor}
             majorColor={theme.colors.gridMajor}
           />
-          {layout.elements.map((item) => {
-            const { element } = item;
-            const style: CSSProperties = {
-              ...baseStyle,
-              ...(elementStyles[element.kind] ?? {}),
-              ...(emphasisStyles[element.emphasis ?? "normal"] ?? {}),
-              left: `${item.left}px`,
-              top: `${item.top}px`
-            };
-
-            if (item.width > 0) {
-              style.width = `${item.width}px`;
-            }
-            if (item.height > 0) {
-              style.height = `${item.height}px`;
-            }
-
-            if (element.kind === "box" || element.kind === "icon") {
-              style.display = "block";
-            }
-
-            const displayContent =
-              element.kind === "value" && valueOverrides && valueOverrides[element.id] !== undefined
-                ? valueOverrides[element.id]
-                : element.content;
-
-            const isOverridden = element.kind === "value" && displayContent !== element.content;
-
-            const className = [
-              "display-element",
-              `kind-${element.kind}`,
-              item.outOfBounds ? "overflow" : "",
-              isOverridden ? "value-overridden" : ""
-            ]
-              .filter(Boolean)
-              .join(" ");
-
-            switch (element.kind) {
-              case "text":
-              case "value":
-              case "badge":
-                return (
-                  <div key={element.id} className={className} style={style}>
-                    {displayContent}
-                  </div>
-                );
-              case "box":
-              case "icon":
-                return <div key={element.id} className={className} style={style} />;
-              default:
-                return null;
-            }
-          })}
+          {renderElementsForLayout(layout, valueOverrides)}
           <div className="legend" style={{ color: theme.colors.legend }}>
             <span>Red pulses per X L</span>
             <span>Green = Ready</span>
             <span>Blue = Flow</span>
           </div>
+          {pendingTransition ? (
+            <div
+              className={`transition-overlay transition-overlay--${pendingTransition.effect}`}
+              style={
+                {
+                  ["--transition-ease" as const]: theme.animation.easing ?? "ease-in-out"
+                } as CSSProperties
+              }
+            >
+              <div className="transition-overlay__glass">
+                <div className="transition-overlay__screen">
+                  {pendingTransition.previewLayout ? (
+                    <div
+                      className="transition-overlay__screen-zoom"
+                      style={{
+                        width: `${pendingTransition.previewLayout.bounds.width}px`,
+                        height: `${pendingTransition.previewLayout.bounds.height}px`,
+                        transform: `scale(${MINI_PREVIEW_SCALE})`
+                      }}
+                    >
+                      <div
+                        className="transition-overlay__mini-surface"
+                        style={{
+                          width: `${pendingTransition.previewLayout.bounds.width}px`,
+                          height: `${pendingTransition.previewLayout.bounds.height}px`,
+                          backgroundColor: theme.colors.displayBackground,
+                          borderColor: theme.colors.badgeBorder
+                        }}
+                      >
+                        {renderElementsForLayout(pendingTransition.previewLayout)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="transition-overlay__placeholder">
+                      {pendingTransition.screenName ?? pendingTransition.screenId}
+                    </div>
+                  )}
+                </div>
+                <div className="transition-overlay__meta">
+                  <span className="transition-overlay__target">
+                    {pendingTransition.screenName ?? pendingTransition.screenId}
+                  </span>
+                  {pendingTransition.actionLabel ? (
+                    <span className="transition-overlay__action">{pendingTransition.actionLabel}</span>
+                  ) : null}
+                  <span className="transition-overlay__trigger">{pendingTransition.triggerLabel}</span>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

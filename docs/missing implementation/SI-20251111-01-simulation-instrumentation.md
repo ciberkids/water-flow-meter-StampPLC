@@ -20,10 +20,10 @@ Upgrade the Simulation tab so it mirrors firmware behaviour: every simulated eve
 
 ## 2. Acceptance Criteria
 
-- [ ] Simulated button/data events emit a visible function trace (action ID + params) sourced from the imported firmware manifest.
-- [ ] Value placeholders accept inline edits, show delta vs. source data, and fire edit/save callbacks reflecting actual firmware actions.
-- [ ] Transaction/transition previews mirror the hardware library effects (enter/exit animations, fades) and highlight target screens.
-- [ ] Function trace log is filterable/replayable for the most recent interactions.
+- [x] Simulated button/data events emit a visible function trace (action ID + params) sourced from the imported firmware manifest.
+- [x] Value placeholders accept inline edits, show delta vs. source data, and fire edit/save callbacks reflecting actual firmware actions.
+- [x] Transaction/transition previews mirror the hardware library effects (enter/exit animations, fades) and highlight target screens.
+- [x] Function trace log is filterable/replayable for the most recent interactions.
 
 ---
 
@@ -33,17 +33,19 @@ Upgrade the Simulation tab so it mirrors firmware behaviour: every simulated eve
 - Integrate the firmware manifest (produced in SI-20251111-03) so each event has a human-friendly name and parameter schema.
 - Enhance value placeholder components to support two-way binding: editing updates dataset clone + validation, saving triggers synthetic `save-config` actions.
 - Create animation helpers that drive the same easing/timing as the firmware library (requires coordination with requirement 5 open item).
+- Transition previews now render a scaled version of the destination screen with effect-specific motion (slide up/down, fade, scale) plus action metadata (`web/mockup/src/App.tsx`, `src/components/DisplayViewport.tsx`, `src/App.css`).
+- Playwright suite covers transition overlays, manifest-labelled traces, and refreshed multi-resolution snapshots for the key screens/tabs (`web/mockup/tests/visual/mockup.spec.ts`, `tests/visual/mockup.spec.ts-snapshots/`).
 
 ---
 
 ## 4. Tasks & Checklist
 
-- [ ] Build manifest ingestion hook in the mockup app and expose it to the Simulation tab context.
+- [x] Build manifest ingestion hook in the mockup app and expose it to the Simulation tab context.
 - [x] Implement function trace panel with filtering, timestamps, and parameter rendering.
 - [x] Add value placeholder editing widgets (inline input with validation + revert) tied to simulated action events.
-- [ ] Mirror firmware transition effects (enter/exit) using matching easing/timing constants.
-- [ ] Update Playwright tests to assert function trace output and edit/save flows.
-- [ ] Document the Simulation workflow in Help.
+- [x] Mirror firmware transition effects (enter/exit) using matching easing/timing constants.
+- [x] Update Playwright tests to assert function trace output and edit/save flows.
+- [x] Document the Simulation workflow in Help.
 
 ---
 

@@ -3,6 +3,7 @@ import "./App.css";
 import { DisplayViewport } from "./components/DisplayViewport";
 import { ScreenSelector } from "./components/ScreenSelector";
 import screensData from "./data/screens.json";
+import actionManifestJson from "./data/actionManifest.json";
 import { DisplayOrientation, ScreenDataset, ScreenDefinition, ScreenElement } from "./types";
 import { ButtonPanel } from "./components/ButtonPanel";
 import { ThemeEditor } from "./components/ThemeEditor";
@@ -18,6 +19,8 @@ import { ExporterPanel } from "./components/ExporterPanel";
 import { SimulationTracePanel } from "./components/SimulationTracePanel";
 import { ValuePlaceholderPanel } from "./components/ValuePlaceholderPanel";
 import { SimulationTraceEntry } from "./types/simulationTrace";
+import { FirmwareActionManifest, FirmwareActionDefinition } from "./types/firmwareActions";
+import { TransitionEffect, TransitionPreviewState } from "./types/transitionPreview";
 import { findMatchingButtonFlows } from "./utils/flowMatching";
 
 const clamp = (value: number, min: number, max: number) =>
@@ -39,6 +42,22 @@ type ValidationFeedback = {
   status: "idle" | "success" | "error";
   message: string;
   issues: string[];
+};
+
+const formatTriggerLabel = (event: SimulatedButtonEvent): string =>
+  `${event.button.toUpperCase()} • ${event.kind}`;
+
+const deriveTransitionEffect = (event: SimulatedButtonEvent): TransitionEffect => {
+  if (event.button === "down") {
+    return "slide-up";
+  }
+  if (event.button === "up") {
+    return "slide-down";
+  }
+  if (event.button === "enter" && event.kind === "short") {
+    return "scale";
+  }
+  return "fade";
 };
 
 export function App() {
@@ -66,6 +85,8 @@ export function App() {
 
   const initialScreens = initialDataset.screens;
   const [dataset, setDataset] = useState<ScreenDataset>(initialDataset);
+  const initialManifest = actionManifestJson as FirmwareActionManifest;
+  const [firmwareManifest, setFirmwareManifest] = useState<FirmwareActionManifest>(initialManifest);
   const [validationFeedback, setValidationFeedback] = useState<ValidationFeedback>(() => ({
     status: datasetValidation.errors?.length ? "error" : "success",
     message: datasetValidation.errors?.length
@@ -82,16 +103,30 @@ export function App() {
     }),
     [dataset]
   );
+  const actionCatalog = useMemo(() => {
+    const map = new Map<string, FirmwareActionDefinition>();
+    firmwareManifest.actions.forEach((action) => {
+      if (action?.id) {
+        map.set(action.id, action);
+      }
+    });
+    return map;
+  }, [firmwareManifest]);
   const [zoom, setZoom] = useState<number>(200);
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [orientation, setOrientation] = useState<DisplayOrientation>("landscape");
   const [interactionLog, setInteractionLog] = useState<string[]>([]);
   const [traceEntries, setTraceEntries] = useState<SimulationTraceEntry[]>([]);
   const [traceFilter, setTraceFilter] = useState<string>("");
-  const [transitionPreview, setTransitionPreview] = useState<{ screenId: string; screenName?: string } | null>(null);
+  const [transitionPreview, setTransitionPreview] = useState<TransitionPreviewState | null>(null);
   const [valueOverrides, setValueOverrides] = useState<Record<string, Record<string, string>>>({});
   const [activePanel, setActivePanel] = useState<"simulation" | "design" | "importExport" | "help">("simulation");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const manifestInputRef = useRef<HTMLInputElement | null>(null);
+  const [manifestFeedback, setManifestFeedback] = useState<{ status: "idle" | "success" | "error"; message: string }>({
+    status: "idle",
+    message: "Using bundled manifest."
+  });
   const screenJsonDownload = useCallback(() => {
     const blob = new Blob([JSON.stringify(dataset, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -176,6 +211,55 @@ export function App() {
     [validateDatasetSafe]
   );
 
+  const parseManifestSafe = useCallback((raw: unknown): FirmwareActionManifest => {
+    if (typeof raw !== "object" || raw === null) {
+      throw new Error("Manifest must be an object");
+    }
+    const candidate = raw as Partial<FirmwareActionManifest>;
+    if (!Array.isArray(candidate.actions)) {
+      throw new Error("Manifest is missing an actions array");
+    }
+    candidate.actions.forEach((action, index) => {
+      if (!action?.id || !action?.label) {
+        throw new Error(`Manifest entry #${index + 1} missing id/label`);
+      }
+    });
+    return {
+      updatedAt: candidate.updatedAt ?? new Date().toISOString(),
+      actions: candidate.actions as FirmwareActionDefinition[]
+    };
+  }, []);
+
+  const handleManifestUploadClick = useCallback(() => {
+    manifestInputRef.current?.click();
+  }, []);
+
+  const handleManifestImport = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) {
+        return;
+      }
+      try {
+        const payload = JSON.parse(await file.text());
+        const parsed = parseManifestSafe(payload);
+        setFirmwareManifest(parsed);
+        setManifestFeedback({
+          status: "success",
+          message: `Loaded ${file.name} (${parsed.actions.length} actions).`
+        });
+      } catch (error) {
+        setManifestFeedback({
+          status: "error",
+          message: error instanceof Error ? error.message : String(error)
+        });
+      } finally {
+        event.target.value = "";
+      }
+    },
+    [parseManifestSafe]
+  );
+
   const handleValidateClick = useCallback(() => {
     const { dataset: validated, issues } = validateDatasetSafe(dataset);
     if (!validated || issues.length > 0) {
@@ -211,7 +295,12 @@ export function App() {
     if (!transitionPreview) {
       return undefined;
     }
-    const timer = window.setTimeout(() => setTransitionPreview(null), 2500);
+    const remaining = transitionPreview.expiresAt - Date.now();
+    if (remaining <= 0) {
+      setTransitionPreview(null);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setTransitionPreview(null), remaining);
     return () => window.clearTimeout(timer);
   }, [transitionPreview]);
 
@@ -236,12 +325,20 @@ export function App() {
 
   const recordTraceEntry = useCallback(
     (entry: Omit<SimulationTraceEntry, "timestamp"> & { timestamp?: number }) => {
+      const actionDefinition = entry.id ? actionCatalog.get(entry.id) : undefined;
       setTraceEntries((current) => {
-        const next = [{ ...entry, timestamp: entry.timestamp ?? Date.now() }, ...current];
+        const next = [
+          {
+            ...entry,
+            functionName: entry.functionName ?? actionDefinition?.label,
+            timestamp: entry.timestamp ?? Date.now()
+          },
+          ...current
+        ];
         return next.slice(0, 25);
       });
     },
-    []
+    [actionCatalog]
   );
 
   const handleTraceReplay = useCallback(
@@ -268,6 +365,7 @@ export function App() {
         recordTraceEntry({
           id: "ui.mock.value-edit",
           label: "Value edited",
+          functionName: actionCatalog.get("ui.mock.value-edit")?.label,
           trigger: `value.edit.${element.id}`,
           screenId,
           screenName: selectedScreen?.name,
@@ -285,7 +383,7 @@ export function App() {
         };
       });
     },
-    [recordTraceEntry, selectedScreen?.name, valueOverrides]
+    [actionCatalog, recordTraceEntry, selectedScreen?.name, valueOverrides]
   );
 
   const handleValueRevert = useCallback((screenId: string, element: ScreenElement) => {
@@ -308,26 +406,57 @@ export function App() {
   const handleValueSave = useCallback(
     (screenId: string, element: ScreenElement, value: string) => {
       recordTraceEntry({
-        id: "core.action.save-config",
-        label: "Save configuration",
+        id: "ui.mock.value-save",
+        label: "Value saved",
+        functionName: actionCatalog.get("ui.mock.value-save")?.label,
         trigger: `value.save.${element.id}`,
         screenId,
         screenName: selectedScreen?.name,
         actionParams: { elementId: element.id, value }
       });
+      recordTraceEntry({
+        id: "core.action.save-config",
+        label: "Save configuration",
+        functionName: actionCatalog.get("core.action.save-config")?.label,
+        trigger: `value.save.${element.id}`,
+        screenId,
+        screenName: selectedScreen?.name,
+        actionParams: { elementId: element.id }
+      });
     },
-    [recordTraceEntry, selectedScreen?.name]
+    [actionCatalog, recordTraceEntry, selectedScreen?.name]
   );
 
   const previewTransition = useCallback(
-    (targetScreenId?: string) => {
-      if (!targetScreenId) {
+    (payload: {
+      targetScreenId?: string;
+      actionId?: string;
+      actionLabel?: string;
+      triggerLabel: string;
+      effect: TransitionEffect;
+    }) => {
+      if (!payload.targetScreenId && !payload.actionLabel) {
         return;
       }
-      const targetScreen = dataset.screens.find((candidate) => candidate.id === targetScreenId);
-      setTransitionPreview({ screenId: targetScreenId, screenName: targetScreen?.name });
+
+      const targetScreen = payload.targetScreenId
+        ? dataset.screens.find((candidate) => candidate.id === payload.targetScreenId)
+        : undefined;
+      const previewLayout =
+        targetScreen && payload.targetScreenId ? computeLayout(targetScreen, orientation) : undefined;
+
+      setTransitionPreview({
+        screenId: payload.targetScreenId ?? selectedScreen?.id ?? "—",
+        screenName: targetScreen?.name ?? payload.targetScreenId ?? selectedScreen?.name,
+        actionId: payload.actionId,
+        actionLabel: payload.actionLabel ?? payload.actionId,
+        triggerLabel: payload.triggerLabel,
+        effect: payload.effect,
+        previewLayout,
+        expiresAt: Date.now() + 1500
+      });
     },
-    [dataset.screens]
+    [dataset.screens, orientation, selectedScreen?.id, selectedScreen?.name]
   );
 
   const selectByOffset = useCallback(
@@ -369,37 +498,49 @@ export function App() {
 
   const handleButtonEvent = useCallback(
     (event: SimulatedButtonEvent) => {
-      const label = `${event.button.toUpperCase()} • ${event.kind}`;
-      let destination: string | undefined = undefined;
-
-      if (event.button === "up" && event.kind !== "long") {
-        destination = selectByOffset(-1);
-      } else if (event.button === "down" && event.kind !== "long") {
-        destination = selectByOffset(1);
-      } else if (event.button === "enter") {
-        destination = event.kind === "long" ? selectById("countdown") : selectById("configuration");
-      }
-
-      const activeScreen = destination ?? selectedScreen?.id ?? screens[0]?.id ?? "—";
-      appendLog(
-        `[${new Date(event.timestamp).toLocaleTimeString()}] ${label} → ${activeScreen}`
-      );
-
+      const triggerLabel = formatTriggerLabel(event);
+      const effect = deriveTransitionEffect(event);
+      let activeScreenId = selectedScreen?.id ?? screens[0]?.id ?? "—";
       const resolvedFlows = findMatchingButtonFlows(selectedScreen, event);
       if (resolvedFlows.length > 0) {
         resolvedFlows.forEach((flow) => {
+          const actionDefinition = flow.actionId ? actionCatalog.get(flow.actionId) : undefined;
+          if (flow.targetScreenId) {
+            const resolvedId = selectById(flow.targetScreenId);
+            if (resolvedId) {
+              activeScreenId = resolvedId;
+            }
+          }
           recordTraceEntry({
             id: flow.actionId ?? "ui.action.unassigned",
             label: flow.label,
+            functionName: actionDefinition?.label,
             trigger: `${event.button}.${event.kind}`,
             screenId: selectedScreen?.id ?? "unknown",
             screenName: selectedScreen?.name,
             actionParams: flow.actionParams ?? null,
             targetScreenId: flow.targetScreenId
           });
-          previewTransition(flow.targetScreenId);
+          previewTransition({
+            targetScreenId: flow.targetScreenId,
+            actionId: flow.actionId,
+            actionLabel: actionDefinition?.label ?? flow.label,
+            triggerLabel,
+            effect
+          });
         });
       } else {
+        let fallbackDestination: string | undefined;
+        if (event.button === "up" && event.kind !== "long") {
+          fallbackDestination = selectByOffset(-1);
+        } else if (event.button === "down" && event.kind !== "long") {
+          fallbackDestination = selectByOffset(1);
+        } else if (event.button === "enter" && event.kind === "short") {
+          fallbackDestination = selectById("configuration");
+        }
+        if (fallbackDestination) {
+          activeScreenId = fallbackDestination;
+        }
         recordTraceEntry({
           id: "ui.action.unmapped",
           label: "No matching flow",
@@ -408,8 +549,12 @@ export function App() {
           screenName: selectedScreen?.name
         });
       }
+
+      appendLog(
+        `[${new Date(event.timestamp).toLocaleTimeString()}] ${triggerLabel} → ${activeScreenId}`
+      );
     },
-    [appendLog, previewTransition, recordTraceEntry, selectById, selectByOffset, selectedScreen, screens]
+    [actionCatalog, appendLog, previewTransition, recordTraceEntry, selectById, selectByOffset, selectedScreen, screens]
   );
 
   const { pressed, press, release, cancelAll } = useSimulatedButtons(handleButtonEvent);
@@ -492,6 +637,7 @@ export function App() {
         <ScreenSelector
           screens={screens}
           activeId={selectedScreen?.id ?? ""}
+          previewId={transitionPreview?.screenId}
           onSelect={setSelectedScreenId}
         />
       </section>
@@ -615,14 +761,10 @@ export function App() {
                       zoomPercent={zoom}
                       showGrid={showGrid}
                       valueOverrides={selectedScreenOverrides}
+                      pendingTransition={transitionPreview}
                     />
                   ) : (
                     <p>No screen selected.</p>
-                  )}
-                  {transitionPreview && (
-                    <div className="transition-preview-banner">
-                      <strong>Transition preview:</strong> {transitionPreview.screenName ?? transitionPreview.screenId}
-                    </div>
                   )}
                 </section>
 
@@ -738,6 +880,27 @@ export function App() {
                     data-testid="dataset-import"
                     style={{ display: "none" }}
                   />
+                </div>
+                <div className="manifest-actions">
+                  <h5>Firmware actions</h5>
+                  <p>Import the JSON manifest exported from the firmware to annotate simulation traces.</p>
+                  <button
+                    type="button"
+                    className="tool-button tool-button--secondary"
+                    onClick={handleManifestUploadClick}
+                  >
+                    Import manifest
+                  </button>
+                  <input
+                    ref={manifestInputRef}
+                    type="file"
+                    accept="application/json"
+                    onChange={handleManifestImport}
+                    style={{ display: "none" }}
+                  />
+                  <p className={`manifest-feedback manifest-feedback--${manifestFeedback.status}`}>
+                    {manifestFeedback.message}
+                  </p>
                 </div>
                 {validationFeedback.status !== "idle" && (
                   <div

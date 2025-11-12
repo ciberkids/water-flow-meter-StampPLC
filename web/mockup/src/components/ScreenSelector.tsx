@@ -3,17 +3,23 @@ import { ScreenDefinition } from "../types";
 interface ScreenSelectorProps {
   screens: ScreenDefinition[];
   activeId: string;
+  previewId?: string;
   onSelect: (id: string) => void;
 }
 
-export function ScreenSelector({ screens, activeId, onSelect }: ScreenSelectorProps) {
+export function ScreenSelector({ screens, activeId, previewId, onSelect }: ScreenSelectorProps) {
   return (
     <div className="screen-selector">
       {screens.map((screen) => (
         <button
           key={screen.id}
           type="button"
-          className={screen.id === activeId ? "active" : ""}
+          className={[
+            screen.id === activeId ? "active" : "",
+            previewId && previewId === screen.id ? "preview-target" : ""
+          ]
+            .filter(Boolean)
+            .join(" ")}
           onClick={() => onSelect(screen.id)}
         >
           <strong>{screen.name}</strong>
@@ -25,4 +31,3 @@ export function ScreenSelector({ screens, activeId, onSelect }: ScreenSelectorPr
     </div>
   );
 }
-
