@@ -265,6 +265,24 @@ test.describe("StampPLC mockup visual regression", () => {
     await expect(xInput).toHaveValue("5");
   });
 
+  test("keyboard repeat events still nudge the selected element", async ({ page }) => {
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+    await page.getByTestId("element-select-title").check();
+    const xInput = page.locator('[data-element-id="title"][data-field="x"]');
+    const initialValue = Number(await xInput.inputValue());
+    await page.evaluate(() => {
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowRight",
+          repeat: true,
+          bubbles: true,
+          cancelable: true
+        })
+      );
+    });
+    await expect(xInput).toHaveValue(String(initialValue + 1));
+  });
+
   test("screen hierarchy adds child screen and updates breadcrumbs", async ({ page }) => {
     await page.getByRole("button", { name: "Design", exact: true }).click();
     const hierarchy = page.getByTestId("screen-hierarchy");
@@ -374,6 +392,60 @@ test.describe("StampPLC mockup visual regression", () => {
     await page.getByRole("button", { name: "Import & Export", exact: true }).click();
     await page.getByRole("button", { name: "Validate JSON" }).click();
     await expect(page.getByTestId("dataset-feedback")).toContainText("Dataset validated");
+  });
+
+  test("importing out-of-bounds dataset clamps geometry and surfaces alert", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Import & Export", exact: true }).click();
+    const overflowingDataset = {
+      screens: [
+        {
+          id: "overflow-screen",
+          name: "Overflow Screen",
+          description: "Coordinates outside bounds",
+          elements: [
+            { id: "title", kind: "text", x: 4, y: 4, content: "Overflow screen", emphasis: "strong" },
+            { id: "offscreen-box", kind: "box", x: 220, y: 260, width: 80, height: 20 }
+          ]
+        }
+      ],
+      theme: {
+        name: "Test Theme",
+        colors: {
+          displayBackground: "#000a17",
+          textPrimary: "#f5faff",
+          textMuted: "#9caec6",
+          textStrong: "#ffffff",
+          value: "#56d2ff",
+          badgeBackground: "#0f1e33",
+          badgeBorder: "#80a8c9",
+          icon: "#56d2ff",
+          legend: "#85bbe8",
+          gridMinor: "rgba(124, 162, 206, 0.28)",
+          gridMajor: "rgba(124, 162, 206, 0.55)"
+        },
+        typography: {
+          base: 8,
+          value: 10,
+          badge: 8
+        },
+        animation: {
+          easing: "ease-in-out"
+        }
+      }
+    };
+
+    await page.setInputFiles('input[data-testid="dataset-import"]', {
+      name: "overflow-dataset.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(overflowingDataset))
+    });
+
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+    const alert = page.locator(".layout-correction-alert");
+    await expect(alert).toBeVisible();
+    await expect(alert).toContainText("overflow-dataset.json");
+    await expect(alert).toContainText("were clamped");
   });
 
   test("exported IR matches dataset layout", async () => {

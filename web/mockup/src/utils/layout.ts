@@ -26,6 +26,10 @@ export interface LayoutElement {
   width: number;
   height: number;
   outOfBounds: boolean;
+  originalLeft: number;
+  originalTop: number;
+  originalWidth: number;
+  originalHeight: number;
 }
 
 export interface LayoutReport {
@@ -81,6 +85,37 @@ function boundsForOrientation(orientation: DisplayOrientation): LayoutBounds {
   return { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT, orientation };
 }
 
+function clampBoxToBounds(
+  bounds: LayoutBounds,
+  box: { left: number; top: number; width: number; height: number }
+) {
+  let { left, top, width, height } = box;
+
+  if (left < 0) {
+    const delta = -left;
+    left = 0;
+    width = Math.max(0, width - delta);
+  }
+
+  if (top < 0) {
+    const delta = -top;
+    top = 0;
+    height = Math.max(0, height - delta);
+  }
+
+  const overflowRight = left + width - bounds.width;
+  if (overflowRight > 0) {
+    width = Math.max(0, width - overflowRight);
+  }
+
+  const overflowBottom = top + height - bounds.height;
+  if (overflowBottom > 0) {
+    height = Math.max(0, height - overflowBottom);
+  }
+
+  return { left, top, width, height };
+}
+
 export function computeLayout(screen: ScreenDefinition, orientation: DisplayOrientation): LayoutReport {
   const bounds = boundsForOrientation(orientation);
   const elements: LayoutElement[] = [];
@@ -119,19 +154,32 @@ export function computeLayout(screen: ScreenDefinition, orientation: DisplayOrie
     const roundedWidth = Math.max(0, Math.round(boxWidth));
     const roundedHeight = Math.max(0, Math.round(boxHeight));
 
-    const outOfBounds =
-      roundedLeft < 0 ||
-      roundedTop < 0 ||
-      roundedLeft + roundedWidth > bounds.width ||
-      roundedTop + roundedHeight > bounds.height;
-
-    const layoutElement: LayoutElement = {
-      element,
+    const originalBox = {
       left: roundedLeft,
       top: roundedTop,
       width: roundedWidth,
-      height: roundedHeight,
-      outOfBounds
+      height: roundedHeight
+    };
+
+    const outOfBounds =
+      originalBox.left < 0 ||
+      originalBox.top < 0 ||
+      originalBox.left + originalBox.width > bounds.width ||
+      originalBox.top + originalBox.height > bounds.height;
+
+    const clampedBox = clampBoxToBounds(bounds, originalBox);
+
+    const layoutElement: LayoutElement = {
+      element,
+      left: clampedBox.left,
+      top: clampedBox.top,
+      width: clampedBox.width,
+      height: clampedBox.height,
+      outOfBounds,
+      originalLeft: originalBox.left,
+      originalTop: originalBox.top,
+      originalWidth: originalBox.width,
+      originalHeight: originalBox.height
     };
 
     elements.push(layoutElement);

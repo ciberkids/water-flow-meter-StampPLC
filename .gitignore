@@ -3,3 +3,6 @@ backups/
 
 # Ignore built web assets
 web/mockup/dist/
+
+# Node dependencies
+node_modules/

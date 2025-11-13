@@ -21,6 +21,13 @@ import { defaultTheme } from "./theme/defaultTheme";
 import { useSimulatedButtons } from "./hooks/useSimulatedButtons";
 import { SimulatedButton, SimulatedButtonEvent } from "./types/buttonSimulation";
 import { computeLayout, DISPLAY_WIDTH, DISPLAY_HEIGHT } from "./utils/layout";
+import {
+  clampDatasetToDisplay,
+  clampCoordinate,
+  clampSize,
+  ClampAdjustment,
+  ClampCorrection
+} from "./utils/datasetClamp";
 import { SchemaValidationError, validateDataset } from "./schema/validation";
 import { ExporterPanel } from "./components/ExporterPanel";
 import { SimulationTracePanel } from "./components/SimulationTracePanel";
@@ -139,19 +146,9 @@ const findParentScreenId = (screens: ScreenDefinition[], childId: string): strin
   return null;
 };
 
-const clampCoordinate = (value: number, axis: "x" | "y"): number => {
-  const max = axis === "x" ? MAX_COORD_X : MAX_COORD_Y;
-  if (Number.isNaN(value)) {
-    return 0;
-  }
-  return Math.max(0, Math.min(max, value));
-};
-
-const clampSize = (value: number): number => {
-  if (Number.isNaN(value)) {
-    return 0;
-  }
-  return Math.max(0, Math.min(MAX_SIZE, value));
+const prepareDataset = (source: ScreenDataset) => {
+  const themed = ensureDatasetTheme(source);
+  return clampDatasetToDisplay(themed);
 };
 
 const normalizeElementUpdate = (
@@ -180,6 +177,13 @@ type ValidationFeedback = {
   issues: string[];
 };
 
+type ClampNotice = {
+  timestamp: number;
+  context: string;
+  total: number;
+  samples: ClampCorrection[];
+};
+
 const formatTriggerLabel = (event: SimulatedButtonEvent): string =>
   `${event.button.toUpperCase()} • ${event.kind}`;
 
@@ -195,6 +199,13 @@ const deriveTransitionEffect = (event: SimulatedButtonEvent): TransitionEffect =
   }
   return "fade";
 };
+
+const buildClampNotice = (corrections: ClampCorrection[], context: string): ClampNotice => ({
+  timestamp: Date.now(),
+  context,
+  total: corrections.length,
+  samples: corrections.slice(0, 4)
+});
 
 export function App() {
   const datasetValidation = useMemo(() => {
@@ -212,10 +223,8 @@ export function App() {
     }
   }, []);
 
-  const initialDataset = useMemo<ScreenDataset>(
-    () => ensureDatasetTheme(datasetValidation.dataset),
-    [datasetValidation.dataset]
-  );
+  const initialDatasetResult = useMemo(() => prepareDataset(datasetValidation.dataset), [datasetValidation.dataset]);
+  const initialDataset = initialDatasetResult.dataset;
 
   const { theme, updateTheme } = useTheme();
 
@@ -230,6 +239,11 @@ export function App() {
       : "Dataset loaded successfully.",
     issues: datasetValidation.errors ?? []
   }));
+  const [clampNotice, setClampNotice] = useState<ClampNotice | null>(() =>
+    initialDatasetResult.corrections.length
+      ? buildClampNotice(initialDatasetResult.corrections, "loading bundled dataset")
+      : null
+  );
   const [selectedScreenId, setSelectedScreenId] = useState<string>(initialScreens[0]?.id ?? "");
   const screens: ScreenDefinition[] = useMemo(() => dataset.screens, [dataset]);
   const datasetSummary = useMemo(
@@ -241,6 +255,15 @@ export function App() {
   );
   const [selectedElementId, setSelectedElementId] = useState<string | null>(
     initialScreens[0]?.elements[0]?.id ?? null
+  );
+  const announceClampCorrections = useCallback(
+    (corrections: ClampCorrection[], context: string) => {
+      if (corrections.length === 0) {
+        return;
+      }
+      setClampNotice(buildClampNotice(corrections, context));
+    },
+    []
   );
   const actionCatalog = useMemo(() => {
     const map = new Map<string, FirmwareActionDefinition>();
@@ -606,14 +629,16 @@ export function App() {
 
   const handleApplyDatasetFromJson = useCallback(
     (nextDataset: ScreenDataset) => {
-      setDataset(ensureDatasetTheme(nextDataset));
+      const result = prepareDataset(nextDataset);
+      setDataset(result.dataset);
+      announceClampCorrections(result.corrections, "applying JSON edits");
       setValidationFeedback({
         status: "success",
         message: "Dataset updated from JSON editor.",
         issues: []
       });
     },
-    []
+    [announceClampCorrections]
   );
 
   const handleUploadFrames = useCallback(
@@ -729,9 +754,10 @@ export function App() {
             issues
           });
         } else {
-          const normalized = ensureDatasetTheme(validated);
-          setDataset(normalized);
-          setSelectedScreenId(normalized.screens[0]?.id ?? "");
+          const result = prepareDataset(validated);
+          setDataset(result.dataset);
+          announceClampCorrections(result.corrections, `importing ${file.name}`);
+          setSelectedScreenId(result.dataset.screens[0]?.id ?? "");
           setValidationFeedback({
             status: "success",
             message: `Imported ${file.name} (${validated.screens.length} screens).`,
@@ -748,7 +774,7 @@ export function App() {
         event.target.value = "";
       }
     },
-    [validateDatasetSafe]
+    [announceClampCorrections, validateDatasetSafe]
   );
 
   const parseManifestSafe = useCallback((raw: unknown): FirmwareActionManifest => {
@@ -810,14 +836,15 @@ export function App() {
       });
       return;
     }
-    const normalized = ensureDatasetTheme(validated);
-    setDataset(normalized);
+    const result = prepareDataset(validated);
+    setDataset(result.dataset);
+    announceClampCorrections(result.corrections, "manual validation");
     setValidationFeedback({
       status: "success",
       message: `Dataset validated (${validated.screens.length} screens).`,
       issues: []
     });
-  }, [dataset, validateDatasetSafe]);
+  }, [announceClampCorrections, dataset, validateDatasetSafe]);
 
   const layoutReport = useMemo(
     () => (selectedScreen ? computeLayout(selectedScreen, orientation) : undefined),
@@ -1135,7 +1162,7 @@ export function App() {
       const arrowDirection = mapArrowKeyToDirection(event.key);
       if (arrowDirection && activePanel === "design") {
         event.preventDefault();
-        if (!event.repeat && selectedElementId) {
+        if (selectedElementId) {
           handleNudgeSelectedElement(arrowDirection);
         }
         return;
@@ -1363,13 +1390,42 @@ export function App() {
 
                 <section className="layout-warnings">
                   <strong>Layout diagnostics</strong>
+                  {clampNotice ? (
+                    <div className="layout-correction-alert">
+                      <div>
+                        <p>
+                          {clampNotice.total} element{clampNotice.total === 1 ? "" : "s"} were clamped when{" "}
+                          {clampNotice.context}.
+                        </p>
+                        <ul>
+                          {clampNotice.samples.map((sample) => (
+                            <li key={`${sample.screenId}:${sample.elementId}`}>
+                              <code>{sample.screenId}</code> · <code>{sample.elementId}</code> (
+                              {sample.adjustments
+                                .map(
+                                  (adjustment) => `${adjustment.field}: ${adjustment.from}→${adjustment.to}`
+                                )
+                                .join(", ")}
+                              )
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <button type="button" className="tool-button tool-button--secondary" onClick={() => setClampNotice(null)}>
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : null}
                   {overflow.length === 0 ? (
-            <span className="ok">All elements fit within {layoutReport?.bounds.width} × {layoutReport?.bounds.height}px.</span>
+                    <span className="ok">
+                      All elements fit within {layoutReport?.bounds.width} × {layoutReport?.bounds.height}px.
+                    </span>
                   ) : (
                     <ul>
                       {overflow.map((item) => (
                         <li key={item.element.id}>
-                          <code>{item.element.id}</code> spills beyond the viewport (x: {item.left}, y: {item.top}, w: {item.width}, h: {item.height})
+                          <code>{item.element.id}</code> exceeded the {layoutReport?.bounds.width ?? DISPLAY_WIDTH} ×{" "}
+                          {layoutReport?.bounds.height ?? DISPLAY_HEIGHT}px viewport (raw x: {item.originalLeft}, y: {item.originalTop}, w: {item.originalWidth}, h: {item.originalHeight}) → clipped to (x: {item.left}, y: {item.top}, w: {item.width}, h: {item.height}).
                         </li>
                       ))}
                     </ul>
