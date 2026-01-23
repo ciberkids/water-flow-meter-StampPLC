@@ -10,6 +10,7 @@
       "path": "/usr/bin/flatpak-spawn",
       "args": ["--host", "fish"]
     }
-  }
+  },
+  "kiroAgent.configureMCP": "Enabled"
 
 }

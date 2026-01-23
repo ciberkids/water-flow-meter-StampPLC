@@ -2,9 +2,13 @@ import { defineConfig } from "cypress";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
+import { execSync } from "node:child_process";
 
 const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 const firmwareRoot = path.resolve(projectRoot, "..", "..", "Water Flow Meter PlatformIO", "src", "ui", "generated");
+const fixtureDatasetPath = path.resolve(projectRoot, "tests", "fixtures", "legacy-screens.json");
+const tscBin = path.resolve(projectRoot, "node_modules/typescript/bin/tsc");
+const exporterCli = path.resolve(projectRoot, "dist-exporter/tools/exporter/cli.js");
 
 function loadJson<T>(relativePath: string): T {
   const absolute = path.resolve(projectRoot, relativePath);
@@ -19,10 +23,19 @@ export default defineConfig({
     supportFile: false,
     setupNodeEvents(on) {
       on("task", {
+        runExportWithFixture() {
+          try {
+            execSync(`node "${tscBin}" --project tsconfig.exporter.json`, { cwd: projectRoot, stdio: "pipe" });
+            execSync(`node "${exporterCli}" --screens "${fixtureDatasetPath}"`, { cwd: projectRoot, stdio: "pipe" });
+            return { ok: true };
+          } catch (error) {
+            return { error: error instanceof Error ? error.message : String(error) };
+          }
+        },
         compareExportedDataset() {
           try {
             const dataset = loadJson<{ screens: Array<{ id: string; elements: Array<{ id: string; x: number; y: number; width?: number; height?: number; kind: string; content?: string }> }> }>(
-              "src/data/screens.json"
+              "tests/fixtures/legacy-screens.json"
             );
             const irRaw = fs.readFileSync(path.join(firmwareRoot, "ui_export_ir.json"), "utf-8");
             const ir = JSON.parse(irRaw) as {

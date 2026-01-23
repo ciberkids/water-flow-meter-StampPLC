@@ -16,7 +16,7 @@ async function readJson(relativePath: string) {
 test("ensureValidDataset validates the canonical screens.json payload", async () => {
   const dataset = ensureValidDataset(await readJson("web/mockup/src/data/screens.json"));
   assert.ok(dataset.screens.length > 0);
-  assert.ok(dataset.screens.every((screen) => screen.elements.length > 0));
+  assert.ok(dataset.screens.every((screen) => Array.isArray(screen.elements)));
 });
 
 test("ensureValidTheme validates the default theme tokens", async () => {
@@ -25,14 +25,34 @@ test("ensureValidTheme validates the default theme tokens", async () => {
   assert.ok(theme.colors.displayBackground.startsWith("#") || theme.colors.displayBackground.startsWith("rgba"));
 });
 
-test("ensureValidDataset rejects screens without elements", () => {
-  assert.throws(
-    () =>
-      ensureValidDataset({
-        screens: [{ id: "bad", name: "Broken", elements: [] }]
-      }),
-    ExportValidationError
+test("ensureValidDataset allows screens without elements but rejects missing screens", () => {
+  const theme = ensureValidTheme({
+    name: "Test",
+    colors: {
+      displayBackground: "#000",
+      textPrimary: "#fff",
+      textMuted: "#ccc",
+      textStrong: "#fff",
+      value: "#fff",
+      badgeBackground: "#000",
+      badgeBorder: "#fff",
+      icon: "#fff",
+      legend: "#fff",
+      gridMinor: "#111",
+      gridMajor: "#222"
+    },
+    typography: { base: 8, value: 10, badge: 8 },
+    animation: { easing: "ease-in-out" }
+  });
+
+  assert.ok(
+    ensureValidDataset({
+      screens: [{ id: "empty", name: "Empty", elements: [] }],
+      theme
+    })
   );
+
+  assert.throws(() => ensureValidDataset({ screens: [], theme }), ExportValidationError);
 });
 
 test("ensureValidTheme rejects malformed color tokens", () => {

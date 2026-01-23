@@ -5,12 +5,14 @@
     - ***Requirements***: functional specifications for delivered code.
         - ***feature addition***: requirement specs for incremental features.
     - ***diagrams***: mermaid diagrams supporting the documentation.
-    - ***missing implementation***: backlog stories detailing outstanding work items and gaps.
-    - ***stories to implement***: tracker highlighting which stories remain open.
+    - ***backlog***: backlog stories detailing outstanding work items and gaps (formerly 'missing implementation').
+    - ***active_work***: tracker highlighting which stories remain open (formerly 'stories to implement').
     - ***new feature proposal***: drafts and mockups for candidate features.
     - ***templates***: reusable documentation templates (e.g., feature addition template).
-    - ***Implemented stories _ IGNORE***: archive of completed narratives retained for history (do not use for current context).
+    - ***archive***: archive of completed narratives retained for history (formerly 'Implemented stories _ IGNORE').
     - ***hardware docs***: hardware references for the project.
+    
+    > **Note on Refinement Findings**: Instead of creating separate `*-refinement-findings.md` files, append a "Refinement Findings" section to the original Story or Bug document.
 - ***Water Flow Meter PlatformIO*** — PlatformIO firmware workspace (authoritative source tree).
     - ***src***: firmware entrypoint (`firmware.cpp`), high-level tasks, and the modular subsystems:
         - `input/` — button processing and interaction helpers.

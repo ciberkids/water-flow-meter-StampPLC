@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ScreenDefinition } from "../../types";
 import type { ScreenGraphicAsset } from "../../types";
 
@@ -28,6 +28,7 @@ export function AnimationInspector({
   }, []);
 
   const startPreview = (asset: ScreenGraphicAsset) => {
+    stopPreview();
     if (!asset.embeddedFrames || asset.embeddedFrames.length === 0) {
       setPreviewAsset(asset.id);
       setPreviewIndex(0);
@@ -46,14 +47,18 @@ export function AnimationInspector({
     }, 500);
   };
 
-  const stopPreview = () => {
+  const stopPreview = useCallback(() => {
     if (timerRef.current) {
       window.clearInterval(timerRef.current);
     }
     timerRef.current = null;
     setPreviewAsset(null);
     setPreviewIndex(0);
-  };
+  }, []);
+
+  useEffect(() => {
+    stopPreview();
+  }, [screen?.id, stopPreview]);
 
   const currentPreview = assets.find((asset) => asset.id === previewAsset);
   const currentFrameSrc =

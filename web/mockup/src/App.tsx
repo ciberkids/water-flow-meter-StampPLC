@@ -1,5 +1,6 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
+import packageJson from "../package.json";
 import { DisplayViewport } from "./components/DisplayViewport";
 import { ScreenSelector } from "./components/ScreenSelector";
 import screensData from "./data/screens.json";
@@ -23,8 +24,11 @@ import { SimulatedButton, SimulatedButtonEvent } from "./types/buttonSimulation"
 import { computeLayout, DISPLAY_WIDTH, DISPLAY_HEIGHT } from "./utils/layout";
 import {
   clampDatasetToDisplay,
+  clampElementGeometry,
   clampCoordinate,
-  clampSize,
+  clampWidth,
+  clampHeight,
+  type DisplayBounds,
   ClampAdjustment,
   ClampCorrection
 } from "./utils/datasetClamp";
@@ -59,26 +63,33 @@ const themesEqual = (a?: ThemeTokens, b?: ThemeTokens): boolean => {
 };
 
 const createId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 8)}`;
-const MAX_COORD_X = DISPLAY_WIDTH;
-const MAX_COORD_Y = DISPLAY_HEIGHT;
-const MAX_SIZE = DISPLAY_HEIGHT;
+const APP_VERSION = packageJson.version ?? "dev";
 const MAX_INPUT_LENGTH = 4;
 const NUDGE_STEP = 1;
+
+type NudgeDirection = "up" | "down" | "left" | "right";
+
+const getNudgeDelta = (direction: NudgeDirection) => {
+  switch (direction) {
+    case "up":
+      // Verify direction: Up should increase Y (Visual Up in Bottom-Left origin)
+      return { deltaX: 0, deltaY: NUDGE_STEP };
+    case "down":
+      return { deltaX: 0, deltaY: -NUDGE_STEP };
+    case "left":
+      return { deltaX: -NUDGE_STEP, deltaY: 0 };
+    case "right":
+      return { deltaX: NUDGE_STEP, deltaY: 0 };
+    default:
+      return { deltaX: 0, deltaY: 0 };
+  }
+};
 
 const createScreenTemplate = (name: string): ScreenDefinition => ({
   id: createId("screen"),
   name,
   description: "",
-  elements: [
-    {
-      id: createId("element"),
-      kind: "text",
-      x: 4,
-      y: 4,
-      content: name,
-      emphasis: "strong"
-    }
-  ],
+  elements: [],
   flows: [],
   submenus: []
 });
@@ -153,20 +164,21 @@ const prepareDataset = (source: ScreenDataset) => {
 
 const normalizeElementUpdate = (
   element: ScreenElement,
-  updates: Partial<ScreenElement>
+  updates: Partial<ScreenElement>,
+  bounds: DisplayBounds
 ): ScreenElement => {
   const next: Partial<ScreenElement> = { ...updates };
   if (updates.x !== undefined) {
-    next.x = clampCoordinate(updates.x, "x");
+    next.x = clampCoordinate(updates.x, "x", bounds);
   }
   if (updates.y !== undefined) {
-    next.y = clampCoordinate(updates.y, "y");
+    next.y = clampCoordinate(updates.y, "y", bounds);
   }
   if (updates.width !== undefined) {
-    next.width = clampSize(updates.width);
+    next.width = clampWidth(updates.width, bounds);
   }
   if (updates.height !== undefined) {
-    next.height = clampSize(updates.height);
+    next.height = clampHeight(updates.height, bounds);
   }
   return { ...element, ...next };
 };
@@ -277,6 +289,20 @@ export function App() {
   const [zoom, setZoom] = useState<number>(200);
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [orientation, setOrientation] = useState<DisplayOrientation>("landscape");
+  const orientationBounds: DisplayBounds = useMemo(
+    () =>
+      orientation === "landscape"
+        ? { width: DISPLAY_HEIGHT, height: DISPLAY_WIDTH, orientation }
+        : { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT, orientation },
+    [orientation]
+  );
+  const datasetBounds: DisplayBounds = useMemo(
+    () =>
+      orientation === "landscape"
+        ? { width: DISPLAY_HEIGHT, height: DISPLAY_WIDTH, orientation }
+        : { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT, orientation },
+    [orientation]
+  );
   const [interactionLog, setInteractionLog] = useState<string[]>([]);
   const [traceEntries, setTraceEntries] = useState<SimulationTraceEntry[]>([]);
   const [traceFilter, setTraceFilter] = useState<string>("");
@@ -491,7 +517,7 @@ export function App() {
           return current;
         }
         const screen = current.screens[index];
-        if (screen.elements.length <= 1) {
+        if (!screen.elements.some((element) => element.id === elementId)) {
           return current;
         }
         const nextScreen = {
@@ -519,23 +545,25 @@ export function App() {
         }
         const screen = current.screens[index];
         const elements = screen.elements.map((element) =>
-          element.id === elementId ? normalizeElementUpdate(element, updates) : element
+          element.id === elementId ? normalizeElementUpdate(element, updates, datasetBounds) : element
         );
         const nextScreens = [...current.screens];
         nextScreens[index] = { ...screen, elements };
         return { ...current, screens: nextScreens };
       });
     },
-    [selectedScreenId]
+    [datasetBounds, selectedScreenId]
   );
 
   const handleNudgeSelectedElement = useCallback(
-    (direction: "up" | "down" | "left" | "right") => {
+    (direction: NudgeDirection) => {
       if (!selectedScreenId || !selectedElementId) {
         return;
       }
-      const deltaX = direction === "left" ? -NUDGE_STEP : direction === "right" ? NUDGE_STEP : 0;
-      const deltaY = direction === "up" ? -NUDGE_STEP : direction === "down" ? NUDGE_STEP : 0;
+      const { deltaX, deltaY } = getNudgeDelta(direction);
+      if (deltaX === 0 && deltaY === 0) {
+        return;
+      }
       setDataset((current) => {
         const index = current.screens.findIndex((screen) => screen.id === selectedScreenId);
         if (index === -1) {
@@ -548,8 +576,8 @@ export function App() {
           }
           return {
             ...element,
-            x: clampCoordinate(element.x + deltaX, "x"),
-            y: clampCoordinate(element.y + deltaY, "y")
+            x: clampCoordinate(element.x + deltaX, "x", datasetBounds),
+            y: clampCoordinate(element.y + deltaY, "y", datasetBounds)
           };
         });
         const nextScreens = [...current.screens];
@@ -557,7 +585,57 @@ export function App() {
         return { ...current, screens: nextScreens };
       });
     },
-    [selectedElementId, selectedScreenId]
+    [datasetBounds, orientation, selectedElementId, selectedScreenId]
+  );
+
+  const handleClampAllOverflow = useCallback(() => {
+    setDataset((current) => {
+      const result = clampDatasetToDisplay(current, datasetBounds);
+      if (result.corrections.length === 0) {
+        return current;
+      }
+      announceClampCorrections(result.corrections, "running “Clamp all to display”");
+      return result.dataset;
+    });
+  }, [announceClampCorrections, datasetBounds]);
+
+  const handleClampElement = useCallback(
+    (elementId: string) => {
+      if (!selectedScreenId) {
+        return;
+      }
+      setDataset((current) => {
+        const screenIndex = current.screens.findIndex((screen) => screen.id === selectedScreenId);
+        if (screenIndex === -1) {
+          return current;
+        }
+        const screen = current.screens[screenIndex];
+        const elementIndex = screen.elements.findIndex((element) => element.id === elementId);
+        if (elementIndex === -1) {
+          return current;
+        }
+        const { element: clampedElement, adjustments } = clampElementGeometry(screen.elements[elementIndex], datasetBounds);
+        if (adjustments.length === 0) {
+          return current;
+        }
+        const nextElements = [...screen.elements];
+        nextElements[elementIndex] = clampedElement;
+        const nextScreens = [...current.screens];
+        nextScreens[screenIndex] = { ...screen, elements: nextElements };
+        announceClampCorrections(
+          [
+            {
+              screenId: screen.id,
+              elementId,
+              adjustments
+            }
+          ],
+          `fixing ${elementId}`
+        );
+        return { ...current, screens: nextScreens };
+      });
+    },
+    [announceClampCorrections, datasetBounds, selectedScreenId]
   );
 
   const handleAddFlow = useCallback(() => {
@@ -851,6 +929,10 @@ export function App() {
     [selectedScreen, orientation]
   );
   const overflow = layoutReport?.overflow ?? [];
+  const overflowElementIds = useMemo(
+    () => new Set(overflow.map((item) => item.element.id)),
+    [overflow]
+  );
 
   useEffect(() => {
     if (!themesEqual(theme, dataset.theme)) {
@@ -1342,25 +1424,6 @@ export function App() {
                       Show grid overlay
                     </label>
                   </div>
-                  <div className="labelled-control">
-                    <label>Orientation</label>
-                    <div className="orientation-group">
-                      <button
-                        type="button"
-                        className={orientation === "landscape" ? "active" : ""}
-                        onClick={() => setOrientation("landscape")}
-                      >
-                        Landscape
-                      </button>
-                      <button
-                        type="button"
-                        className={orientation === "portrait" ? "active" : ""}
-                        onClick={() => setOrientation("portrait")}
-                      >
-                        Portrait
-                      </button>
-                    </div>
-                  </div>
                 </section>
 
                 <section className="viewport-container">
@@ -1394,8 +1457,8 @@ export function App() {
                     <div className="layout-correction-alert">
                       <div>
                         <p>
-                          {clampNotice.total} element{clampNotice.total === 1 ? "" : "s"} were clamped when{" "}
-                          {clampNotice.context}.
+                          {clampNotice.total} element{clampNotice.total === 1 ? "" : "s"}{" "}
+                          {clampNotice.total === 1 ? "was" : "were"} clamped while {clampNotice.context}.
                         </p>
                         <ul>
                           {clampNotice.samples.map((sample) => (
@@ -1439,6 +1502,9 @@ export function App() {
                   <span>
                     Resolution: {layoutReport?.bounds.width ?? 135} × {layoutReport?.bounds.height ?? 240} px · Zoomed to {(zoom / 100).toFixed(1)}×
                   </span>
+                  <span>
+                    Build: {APP_VERSION}
+                  </span>
                 </div>
               </div>
               <div className="panel-column panel-column--trace">
@@ -1474,35 +1540,115 @@ export function App() {
                 {renderScreenContext({ showThemeSnapshot: true, hideSelector: true })}
               </div>
               <div className="panel-column panel-column--main">
-                <ThemeEditor
-                  layout={layoutReport}
-                  zoomPercent={zoom}
-                  showGrid={showGrid}
-                  screen={selectedScreen}
-                  previewFooter={
-                    <section className="json-live json-live--design">
-                      <strong>Live screen JSON</strong>
-                      <p>
-                        Snapshot of <code>{selectedScreen?.id ?? "—"}</code> rendered from the dataset. Updates immediately when you
-                        switch screens or edit JSON.
-                      </p>
-                      <pre>{selectedScreen ? JSON.stringify(selectedScreen, null, 2) : "// Select a screen to view JSON."}</pre>
-                    </section>
-                  }
-                />
-                <DesignToolbox
-                  screen={selectedScreen}
-                  onAddElement={handleAddElement}
-                  onRemoveElement={handleRemoveElement}
-                  onUpdateElement={handleUpdateElement}
-                  selectedElementId={selectedElementId}
-                  onSelectElement={setSelectedElementId}
-                  onNudgeElement={handleNudgeSelectedElement}
-                  maxCoordinateX={MAX_COORD_X}
-                  maxCoordinateY={MAX_COORD_Y}
-                  maxDimension={MAX_SIZE}
-                  maxInputLength={MAX_INPUT_LENGTH}
-                />
+                <section className="controls design-controls">
+                  <div className="labelled-control">
+                    <label>Orientation</label>
+                    <div className="orientation-group">
+                      <button
+                        type="button"
+                        className={orientation === "landscape" ? "active" : ""}
+                        onClick={() => setOrientation("landscape")}
+                      >
+                        Landscape
+                      </button>
+                      <button
+                        type="button"
+                        className={orientation === "portrait" ? "active" : ""}
+                        onClick={() => setOrientation("portrait")}
+                      >
+                        Portrait
+                      </button>
+                    </div>
+                  </div>
+                </section>
+                <div className="design-main-grid">
+                  <ThemeEditor
+                    layout={layoutReport}
+                    zoomPercent={zoom}
+                    showGrid={showGrid}
+                    screen={selectedScreen}
+                    previewFooter={
+                      <section className="viewport-controls" aria-label="Viewport controls">
+                        <h4>Viewport movement</h4>
+                        <div className="element-move-pad" role="group">
+                          <span aria-hidden="true" />
+                          <button
+                            type="button"
+                            className="tool-button tool-button--secondary"
+                            data-testid="element-nudge-up"
+                            onClick={() => handleNudgeSelectedElement("up")}
+                            disabled={!selectedElementId}
+                          >
+                            ↑
+                          </button>
+                          <span aria-hidden="true" />
+                          <button
+                            type="button"
+                            className="tool-button tool-button--secondary"
+                            data-testid="element-nudge-left"
+                            onClick={() => handleNudgeSelectedElement("left")}
+                            disabled={!selectedElementId}
+                          >
+                            ←
+                          </button>
+                          <span aria-hidden="true" />
+                          <button
+                            type="button"
+                            className="tool-button tool-button--secondary"
+                            data-testid="element-nudge-right"
+                            onClick={() => handleNudgeSelectedElement("right")}
+                            disabled={!selectedElementId}
+                          >
+                            →
+                          </button>
+                          <span aria-hidden="true" />
+                          <button
+                            type="button"
+                            className="tool-button tool-button--secondary"
+                            data-testid="element-nudge-down"
+                            onClick={() => handleNudgeSelectedElement("down")}
+                            disabled={!selectedElementId}
+                          >
+                            ↓
+                          </button>
+                          <span aria-hidden="true" />
+                        </div>
+                        <div className="element-move-actions">
+                          <button
+                            type="button"
+                            className="tool-button tool-button--secondary"
+                            onClick={handleClampAllOverflow}
+                            disabled={overflowElementIds.size === 0}
+                            data-testid="element-clamp-all"
+                          >
+                            Clamp all to display
+                          </button>
+                          <p className="element-move-hint">
+                            Keyboard arrows follow the live viewport orientation while the Design tab is active.
+                          </p>
+                        </div>
+                      </section>
+                    }
+                    sidebarContent={
+                      <DesignToolbox
+                        screen={selectedScreen}
+                        onAddElement={handleAddElement}
+                        onRemoveElement={handleRemoveElement}
+                        onUpdateElement={handleUpdateElement}
+                        selectedElementId={selectedElementId}
+                        onSelectElement={setSelectedElementId}
+                        onClampElement={handleClampElement}
+                        overflowElementIds={overflowElementIds}
+                        maxCoordinateX={layoutReport?.bounds.width ?? DISPLAY_WIDTH}
+                        maxCoordinateY={layoutReport?.bounds.height ?? DISPLAY_HEIGHT}
+                        maxWidth={layoutReport?.bounds.width ?? DISPLAY_WIDTH}
+                        maxHeight={layoutReport?.bounds.height ?? DISPLAY_HEIGHT}
+                        maxInputLength={MAX_INPUT_LENGTH}
+                      />
+                    }
+                    stackControls
+                  />
+                </div>
                 <EventBindingPanel
                   screen={selectedScreen}
                   actions={firmwareManifest.actions}

@@ -4,17 +4,23 @@ import path from "node:path";
 import { execSync } from "node:child_process";
 import { Buffer } from "node:buffer";
 import { fileURLToPath } from "node:url";
+import { DISPLAY_HEIGHT, DISPLAY_WIDTH } from "../../src/utils/layout";
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const mockupRoot = path.resolve(testDir, "..", "..");
-const dataset = JSON.parse(
-  fs.readFileSync(path.resolve(mockupRoot, "src", "data", "screens.json"), "utf-8")
+const fixtureDataset = JSON.parse(
+  fs.readFileSync(path.resolve(mockupRoot, "tests", "fixtures", "legacy-screens.json"), "utf-8")
 ) as {
   screens: Array<{ id: string; name: string }>;
 };
+const fixtureDatasetFile = {
+  name: "legacy-screens.json",
+  mimeType: "application/json",
+  buffer: Buffer.from(JSON.stringify(fixtureDataset))
+};
 
 const screenLabel = (id: string, fallback: string) =>
-  dataset.screens.find((screen) => screen.id === id)?.name ?? fallback;
+  fixtureDataset.screens.find((screen) => screen.id === id)?.name ?? fallback;
 
 const screenDefinitions = [
   { id: "info-overview", label: screenLabel("info-overview", "Instant Flow"), snapshot: "screen-info-overview" },
@@ -43,10 +49,24 @@ test.describe("StampPLC mockup visual regression", () => {
   const normaliseWorkspace = async (
     page: Parameters<typeof test.beforeEach>[0]["page"],
     width = 1440,
-    height = 900
+    height = 900,
+    options: { importFixture?: boolean } = {}
   ) => {
+    const { importFixture = true } = options;
     await page.setViewportSize({ width, height });
     await page.goto("/");
+    await page.evaluate(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+    });
+    await page.reload();
+
+    if (importFixture) {
+      await page.getByRole("button", { name: "Import & Export", exact: true }).click();
+      await page.setInputFiles('input[data-testid="dataset-import"]', fixtureDatasetFile);
+      await expect(page.getByTestId("dataset-feedback")).toContainText("Imported legacy-screens.json");
+      await page.getByRole("button", { name: "Simulation", exact: true }).click();
+    }
 
     // Normalise interactive controls before capturing screenshots.
     await page.locator("#zoom").evaluate((element) => {
@@ -55,7 +75,17 @@ test.describe("StampPLC mockup visual regression", () => {
       input.dispatchEvent(new Event("input", { bubbles: true }));
       input.dispatchEvent(new Event("change", { bubbles: true }));
     });
-    await page.getByRole("button", { name: "Landscape", exact: true }).click();
+
+    // Orientation controls moved to the Design tab; prefer them when present.
+    const landscapeButton = page.getByRole("button", { name: "Landscape", exact: true });
+    if (await landscapeButton.count()) {
+      await landscapeButton.click();
+    } else {
+      await page.getByRole("button", { name: "Design", exact: true }).click();
+      await page.getByRole("button", { name: "Landscape", exact: true }).click();
+      await page.getByRole("button", { name: "Simulation", exact: true }).click();
+    }
+
     await page.getByLabel("Show grid overlay").check();
   };
 
@@ -105,6 +135,107 @@ test.describe("StampPLC mockup visual regression", () => {
       });
     }
   }
+
+  test("loads with a blank canvas by default", async ({ page }) => {
+    await normaliseWorkspace(page, 1440, 900, { importFixture: false });
+
+    await expect(page.locator(".screen-selector button")).toHaveCount(1);
+    await expect(page.locator(".screen-selector button").first()).toContainText(/Blank Canvas/i);
+
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+    await expect(page.getByTestId("design-element-list")).toContainText("No elements yet.");
+  });
+
+  test("display preview places edge coordinates at the pixel bounds", async ({ page }) => {
+    await normaliseWorkspace(page, 1440, 900, { importFixture: false });
+
+    // Use 1:1 zoom to simplify comparing DOM positions to display pixels.
+    await page.locator("#zoom").evaluate((element) => {
+      const input = element as HTMLInputElement;
+      input.value = "100";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+
+    // Landscape is the default orientation, so width/height swap.
+    const layoutBounds = { width: DISPLAY_HEIGHT, height: DISPLAY_WIDTH };
+    const maxX = DISPLAY_WIDTH;
+    const maxY = DISPLAY_HEIGHT;
+
+    const corners = [
+      { label: "TL", x: 0, y: 0 },
+      { label: "BL", x: 0, y: maxY },
+      { label: "TR", x: maxX, y: 0 },
+      { label: "BR", x: maxX, y: maxY }
+    ] as const;
+
+    for (const corner of corners) {
+      await page.getByTestId("design-add-text").click();
+      const elementRow = page
+        .locator('[data-testid="design-element-list"] li')
+        .last()
+        .locator("div[data-element-id]")
+        .first();
+      const elementId = await elementRow.getAttribute("data-element-id");
+      expect(elementId).toBeTruthy();
+
+      await page.locator(`[data-element-id="${elementId}"] input[type="text"]`).fill(corner.label);
+      const xInput = page.locator(`input[data-element-id="${elementId}"][data-field="x"]`);
+      const yInput = page.locator(`input[data-element-id="${elementId}"][data-field="y"]`);
+      await xInput.fill(String(corner.x));
+      await yInput.fill(String(corner.y));
+      await expect(xInput).toHaveValue(String(corner.x));
+      await expect(yInput).toHaveValue(String(corner.y));
+    }
+
+    await page.getByRole("button", { name: "Simulation", exact: true }).click();
+
+    const surface = page.locator(".display-surface");
+    await expect(surface).toBeVisible();
+    const surfaceBox = await surface.boundingBox();
+    if (!surfaceBox) {
+      throw new Error("Could not measure display surface");
+    }
+
+    const scaleX = surfaceBox.width / layoutBounds.width;
+    const scaleY = surfaceBox.height / layoutBounds.height;
+    const tolerance = 1; // pixels
+
+    for (const corner of corners) {
+      const element = page.locator(".display-element.kind-text", { hasText: corner.label });
+      await expect(element).toBeVisible();
+      const box = await element.boundingBox();
+      if (!box) {
+        throw new Error(`Could not measure element ${corner.label}`);
+      }
+
+      const relLeft = box.x - surfaceBox.x;
+      const relTop = box.y - surfaceBox.y;
+      const relRight = relLeft + box.width;
+      const relBottom = relTop + box.height;
+
+      const normLeft = relLeft / scaleX;
+      const normTop = relTop / scaleY;
+      const normRight = relRight / scaleX;
+      const normBottom = relBottom / scaleY;
+
+      if (corner.label === "TL") {
+        expect(normLeft).toBeLessThanOrEqual(tolerance);
+        expect(normTop).toBeLessThanOrEqual(tolerance);
+      } else if (corner.label === "TR") {
+        expect(Math.abs(normRight - layoutBounds.width)).toBeLessThanOrEqual(tolerance);
+        expect(normTop).toBeLessThanOrEqual(tolerance);
+      } else if (corner.label === "BL") {
+        expect(normLeft).toBeLessThanOrEqual(tolerance);
+        expect(Math.abs(normBottom - layoutBounds.height)).toBeLessThanOrEqual(tolerance);
+      } else if (corner.label === "BR") {
+        expect(Math.abs(normRight - layoutBounds.width)).toBeLessThanOrEqual(tolerance);
+        expect(Math.abs(normBottom - layoutBounds.height)).toBeLessThanOrEqual(tolerance);
+      }
+    }
+  });
 
   test("keyboard short press updates screen and logs state", async ({ page }) => {
     await page.keyboard.press("ArrowDown");
@@ -220,15 +351,15 @@ test.describe("StampPLC mockup visual regression", () => {
 
   test("design live JSON mirrors selection", async ({ page }) => {
     await page.getByRole("button", { name: "Design", exact: true }).click();
-    const livePanel = page.locator(".json-live");
-    await expect(livePanel).toBeVisible();
-    await expect(livePanel).toContainText('"id": "info-overview"');
+    const liveEditor = page.getByTestId("live-json-editor");
+    await expect(liveEditor).toBeVisible();
+    await expect(liveEditor).toHaveValue(/"id": "info-overview"/);
 
     await page
       .getByTestId("screen-hierarchy")
       .getByRole("button", { name: /Configuration Menu/ })
       .click();
-    await expect(livePanel).toContainText('"id": "configuration"');
+    await expect(liveEditor).toHaveValue(/"id": "configuration"/);
   });
 
   test("design toolbox inserts elements and syncs JSON", async ({ page }) => {
@@ -252,17 +383,35 @@ test.describe("StampPLC mockup visual regression", () => {
     await page.getByRole("button", { name: "Design", exact: true }).click();
     await page.getByTestId("element-select-title").check();
     const xInput = page.locator('[data-element-id="title"][data-field="x"]');
-    await expect(xInput).toHaveValue("4");
+    const yInput = page.locator('[data-element-id="title"][data-field="y"]');
+    const initialX = Number(await xInput.inputValue());
+    const initialY = Number(await yInput.inputValue());
+    await page.getByTestId("element-nudge-up").click();
+    await expect(yInput).toHaveValue(String(initialY + 1));
     await page.getByTestId("element-nudge-right").click();
-    await expect(xInput).toHaveValue("5");
+    await expect(xInput).toHaveValue(String(initialX + 1));
+    await page.getByTestId("element-nudge-left").click();
+    await expect(xInput).toHaveValue(String(initialX));
   });
 
   test("keyboard arrows move the selected element in design tab", async ({ page }) => {
     await page.getByRole("button", { name: "Design", exact: true }).click();
     await page.getByTestId("element-select-title").check();
+    const yInput = page.locator('[data-element-id="title"][data-field="y"]');
+    const initialY = Number(await yInput.inputValue());
+    await page.keyboard.press("ArrowUp");
+    await expect(yInput).toHaveValue(String(initialY + 1));
+  });
+
+  test("keyboard left/right adjust horizontal coordinate", async ({ page }) => {
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+    await page.getByTestId("element-select-title").check();
     const xInput = page.locator('[data-element-id="title"][data-field="x"]');
+    const initialX = Number(await xInput.inputValue());
     await page.keyboard.press("ArrowRight");
-    await expect(xInput).toHaveValue("5");
+    await expect(xInput).toHaveValue(String(initialX + 1));
+    await page.keyboard.press("ArrowLeft");
+    await expect(xInput).toHaveValue(String(initialX));
   });
 
   test("keyboard repeat events still nudge the selected element", async ({ page }) => {
@@ -281,6 +430,42 @@ test.describe("StampPLC mockup visual regression", () => {
       );
     });
     await expect(xInput).toHaveValue(String(initialValue + 1));
+  });
+
+  test("per-element clamp button resolves overflows", async ({ page }) => {
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+    await page.getByTestId("element-select-sensor-grid-left").check();
+    const widthInput = page.locator('[data-element-id="sensor-grid-left"][data-field="width"]');
+    await widthInput.fill("200");
+    const clampButton = page.getByTestId("element-clamp-sensor-grid-left");
+    await expect(clampButton).toBeVisible();
+    await clampButton.click();
+    await expect(widthInput).toHaveValue("135");
+  });
+
+  test("global clamp action fixes all overflowing elements", async ({ page }) => {
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+    await page.getByTestId("element-select-sensor-grid-right").check();
+    const widthInput = page.locator('[data-element-id="sensor-grid-right"][data-field="width"]');
+    await widthInput.fill("200");
+    const clampAllButton = page.getByTestId("element-clamp-all");
+    await expect(clampAllButton).toBeEnabled();
+    await clampAllButton.click();
+    await expect(widthInput).toHaveValue("135");
+  });
+
+  test("landscape orientation keeps keyboard arrows intuitive", async ({ page }) => {
+    await page.getByRole("button", { name: "Landscape", exact: true }).click();
+    await page.getByRole("button", { name: "Design", exact: true }).click();
+    await page.getByTestId("element-select-title").check();
+    const xInput = page.locator('[data-element-id="title"][data-field="x"]');
+    const yInput = page.locator('[data-element-id="title"][data-field="y"]');
+    const initialX = Number(await xInput.inputValue());
+    const initialY = Number(await yInput.inputValue());
+    await page.keyboard.press("ArrowUp");
+    await expect(yInput).toHaveValue(String(initialY + 1));
+    await page.keyboard.press("ArrowRight");
+    await expect(xInput).toHaveValue(String(initialX + 1));
   });
 
   test("screen hierarchy adds child screen and updates breadcrumbs", async ({ page }) => {
@@ -451,14 +636,18 @@ test.describe("StampPLC mockup visual regression", () => {
   test("exported IR matches dataset layout", async () => {
     const projectRoot = path.resolve(mockupRoot, "..", "..");
     const tscBin = path.resolve(mockupRoot, "node_modules/typescript/bin/tsc");
+    const datasetPath = path.resolve(mockupRoot, "tests", "fixtures", "legacy-screens.json");
     execSync(`node "${tscBin}" --project tsconfig.exporter.json`, {
       cwd: mockupRoot,
       stdio: "inherit"
     });
-    execSync("node dist-exporter/tools/exporter/cli.js", { cwd: mockupRoot, stdio: "inherit" });
+    execSync(`node dist-exporter/tools/exporter/cli.js --screens "${datasetPath}"`, {
+      cwd: mockupRoot,
+      stdio: "inherit"
+    });
 
     const dataset = JSON.parse(
-      fs.readFileSync(path.resolve(mockupRoot, "src/data/screens.json"), "utf-8")
+      fs.readFileSync(datasetPath, "utf-8")
     ) as {
       screens: Array<{ id: string; elements: Array<{ id: string; x: number; y: number; width?: number; height?: number; kind: string; content?: string }> }>;
     };

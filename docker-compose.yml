@@ -5,6 +5,7 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ./web/mockup:/app
+      # Relabel volume for SELinux so the container can read/write the bind mount.
+      - ./web/mockup:/app:Z
       - /app/node_modules
     command: npm run dev -- --host 0.0.0.0 --port 5173

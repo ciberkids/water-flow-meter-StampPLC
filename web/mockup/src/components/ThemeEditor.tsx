@@ -3,7 +3,7 @@ import { DisplayViewport } from "./DisplayViewport";
 import type { LayoutReport } from "../utils/layout";
 import type { ScreenDefinition } from "../types";
 import { useTheme } from "../theme/ThemeProvider";
-import { ThemeAnimationPreset, ThemeColorTokens } from "../theme/types";
+import { ThemeColorTokens } from "../theme/types";
 
 function normalizeColorToHex(color: string): string {
   if (color.startsWith("#")) {
@@ -79,14 +79,6 @@ const colorFields: Array<{ key: keyof ThemeColorTokens; label: string; name: str
   { key: "gridMinor", label: "Grid minor line", name: "theme-grid-minor" }
 ];
 
-const animationPresets: Array<{ value: ThemeAnimationPreset; label: string }> = [
-  { value: "linear", label: "Linear" },
-  { value: "ease-in", label: "Ease-in" },
-  { value: "ease-out", label: "Ease-out" },
-  { value: "ease-in-out", label: "Ease-in-out" },
-  { value: "cubic-bezier(0.4, 0, 0.2, 1)", label: "Smooth (cubic-bezier)" }
-];
-
 const warmPresetColors: Partial<ThemeColorTokens> = {
   displayBackground: "#1a0b11",
   textPrimary: "#ffece6",
@@ -107,9 +99,19 @@ interface ThemeEditorProps {
   showGrid: boolean;
   screen?: ScreenDefinition;
   previewFooter?: ReactNode;
+  stackControls?: boolean;
+  sidebarContent?: ReactNode;
 }
 
-export function ThemeEditor({ layout, zoomPercent, showGrid, screen, previewFooter }: ThemeEditorProps) {
+export function ThemeEditor({
+  layout,
+  zoomPercent,
+  showGrid,
+  screen,
+  previewFooter,
+  stackControls = false,
+  sidebarContent
+}: ThemeEditorProps) {
   const { theme, updateTheme, resetTheme } = useTheme();
   const previewZoom =
     layout?.bounds.orientation === "landscape" ? Math.min(zoomPercent, 160) : Math.min(zoomPercent, 200);
@@ -161,17 +163,6 @@ export function ThemeEditor({ layout, zoomPercent, showGrid, screen, previewFoot
     });
   };
 
-  const handleAnimationPresetChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const preset = event.target.value as ThemeAnimationPreset;
-    updateTheme((current) => ({
-      ...current,
-      animation: {
-        ...current.animation,
-        easing: preset
-      }
-    }));
-  };
-
   const applyWarmPreset = () => {
     updateTheme((current) => ({
       ...current,
@@ -187,8 +178,95 @@ export function ThemeEditor({ layout, zoomPercent, showGrid, screen, previewFoot
     ? `${layout.bounds.width} × ${layout.bounds.height}px • ${layout.bounds.orientation}`
     : "Configure dataset to view preview";
 
+  const renderColorSection = () => (
+    <section className="theme-editor__section">
+      <h4>Colours</h4>
+      <div className="theme-editor__grid">
+        {colorFields.map((field) => (
+          <label key={field.key} className="theme-editor__field">
+            <span>{field.label}</span>
+            <div className="color-input-row">
+              <input
+                type="color"
+                name={field.name}
+                value={normalizeColorToHex(theme.colors[field.key])}
+                onInput={(event) =>
+                  applyColorChange(field.key, (event.target as HTMLInputElement).value)
+                }
+                onChange={(event) => applyColorChange(field.key, event.target.value)}
+              />
+              <input
+                type="text"
+                aria-label={`${field.label} hex value`}
+                value={normalizeColorToHex(theme.colors[field.key])}
+                onChange={(event) => {
+                  const sanitized = sanitizeUserHex(event.target.value);
+                  if (sanitized) {
+                    applyColorChange(field.key, sanitized);
+                  }
+                }}
+              />
+            </div>
+          </label>
+        ))}
+      </div>
+    </section>
+  );
+
+  const renderTypographySection = () => (
+    <section className="theme-editor__section">
+      <h4>Typography</h4>
+      <div className="theme-editor__grid theme-editor__grid--compact">
+        <label className="theme-editor__field">
+          <span>Base font size ({theme.typography.base}px)</span>
+          <input
+            type="range"
+            min={6}
+            max={14}
+            value={theme.typography.base}
+            onChange={handleBaseTypographyChange}
+          />
+        </label>
+        <label className="theme-editor__field">
+          <span>Value font size ({theme.typography.value}px)</span>
+          <input
+            type="range"
+            min={6}
+            max={20}
+            value={theme.typography.value}
+            onChange={handleValueTypographyChange}
+          />
+        </label>
+        <label className="theme-editor__field">
+          <span>Badge font size ({theme.typography.badge}px)</span>
+          <input
+            type="range"
+            min={6}
+            max={14}
+            value={theme.typography.badge}
+            onChange={handleBadgeTypographyChange}
+          />
+        </label>
+      </div>
+    </section>
+  );
+
+  const inlineSections = stackControls ? (
+    <div className="theme-editor__inline-sections">
+      {renderColorSection()}
+      {renderTypographySection()}
+    </div>
+  ) : null;
+
+  const sidebarSections = stackControls ? sidebarContent : sidebarContent ?? (
+    <>
+      {renderColorSection()}
+      {renderTypographySection()}
+    </>
+  );
+
   return (
-    <section className="theme-editor" aria-label="Design controls">
+    <section className={`theme-editor${stackControls ? " theme-editor--stacked" : ""}`} aria-label="Design controls">
       <header className="theme-editor__header">
         <div>
           <h3>Design system</h3>
@@ -223,93 +301,13 @@ export function ThemeEditor({ layout, zoomPercent, showGrid, screen, previewFoot
           ) : (
             <p className="theme-editor__empty">Select a screen to preview design changes.</p>
           )}
-          {previewFooter && <div className="theme-editor__preview-footer">{previewFooter}</div>}
+          {previewFooter ? (
+            <div className="theme-editor__preview-footer">{previewFooter}</div>
+          ) : null}
+          {inlineSections}
         </aside>
 
-        <div className="theme-editor__sections">
-          <section className="theme-editor__section">
-            <h4>Colours</h4>
-            <div className="theme-editor__grid">
-              {colorFields.map((field) => (
-                <label key={field.key} className="theme-editor__field">
-                  <span>{field.label}</span>
-                  <div className="color-input-row">
-                    <input
-                      type="color"
-                      name={field.name}
-                      value={normalizeColorToHex(theme.colors[field.key])}
-                      onInput={(event) =>
-                        applyColorChange(field.key, (event.target as HTMLInputElement).value)
-                      }
-                      onChange={(event) => applyColorChange(field.key, event.target.value)}
-                    />
-                    <input
-                      type="text"
-                      aria-label={`${field.label} hex value`}
-                      value={normalizeColorToHex(theme.colors[field.key])}
-                      onChange={(event) => {
-                        const sanitized = sanitizeUserHex(event.target.value);
-                        if (sanitized) {
-                          applyColorChange(field.key, sanitized);
-                        }
-                      }}
-                    />
-                  </div>
-                </label>
-              ))}
-            </div>
-          </section>
-
-          <section className="theme-editor__section">
-            <h4>Typography</h4>
-            <div className="theme-editor__grid theme-editor__grid--compact">
-              <label className="theme-editor__field">
-                <span>Base font size ({theme.typography.base}px)</span>
-                <input
-                  type="range"
-                  min={6}
-                  max={14}
-                  value={theme.typography.base}
-                  onChange={handleBaseTypographyChange}
-                />
-              </label>
-              <label className="theme-editor__field">
-                <span>Value font size ({theme.typography.value}px)</span>
-                <input
-                  type="range"
-                  min={6}
-                  max={20}
-                  value={theme.typography.value}
-                  onChange={handleValueTypographyChange}
-                />
-              </label>
-              <label className="theme-editor__field">
-                <span>Badge font size ({theme.typography.badge}px)</span>
-                <input
-                  type="range"
-                  min={6}
-                  max={14}
-                  value={theme.typography.badge}
-                  onChange={handleBadgeTypographyChange}
-                />
-              </label>
-            </div>
-          </section>
-
-          <section className="theme-editor__section">
-            <h4>Animation</h4>
-            <label className="theme-editor__field">
-              <span>Transition easing</span>
-              <select value={theme.animation.easing} onChange={handleAnimationPresetChange}>
-                {animationPresets.map((preset) => (
-                  <option key={preset.value} value={preset.value}>
-                    {preset.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </section>
-        </div>
+        {sidebarSections ? <div className="theme-editor__sections">{sidebarSections}</div> : null}
       </div>
 
       <div className="theme-editor__actions">

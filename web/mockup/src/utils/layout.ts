@@ -1,7 +1,7 @@
 import { DisplayOrientation, ScreenDefinition, ScreenElement } from "../types";
 
-export const DISPLAY_WIDTH = 135;
-export const DISPLAY_HEIGHT = 240;
+export const DISPLAY_WIDTH: number = 135;
+export const DISPLAY_HEIGHT: number = 240;
 
 const DEFAULT_METRICS: Record<ScreenElement["kind"], { charWidth: number; height: number; padding?: number }> = {
   text: { charWidth: 6, height: 8 },
@@ -12,6 +12,8 @@ const DEFAULT_METRICS: Record<ScreenElement["kind"], { charWidth: number; height
   animation: { charWidth: 6, height: 18, padding: 6 },
   scrollbar: { charWidth: 4, height: 60 }
 };
+
+const clampValue = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 export interface LayoutBounds {
   width: number;
@@ -125,29 +127,26 @@ export function computeLayout(screen: ScreenDefinition, orientation: DisplayOrie
     const portraitWidth = estimateWidth(element);
     const portraitHeight = estimateHeight(element);
 
-    let left = element.x;
-    let top = element.y;
-
-    // Align before rotation to reflect intended anchor point.
-    const align = element.align ?? "left";
-    if (align === "center") {
-      left = element.x - portraitWidth / 2;
-    } else if (align === "right") {
-      left = element.x - portraitWidth;
-    }
-
+    // No scaling - 1:1 mapping
     let boxWidth = portraitWidth;
     let boxHeight = portraitHeight;
 
-    if (orientation === "landscape") {
-      // Rotate 90° clockwise so the StampPLC portrait data maps to landscape mounts.
-      const rotatedLeft = top;
-      const rotatedTop = DISPLAY_WIDTH - (left + portraitWidth);
-      left = rotatedLeft;
-      top = rotatedTop;
-      boxWidth = portraitHeight;
-      boxHeight = portraitWidth;
-    }
+    const normalizedX = clampValue(element.x ?? 0, 0, bounds.width);
+    const normalizedY = clampValue(element.y ?? 0, 0, bounds.height);
+
+    const alignOffset =
+      element.align === "center" ? boxWidth / 2 : element.align === "right" ? boxWidth : 0;
+
+    // In LTR/Cartesian: Left is just X - Alignment
+    const unclampedLeft = normalizedX - alignOffset;
+    const maxLeft = Math.max(bounds.width - boxWidth, 0);
+    const left = clampValue(unclampedLeft, 0, maxLeft);
+
+    // Invert Y axis: 0 is bottom, bounds.height is top.
+    // CSS Top = Bounds Height - Y - Element Height
+    const unclampedTop = bounds.height - normalizedY - boxHeight;
+    const maxTop = Math.max(bounds.height - boxHeight, 0);
+    const top = clampValue(unclampedTop, 0, maxTop);
 
     const roundedLeft = Math.round(left);
     const roundedTop = Math.round(top);

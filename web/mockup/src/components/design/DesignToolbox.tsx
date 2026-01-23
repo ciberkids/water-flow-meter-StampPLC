@@ -17,10 +17,12 @@ interface DesignToolboxProps {
   onUpdateElement: (elementId: string, updates: Partial<ScreenElement>) => void;
   selectedElementId: string | null;
   onSelectElement: (elementId: string) => void;
-  onNudgeElement: (direction: "up" | "down" | "left" | "right") => void;
+  onClampElement: (elementId: string) => void;
+  overflowElementIds: Set<string>;
   maxCoordinateX: number;
   maxCoordinateY: number;
-  maxDimension: number;
+  maxWidth: number;
+  maxHeight: number;
   maxInputLength: number;
 }
 
@@ -45,10 +47,12 @@ export function DesignToolbox({
   onUpdateElement,
   selectedElementId,
   onSelectElement,
-  onNudgeElement,
+  onClampElement,
+  overflowElementIds,
   maxCoordinateX,
   maxCoordinateY,
-  maxDimension,
+  maxWidth,
+  maxHeight,
   maxInputLength
 }: DesignToolboxProps) {
   return (
@@ -139,45 +143,57 @@ export function DesignToolbox({
                     <>
                       <label>
                         Width
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          maxLength={maxInputLength}
-                          data-element-id={element.id}
-                          data-field="width"
-                          value={element.width ?? 0}
-                          onChange={(event) =>
-                            onUpdateElement(element.id, {
-                              width: sanitizeNumericInput(event.target.value, maxInputLength, maxDimension)
-                            })
-                          }
-                        />
-                      </label>
-                      <label>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            maxLength={maxInputLength}
+                            data-element-id={element.id}
+                            data-field="width"
+                            value={element.width ?? 0}
+                            onChange={(event) =>
+                              onUpdateElement(element.id, {
+                                width: sanitizeNumericInput(event.target.value, maxInputLength, maxWidth)
+                              })
+                            }
+                          />
+                        </label>
+                        <label>
                         Height
                         <input
                           type="number"
-                          inputMode="numeric"
-                          maxLength={maxInputLength}
-                          data-element-id={element.id}
-                          data-field="height"
-                          value={element.height ?? 0}
-                          onChange={(event) =>
-                            onUpdateElement(element.id, {
-                              height: sanitizeNumericInput(event.target.value, maxInputLength, maxDimension)
-                            })
-                          }
-                        />
-                      </label>
+                            inputMode="numeric"
+                            maxLength={maxInputLength}
+                            data-element-id={element.id}
+                            data-field="height"
+                            value={element.height ?? 0}
+                            onChange={(event) =>
+                              onUpdateElement(element.id, {
+                                height: sanitizeNumericInput(event.target.value, maxInputLength, maxHeight)
+                              })
+                            }
+                          />
+                        </label>
                     </>
                   ) : null}
-                  <button
-                    type="button"
-                    className="tool-button tool-button--danger"
-                    onClick={() => onRemoveElement(element.id)}
-                  >
-                    Delete
-                  </button>
+                  <div className="element-row__actions">
+                    {overflowElementIds.has(element.id) ? (
+                      <button
+                        type="button"
+                        className="tool-button tool-button--secondary element-row__clamp"
+                        data-testid={`element-clamp-${element.id}`}
+                        onClick={() => onClampElement(element.id)}
+                      >
+                        Clamp to display
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="tool-button tool-button--danger"
+                      onClick={() => onRemoveElement(element.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </li>
             ))}
@@ -185,50 +201,6 @@ export function DesignToolbox({
         ) : (
           <p>No elements yet.</p>
         )}
-        <div className="element-move-controls">
-          <h4>Move selected element</h4>
-          <div className="element-move-grid">
-            <button
-              type="button"
-              className="tool-button tool-button--secondary"
-              data-testid="element-nudge-up"
-              onClick={() => onNudgeElement("up")}
-              disabled={!selectedElementId}
-            >
-              ↑
-            </button>
-            <div className="element-move-grid__middle">
-              <button
-                type="button"
-                className="tool-button tool-button--secondary"
-                data-testid="element-nudge-left"
-                onClick={() => onNudgeElement("left")}
-                disabled={!selectedElementId}
-              >
-                ←
-              </button>
-              <button
-                type="button"
-                className="tool-button tool-button--secondary"
-                data-testid="element-nudge-right"
-                onClick={() => onNudgeElement("right")}
-                disabled={!selectedElementId}
-              >
-                →
-              </button>
-            </div>
-            <button
-              type="button"
-              className="tool-button tool-button--secondary"
-              data-testid="element-nudge-down"
-              onClick={() => onNudgeElement("down")}
-              disabled={!selectedElementId}
-            >
-              ↓
-            </button>
-          </div>
-          <p className="element-move-hint">You can also use keyboard arrow keys while the Design tab is active.</p>
-        </div>
       </div>
     </section>
   );

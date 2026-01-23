@@ -10,7 +10,7 @@ npm install
 npm run dev
 ```
 
-The dev server launches at `http://localhost:5173/`. Use the screen selector to preview different templates and the zoom slider to enlarge the 135×240 display.
+The dev server launches at `http://localhost:5173/`. You start on an empty **Blank Canvas** dataset; add screens in the Design tab or import your own JSON, and use the zoom slider to enlarge the 135×240 display.
 
 - Keyboard shortcuts mirror the StampPLC buttons: `Arrow Up`, `Arrow Down`, and `Enter` trigger the same long/short press behaviours as the on-screen controls.
 - Design panel lets you adjust palette, typography scales, and easing presets in real time, writing changes straight into the dataset's `theme` block.
@@ -47,7 +47,7 @@ Manage the mockup dataset directly inside the UI:
 
 - **Simulation** — load screens through the selector and exercise the simulated hardware controls.
 - **Design** — adjust layout tokens visually or via JSON, inspect the live screen JSON, and use the shared screen selector/context cards beside the editor.
-- **Import & Export** — load or validate `screens.json`, download the current dataset, and run the firmware translator once validation succeeds.
+- **Import & Export** — load or validate `screens.json`, download the current dataset, and run the firmware translator once validation succeeds. A legacy sample dataset for regression tests lives in `tests/fixtures/legacy-screens.json`.
 - **Help & Documentation** — reference the schema, learn how the tool works, and review dataset metadata.
 - Design tokens travel with `screens.json`; the translator reads them directly from the dataset so firmware mirrors what you preview.
 
@@ -75,7 +75,7 @@ web/mockup
 
 ## Screen layout JSON
 
-Layouts are defined in `src/data/screens.json` using simple primitives (text, rectangle, icon placeholders). When you edit the JSON, the viewport hot-reloads to display the new layout.
+Layouts are defined in `src/data/screens.json` using simple primitives (text, rectangle, icon placeholders). The bundled file is intentionally empty—add your own screens and elements or import a dataset, and the viewport will hot-reload to display changes.
 
 ## Next steps
 

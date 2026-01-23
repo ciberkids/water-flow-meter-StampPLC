@@ -229,11 +229,6 @@ export function DisplayViewport({
             majorColor={theme.colors.gridMajor}
           />
           {renderElementsForLayout(layout, valueOverrides, { scrollIndicator })}
-          <div className="legend" style={{ color: theme.colors.legend }}>
-            <span>Red pulses per X L</span>
-            <span>Green = Ready</span>
-            <span>Blue = Flow</span>
-          </div>
           {pendingTransition ? (
             <div
               className={`transition-overlay transition-overlay--${pendingTransition.effect}`}

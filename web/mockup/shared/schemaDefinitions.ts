@@ -56,7 +56,7 @@ const buttonTriggerSchema: JSONSchemaType<ButtonFlowTrigger> = {
   properties: {
     type: { type: "string", const: "button" },
     button: { type: "string", enum: ["up", "down", "enter"] },
-    gesture: { type: "string", enum: ["short", "long", "hold"], nullable: true }
+    gesture: { type: "string", enum: ["short", "long"], nullable: true }
   }
 };
 
@@ -197,7 +197,7 @@ export const screenSchema: JSONSchemaType<ScreenDefinition> = {
     description: { type: "string", nullable: true },
     elements: {
       type: "array",
-      minItems: 1,
+      minItems: 0,
       items: elementSchema
     },
     flows: {
