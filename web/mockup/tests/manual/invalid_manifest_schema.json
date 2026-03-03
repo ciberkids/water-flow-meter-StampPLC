@@ -1,0 +1,9 @@
+{
+    "actions": [
+        {
+            "id": "test.action.1",
+            "description": "Missing name"
+        }
+    ],
+    "values": []
+}

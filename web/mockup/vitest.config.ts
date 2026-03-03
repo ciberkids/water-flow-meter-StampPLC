@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.test.mts", "src/**/*.test.mjs"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.test.mts", "src/**/*.test.mjs", "tools/**/*.test.ts"],
     globals: false
   }
 });

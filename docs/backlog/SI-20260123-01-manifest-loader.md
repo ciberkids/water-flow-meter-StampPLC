@@ -33,11 +33,11 @@ Define a strict TypeScript Interface and JSON Schema for the manifest.
 
 ## 3. Implementation Tasks
 
-- [ ] Define `Manifest.ts` types in `src/types/`.
-- [ ] Create `loadManifest()` utility with Zod/AJV validation.
-- [ ] Add "Load Manifest" button to `DesignToolbox` header.
-- [ ] Store manifest in React State (`useFirmwareManifest` hook/context).
-- [ ] Verify loading a sample `manifest.json` works and populates the store.
+- [x] Define `Manifest.ts` types in `src/types/`.
+- [x] Create `loadManifest()` utility with Zod/AJV validation.
+- [x] Add "Load Manifest" button to `DesignToolbox` header.
+- [x] Store manifest in React State (`useFirmwareManifest` hook/context).
+- [x] Verify loading a sample `manifest.json` works and populates the store.
 
 ## 4. Verification Plan
 

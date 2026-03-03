@@ -1,13 +1,13 @@
 import type {
-  AnimationKeyframe,
   ScreenAnimation,
   ScreenDataset,
-  ScreenDefinition,
   ScreenElement,
   ScreenFlow,
   ScreenSubmenu
 } from "../../src/types.js";
 import type { ThemeTokens } from "../../src/theme/types.js";
+
+export type { FirmwareManifest, FirmwareAction } from "../../shared/schemaDefinitions.js";
 
 export interface ValidatedInput {
   dataset: ScreenDataset;
@@ -40,9 +40,10 @@ export interface IRScreenElement {
   kind: IRElementKind;
   size?: { width: number; height: number };
   binding?: string;
+  dataSourceId?: string;
 }
 
-export interface IRFlow extends ScreenFlow {}
+export interface IRFlow extends ScreenFlow { }
 
 export interface IRAsset {
   id: string;
@@ -54,15 +55,22 @@ export interface IRAsset {
   embeddedFrames?: string[];
 }
 
-export interface IRAnimation extends ScreenAnimation {}
+export interface IRAnimation extends ScreenAnimation { }
 
-export interface IRSubmenu extends ScreenSubmenu {}
+export interface IRSubmenu extends ScreenSubmenu { }
+
+export interface IRScreenEvent {
+  trigger: string;
+  actionId?: string;
+  targetScreenId?: string;
+}
 
 export interface IRScreen {
   id: string;
   name: string;
   description?: string;
   elements: IRScreenElement[];
+  events: IRScreenEvent[];
   flows: IRFlow[];
   assets: IRAsset[];
   animations: IRAnimation[];
@@ -127,4 +135,12 @@ export interface BackupSummary {
   location?: string | null;
   restored?: boolean;
   reason?: string;
+}
+
+/** Summary of the firmware manifest load result included in CLI JSON output. */
+export interface ManifestSummary {
+  status: "loaded" | "missing" | "invalid";
+  path?: string;
+  actionCount?: number;
+  error?: string;
 }

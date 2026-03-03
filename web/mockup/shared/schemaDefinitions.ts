@@ -3,6 +3,7 @@ import type {
   ScreenDataset,
   ScreenDefinition,
   ScreenElement,
+  ScreenEvent,
   ScreenFlow,
   ScreenGraphicAsset,
   ScreenAnimation,
@@ -38,6 +39,7 @@ export const elementSchema: JSONSchemaType<ScreenElement> = {
       nullable: true
     },
     binding: { type: "string", nullable: true },
+    dataSourceId: { type: "string", nullable: true },
     metadata: {
       type: "object",
       nullable: true,
@@ -46,6 +48,17 @@ export const elementSchema: JSONSchemaType<ScreenElement> = {
         oneOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }]
       }
     }
+  }
+};
+
+export const screenEventSchema: JSONSchemaType<ScreenEvent> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["trigger"],
+  properties: {
+    trigger: { type: "string", minLength: 1 },
+    actionId: { type: "string", nullable: true },
+    targetScreenId: { type: "string", nullable: true }
   }
 };
 
@@ -200,6 +213,11 @@ export const screenSchema: JSONSchemaType<ScreenDefinition> = {
       minItems: 0,
       items: elementSchema
     },
+    events: {
+      type: "array",
+      nullable: true,
+      items: screenEventSchema
+    },
     flows: {
       type: "array",
       nullable: true,
@@ -299,3 +317,66 @@ const datasetSchemaDefinition = {
 
 export const datasetSchema: JSONSchemaType<ScreenDataset> =
   datasetSchemaDefinition as unknown as JSONSchemaType<ScreenDataset>;
+
+// ── Firmware manifest schema ────────────────────────────────────────────────
+
+export interface FirmwareActionParam {
+  type: "string" | "number" | "boolean";
+}
+
+export interface FirmwareAction {
+  id: string;
+  label: string;
+  description?: string;
+  params?: Record<string, FirmwareActionParam>;
+}
+
+export interface FirmwareManifest {
+  version: string;
+  generatedAt: string;
+  actions: FirmwareAction[];
+}
+
+export const firmwareActionParamSchema: JSONSchemaType<FirmwareActionParam> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["type"],
+  properties: {
+    type: { type: "string", enum: ["string", "number", "boolean"] }
+  }
+};
+
+export const firmwareActionSchema: JSONSchemaType<FirmwareAction> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["id", "label"],
+  properties: {
+    id: { type: "string", minLength: 1 },
+    label: { type: "string", minLength: 1 },
+    description: { type: "string", nullable: true },
+    params: {
+      type: "object",
+      nullable: true,
+      required: [],
+      additionalProperties: firmwareActionParamSchema
+    }
+  }
+};
+
+const firmwareManifestDefinition = {
+  type: "object",
+  additionalProperties: false,
+  required: ["version", "generatedAt", "actions"],
+  properties: {
+    version: { type: "string", minLength: 1 },
+    generatedAt: { type: "string", minLength: 1 },
+    actions: {
+      type: "array",
+      minItems: 0,
+      items: firmwareActionSchema
+    }
+  }
+} as const;
+
+export const firmwareManifestSchema: JSONSchemaType<FirmwareManifest> =
+  firmwareManifestDefinition as unknown as JSONSchemaType<FirmwareManifest>;

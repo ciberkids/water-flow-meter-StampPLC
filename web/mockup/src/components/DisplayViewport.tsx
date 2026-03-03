@@ -12,6 +12,7 @@ interface DisplayViewportProps {
   valueOverrides?: Record<string, string>;
   pendingTransition?: TransitionPreviewState | null;
   scrollIndicator?: string;
+  firmwareValues?: import("../types/firmwareActions").FirmwareValueDefinition[];
 }
 
 const FRAME_PADDING = 8;
@@ -24,7 +25,8 @@ export function DisplayViewport({
   showGrid,
   valueOverrides,
   pendingTransition,
-  scrollIndicator
+  scrollIndicator,
+  firmwareValues
 }: DisplayViewportProps) {
   const { theme } = useTheme();
   const orientation = layout.bounds.orientation;
@@ -141,8 +143,19 @@ export function DisplayViewport({
         }
 
         const overrideValue = overrides ? overrides[element.id] : undefined;
-        const displayContent =
-          element.kind === "value" && overrideValue !== undefined ? overrideValue : element.content;
+        let displayContent = element.content;
+
+        if (element.dataSourceId && firmwareValues) {
+          const boundValue = firmwareValues.find((v) => v.id === element.dataSourceId);
+          if (boundValue) {
+            displayContent = `{{${boundValue.name}}}`;
+          }
+        }
+
+        if (element.kind === "value" && overrideValue !== undefined) {
+          // Overrides take precedence (e.g. simulation values)
+          displayContent = overrideValue;
+        }
 
         const isOverridden =
           element.kind === "value" && overrideValue !== undefined && displayContent !== element.content;

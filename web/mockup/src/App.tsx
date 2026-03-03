@@ -10,6 +10,7 @@ import {
   ScreenDataset,
   ScreenDefinition,
   ScreenElement,
+  ScreenEvent,
   ScreenFlow,
   ElementKind
 } from "./types";
@@ -43,9 +44,9 @@ import { findMatchingButtonFlows } from "./utils/flowMatching";
 import { ScreenHierarchyPanel } from "./components/design/ScreenHierarchyPanel";
 import { buildScreenHierarchy } from "./utils/screenHierarchy";
 import { DesignToolbox } from "./components/design/DesignToolbox";
-import { EventBindingPanel } from "./components/design/EventBindingPanel";
 import { LiveJsonEditorPanel } from "./components/design/LiveJsonEditorPanel";
 import { AnimationInspector } from "./components/design/AnimationInspector";
+import { validateManifest } from "./schema/manifestValidation";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -315,6 +316,22 @@ export function App() {
     status: "idle",
     message: "Using bundled manifest."
   });
+  const handleLoadManifest = useCallback(
+    async (file: File) => {
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const validated = validateManifest(data);
+        setFirmwareManifest(validated);
+        setManifestFeedback({ status: "success", message: `Loaded manifest with ${validated.actions.length} actions.` });
+      } catch (error) {
+        console.error("Manifest load failed", error);
+        setManifestFeedback({ status: "error", message: error instanceof Error ? error.message : "Unknown error loading manifest" });
+      }
+    },
+    []
+  );
+
   const screenJsonDownload = useCallback(() => {
     const blob = new Blob([JSON.stringify(dataset, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -811,6 +828,56 @@ export function App() {
     }
   }, []);
 
+  const handleAddEvent = useCallback((screenId: string) => {
+    setDataset((current) => {
+      const screenIndex = current.screens.findIndex((s) => s.id === screenId);
+      if (screenIndex === -1) {
+        return current;
+      }
+      const screen = current.screens[screenIndex];
+      const nextEvents = [...(screen.events ?? []), { trigger: "btn_a_click" }];
+      const nextScreens = [...current.screens];
+      nextScreens[screenIndex] = { ...screen, events: nextEvents };
+      return { ...current, screens: nextScreens };
+    });
+  }, []);
+
+  const handleUpdateEvent = useCallback(
+    (screenId: string, index: number, updates: Partial<ScreenEvent>) => {
+      setDataset((current) => {
+        const screenIndex = current.screens.findIndex((s) => s.id === screenId);
+        if (screenIndex === -1) {
+          return current;
+        }
+        const screen = current.screens[screenIndex];
+        const nextEvents = [...(screen.events ?? [])];
+        if (index < 0 || index >= nextEvents.length) {
+          return current;
+        }
+        nextEvents[index] = { ...nextEvents[index], ...updates };
+        const nextScreens = [...current.screens];
+        nextScreens[screenIndex] = { ...screen, events: nextEvents };
+        return { ...current, screens: nextScreens };
+      });
+    },
+    []
+  );
+
+  const handleRemoveEvent = useCallback((screenId: string, index: number) => {
+    setDataset((current) => {
+      const screenIndex = current.screens.findIndex((s) => s.id === screenId);
+      if (screenIndex === -1) {
+        return current;
+      }
+      const screen = current.screens[screenIndex];
+      const nextEvents = [...(screen.events ?? [])];
+      nextEvents.splice(index, 1);
+      const nextScreens = [...current.screens];
+      nextScreens[screenIndex] = { ...screen, events: nextEvents };
+      return { ...current, screens: nextScreens };
+    });
+  }, []);
+
   const handleImportClick = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
@@ -855,24 +922,6 @@ export function App() {
     [announceClampCorrections, validateDatasetSafe]
   );
 
-  const parseManifestSafe = useCallback((raw: unknown): FirmwareActionManifest => {
-    if (typeof raw !== "object" || raw === null) {
-      throw new Error("Manifest must be an object");
-    }
-    const candidate = raw as Partial<FirmwareActionManifest>;
-    if (!Array.isArray(candidate.actions)) {
-      throw new Error("Manifest is missing an actions array");
-    }
-    candidate.actions.forEach((action, index) => {
-      if (!action?.id || !action?.label) {
-        throw new Error(`Manifest entry #${index + 1} missing id/label`);
-      }
-    });
-    return {
-      updatedAt: candidate.updatedAt ?? new Date().toISOString(),
-      actions: candidate.actions as FirmwareActionDefinition[]
-    };
-  }, []);
 
   const handleManifestUploadClick = useCallback(() => {
     manifestInputRef.current?.click();
@@ -885,13 +934,7 @@ export function App() {
         return;
       }
       try {
-        const payload = JSON.parse(await file.text());
-        const parsed = parseManifestSafe(payload);
-        setFirmwareManifest(parsed);
-        setManifestFeedback({
-          status: "success",
-          message: `Loaded ${file.name} (${parsed.actions.length} actions).`
-        });
+        await handleLoadManifest(file);
       } catch (error) {
         setManifestFeedback({
           status: "error",
@@ -901,7 +944,7 @@ export function App() {
         event.target.value = "";
       }
     },
-    [parseManifestSafe]
+    [handleLoadManifest]
   );
 
   const handleValidateClick = useCallback(() => {
@@ -979,7 +1022,7 @@ export function App() {
         const next = [
           {
             ...entry,
-            functionName: entry.functionName ?? actionDefinition?.label,
+            functionName: entry.functionName ?? actionDefinition?.name,
             timestamp: entry.timestamp ?? Date.now()
           },
           ...current
@@ -1014,7 +1057,7 @@ export function App() {
         recordTraceEntry({
           id: "ui.mock.value-edit",
           label: "Value edited",
-          functionName: actionCatalog.get("ui.mock.value-edit")?.label,
+          functionName: actionCatalog.get("ui.mock.value-edit")?.name,
           trigger: `value.edit.${element.id}`,
           screenId,
           screenName: selectedScreen?.name,
@@ -1057,7 +1100,7 @@ export function App() {
       recordTraceEntry({
         id: "ui.mock.value-save",
         label: "Value saved",
-        functionName: actionCatalog.get("ui.mock.value-save")?.label,
+        functionName: actionCatalog.get("ui.mock.value-save")?.name,
         trigger: `value.save.${element.id}`,
         screenId,
         screenName: selectedScreen?.name,
@@ -1066,7 +1109,7 @@ export function App() {
       recordTraceEntry({
         id: "core.action.save-config",
         label: "Save configuration",
-        functionName: actionCatalog.get("core.action.save-config")?.label,
+        functionName: actionCatalog.get("core.action.save-config")?.name,
         trigger: `value.save.${element.id}`,
         screenId,
         screenName: selectedScreen?.name,
@@ -1163,7 +1206,7 @@ export function App() {
           recordTraceEntry({
             id: flow.actionId ?? "ui.action.unassigned",
             label: flow.label,
-            functionName: actionDefinition?.label,
+            functionName: actionDefinition?.name,
             trigger: `${event.button}.${event.kind}`,
             screenId: selectedScreen?.id ?? "unknown",
             screenName: selectedScreen?.name,
@@ -1173,7 +1216,7 @@ export function App() {
           previewTransition({
             targetScreenId: flow.targetScreenId,
             actionId: flow.actionId,
-            actionLabel: actionDefinition?.label ?? flow.label,
+            actionLabel: actionDefinition?.name ?? flow.label,
             triggerLabel,
             effect
           });
@@ -1435,6 +1478,7 @@ export function App() {
                       valueOverrides={selectedScreenOverrides}
                       pendingTransition={transitionPreview}
                       scrollIndicator={scrollIndicator}
+                      firmwareValues={firmwareManifest.values}
                     />
                   ) : (
                     <p>No screen selected.</p>
@@ -1567,6 +1611,7 @@ export function App() {
                     zoomPercent={zoom}
                     showGrid={showGrid}
                     screen={selectedScreen}
+                    firmwareValues={firmwareManifest.values}
                     previewFooter={
                       <section className="viewport-controls" aria-label="Viewport controls">
                         <h4>Viewport movement</h4>
@@ -1644,19 +1689,18 @@ export function App() {
                         maxWidth={layoutReport?.bounds.width ?? DISPLAY_WIDTH}
                         maxHeight={layoutReport?.bounds.height ?? DISPLAY_HEIGHT}
                         maxInputLength={MAX_INPUT_LENGTH}
+                        onLoadManifest={handleLoadManifest}
+                        firmwareActions={firmwareManifest.actions}
+                        firmwareValues={firmwareManifest.values}
+                        screens={dataset.screens}
+                        onAddEvent={handleAddEvent}
+                        onUpdateEvent={handleUpdateEvent}
+                        onRemoveEvent={handleRemoveEvent}
                       />
                     }
                     stackControls
                   />
                 </div>
-                <EventBindingPanel
-                  screen={selectedScreen}
-                  actions={firmwareManifest.actions}
-                  screens={screens}
-                  onAddFlow={handleAddFlow}
-                  onDeleteFlow={handleDeleteFlow}
-                  onUpdateFlow={handleUpdateFlow}
-                />
                 <AnimationInspector
                   screen={selectedScreen}
                   onUploadFrames={handleUploadFrames}
@@ -1777,7 +1821,11 @@ export function App() {
             <div className="panel-grid">
               <div className="panel-column panel-column--context">{renderScreenContext()}</div>
               <div className="panel-column panel-column--main">
-                <HelpPanel dataset={dataset} selectedScreen={selectedScreen} />
+                <HelpPanel
+                  dataset={dataset}
+                  selectedScreen={selectedScreen}
+                  onNavigateToTab={setActivePanel}
+                />
               </div>
             </div>
           </section>

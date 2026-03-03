@@ -46,6 +46,13 @@ interface BackupSummary {
   reason?: string;
 }
 
+interface ManifestStatus {
+  status: "loaded" | "missing" | "invalid";
+  path?: string;
+  actionCount?: number;
+  error?: string;
+}
+
 interface ExportResponse {
   status: string;
   summary?: ExportSummary;
@@ -54,6 +61,7 @@ interface ExportResponse {
   validation?: ValidationReport;
   compilation?: AutomationCheck;
   backup?: BackupSummary;
+  manifest?: ManifestStatus;
 }
 
 type ExportState = "idle" | "running" | "success" | "error";
@@ -93,6 +101,7 @@ export function ExporterPanel({ disabled = false, onNavigateToScreen }: Exporter
   const [validationReport, setValidationReport] = useState<ValidationReport | null>(null);
   const [compilationReport, setCompilationReport] = useState<AutomationCheck | null>(null);
   const [backupSummary, setBackupSummary] = useState<BackupSummary | null>(null);
+  const [manifestStatus, setManifestStatus] = useState<ManifestStatus | null>(null);
 
   const triggerExport = useCallback(async () => {
     setState("running");
@@ -102,6 +111,7 @@ export function ExporterPanel({ disabled = false, onNavigateToScreen }: Exporter
     setValidationReport(null);
     setCompilationReport(null);
     setBackupSummary(null);
+    setManifestStatus(null);
     try {
       const response = await fetch("/api/export", {
         method: "POST",
@@ -111,6 +121,7 @@ export function ExporterPanel({ disabled = false, onNavigateToScreen }: Exporter
       setValidationReport(payload.validation ?? null);
       setCompilationReport(payload.compilation ?? null);
       setBackupSummary(payload.backup ?? null);
+      setManifestStatus(payload.manifest ?? null);
       if (!response.ok || payload.status !== "ok") {
         setState("error");
         setErrorMessage(payload.message ?? "Export failed");
@@ -277,6 +288,37 @@ export function ExporterPanel({ disabled = false, onNavigateToScreen }: Exporter
             <p className="automation-panel__details">
               Duration: {compilationReport.durationMs.toFixed(0)} ms
             </p>
+          )}
+        </section>
+      )}
+
+      {manifestStatus && (
+        <section className="manifest-panel">
+          <strong>Firmware manifest</strong>
+          <span
+            className={`status-tag ${manifestStatus.status === "loaded"
+                ? "status-success"
+                : manifestStatus.status === "invalid"
+                  ? "status-error"
+                  : "status-warning"
+              }`}
+          >
+            {manifestStatus.status === "loaded"
+              ? `Loaded (${manifestStatus.actionCount ?? 0} actions)`
+              : manifestStatus.status === "invalid"
+                ? "Invalid"
+                : "Not provided"}
+          </span>
+          {manifestStatus.path && (
+            <p className="manifest-panel__path"><code>{manifestStatus.path}</code></p>
+          )}
+          {manifestStatus.status === "missing" && (
+            <p className="manifest-panel__hint">
+              Upload a firmware manifest via the Import &amp; Export tab to enable binding coverage checks.
+            </p>
+          )}
+          {manifestStatus.error && (
+            <p className="manifest-panel__error">{manifestStatus.error}</p>
           )}
         </section>
       )}

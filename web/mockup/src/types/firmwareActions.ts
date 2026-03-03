@@ -1,18 +1,21 @@
-export interface FirmwareActionParam {
-  name: string;
-  type: "string" | "number" | "boolean";
-  description?: string;
-}
 
 export interface FirmwareActionDefinition {
   id: string;
-  label: string;
+  name: string;
   description?: string;
-  category?: string;
-  params?: FirmwareActionParam[];
+  triggers?: string[];
+  // validations?: ... ?
+}
+
+export interface FirmwareValueDefinition {
+  id: string;
+  name: string;
+  type: "int" | "float" | "string" | "bool";
+  readOnly: boolean;
 }
 
 export interface FirmwareActionManifest {
-  updatedAt: string;
   actions: FirmwareActionDefinition[];
+  values: FirmwareValueDefinition[];
 }
+

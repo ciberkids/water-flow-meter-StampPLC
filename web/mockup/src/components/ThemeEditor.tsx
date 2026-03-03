@@ -101,6 +101,7 @@ interface ThemeEditorProps {
   previewFooter?: ReactNode;
   stackControls?: boolean;
   sidebarContent?: ReactNode;
+  firmwareValues?: import("../types/firmwareActions").FirmwareValueDefinition[];
 }
 
 export function ThemeEditor({
@@ -110,7 +111,8 @@ export function ThemeEditor({
   screen,
   previewFooter,
   stackControls = false,
-  sidebarContent
+  sidebarContent,
+  firmwareValues
 }: ThemeEditorProps) {
   const { theme, updateTheme, resetTheme } = useTheme();
   const previewZoom =
@@ -296,7 +298,12 @@ export function ThemeEditor({
           <h4>Live preview</h4>
           {layout ? (
             <div className="theme-editor__viewport">
-              <DisplayViewport layout={layout} zoomPercent={previewZoom} showGrid={showGrid} />
+              <DisplayViewport
+                layout={layout}
+                zoomPercent={previewZoom}
+                showGrid={showGrid}
+                firmwareValues={firmwareValues}
+              />
             </div>
           ) : (
             <p className="theme-editor__empty">Select a screen to preview design changes.</p>

@@ -1,114 +1,135 @@
-import type { ScreenDefinition, ScreenFlow } from "../../types";
-import type { FirmwareActionDefinition } from "../../types/firmwareActions";
+import {
+  ScreenDefinition,
+  ScreenEvent,
+  ScreenDefinition as ScreenDefWithEvents,
+  ScreenEvent as ScreenEvWithEvents
+} from "../../types";
+import { FirmwareActionDefinition } from "../../types/firmwareActions";
 
 interface EventBindingPanelProps {
   screen?: ScreenDefinition;
   actions: FirmwareActionDefinition[];
   screens: ScreenDefinition[];
-  onUpdateFlow: (flowId: string, updates: Partial<ScreenFlow>) => void;
-  onAddFlow: () => void;
-  onDeleteFlow: (flowId: string) => void;
+  onAddEvent: (screenId: string) => void;
+  onUpdateEvent: (screenId: string, index: number, updates: Partial<ScreenEvent>) => void;
+  onRemoveEvent: (screenId: string, index: number) => void;
 }
+
+const TRIGGER_OPTIONS = [
+  { value: "btn_a_click", label: "Button A Click" },
+  { value: "btn_b_click", label: "Button B Click" },
+  { value: "btn_c_click", label: "Button C Click" },
+  { value: "encoder_push", label: "Encoder Push" },
+  { value: "encoder_cw", label: "Encoder CW" },
+  { value: "encoder_ccw", label: "Encoder CCW" }
+];
 
 export function EventBindingPanel({
   screen,
   actions,
   screens,
-  onUpdateFlow,
-  onAddFlow,
-  onDeleteFlow
+  onAddEvent,
+  onUpdateEvent,
+  onRemoveEvent
 }: EventBindingPanelProps) {
-  const flows = screen?.flows ?? [];
+  if (!screen) {
+    return (
+      <section className="event-binding-panel">
+        <header>
+          <h3>Event bindings</h3>
+          <p>No screen selected.</p>
+        </header>
+      </section>
+    );
+  }
+
+  const events = screen.events ?? [];
+
   return (
-    <section className="event-binding-panel" data-testid="event-binding-panel">
+    <section className="event-binding-panel">
       <header>
-        <h3>Event bindings</h3>
-        <p>
-          Map screen flows to firmware actions from the manifest. Changes apply immediately and are
-          reflected in exports.
-        </p>
-        <button type="button" className="tool-button" onClick={onAddFlow} disabled={!screen}>
-          Add button event
-        </button>
+        <div className="toolbox-header-row">
+          <h3>Event bindings</h3>
+          <button
+            type="button"
+            className="tool-button tool-button--secondary tool-button--small"
+            onClick={() => onAddEvent(screen.id)}
+          >
+            Add Event
+          </button>
+        </div>
+        <p>Map hardware inputs to firmware actions.</p>
       </header>
-      {flows.length === 0 ? (
-        <p>No flows defined for this screen.</p>
+
+      {events.length === 0 ? (
+        <p className="empty-state">No events configured.</p>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Label</th>
-              <th>Trigger</th>
-              <th>Action</th>
-              <th>Target screen</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {flows.map((flow) => (
-              <tr key={flow.id}>
-                <td>
-                  <input
-                    type="text"
-                    value={flow.label}
-                    onChange={(event) => onUpdateFlow(flow.id, { label: event.target.value })}
-                  />
-                </td>
-                <td className="trigger-cell">
-                  {flow.trigger.type === "button" ? (
-                    <>
-                      <span>{flow.trigger.button.toUpperCase()}</span>
-                      <span>{flow.trigger.gesture ?? "short"}</span>
-                    </>
-                  ) : (
-                    <span>{flow.trigger.type}</span>
-                  )}
-                </td>
-                <td>
+        <ul className="event-list">
+          {events.map((event, index) => (
+            <li key={index} className="event-item">
+              <div className="event-row">
+                <label>
+                  <span>Trigger</span>
                   <select
-                    value={flow.actionId ?? ""}
-                    data-testid="flow-action-select"
-                    onChange={(event) =>
-                      onUpdateFlow(flow.id, { actionId: event.target.value || undefined })
-                    }
+                    value={event.trigger}
+                    onChange={(e) => onUpdateEvent(screen.id, index, { trigger: e.target.value })}
                   >
-                    <option value="">Unassigned</option>
-                    {actions.map((action) => (
-                      <option key={action.id} value={action.id}>
-                        {action.label}
+                    <option value="" disabled>Select Trigger</option>
+                    {TRIGGER_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
                       </option>
                     ))}
                   </select>
-                </td>
-                <td>
-                  <select
-                    value={flow.targetScreenId ?? ""}
-                    data-testid="flow-target-select"
-                    onChange={(event) =>
-                      onUpdateFlow(flow.id, { targetScreenId: event.target.value || undefined })
-                    }
-                  >
-                    <option value="">Stay</option>
-                    {screens.map((candidate) => (
-                      <option key={candidate.id} value={candidate.id}>
-                        {candidate.name}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td>
+                </label>
+                <div className="event-actions">
                   <button
                     type="button"
-                    className="tool-button tool-button--danger"
-                    onClick={() => onDeleteFlow(flow.id)}
+                    className="icon-button delete-button"
+                    onClick={() => onRemoveEvent(screen.id, index)}
+                    title="Remove Event"
                   >
-                    Remove
+                    ×
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </div>
+
+              <div className="event-row">
+                <label>
+                  <span>Action</span>
+                  <select
+                    value={event.actionId ?? ""}
+                    onChange={(e) => onUpdateEvent(screen.id, index, { actionId: e.target.value || undefined })}
+                  >
+                    <option value="">(None)</option>
+                    {actions.map((action) => (
+                      <option key={action.id} value={action.id}>
+                        {action.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="event-row">
+                <label>
+                  <span>Target Screen</span>
+                  <select
+                    value={event.targetScreenId ?? ""}
+                    onChange={(e) => onUpdateEvent(screen.id, index, { targetScreenId: e.target.value || undefined })}
+                  >
+                    <option value="">(None)</option>
+                    {screens.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

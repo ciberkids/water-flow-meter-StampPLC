@@ -108,6 +108,9 @@ function convertElement(element: ScreenElement): IRScreenElement {
   if (element.binding) {
     base.binding = element.binding;
   }
+  if (element.dataSourceId) {
+    base.dataSourceId = element.dataSourceId;
+  }
   return base;
 }
 
@@ -124,6 +127,7 @@ function convertScreen(
     name: screen.name,
     description: screen.description,
     elements: screen.elements.map(convertElement),
+    events: screen.events ? [...screen.events] : [],
     flows: [...flows],
     assets: [...assets],
     animations: [...animations],

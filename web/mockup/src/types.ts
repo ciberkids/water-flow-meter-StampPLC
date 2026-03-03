@@ -23,6 +23,7 @@ export interface ScreenElement {
   emphasis?: "normal" | "strong" | "muted";
   binding?: string;
   metadata?: ScreenElementMetadata;
+  dataSourceId?: string;
 }
 
 export type ButtonName = "up" | "down" | "enter";
@@ -89,11 +90,18 @@ export interface ScreenSubmenu {
   iconAssetId?: string;
 }
 
+export interface ScreenEvent {
+  trigger: string;
+  actionId?: string;
+  targetScreenId?: string;
+}
+
 export interface ScreenDefinition {
   id: string;
   name: string;
   description?: string;
   elements: ScreenElement[];
+  events?: ScreenEvent[];
   flows?: ScreenFlow[];
   assets?: ScreenGraphicAsset[];
   animations?: ScreenAnimation[];
