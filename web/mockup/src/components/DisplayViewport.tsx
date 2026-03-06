@@ -148,7 +148,7 @@ export function DisplayViewport({
         if (element.dataSourceId && firmwareValues) {
           const boundValue = firmwareValues.find((v) => v.id === element.dataSourceId);
           if (boundValue) {
-            displayContent = `{{${boundValue.name}}}`;
+            displayContent = `{{${boundValue.description ?? boundValue.id}}}`;
           }
         }
 

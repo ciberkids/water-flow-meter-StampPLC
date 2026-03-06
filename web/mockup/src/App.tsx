@@ -47,6 +47,7 @@ import { DesignToolbox } from "./components/design/DesignToolbox";
 import { LiveJsonEditorPanel } from "./components/design/LiveJsonEditorPanel";
 import { AnimationInspector } from "./components/design/AnimationInspector";
 import { validateManifest } from "./schema/manifestValidation";
+import { FirmwareLoopPanel } from "./components/FirmwareLoopPanel";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -360,6 +361,61 @@ export function App() {
   );
   const totalScreens = screens.length;
   const selectedScreenOverrides = selectedScreen ? valueOverrides[selectedScreen.id] ?? {} : {};
+
+  /* ---- Firmware Loop: binding index + state ---- */
+  const bindingIndex = useMemo(() => {
+    const index = new Map<string, { screenId: string; elementId: string }[]>();
+    for (const scr of screens) {
+      for (const el of scr.elements ?? []) {
+        if (el.binding) {
+          if (!index.has(el.binding)) index.set(el.binding, []);
+          index.get(el.binding)!.push({ screenId: scr.id, elementId: el.id });
+        }
+      }
+    }
+    return index;
+  }, [screens]);
+
+  const manifestValueBindings = useMemo(() => {
+    return (firmwareManifest.values ?? []).map((v: { id: string; type?: string; unit?: string; description?: string }) => ({
+      id: v.id,
+      type: v.type,
+      unit: v.unit,
+      description: v.description
+    }));
+  }, [firmwareManifest]);
+
+  const [firmwareLoopValues, setFirmwareLoopValues] = useState<Record<string, string>>({});
+
+  const handleFirmwareValueChange = useCallback((bindingId: string, value: string) => {
+    setFirmwareLoopValues(prev => ({ ...prev, [bindingId]: value }));
+    const targets = bindingIndex.get(bindingId);
+    if (targets) {
+      setValueOverrides(current => {
+        const next = { ...current };
+        for (const { screenId, elementId } of targets) {
+          next[screenId] = { ...(next[screenId] ?? {}), [elementId]: value };
+        }
+        return next;
+      });
+    }
+  }, [bindingIndex]);
+
+  const handleFirmwareBatchChange = useCallback((updates: Record<string, string>) => {
+    setFirmwareLoopValues(prev => ({ ...prev, ...updates }));
+    setValueOverrides(current => {
+      const next = { ...current };
+      for (const [bindingId, value] of Object.entries(updates)) {
+        const targets = bindingIndex.get(bindingId);
+        if (targets) {
+          for (const { screenId, elementId } of targets) {
+            next[screenId] = { ...(next[screenId] ?? {}), [elementId]: value };
+          }
+        }
+      }
+      return next;
+    });
+  }, [bindingIndex]);
   useEffect(() => {
     if (!selectedScreen) {
       if (selectedElementId !== null) {
@@ -1478,7 +1534,7 @@ export function App() {
                       valueOverrides={selectedScreenOverrides}
                       pendingTransition={transitionPreview}
                       scrollIndicator={scrollIndicator}
-                      firmwareValues={firmwareManifest.values}
+                      firmwareValues={firmwareManifest.values ?? []}
                     />
                   ) : (
                     <p>No screen selected.</p>
@@ -1493,6 +1549,13 @@ export function App() {
                   onChange={handleValueChange}
                   onRevert={handleValueRevert}
                   onSave={handleValueSave}
+                />
+
+                <FirmwareLoopPanel
+                  bindings={manifestValueBindings}
+                  values={firmwareLoopValues}
+                  onValueChange={handleFirmwareValueChange}
+                  onBatchChange={handleFirmwareBatchChange}
                 />
 
                 <section className="layout-warnings">
@@ -1611,7 +1674,7 @@ export function App() {
                     zoomPercent={zoom}
                     showGrid={showGrid}
                     screen={selectedScreen}
-                    firmwareValues={firmwareManifest.values}
+                    firmwareValues={firmwareManifest.values ?? []}
                     previewFooter={
                       <section className="viewport-controls" aria-label="Viewport controls">
                         <h4>Viewport movement</h4>
@@ -1691,7 +1754,7 @@ export function App() {
                         maxInputLength={MAX_INPUT_LENGTH}
                         onLoadManifest={handleLoadManifest}
                         firmwareActions={firmwareManifest.actions}
-                        firmwareValues={firmwareManifest.values}
+                        firmwareValues={firmwareManifest.values ?? []}
                         screens={dataset.screens}
                         onAddEvent={handleAddEvent}
                         onUpdateEvent={handleUpdateEvent}

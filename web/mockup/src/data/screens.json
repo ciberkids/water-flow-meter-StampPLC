@@ -10,7 +10,7 @@
           "kind": "text",
           "x": 2,
           "y": 2,
-          "content": "Instant Flow",
+          "content": "Instant Flow (L/s)",
           "emphasis": "strong"
         },
         {
@@ -296,58 +296,122 @@
           "emphasis": "strong"
         },
         {
+          "id": "s1-label",
+          "kind": "text",
+          "x": 2,
+          "y": 18,
+          "content": "S1",
+          "emphasis": "muted"
+        },
+        {
           "id": "s1-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 18,
           "binding": "sensor.1.cumulativeLiters"
         },
         {
+          "id": "s2-label",
+          "kind": "text",
+          "x": 2,
+          "y": 30,
+          "content": "S2",
+          "emphasis": "muted"
+        },
+        {
           "id": "s2-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 30,
           "binding": "sensor.2.cumulativeLiters"
         },
         {
+          "id": "s3-label",
+          "kind": "text",
+          "x": 2,
+          "y": 42,
+          "content": "S3",
+          "emphasis": "muted"
+        },
+        {
           "id": "s3-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 42,
           "binding": "sensor.3.cumulativeLiters"
         },
         {
+          "id": "s4-label",
+          "kind": "text",
+          "x": 2,
+          "y": 54,
+          "content": "S4",
+          "emphasis": "muted"
+        },
+        {
           "id": "s4-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 54,
           "binding": "sensor.4.cumulativeLiters"
         },
         {
+          "id": "s5-label",
+          "kind": "text",
+          "x": 69,
+          "y": 18,
+          "content": "S5",
+          "emphasis": "muted"
+        },
+        {
           "id": "s5-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 18,
           "binding": "sensor.5.cumulativeLiters"
         },
         {
+          "id": "s6-label",
+          "kind": "text",
+          "x": 69,
+          "y": 30,
+          "content": "S6",
+          "emphasis": "muted"
+        },
+        {
           "id": "s6-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 30,
           "binding": "sensor.6.cumulativeLiters"
         },
         {
+          "id": "s7-label",
+          "kind": "text",
+          "x": 69,
+          "y": 42,
+          "content": "S7",
+          "emphasis": "muted"
+        },
+        {
           "id": "s7-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 42,
           "binding": "sensor.7.cumulativeLiters"
         },
         {
+          "id": "s8-label",
+          "kind": "text",
+          "x": 69,
+          "y": 54,
+          "content": "S8",
+          "emphasis": "muted"
+        },
+        {
           "id": "s8-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 54,
           "binding": "sensor.8.cumulativeLiters"
         },
@@ -384,7 +448,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "Hold ENTER 30s→reset totals",
+          "content": "ENTER→30s reset  ↑↓ pages",
           "emphasis": "muted"
         }
       ],
@@ -412,15 +476,14 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-idle",
-          "label": "Enter idle",
+          "id": "f-reset-all",
+          "label": "Reset all countdown",
           "trigger": {
             "type": "button",
             "button": "enter",
-            "gesture": "long"
+            "gesture": "short"
           },
-          "targetScreenId": "countdown-reset-all",
-          "guard": "enterLong"
+          "targetScreenId": "countdown-reset-all"
         }
       ]
     },
@@ -438,58 +501,122 @@
           "emphasis": "strong"
         },
         {
+          "id": "s1-label",
+          "kind": "text",
+          "x": 2,
+          "y": 18,
+          "content": "S1",
+          "emphasis": "muted"
+        },
+        {
           "id": "s1-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 18,
           "binding": "sensor.1.cumulativeM3"
         },
         {
+          "id": "s2-label",
+          "kind": "text",
+          "x": 2,
+          "y": 30,
+          "content": "S2",
+          "emphasis": "muted"
+        },
+        {
           "id": "s2-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 30,
           "binding": "sensor.2.cumulativeM3"
         },
         {
+          "id": "s3-label",
+          "kind": "text",
+          "x": 2,
+          "y": 42,
+          "content": "S3",
+          "emphasis": "muted"
+        },
+        {
           "id": "s3-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 42,
           "binding": "sensor.3.cumulativeM3"
         },
         {
+          "id": "s4-label",
+          "kind": "text",
+          "x": 2,
+          "y": 54,
+          "content": "S4",
+          "emphasis": "muted"
+        },
+        {
           "id": "s4-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 54,
           "binding": "sensor.4.cumulativeM3"
         },
         {
+          "id": "s5-label",
+          "kind": "text",
+          "x": 69,
+          "y": 18,
+          "content": "S5",
+          "emphasis": "muted"
+        },
+        {
           "id": "s5-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 18,
           "binding": "sensor.5.cumulativeM3"
         },
         {
+          "id": "s6-label",
+          "kind": "text",
+          "x": 69,
+          "y": 30,
+          "content": "S6",
+          "emphasis": "muted"
+        },
+        {
           "id": "s6-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 30,
           "binding": "sensor.6.cumulativeM3"
         },
         {
+          "id": "s7-label",
+          "kind": "text",
+          "x": 69,
+          "y": 42,
+          "content": "S7",
+          "emphasis": "muted"
+        },
+        {
           "id": "s7-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 42,
           "binding": "sensor.7.cumulativeM3"
         },
         {
+          "id": "s8-label",
+          "kind": "text",
+          "x": 69,
+          "y": 54,
+          "content": "S8",
+          "emphasis": "muted"
+        },
+        {
           "id": "s8-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 54,
           "binding": "sensor.8.cumulativeM3"
         },
@@ -526,7 +653,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "Hold ENTER 30s→reset totals",
+          "content": "ENTER→30s reset  ↑↓ pages",
           "emphasis": "muted"
         }
       ],
@@ -554,15 +681,14 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-idle",
-          "label": "Enter idle",
+          "id": "f-reset-all",
+          "label": "Reset all countdown",
           "trigger": {
             "type": "button",
             "button": "enter",
-            "gesture": "long"
+            "gesture": "short"
           },
-          "targetScreenId": "countdown-reset-all",
-          "guard": "enterLong"
+          "targetScreenId": "countdown-reset-all"
         }
       ]
     },
@@ -580,58 +706,122 @@
           "emphasis": "strong"
         },
         {
+          "id": "s1-label",
+          "kind": "text",
+          "x": 2,
+          "y": 18,
+          "content": "S1",
+          "emphasis": "muted"
+        },
+        {
           "id": "s1-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 18,
           "binding": "sensor.1.sessionLiters"
         },
         {
+          "id": "s2-label",
+          "kind": "text",
+          "x": 2,
+          "y": 30,
+          "content": "S2",
+          "emphasis": "muted"
+        },
+        {
           "id": "s2-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 30,
           "binding": "sensor.2.sessionLiters"
         },
         {
+          "id": "s3-label",
+          "kind": "text",
+          "x": 2,
+          "y": 42,
+          "content": "S3",
+          "emphasis": "muted"
+        },
+        {
           "id": "s3-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 42,
           "binding": "sensor.3.sessionLiters"
         },
         {
+          "id": "s4-label",
+          "kind": "text",
+          "x": 2,
+          "y": 54,
+          "content": "S4",
+          "emphasis": "muted"
+        },
+        {
           "id": "s4-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 54,
           "binding": "sensor.4.sessionLiters"
         },
         {
+          "id": "s5-label",
+          "kind": "text",
+          "x": 69,
+          "y": 18,
+          "content": "S5",
+          "emphasis": "muted"
+        },
+        {
           "id": "s5-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 18,
           "binding": "sensor.5.sessionLiters"
         },
         {
+          "id": "s6-label",
+          "kind": "text",
+          "x": 69,
+          "y": 30,
+          "content": "S6",
+          "emphasis": "muted"
+        },
+        {
           "id": "s6-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 30,
           "binding": "sensor.6.sessionLiters"
         },
         {
+          "id": "s7-label",
+          "kind": "text",
+          "x": 69,
+          "y": 42,
+          "content": "S7",
+          "emphasis": "muted"
+        },
+        {
           "id": "s7-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 42,
           "binding": "sensor.7.sessionLiters"
         },
         {
+          "id": "s8-label",
+          "kind": "text",
+          "x": 69,
+          "y": 54,
+          "content": "S8",
+          "emphasis": "muted"
+        },
+        {
           "id": "s8-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 54,
           "binding": "sensor.8.sessionLiters"
         },
@@ -668,7 +858,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "Hold ENTER 3s→reset session",
+          "content": "ENTER→3s reset  ↑↓ pages",
           "emphasis": "muted"
         }
       ],
@@ -701,7 +891,7 @@
           "trigger": {
             "type": "button",
             "button": "enter",
-            "gesture": "long"
+            "gesture": "short"
           },
           "targetScreenId": "countdown-reset-session"
         }
@@ -721,58 +911,122 @@
           "emphasis": "strong"
         },
         {
+          "id": "s1-label",
+          "kind": "text",
+          "x": 2,
+          "y": 18,
+          "content": "S1",
+          "emphasis": "muted"
+        },
+        {
           "id": "s1-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 18,
           "binding": "sensor.1.sessionM3"
         },
         {
+          "id": "s2-label",
+          "kind": "text",
+          "x": 2,
+          "y": 30,
+          "content": "S2",
+          "emphasis": "muted"
+        },
+        {
           "id": "s2-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 30,
           "binding": "sensor.2.sessionM3"
         },
         {
+          "id": "s3-label",
+          "kind": "text",
+          "x": 2,
+          "y": 42,
+          "content": "S3",
+          "emphasis": "muted"
+        },
+        {
           "id": "s3-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 42,
           "binding": "sensor.3.sessionM3"
         },
         {
+          "id": "s4-label",
+          "kind": "text",
+          "x": 2,
+          "y": 54,
+          "content": "S4",
+          "emphasis": "muted"
+        },
+        {
           "id": "s4-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 54,
           "binding": "sensor.4.sessionM3"
         },
         {
+          "id": "s5-label",
+          "kind": "text",
+          "x": 69,
+          "y": 18,
+          "content": "S5",
+          "emphasis": "muted"
+        },
+        {
           "id": "s5-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 18,
           "binding": "sensor.5.sessionM3"
         },
         {
+          "id": "s6-label",
+          "kind": "text",
+          "x": 69,
+          "y": 30,
+          "content": "S6",
+          "emphasis": "muted"
+        },
+        {
           "id": "s6-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 30,
           "binding": "sensor.6.sessionM3"
         },
         {
+          "id": "s7-label",
+          "kind": "text",
+          "x": 69,
+          "y": 42,
+          "content": "S7",
+          "emphasis": "muted"
+        },
+        {
           "id": "s7-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 42,
           "binding": "sensor.7.sessionM3"
         },
         {
+          "id": "s8-label",
+          "kind": "text",
+          "x": 69,
+          "y": 54,
+          "content": "S8",
+          "emphasis": "muted"
+        },
+        {
           "id": "s8-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 54,
           "binding": "sensor.8.sessionM3"
         },
@@ -801,7 +1055,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "Hold ENTER 3s→reset session",
+          "content": "ENTER→3s reset  ↑↓ pages",
           "emphasis": "muted"
         }
       ],
@@ -834,7 +1088,7 @@
           "trigger": {
             "type": "button",
             "button": "enter",
-            "gesture": "long"
+            "gesture": "short"
           },
           "targetScreenId": "countdown-reset-session"
         }
@@ -854,58 +1108,122 @@
           "emphasis": "strong"
         },
         {
+          "id": "s1-label",
+          "kind": "text",
+          "x": 2,
+          "y": 18,
+          "content": "S1",
+          "emphasis": "muted"
+        },
+        {
           "id": "s1-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 18,
           "binding": "sensor.1.maxFlowSinceReset"
         },
         {
+          "id": "s2-label",
+          "kind": "text",
+          "x": 2,
+          "y": 30,
+          "content": "S2",
+          "emphasis": "muted"
+        },
+        {
           "id": "s2-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 30,
           "binding": "sensor.2.maxFlowSinceReset"
         },
         {
+          "id": "s3-label",
+          "kind": "text",
+          "x": 2,
+          "y": 42,
+          "content": "S3",
+          "emphasis": "muted"
+        },
+        {
           "id": "s3-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 42,
           "binding": "sensor.3.maxFlowSinceReset"
         },
         {
+          "id": "s4-label",
+          "kind": "text",
+          "x": 2,
+          "y": 54,
+          "content": "S4",
+          "emphasis": "muted"
+        },
+        {
           "id": "s4-value",
           "kind": "value",
-          "x": 2,
+          "x": 14,
           "y": 54,
           "binding": "sensor.4.maxFlowSinceReset"
         },
         {
+          "id": "s5-label",
+          "kind": "text",
+          "x": 69,
+          "y": 18,
+          "content": "S5",
+          "emphasis": "muted"
+        },
+        {
           "id": "s5-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 18,
           "binding": "sensor.5.maxFlowSinceReset"
         },
         {
+          "id": "s6-label",
+          "kind": "text",
+          "x": 69,
+          "y": 30,
+          "content": "S6",
+          "emphasis": "muted"
+        },
+        {
           "id": "s6-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 30,
           "binding": "sensor.6.maxFlowSinceReset"
         },
         {
+          "id": "s7-label",
+          "kind": "text",
+          "x": 69,
+          "y": 42,
+          "content": "S7",
+          "emphasis": "muted"
+        },
+        {
           "id": "s7-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 42,
           "binding": "sensor.7.maxFlowSinceReset"
         },
         {
+          "id": "s8-label",
+          "kind": "text",
+          "x": 69,
+          "y": 54,
+          "content": "S8",
+          "emphasis": "muted"
+        },
+        {
           "id": "s8-value",
           "kind": "value",
-          "x": 69,
+          "x": 81,
           "y": 54,
           "binding": "sensor.8.maxFlowSinceReset"
         },
@@ -934,7 +1252,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "Hold ENTER 3s→reset session",
+          "content": "ENTER→3s reset  ↑↓ pages",
           "emphasis": "muted"
         }
       ],
@@ -967,7 +1285,7 @@
           "trigger": {
             "type": "button",
             "button": "enter",
-            "gesture": "long"
+            "gesture": "short"
           },
           "targetScreenId": "countdown-reset-session"
         }

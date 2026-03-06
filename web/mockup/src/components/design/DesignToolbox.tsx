@@ -86,7 +86,7 @@ export function DesignToolbox({
     if (!firmwareValues) return [];
     return firmwareValues.filter((v) => {
       if (kind === "text") return v.type === "string";
-      if (kind === "value") return v.type === "int" || v.type === "float";
+      if (kind === "value") return v.type === "number" || v.type === "int" || v.type === "float";
       return false;
     });
   };
@@ -170,7 +170,7 @@ export function DesignToolbox({
                           <option value="">(None)</option>
                           {compatibleValues.map((v) => (
                             <option key={v.id} value={v.id}>
-                              {v.name}
+                              {v.description ?? v.id}
                             </option>
                           ))}
                         </select>

@@ -9,13 +9,15 @@ export interface FirmwareActionDefinition {
 
 export interface FirmwareValueDefinition {
   id: string;
-  name: string;
-  type: "int" | "float" | "string" | "bool";
-  readOnly: boolean;
+  type?: string;
+  unit?: string;
+  register?: number;
+  description?: string;
+  readOnly?: boolean;
 }
 
 export interface FirmwareActionManifest {
   actions: FirmwareActionDefinition[];
-  values: FirmwareValueDefinition[];
+  values?: FirmwareValueDefinition[];
 }
 
