@@ -1297,6 +1297,44 @@ export function App() {
           screenName: selectedScreen?.name
         });
       }
+      // Handle combo gesture (UP+DOWN) for factory reset
+      if (event.button === "up+down") {
+        if (event.kind === "long") {
+          const resolved = selectById("countdown-factory-reset");
+          if (resolved) {
+            activeScreenId = resolved;
+          }
+          recordTraceEntry({
+            id: "core.action.factory-reset",
+            label: "Factory reset countdown started",
+            functionName: "Factory reset",
+            trigger: "up+down.long",
+            screenId: selectedScreen?.id ?? "unknown",
+            screenName: selectedScreen?.name,
+            targetScreenId: "countdown-factory-reset"
+          });
+          previewTransition({
+            targetScreenId: "countdown-factory-reset",
+            actionId: "core.action.factory-reset",
+            actionLabel: "Factory reset",
+            triggerLabel,
+            effect
+          });
+        } else if (event.kind === "combo-warning") {
+          recordTraceEntry({
+            id: "ui.action.combo-warning",
+            label: "Factory reset warning overlay",
+            trigger: "up+down.combo-warning",
+            screenId: selectedScreen?.id ?? "unknown",
+            screenName: selectedScreen?.name
+          });
+        }
+
+        appendLog(
+          `[${new Date(event.timestamp).toLocaleTimeString()}] ${triggerLabel} → ${activeScreenId}`
+        );
+        return;
+      }
 
       appendLog(
         `[${new Date(event.timestamp).toLocaleTimeString()}] ${triggerLabel} → ${activeScreenId}`
@@ -1305,9 +1343,9 @@ export function App() {
     [actionCatalog, appendLog, previewTransition, recordTraceEntry, selectById, selectByOffset, selectedScreen, screens]
   );
 
-  const { pressed, press, release, cancelAll } = useSimulatedButtons(handleButtonEvent);
+  const { pressed, comboActive, press, release, cancelAll } = useSimulatedButtons(handleButtonEvent);
 
-  const mapKeyToButton = useCallback((key: string): SimulatedButton | undefined => {
+  const mapKeyToButton = useCallback((key: string): "up" | "down" | "enter" | undefined => {
     switch (key) {
       case "ArrowUp":
         return "up";
@@ -1541,7 +1579,7 @@ export function App() {
                   )}
                 </section>
 
-                <ButtonPanel pressed={pressed} onPressStart={press} onPressEnd={release} />
+                <ButtonPanel pressed={pressed} comboActive={comboActive} onPressStart={press} onPressEnd={release} />
 
                 <ValuePlaceholderPanel
                   screen={selectedScreen}

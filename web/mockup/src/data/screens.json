@@ -450,6 +450,15 @@
           "y": 226,
           "content": "ENTER→30s reset  ↑↓ pages",
           "emphasis": "muted"
+        },
+        {
+          "id": "undersampling-badge",
+          "kind": "badge",
+          "x": 2,
+          "y": 4,
+          "content": "⚠ Undersampling",
+          "binding": "diagnostics.undersampling",
+          "emphasis": "muted"
         }
       ],
       "flows": [
@@ -654,6 +663,15 @@
           "x": 2,
           "y": 226,
           "content": "ENTER→30s reset  ↑↓ pages",
+          "emphasis": "muted"
+        },
+        {
+          "id": "undersampling-badge",
+          "kind": "badge",
+          "x": 2,
+          "y": 4,
+          "content": "⚠ Undersampling",
+          "binding": "diagnostics.undersampling",
           "emphasis": "muted"
         }
       ],
@@ -1057,6 +1075,15 @@
           "y": 226,
           "content": "ENTER→3s reset  ↑↓ pages",
           "emphasis": "muted"
+        },
+        {
+          "id": "undersampling-badge",
+          "kind": "badge",
+          "x": 2,
+          "y": 4,
+          "content": "⚠ Undersampling",
+          "binding": "diagnostics.undersampling",
+          "emphasis": "muted"
         }
       ],
       "flows": [
@@ -1253,6 +1280,15 @@
           "x": 2,
           "y": 226,
           "content": "ENTER→3s reset  ↑↓ pages",
+          "emphasis": "muted"
+        },
+        {
+          "id": "undersampling-badge",
+          "kind": "badge",
+          "x": 2,
+          "y": 4,
+          "content": "⚠ Undersampling",
+          "binding": "diagnostics.undersampling",
           "emphasis": "muted"
         }
       ],
@@ -1586,6 +1622,335 @@
       ]
     },
     {
+      "id": "countdown-factory-reset",
+      "name": "Factory Reset Countdown",
+      "description": "30 s countdown for factory reset. Hold UP+DOWN throughout. Warning overlay after 3 s.",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "kind": "box",
+          "x": 0,
+          "y": 0,
+          "width": 135,
+          "height": 240
+        },
+        {
+          "id": "title",
+          "kind": "text",
+          "x": 5,
+          "y": 50,
+          "content": "⚠ FACTORY RESET",
+          "emphasis": "strong"
+        },
+        {
+          "id": "warning-text",
+          "kind": "text",
+          "x": 5,
+          "y": 70,
+          "content": "Keep holding UP+DOWN",
+          "emphasis": "muted"
+        },
+        {
+          "id": "warning-detail",
+          "kind": "text",
+          "x": 5,
+          "y": 86,
+          "content": "Wipes NVS & Modbus config!",
+          "emphasis": "muted"
+        },
+        {
+          "id": "timer-value",
+          "kind": "value",
+          "x": 40,
+          "y": 110,
+          "content": "30",
+          "binding": "countdown.value"
+        },
+        {
+          "id": "timer-unit",
+          "kind": "text",
+          "x": 70,
+          "y": 110,
+          "content": "s"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 5,
+          "y": 226,
+          "content": "Release to cancel",
+          "emphasis": "muted"
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-execute",
+          "label": "Execute factory reset",
+          "trigger": {
+            "type": "timeout",
+            "durationMs": 30000
+          },
+          "targetScreenId": "info-p1-instant-flow",
+          "actionId": "core.action.factory-reset"
+        },
+        {
+          "id": "f-cancel",
+          "label": "Cancel",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "info-p1-instant-flow"
+        }
+      ]
+    },
+    {
+      "id": "countdown-sensor-save",
+      "name": "Save & Validate Countdown",
+      "description": "3s countdown for saving sensor settings with Nyquist validation.",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "kind": "box",
+          "x": 0,
+          "y": 0,
+          "width": 135,
+          "height": 240
+        },
+        {
+          "id": "title",
+          "kind": "text",
+          "x": 5,
+          "y": 60,
+          "content": "Save & Validate?",
+          "emphasis": "strong"
+        },
+        {
+          "id": "warning",
+          "kind": "text",
+          "x": 5,
+          "y": 76,
+          "content": "Hold ENTER to save",
+          "emphasis": "muted"
+        },
+        {
+          "id": "timer-value",
+          "kind": "value",
+          "x": 55,
+          "y": 100,
+          "content": "3",
+          "binding": "countdown.value"
+        },
+        {
+          "id": "timer-unit",
+          "kind": "text",
+          "x": 72,
+          "y": 100,
+          "content": "s"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 5,
+          "y": 226,
+          "content": "Release to cancel",
+          "emphasis": "muted"
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-confirm",
+          "label": "Save sensor settings",
+          "trigger": {
+            "type": "timeout",
+            "durationMs": 3000
+          },
+          "targetScreenId": "config-s1-connected",
+          "actionId": "config.action.sensor.save"
+        },
+        {
+          "id": "f-cancel",
+          "label": "Cancel",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s1-connected"
+        }
+      ]
+    },
+    {
+      "id": "countdown-config-exit",
+      "name": "Exit Configuration Countdown",
+      "description": "3s countdown to exit config. Release before 1.5s cancels; hold to 3s exits to idle.",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "kind": "box",
+          "x": 0,
+          "y": 0,
+          "width": 135,
+          "height": 240
+        },
+        {
+          "id": "title",
+          "kind": "text",
+          "x": 5,
+          "y": 60,
+          "content": "Exit Configuration?",
+          "emphasis": "strong"
+        },
+        {
+          "id": "warning",
+          "kind": "text",
+          "x": 5,
+          "y": 76,
+          "content": "Hold ENTER to exit",
+          "emphasis": "muted"
+        },
+        {
+          "id": "timer-value",
+          "kind": "value",
+          "x": 55,
+          "y": 100,
+          "content": "3",
+          "binding": "countdown.value"
+        },
+        {
+          "id": "timer-unit",
+          "kind": "text",
+          "x": 72,
+          "y": 100,
+          "content": "s"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 5,
+          "y": 226,
+          "content": "Release to cancel",
+          "emphasis": "muted"
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-confirm",
+          "label": "Exit to info mode",
+          "trigger": {
+            "type": "timeout",
+            "durationMs": 3000
+          },
+          "targetScreenId": "state-idle",
+          "actionId": "ui.action.mode.info"
+        },
+        {
+          "id": "f-cancel",
+          "label": "Cancel",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c1-modbus-id"
+        }
+      ]
+    },
+    {
+      "id": "nyquist-warning",
+      "name": "Nyquist Validation Warning",
+      "description": "Shown when f_theoretical exceeds Nyquist limit. UP=Edit, DOWN=Save anyway.",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "kind": "box",
+          "x": 0,
+          "y": 0,
+          "width": 135,
+          "height": 240
+        },
+        {
+          "id": "title",
+          "kind": "text",
+          "x": 5,
+          "y": 40,
+          "content": "⚠ Sampling too slow",
+          "emphasis": "strong"
+        },
+        {
+          "id": "detail-1",
+          "kind": "text",
+          "x": 5,
+          "y": 60,
+          "content": "f_theoretical exceeds"
+        },
+        {
+          "id": "detail-2",
+          "kind": "text",
+          "x": 5,
+          "y": 72,
+          "content": "Nyquist limit",
+          "emphasis": "muted"
+        },
+        {
+          "id": "nyquist-value",
+          "kind": "value",
+          "x": 5,
+          "y": 92,
+          "content": "—",
+          "binding": "config.sensor.nyquistWarning"
+        },
+        {
+          "id": "option-up",
+          "kind": "text",
+          "x": 5,
+          "y": 130,
+          "content": "UP = Edit values",
+          "emphasis": "strong"
+        },
+        {
+          "id": "option-down",
+          "kind": "text",
+          "x": 5,
+          "y": 150,
+          "content": "DOWN = Save anyway",
+          "emphasis": "muted"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 5,
+          "y": 226,
+          "content": "Choose UP or DOWN",
+          "emphasis": "muted"
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-edit",
+          "label": "Return to edit",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s4-max-flow"
+        },
+        {
+          "id": "f-force-save",
+          "label": "Force save (ignore warning)",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s1-connected",
+          "actionId": "config.action.sensor.save"
+        }
+      ]
+    },
+    {
       "id": "state-idle",
       "name": "Idle (display off)",
       "description": "Backlight off state. Any button press returns to Info mode.",
@@ -1714,8 +2079,7 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "info-p1-instant-flow",
-          "actionId": "ui.action.mode.info"
+          "targetScreenId": "countdown-config-exit"
         }
       ]
     },
@@ -1798,8 +2162,7 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "info-p1-instant-flow",
-          "actionId": "ui.action.mode.info"
+          "targetScreenId": "countdown-config-exit"
         }
       ]
     },
@@ -1890,8 +2253,7 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "info-p1-instant-flow",
-          "actionId": "ui.action.mode.info"
+          "targetScreenId": "countdown-config-exit"
         }
       ]
     },
@@ -1974,8 +2336,7 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "info-p1-instant-flow",
-          "actionId": "ui.action.mode.info"
+          "targetScreenId": "countdown-config-exit"
         }
       ]
     },
@@ -2058,8 +2419,7 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "info-p1-instant-flow",
-          "actionId": "ui.action.mode.info"
+          "targetScreenId": "countdown-config-exit"
         }
       ]
     },
@@ -2142,8 +2502,7 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "info-p1-instant-flow",
-          "actionId": "ui.action.mode.info"
+          "targetScreenId": "countdown-config-exit"
         }
       ]
     },
@@ -2223,8 +2582,7 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "info-p1-instant-flow",
-          "actionId": "ui.action.mode.info"
+          "targetScreenId": "countdown-config-exit"
         }
       ]
     },
@@ -2308,7 +2666,18 @@
             "button": "enter",
             "gesture": "long"
           },
-          "actionId": "config.action.sensor.save"
+          "targetScreenId": "countdown-sensor-save"
+        },
+        {
+          "id": "f-inactive-exit",
+          "label": "Exit if sensor inactive",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "config-c7-sensor-select",
+          "condition": "sensor.connected == false"
         }
       ]
     },
@@ -2399,7 +2768,7 @@
             "button": "enter",
             "gesture": "long"
           },
-          "actionId": "config.action.sensor.save"
+          "targetScreenId": "countdown-sensor-save"
         }
       ]
     },
@@ -2483,7 +2852,7 @@
             "button": "enter",
             "gesture": "long"
           },
-          "actionId": "config.action.sensor.save"
+          "targetScreenId": "countdown-sensor-save"
         }
       ]
     },
@@ -2582,7 +2951,7 @@
             "button": "enter",
             "gesture": "long"
           },
-          "actionId": "config.action.sensor.save"
+          "targetScreenId": "countdown-sensor-save"
         }
       ]
     }

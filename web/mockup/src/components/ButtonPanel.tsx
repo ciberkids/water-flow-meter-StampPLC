@@ -1,7 +1,10 @@
 import { SimulatedButton } from "../types/buttonSimulation";
 
+/** Physical buttons on the device — excludes virtual combo "up+down" */
+type PhysicalButton = Exclude<SimulatedButton, "up+down">;
+
 const BUTTON_METADATA: Record<
-  SimulatedButton,
+  PhysicalButton,
   { label: string; hint: string }
 > = {
   up: { label: "BtnA • Up", hint: "Cycles to previous page" },
@@ -10,16 +13,17 @@ const BUTTON_METADATA: Record<
 };
 
 interface ButtonPanelProps {
-  pressed: Record<SimulatedButton, boolean>;
-  onPressStart: (button: SimulatedButton) => void;
-  onPressEnd: (button: SimulatedButton) => void;
+  pressed: Record<PhysicalButton, boolean>;
+  comboActive?: boolean;
+  onPressStart: (button: PhysicalButton) => void;
+  onPressEnd: (button: PhysicalButton) => void;
 }
 
-export function ButtonPanel({ pressed, onPressStart, onPressEnd }: ButtonPanelProps) {
+export function ButtonPanel({ pressed, comboActive, onPressStart, onPressEnd }: ButtonPanelProps) {
   return (
     <section className="button-panel">
       <h3>StampPLC Buttons</h3>
-      {(Object.keys(BUTTON_METADATA) as SimulatedButton[]).map((button) => {
+      {(Object.keys(BUTTON_METADATA) as PhysicalButton[]).map((button) => {
         const meta = BUTTON_METADATA[button];
         const active = pressed[button];
         return (
@@ -53,6 +57,21 @@ export function ButtonPanel({ pressed, onPressStart, onPressEnd }: ButtonPanelPr
           </button>
         );
       })}
+      {comboActive && (
+        <div style={{
+          marginTop: 8,
+          padding: "6px 10px",
+          background: "rgba(239, 68, 68, 0.15)",
+          border: "1px solid #ef4444",
+          borderRadius: 6,
+          color: "#ef4444",
+          fontSize: 11,
+          fontWeight: 600,
+          textAlign: "center"
+        }}>
+          ⚠ UP+DOWN combo active — hold for factory reset
+        </div>
+      )}
     </section>
   );
 }
