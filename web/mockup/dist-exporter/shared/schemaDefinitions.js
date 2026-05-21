@@ -7,7 +7,7 @@ export const elementSchema = {
         id: { type: "string", minLength: 1 },
         kind: {
             type: "string",
-            enum: ["text", "value", "badge", "box", "icon"]
+            enum: ["text", "value", "badge", "box", "icon", "animation", "scrollbar"]
         },
         x: { type: "integer" },
         y: { type: "integer" },
@@ -20,7 +20,26 @@ export const elementSchema = {
             enum: ["normal", "strong", "muted"],
             nullable: true
         },
-        binding: { type: "string", nullable: true }
+        binding: { type: "string", nullable: true },
+        dataSourceId: { type: "string", nullable: true },
+        metadata: {
+            type: "object",
+            nullable: true,
+            required: [],
+            additionalProperties: {
+                oneOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }]
+            }
+        }
+    }
+};
+export const screenEventSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["trigger"],
+    properties: {
+        trigger: { type: "string", minLength: 1 },
+        actionId: { type: "string", nullable: true },
+        targetScreenId: { type: "string", nullable: true }
     }
 };
 const buttonTriggerSchema = {
@@ -97,6 +116,11 @@ export const graphicAssetSchema = {
             type: "array",
             nullable: true,
             items: { type: "string", pattern: colorPattern }
+        },
+        embeddedFrames: {
+            type: "array",
+            nullable: true,
+            items: { type: "string", minLength: 1 }
         }
     }
 };
@@ -158,8 +182,13 @@ export const screenSchema = {
         description: { type: "string", nullable: true },
         elements: {
             type: "array",
-            minItems: 1,
+            minItems: 0,
             items: elementSchema
+        },
+        events: {
+            type: "array",
+            nullable: true,
+            items: screenEventSchema
         },
         flows: {
             type: "array",
@@ -256,4 +285,43 @@ const datasetSchemaDefinition = {
     }
 };
 export const datasetSchema = datasetSchemaDefinition;
+export const firmwareActionParamSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["type"],
+    properties: {
+        type: { type: "string", enum: ["string", "number", "boolean"] }
+    }
+};
+export const firmwareActionSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["id", "label"],
+    properties: {
+        id: { type: "string", minLength: 1 },
+        label: { type: "string", minLength: 1 },
+        description: { type: "string", nullable: true },
+        params: {
+            type: "object",
+            nullable: true,
+            required: [],
+            additionalProperties: firmwareActionParamSchema
+        }
+    }
+};
+const firmwareManifestDefinition = {
+    type: "object",
+    additionalProperties: false,
+    required: ["version", "generatedAt", "actions"],
+    properties: {
+        version: { type: "string", minLength: 1 },
+        generatedAt: { type: "string", minLength: 1 },
+        actions: {
+            type: "array",
+            minItems: 0,
+            items: firmwareActionSchema
+        }
+    }
+};
+export const firmwareManifestSchema = firmwareManifestDefinition;
 //# sourceMappingURL=schemaDefinitions.js.map

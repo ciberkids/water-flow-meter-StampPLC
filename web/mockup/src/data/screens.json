@@ -2677,7 +2677,7 @@
             "gesture": "long"
           },
           "targetScreenId": "config-c7-sensor-select",
-          "condition": "sensor.connected == false"
+          "guard": "sensor.connected == false"
         }
       ]
     },

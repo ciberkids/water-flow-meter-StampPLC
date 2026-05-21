@@ -27,7 +27,7 @@ export interface ScreenElement {
 }
 
 export type ButtonName = "up" | "down" | "enter";
-export type ButtonGesture = "short" | "long";
+export type ButtonGesture = "short" | "long" | "hold";
 
 export interface ButtonFlowTrigger {
   type: "button";

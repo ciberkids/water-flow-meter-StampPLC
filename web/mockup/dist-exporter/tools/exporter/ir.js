@@ -48,7 +48,17 @@ function normaliseTextPayload(element) {
                 }
             };
         case "icon":
-            return { type: "icon", payload: { assetId: element.content } };
+            return { type: "icon", payload: { assetId: element.metadata?.assetId ?? element.content } };
+        case "animation":
+            return { type: "animation", payload: { assetId: element.metadata?.assetId } };
+        case "scrollbar":
+            return {
+                type: "scrollbar",
+                payload: {
+                    label: element.content,
+                    autoIndex: Boolean(element.metadata?.autoScrollIndex)
+                }
+            };
         default: {
             const exhaustive = element.kind;
             return exhaustive;
@@ -71,6 +81,9 @@ function convertElement(element) {
     if (element.binding) {
         base.binding = element.binding;
     }
+    if (element.dataSourceId) {
+        base.dataSourceId = element.dataSourceId;
+    }
     return base;
 }
 function convertScreen(screen) {
@@ -83,6 +96,7 @@ function convertScreen(screen) {
         name: screen.name,
         description: screen.description,
         elements: screen.elements.map(convertElement),
+        events: screen.events ? [...screen.events] : [],
         flows: [...flows],
         assets: [...assets],
         animations: [...animations],

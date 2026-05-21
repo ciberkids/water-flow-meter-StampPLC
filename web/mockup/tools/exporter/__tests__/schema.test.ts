@@ -29,17 +29,17 @@ test("ensureValidDataset allows screens without elements but rejects missing scr
   const theme = ensureValidTheme({
     name: "Test",
     colors: {
-      displayBackground: "#000",
-      textPrimary: "#fff",
-      textMuted: "#ccc",
-      textStrong: "#fff",
-      value: "#fff",
-      badgeBackground: "#000",
-      badgeBorder: "#fff",
-      icon: "#fff",
-      legend: "#fff",
-      gridMinor: "#111",
-      gridMajor: "#222"
+      displayBackground: "#000000",
+      textPrimary: "#ffffff",
+      textMuted: "#cccccc",
+      textStrong: "#ffffff",
+      value: "#ffffff",
+      badgeBackground: "#000000",
+      badgeBorder: "#ffffff",
+      icon: "#ffffff",
+      legend: "#ffffff",
+      gridMinor: "#000000",
+      gridMajor: "#ffffff"
     },
     typography: { base: 8, value: 10, badge: 8 },
     animation: { easing: "ease-in-out" }

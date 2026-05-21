@@ -83,8 +83,63 @@ const validationChecks = [
         };
     }
 ];
-export function runExportValidations(dataset, ir) {
-    const checks = validationChecks.map((check) => check(dataset, ir));
+/** Built-in action prefixes that don't need a manifest entry. */
+const BUILTIN_PREFIXES = ["ui.", "core."];
+function isBuiltinAction(actionId) {
+    return BUILTIN_PREFIXES.some((prefix) => actionId.startsWith(prefix));
+}
+/**
+ * Validates that every non-builtin actionId referenced in flows and screen events
+ * is present in the firmware manifest.
+ */
+function checkManifestBindingCoverage(dataset, manifest) {
+    if (!manifest) {
+        return {
+            id: "manifest-binding-coverage",
+            title: "Firmware manifest binding coverage",
+            status: "warning",
+            message: "No firmware manifest provided. Custom action bindings cannot be verified. " +
+                "Upload a manifest via the Import tab to enable coverage checks.",
+            recommendation: "Run 'manifest_gen' from the firmware repo or upload ui_manifest.json via the Import & Export tab."
+        };
+    }
+    const knownIds = new Set(manifest.actions.map((a) => a.id));
+    const missing = [];
+    for (const screen of dataset.screens) {
+        for (const flow of screen.flows ?? []) {
+            const id = flow.actionId;
+            if (id && !isBuiltinAction(id) && !knownIds.has(id)) {
+                missing.push(`${screen.id}/flow:${flow.id} references unknown action "${id}"`);
+            }
+        }
+        for (const event of screen.events ?? []) {
+            const id = event.actionId;
+            if (id && !isBuiltinAction(id) && !knownIds.has(id)) {
+                missing.push(`${screen.id}/event:"${event.trigger}" references unknown action "${id}"`);
+            }
+        }
+    }
+    if (missing.length > 0) {
+        return {
+            id: "manifest-binding-coverage",
+            title: "Firmware manifest binding coverage",
+            status: "fail",
+            message: `${missing.length} action binding(s) reference functions not found in the manifest.`,
+            recommendation: missing.join("; ")
+        };
+    }
+    return {
+        id: "manifest-binding-coverage",
+        title: "Firmware manifest binding coverage",
+        status: "pass",
+        message: `All action bindings are covered by the manifest (${manifest.actions.length} actions).`
+    };
+}
+export function runExportValidations(dataset, ir, manifest) {
+    const checks = [
+        ...validationChecks.map((check) => check(dataset, ir)),
+        checkManifestBindingCoverage(dataset, manifest)
+    ];
     const failing = checks.filter((check) => check.status === "fail");
     const status = failing.length > 0 ? "fail" : "pass";
     const log = checks

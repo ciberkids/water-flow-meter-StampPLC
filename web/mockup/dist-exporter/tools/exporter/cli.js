@@ -7,7 +7,10 @@ import { spawn } from "node:child_process";
 import { ensureValidDataset, ensureValidTheme, ExportValidationError } from "./schema.js";
 import { buildIntermediateRepresentation } from "./ir.js";
 import { emitCpp } from "./cppEmitter.js";
+import { emitUiEvents } from "./eventEmitter.js";
+import { emitUiBindings } from "./valueEmitter.js";
 import { runExportValidations } from "./validation.js";
+import { loadManifest } from "./manifestLoader.js";
 async function resolveWorkspaceRoot(startDir) {
     const candidates = [
         path.resolve(startDir, "..", ".."),
@@ -80,10 +83,15 @@ async function writeOutputs(ir, outDir, dryRun) {
     }
     await prepareOutputDirectory(outDir);
     const { header, source, metadataJson } = emitCpp(ir);
+    const eventsSource = emitUiEvents(ir);
+    const { header: bindingsHeader, source: bindingsSource } = emitUiBindings(ir);
     const irJson = JSON.stringify(ir, null, 2);
     await Promise.all([
         fs.writeFile(path.join(outDir, "GeneratedUi.h"), header, "utf-8"),
         fs.writeFile(path.join(outDir, "GeneratedUi.cpp"), source, "utf-8"),
+        fs.writeFile(path.join(outDir, "ui_events.cpp"), eventsSource, "utf-8"),
+        fs.writeFile(path.join(outDir, "ui_bindings.h"), bindingsHeader, "utf-8"),
+        fs.writeFile(path.join(outDir, "ui_bindings.cpp"), bindingsSource, "utf-8"),
         fs.writeFile(path.join(outDir, "ui_export_metadata.json"), metadataJson, "utf-8"),
         fs.writeFile(path.join(outDir, "ui_export_ir.json"), irJson, "utf-8")
     ]);
@@ -99,14 +107,16 @@ function parseCliArgs(projectRoot, workspaceRoot) {
             screens: { type: "string", default: screensDefault },
             theme: { type: "string", default: themeDefault },
             out: { type: "string", default: outDefault },
-            "dry-run": { type: "boolean", default: false }
+            "dry-run": { type: "boolean", default: false },
+            manifest: { type: "string", default: "" }
         }
     });
     return {
         screens: resolvePath(projectRoot, values.screens),
         theme: values.theme ? resolvePath(projectRoot, values.theme) : undefined,
         out: resolvePath(projectRoot, values.out),
-        dryRun: Boolean(values["dry-run"])
+        dryRun: Boolean(values["dry-run"]),
+        manifest: values.manifest ? resolvePath(projectRoot, values.manifest) : undefined
     };
 }
 function collectOutput(stdout, stderr) {
@@ -204,7 +214,25 @@ async function run() {
             ? ensureValidTheme(await readJsonFile(options.theme))
             : dataset.theme;
         const ir = buildIntermediateRepresentation(dataset, themeTokens);
-        const validationReport = runExportValidations(dataset, ir);
+        // Load manifest (optional) and build the manifest status summary.
+        const manifestResult = await loadManifest(options.manifest);
+        const manifestSummary = {
+            status: manifestResult.status,
+            path: manifestResult.path,
+            actionCount: manifestResult.actionCount,
+            error: manifestResult.error
+        };
+        // Block export if manifest was explicitly provided but failed to load.
+        if (manifestResult.status === "invalid") {
+            console.error(JSON.stringify({
+                status: "validation-error",
+                message: `Manifest is invalid: ${manifestResult.error}`,
+                manifest: manifestSummary
+            }, null, 2));
+            process.exitCode = 2;
+            return;
+        }
+        const validationReport = runExportValidations(dataset, ir, manifestResult.manifest);
         if (validationReport.status === "fail") {
             throw new ExportValidationError("Post-export validation failed", validationReport.issues, validationReport);
         }
@@ -268,6 +296,7 @@ async function run() {
             status: "ok",
             summary,
             validation: validationReport,
+            manifest: manifestSummary,
             backup: backupSummary,
             compilation: compilationReport
         }, null, 2));
