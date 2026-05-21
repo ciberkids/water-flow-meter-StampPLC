@@ -49,16 +49,6 @@ function normaliseTextPayload(element) {
             };
         case "icon":
             return { type: "icon", payload: { assetId: element.metadata?.assetId ?? element.content } };
-        case "animation":
-            return { type: "animation", payload: { assetId: element.metadata?.assetId } };
-        case "scrollbar":
-            return {
-                type: "scrollbar",
-                payload: {
-                    label: element.content,
-                    autoIndex: Boolean(element.metadata?.autoScrollIndex)
-                }
-            };
         default: {
             const exhaustive = element.kind;
             return exhaustive;

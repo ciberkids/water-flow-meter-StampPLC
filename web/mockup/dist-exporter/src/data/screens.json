@@ -1,6 +1,91 @@
 {
     "screens": [
         {
+            "id": "info-p0-global-status",
+            "name": "P0 — Global Status",
+            "description": "Live aggregate metrics for all active sensors and global flow animation.",
+            "elements": [
+                {
+                    "id": "hdr-title",
+                    "kind": "text",
+                    "x": 2,
+                    "y": 2,
+                    "content": "System Status",
+                    "emphasis": "strong"
+                },
+                {
+                    "id": "total-flow-label",
+                    "kind": "text",
+                    "x": 2,
+                    "y": 20,
+                    "content": "Total Flow (L/s):",
+                    "emphasis": "muted"
+                },
+                {
+                    "id": "total-flow-value",
+                    "kind": "text",
+                    "x": 2,
+                    "y": 32,
+                    "binding": "telemetry.total",
+                    "emphasis": "strong"
+                },
+                {
+                    "id": "flow-dots",
+                    "kind": "icon",
+                    "x": 40,
+                    "y": 70,
+                    "width": 55,
+                    "height": 55,
+                    "metadata": {
+                        "assetId": "flow-dots"
+                    }
+                },
+                {
+                    "id": "footer-hint",
+                    "kind": "text",
+                    "x": 2,
+                    "y": 226,
+                    "content": "↑↓ pages  ENTER 3s→idle",
+                    "emphasis": "muted"
+                }
+            ],
+            "flows": [
+                {
+                    "id": "f-next",
+                    "label": "Next page",
+                    "trigger": {
+                        "type": "button",
+                        "button": "down",
+                        "gesture": "short"
+                    },
+                    "targetScreenId": "info-p1-instant-flow",
+                    "actionId": "ui.action.page.next"
+                },
+                {
+                    "id": "f-prev",
+                    "label": "Prev page",
+                    "trigger": {
+                        "type": "button",
+                        "button": "up",
+                        "gesture": "short"
+                    },
+                    "targetScreenId": "info-p7-enter-config",
+                    "actionId": "ui.action.page.previous"
+                },
+                {
+                    "id": "f-idle",
+                    "label": "Enter idle",
+                    "trigger": {
+                        "type": "button",
+                        "button": "enter",
+                        "gesture": "long"
+                    },
+                    "targetScreenId": "state-idle",
+                    "actionId": "ui.action.mode.idle"
+                }
+            ]
+        },
+        {
             "id": "info-p1-instant-flow",
             "name": "P1 — Instant Flow",
             "description": "Live instantaneous flow rate (L/s) for all 8 sensors. Shows propeller animation when any sensor is active.",
@@ -198,18 +283,6 @@
                     "height": 1
                 },
                 {
-                    "id": "propeller",
-                    "kind": "animation",
-                    "x": 40,
-                    "y": 70,
-                    "width": 55,
-                    "height": 55,
-                    "metadata": {
-                        "assetId": "propeller",
-                        "autoScrollIndex": false
-                    }
-                },
-                {
                     "id": "divider-2",
                     "kind": "box",
                     "x": 0,
@@ -225,17 +298,6 @@
                     "content": "Red=Pulse • Grn=Ready • Blu=Flow",
                     "binding": "legend.led",
                     "emphasis": "muted"
-                },
-                {
-                    "id": "scroll-pos",
-                    "kind": "scrollbar",
-                    "x": 131,
-                    "y": 14,
-                    "width": 4,
-                    "height": 120,
-                    "metadata": {
-                        "autoScrollIndex": true
-                    }
                 },
                 {
                     "id": "footer-hint",
@@ -266,7 +328,7 @@
                         "button": "up",
                         "gesture": "short"
                     },
-                    "targetScreenId": "info-p7-enter-config",
+                    "targetScreenId": "info-p0-global-status",
                     "actionId": "ui.action.page.previous"
                 },
                 {
@@ -431,17 +493,6 @@
                     "content": "Red=Pulse • Grn=Ready • Blu=Flow",
                     "binding": "legend.led",
                     "emphasis": "muted"
-                },
-                {
-                    "id": "scroll-pos",
-                    "kind": "scrollbar",
-                    "x": 131,
-                    "y": 14,
-                    "width": 4,
-                    "height": 120,
-                    "metadata": {
-                        "autoScrollIndex": true
-                    }
                 },
                 {
                     "id": "footer-hint",
@@ -647,17 +698,6 @@
                     "emphasis": "muted"
                 },
                 {
-                    "id": "scroll-pos",
-                    "kind": "scrollbar",
-                    "x": 131,
-                    "y": 14,
-                    "width": 4,
-                    "height": 120,
-                    "metadata": {
-                        "autoScrollIndex": true
-                    }
-                },
-                {
                     "id": "footer-hint",
                     "kind": "text",
                     "x": 2,
@@ -861,17 +901,6 @@
                     "emphasis": "muted"
                 },
                 {
-                    "id": "scroll-pos",
-                    "kind": "scrollbar",
-                    "x": 131,
-                    "y": 14,
-                    "width": 4,
-                    "height": 120,
-                    "metadata": {
-                        "autoScrollIndex": true
-                    }
-                },
-                {
                     "id": "footer-hint",
                     "kind": "text",
                     "x": 2,
@@ -1056,17 +1085,6 @@
                     "content": "Red=Pulse • Grn=Ready • Blu=Flow",
                     "binding": "legend.led",
                     "emphasis": "muted"
-                },
-                {
-                    "id": "scroll-pos",
-                    "kind": "scrollbar",
-                    "x": 131,
-                    "y": 14,
-                    "width": 4,
-                    "height": 120,
-                    "metadata": {
-                        "autoScrollIndex": true
-                    }
                 },
                 {
                     "id": "footer-hint",
@@ -1264,17 +1282,6 @@
                     "emphasis": "muted"
                 },
                 {
-                    "id": "scroll-pos",
-                    "kind": "scrollbar",
-                    "x": 131,
-                    "y": 14,
-                    "width": 4,
-                    "height": 120,
-                    "metadata": {
-                        "autoScrollIndex": true
-                    }
-                },
-                {
                     "id": "footer-hint",
                     "kind": "text",
                     "x": 2,
@@ -1363,17 +1370,6 @@
                     "height": 1
                 },
                 {
-                    "id": "scroll-pos",
-                    "kind": "scrollbar",
-                    "x": 131,
-                    "y": 14,
-                    "width": 4,
-                    "height": 120,
-                    "metadata": {
-                        "autoScrollIndex": true
-                    }
-                },
-                {
                     "id": "legend-led",
                     "kind": "text",
                     "x": 2,
@@ -1400,7 +1396,7 @@
                         "button": "down",
                         "gesture": "short"
                     },
-                    "targetScreenId": "info-p1-instant-flow",
+                    "targetScreenId": "info-p0-global-status",
                     "actionId": "ui.action.page.next"
                 },
                 {

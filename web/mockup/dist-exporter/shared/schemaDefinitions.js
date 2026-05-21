@@ -7,7 +7,7 @@ export const elementSchema = {
         id: { type: "string", minLength: 1 },
         kind: {
             type: "string",
-            enum: ["text", "value", "badge", "box", "icon", "animation", "scrollbar"]
+            enum: ["text", "value", "badge", "box", "icon"]
         },
         x: { type: "integer" },
         y: { type: "integer" },

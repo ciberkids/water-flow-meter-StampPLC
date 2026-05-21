@@ -82,19 +82,23 @@ stateDiagram-v2
     }
 ```
 
-### 4.2. Propeller Indicator
+### 4.2. Global Flow Indicator (Animated Dots)
 
-- Right-hand side renders an SVG propeller.
-- Animation cycles through pre-rendered frames at 1 fps while any sensor satisfies `isReady == true` AND `instantFlow_L_s > 0.0`.
-- When all sensors report zero flow, show static “stopped” frame.
+- A new **Global Status** page (P0) serves as the first screen, showing aggregated system telemetry (Total L/s and Total L) and a central flow indicator.
+- The flow indicator consists of a pair of dots:
+  - When no flow is detected across the system (`aggregateFlowLps == 0.0`), a single red dot is shown statically.
+  - When flow is detected, two blue dots appear and disappear alternately.
+  - The alternation frequency is directly correlated to the total `aggregateFlowLps`.
+- The propeller animation design has been removed to conserve space on the 135-pixel wide display.
 
 ### 4.3. Telemetry Pages
 
-Pages are circular; UP/DOWN step through them with wrap-around. Each page displays the selected metric for all eight sensors concurrently (column layout). Sensors that are disabled (`inUse == false`) render `--` with a footnote icon.
+Pages are circular; UP/DOWN step through them with wrap-around. P0 provides a global summary, while P1–P6 display metrics for all eight sensors concurrently (column layout). Sensors that are disabled (`inUse == false`) render `--` with a footnote icon.
 
 | Page ID | Title | Metric Source | ENTER (short) | ENTER (long) | Notes |
 | :------ | :---- | :------------ | :------------- | :------------ | :----- |
-| P1 | Instant Flow | Holding registers 101-116 (`instantFlow_L_s`) | No action | Back-to-idle countdown (3 s) | Also shows per-sensor status icons. |
+| P0 | System Status | Global aggregate flow and volume | No action | Back-to-idle countdown (3 s) | First screen shown from Idle. |
+| P1 | Instant Flow | Holding registers 101-116 (`instantFlow_L_s`) | No action | Back-to-idle countdown (3 s) | Also shows per-sensor status icons. |
 | P2 | Cumulative Liters | Holding registers 103-110 (`cumulativeLiters`) | Start 30 s countdown to “Reset All Measured” command | Cancel (no action) | Countdown text must include “Hold ENTER to reset totals (30 → 0)”. |
 | P3 | Cumulative Cubic Meters | Derived from P2 | Same as P2 | Cancel | |
 | P4 | Session Liters | Holding registers 111-112 (`sessionLiters`) | Start 3 s countdown to sensor session reset | Cancel | Issues sensor-specific session reset for all ready sensors once timer hits zero. |
@@ -187,7 +191,7 @@ Rules:
 2. Use contrasting highlight color for the focused sensor or editable field.
 3. Display units alongside numeric values (e.g., “L/s”, “L”, “m³”).
 4. Provide error and success feedback to the user within 1 s of an action (e.g., “Session reset complete”).
-5. Ensure the UI scales for all eight sensors without overlap; adopt a two-column layout (sensors 1-4 left, 5-8 right) with a 48 × 48 px reserved propeller window per sensor as documented in `../../StampPLC specifications.md`.
+5. Ensure the UI scales for all eight sensors without overlap; adopt a two-column layout (sensors 1-4 left, 5-8 right).
 6. Surface LED status legend within info mode so operators understand current colour semantics.
 
 ---

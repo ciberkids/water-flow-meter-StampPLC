@@ -33,7 +33,7 @@ class UiRenderer {
                        const UiRenderContext& context);
   void drawBoxElement(const ui_exporter::Element& element, uint16_t fillColor, uint16_t borderColor);
   void drawIconElement(const ui_exporter::Element& element, const UiRenderContext& context);
-  void drawPropeller(const ui_exporter::Element& element, const UiRenderContext& context);
+  void drawFlowDots(const ui_exporter::Element& element, const UiRenderContext& context);
   void drawWarningBanner(const UiRenderContext& context);
   int16_t measureTextWidth(const ui_exporter::Element& element, const char* text) const;
   int16_t glyphWidthFor(const ui_exporter::Element& element) const;

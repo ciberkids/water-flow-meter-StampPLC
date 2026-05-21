@@ -7,6 +7,10 @@
 
 namespace ui_exporter {
 
+void UpdateValues_InfoP0GlobalStatus() {
+    // No bound values on this screen
+}
+
 void UpdateValues_InfoP1InstantFlow() {
     // No bound values on this screen
 }
@@ -112,6 +116,10 @@ void UpdateValues_ConfigS4MaxFlow() {
 }
 
 void UpdateScreenValues(const char* screenId) {
+    if (strcmp(screenId, "info-p0-global-status") == 0) {
+        UpdateValues_InfoP0GlobalStatus();
+        return;
+    }
     if (strcmp(screenId, "info-p1-instant-flow") == 0) {
         UpdateValues_InfoP1InstantFlow();
         return;

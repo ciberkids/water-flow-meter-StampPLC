@@ -2,6 +2,26 @@
 
 namespace ui_exporter {
 
+static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusHdrTitle_Text = { "System Status", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowLabel_Text = { "Total Flow (L/s):", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusFooterHint_Text = { "↑↓ pages  ENTER 3s→idle", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kInfoP0GlobalStatusElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusHdrTitle_Text, nullptr, nullptr },
+    { "total-flow-label", ui_exporter::ElementType::Text, 2, 20, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowLabel_Text, nullptr, nullptr },
+    { "total-flow-value", ui_exporter::ElementType::Text, 2, 32, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowValue_Text, nullptr, "telemetry.total" },
+    { "flow-dots", ui_exporter::ElementType::Icon, 40, 70, 55, 55, nullptr, "flow-dots", nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 226, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kInfoP0GlobalStatusFlows[] = {
+    { "f-next", "Next page", "info-p1-instant-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Prev page", "info-p7-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-idle", "Enter idle", "state-idle", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.mode.idle", nullptr, 0 }
+};
+
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowHdrTitle_Text = { "Instant Flow (L/s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS1Label_Text = { "S1", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
@@ -57,17 +77,15 @@ static constexpr ui_exporter::Element kInfoP1InstantFlowElements[] = {
     { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS8Value_Text, nullptr, "sensor.8.instantFlow" },
     { "s8-status", ui_exporter::ElementType::Badge, 120, 54, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS8Status_Text, nullptr, "sensor.8.status" },
     { "divider-1", ui_exporter::ElementType::Box, 0, 65, 135, 1, nullptr, nullptr, nullptr },
-    { "propeller", ui_exporter::ElementType::Text, 40, 70, 55, 55, nullptr, nullptr, nullptr },
     { "divider-2", ui_exporter::ElementType::Box, 0, 130, 135, 1, nullptr, nullptr, nullptr },
     { "legend-led", ui_exporter::ElementType::Text, 2, 133, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowLegendLed_Text, nullptr, "legend.led" },
-    { "scroll-pos", ui_exporter::ElementType::Text, 131, 14, 4, 120, nullptr, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 226, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowFooterHint_Text, nullptr, nullptr }
 };
 
 
 static constexpr ui_exporter::Flow kInfoP1InstantFlowFlows[] = {
     { "f-next", "Next page", "info-p2-cumulative-liters", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Prev page", "info-p7-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-prev", "Prev page", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-idle", "Enter idle", "state-idle", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.mode.idle", nullptr, 0 }
 };
 
@@ -112,7 +130,6 @@ static constexpr ui_exporter::Element kInfoP2CumulativeLitersElements[] = {
     { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS8Value_Text, nullptr, "sensor.8.cumulativeLiters" },
     { "divider-1", ui_exporter::ElementType::Box, 0, 65, 135, 1, nullptr, nullptr, nullptr },
     { "legend-led", ui_exporter::ElementType::Text, 2, 70, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersLegendLed_Text, nullptr, "legend.led" },
-    { "scroll-pos", ui_exporter::ElementType::Text, 131, 14, 4, 120, nullptr, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 226, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersFooterHint_Text, nullptr, nullptr },
     { "undersampling-badge", ui_exporter::ElementType::Badge, 2, 4, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersUndersamplingBadge_Text, nullptr, "diagnostics.undersampling" }
 };
@@ -165,7 +182,6 @@ static constexpr ui_exporter::Element kInfoP3CumulativeM3Elements[] = {
     { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S8Value_Text, nullptr, "sensor.8.cumulativeM3" },
     { "divider-1", ui_exporter::ElementType::Box, 0, 65, 135, 1, nullptr, nullptr, nullptr },
     { "legend-led", ui_exporter::ElementType::Text, 2, 70, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3LegendLed_Text, nullptr, "legend.led" },
-    { "scroll-pos", ui_exporter::ElementType::Text, 131, 14, 4, 120, nullptr, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 226, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3FooterHint_Text, nullptr, nullptr },
     { "undersampling-badge", ui_exporter::ElementType::Badge, 2, 4, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3UndersamplingBadge_Text, nullptr, "diagnostics.undersampling" }
 };
@@ -218,7 +234,6 @@ static constexpr ui_exporter::Element kInfoP4SessionLitersElements[] = {
     { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS8Value_Text, nullptr, "sensor.8.sessionLiters" },
     { "undersampling-diag", ui_exporter::ElementType::Badge, 2, 66, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersUndersamplingDiag_Text, nullptr, "diagnostics.undersampling" },
     { "legend-led", ui_exporter::ElementType::Text, 2, 78, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersLegendLed_Text, nullptr, "legend.led" },
-    { "scroll-pos", ui_exporter::ElementType::Text, 131, 14, 4, 120, nullptr, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 226, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersFooterHint_Text, nullptr, nullptr }
 };
 
@@ -269,7 +284,6 @@ static constexpr ui_exporter::Element kInfoP5SessionM3Elements[] = {
     { "s8-label", ui_exporter::ElementType::Text, 69, 54, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S8Label_Text, nullptr, nullptr },
     { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S8Value_Text, nullptr, "sensor.8.sessionM3" },
     { "legend-led", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3LegendLed_Text, nullptr, "legend.led" },
-    { "scroll-pos", ui_exporter::ElementType::Text, 131, 14, 4, 120, nullptr, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 226, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3FooterHint_Text, nullptr, nullptr },
     { "undersampling-badge", ui_exporter::ElementType::Badge, 2, 4, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3UndersamplingBadge_Text, nullptr, "diagnostics.undersampling" }
 };
@@ -321,7 +335,6 @@ static constexpr ui_exporter::Element kInfoP6MaxFlowElements[] = {
     { "s8-label", ui_exporter::ElementType::Text, 69, 54, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS8Label_Text, nullptr, nullptr },
     { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS8Value_Text, nullptr, "sensor.8.maxFlowSinceReset" },
     { "legend-led", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowLegendLed_Text, nullptr, "legend.led" },
-    { "scroll-pos", ui_exporter::ElementType::Text, 131, 14, 4, 120, nullptr, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 226, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowFooterHint_Text, nullptr, nullptr },
     { "undersampling-badge", ui_exporter::ElementType::Badge, 2, 4, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowUndersamplingBadge_Text, nullptr, "diagnostics.undersampling" }
 };
@@ -344,14 +357,13 @@ static constexpr ui_exporter::Element kInfoP7EnterConfigElements[] = {
     { "prompt-line1", ui_exporter::ElementType::Text, 10, 90, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigPromptLine1_Text, nullptr, nullptr },
     { "prompt-line2", ui_exporter::ElementType::Text, 10, 104, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigPromptLine2_Text, nullptr, nullptr },
     { "divider-1", ui_exporter::ElementType::Box, 20, 120, 95, 1, nullptr, nullptr, nullptr },
-    { "scroll-pos", ui_exporter::ElementType::Text, 131, 14, 4, 120, nullptr, nullptr, nullptr },
     { "legend-led", ui_exporter::ElementType::Text, 2, 214, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigLegendLed_Text, nullptr, "legend.led" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 226, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigFooterHint_Text, nullptr, nullptr }
 };
 
 
 static constexpr ui_exporter::Flow kInfoP7EnterConfigFlows[] = {
-    { "f-next", "Next page", "info-p1-instant-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-next", "Next page", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Prev page", "info-p6-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-config-countdown", "Config countdown", "countdown-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
 };
@@ -784,6 +796,7 @@ static constexpr ui_exporter::Flow kConfigS4MaxFlowFlows[] = {
 };
 
 const ui_exporter::Screen kGeneratedScreens[] = {
+    { "info-p0-global-status", "P0 — Global Status", kInfoP0GlobalStatusElements, sizeof(kInfoP0GlobalStatusElements) / sizeof(kInfoP0GlobalStatusElements[0]), kInfoP0GlobalStatusFlows, sizeof(kInfoP0GlobalStatusFlows) / sizeof(kInfoP0GlobalStatusFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "info-p1-instant-flow", "P1 — Instant Flow", kInfoP1InstantFlowElements, sizeof(kInfoP1InstantFlowElements) / sizeof(kInfoP1InstantFlowElements[0]), kInfoP1InstantFlowFlows, sizeof(kInfoP1InstantFlowFlows) / sizeof(kInfoP1InstantFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "info-p2-cumulative-liters", "P2 — Cumulative Liters", kInfoP2CumulativeLitersElements, sizeof(kInfoP2CumulativeLitersElements) / sizeof(kInfoP2CumulativeLitersElements[0]), kInfoP2CumulativeLitersFlows, sizeof(kInfoP2CumulativeLitersFlows) / sizeof(kInfoP2CumulativeLitersFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "info-p3-cumulative-m3", "P3 — Cumulative m³", kInfoP3CumulativeM3Elements, sizeof(kInfoP3CumulativeM3Elements) / sizeof(kInfoP3CumulativeM3Elements[0]), kInfoP3CumulativeM3Flows, sizeof(kInfoP3CumulativeM3Flows) / sizeof(kInfoP3CumulativeM3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
@@ -833,7 +846,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-05-21T21:33:58.513Z", 26, 235
+    "2026-05-21T22:01:22.754Z", 27, 232
 };
 
 }  // namespace ui_exporter

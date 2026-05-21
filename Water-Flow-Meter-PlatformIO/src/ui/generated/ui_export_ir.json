@@ -1,8 +1,132 @@
 {
-  "generatedAt": "2026-05-21T21:33:58.513Z",
-  "screenCount": 26,
-  "elementCount": 235,
+  "generatedAt": "2026-05-21T22:01:22.754Z",
+  "screenCount": 27,
+  "elementCount": 232,
   "dataset": [
+    {
+      "id": "info-p0-global-status",
+      "name": "P0 — Global Status",
+      "description": "Live aggregate metrics for all active sensors and global flow animation.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 2,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "System Status",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "total-flow-label",
+          "position": {
+            "x": 2,
+            "y": 20
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Total Flow (L/s):",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "total-flow-value",
+          "position": {
+            "x": 2,
+            "y": 32
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "telemetry.total"
+        },
+        {
+          "id": "flow-dots",
+          "position": {
+            "x": 40,
+            "y": 70
+          },
+          "kind": {
+            "type": "icon",
+            "payload": {
+              "assetId": "flow-dots"
+            }
+          },
+          "size": {
+            "width": 55,
+            "height": 55
+          }
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 2,
+            "y": 226
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "↑↓ pages  ENTER 3s→idle",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next page",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "info-p1-instant-flow",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Prev page",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "info-p7-enter-config",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-idle",
+          "label": "Enter idle",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "state-idle",
+          "actionId": "ui.action.mode.idle"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
     {
       "id": "info-p1-instant-flow",
       "name": "P1 — Instant Flow",
@@ -418,23 +542,6 @@
           }
         },
         {
-          "id": "propeller",
-          "position": {
-            "x": 40,
-            "y": 70
-          },
-          "kind": {
-            "type": "animation",
-            "payload": {
-              "assetId": "propeller"
-            }
-          },
-          "size": {
-            "width": 55,
-            "height": 55
-          }
-        },
-        {
           "id": "divider-2",
           "position": {
             "x": 0,
@@ -467,23 +574,6 @@
             }
           },
           "binding": "legend.led"
-        },
-        {
-          "id": "scroll-pos",
-          "position": {
-            "x": 131,
-            "y": 14
-          },
-          "kind": {
-            "type": "scrollbar",
-            "payload": {
-              "autoIndex": true
-            }
-          },
-          "size": {
-            "width": 4,
-            "height": 120
-          }
         },
         {
           "id": "footer-hint",
@@ -522,7 +612,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "info-p7-enter-config",
+          "targetScreenId": "info-p0-global-status",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -842,23 +932,6 @@
             }
           },
           "binding": "legend.led"
-        },
-        {
-          "id": "scroll-pos",
-          "position": {
-            "x": 131,
-            "y": 14
-          },
-          "kind": {
-            "type": "scrollbar",
-            "payload": {
-              "autoIndex": true
-            }
-          },
-          "size": {
-            "width": 4,
-            "height": 120
-          }
         },
         {
           "id": "footer-hint",
@@ -1234,23 +1307,6 @@
           "binding": "legend.led"
         },
         {
-          "id": "scroll-pos",
-          "position": {
-            "x": 131,
-            "y": 14
-          },
-          "kind": {
-            "type": "scrollbar",
-            "payload": {
-              "autoIndex": true
-            }
-          },
-          "size": {
-            "width": 4,
-            "height": 120
-          }
-        },
-        {
           "id": "footer-hint",
           "position": {
             "x": 2,
@@ -1622,23 +1678,6 @@
           "binding": "legend.led"
         },
         {
-          "id": "scroll-pos",
-          "position": {
-            "x": 131,
-            "y": 14
-          },
-          "kind": {
-            "type": "scrollbar",
-            "payload": {
-              "autoIndex": true
-            }
-          },
-          "size": {
-            "width": 4,
-            "height": 120
-          }
-        },
-        {
           "id": "footer-hint",
           "position": {
             "x": 2,
@@ -1976,23 +2015,6 @@
             }
           },
           "binding": "legend.led"
-        },
-        {
-          "id": "scroll-pos",
-          "position": {
-            "x": 131,
-            "y": 14
-          },
-          "kind": {
-            "type": "scrollbar",
-            "payload": {
-              "autoIndex": true
-            }
-          },
-          "size": {
-            "width": 4,
-            "height": 120
-          }
         },
         {
           "id": "footer-hint",
@@ -2350,23 +2372,6 @@
           "binding": "legend.led"
         },
         {
-          "id": "scroll-pos",
-          "position": {
-            "x": 131,
-            "y": 14
-          },
-          "kind": {
-            "type": "scrollbar",
-            "payload": {
-              "autoIndex": true
-            }
-          },
-          "size": {
-            "width": 4,
-            "height": 120
-          }
-        },
-        {
           "id": "footer-hint",
           "position": {
             "x": 2,
@@ -2506,23 +2511,6 @@
           }
         },
         {
-          "id": "scroll-pos",
-          "position": {
-            "x": 131,
-            "y": 14
-          },
-          "kind": {
-            "type": "scrollbar",
-            "payload": {
-              "autoIndex": true
-            }
-          },
-          "size": {
-            "width": 4,
-            "height": 120
-          }
-        },
-        {
           "id": "legend-led",
           "position": {
             "x": 2,
@@ -2564,7 +2552,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "info-p1-instant-flow",
+          "targetScreenId": "info-p0-global-status",
           "actionId": "ui.action.page.next"
         },
         {

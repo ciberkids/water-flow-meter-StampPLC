@@ -195,40 +195,42 @@ void UiRenderer::drawBoxElement(const ui_exporter::Element& element,
 
 void UiRenderer::drawIconElement(const ui_exporter::Element& element,
                                  const UiRenderContext& context) {
-  if (element.assetId && std::strcmp(element.assetId, "propeller") == 0) {
-    drawPropeller(element, context);
+  if (element.assetId && std::strcmp(element.assetId, "flow-dots") == 0) {
+    drawFlowDots(element, context);
   }
 }
 
-void UiRenderer::drawPropeller(const ui_exporter::Element& element,
-                               const UiRenderContext& context) {
+void UiRenderer::drawFlowDots(const ui_exporter::Element& element,
+                              const UiRenderContext& context) {
   auto& display = M5StamPLC.Display;
-  const bool active = context.propellerActive;
-  const uint16_t circleColor = active ? highlightColor_ : textColor_;
-  const int16_t radius = std::min(element.width, element.height) / 2;
-  const int16_t centerX = element.x + radius;
-  const int16_t centerY = element.y + radius;
-  display.drawCircle(centerX, centerY, radius, circleColor);
-  display.drawCircle(centerX, centerY, radius / 5, circleColor);
+  const bool active = context.aggregateFlowLps > 0.001;
+  const int16_t centerY = element.y + (element.height / 2);
+  const int16_t radius = std::min(element.width, element.height) / 4;
+  const int16_t leftX = element.x + radius;
+  const int16_t rightX = element.x + element.width - radius;
 
-  constexpr float kPi = 3.14159265f;
-  const float baseAngleRad = static_cast<float>(context.propellerFrame) * (kPi / 4.0f);
-  const float bladeWidth = static_cast<float>(radius) * 0.55f;
-  const float bladeLength = static_cast<float>(radius) * 0.9f;
-
-  for (int i = 0; i < 4; ++i) {
-    const float angle = baseAngleRad + static_cast<float>(i) * (kPi / 2.0f);
-    const float cosA = std::cos(angle);
-    const float sinA = std::sin(angle);
-
-    const int16_t tipX = static_cast<int16_t>(centerX + cosA * bladeLength);
-    const int16_t tipY = static_cast<int16_t>(centerY + sinA * bladeLength);
-    const int16_t leftX = static_cast<int16_t>(centerX + cosA * (radius / 3.0f) - sinA * bladeWidth);
-    const int16_t leftY = static_cast<int16_t>(centerY + sinA * (radius / 3.0f) + cosA * bladeWidth);
-    const int16_t rightX = static_cast<int16_t>(centerX + cosA * (radius / 3.0f) + sinA * bladeWidth);
-    const int16_t rightY = static_cast<int16_t>(centerY + sinA * (radius / 3.0f) - cosA * bladeWidth);
-
-    display.fillTriangle(tipX, tipY, leftX, leftY, rightX, rightY, circleColor);
+  if (!active) {
+    // Single red dot when no flow
+    display.fillCircle(leftX, centerY, radius, 0xF800); // Red
+    display.fillCircle(rightX, centerY, radius, badgeBackgroundColor_); // Clear second dot
+  } else {
+    // Alternating blue dots based on flow rate
+    const uint32_t nowMs = millis();
+    float flow = context.aggregateFlowLps;
+    if (flow < 0.1f) flow = 0.1f;
+    if (flow > 10.0f) flow = 10.0f;
+    
+    const uint32_t periodMs = static_cast<uint32_t>(1000.0f / flow);
+    const bool phase = (nowMs % periodMs) < (periodMs / 2);
+    
+    uint16_t blueColor = 0x001F; // Blue in RGB565
+    if (phase) {
+      display.fillCircle(leftX, centerY, radius, blueColor);
+      display.fillCircle(rightX, centerY, radius, badgeBackgroundColor_);
+    } else {
+      display.fillCircle(leftX, centerY, radius, badgeBackgroundColor_);
+      display.fillCircle(rightX, centerY, radius, blueColor);
+    }
   }
 }
 

@@ -15,6 +15,10 @@ void RequestScreenLoad(const char* screenId) {
     ScreenManager::LoadScreen(screenId);
 }
 
+void RegisterEvents_InfoP0GlobalStatus() {
+    // No events defined for this screen
+}
+
 void RegisterEvents_InfoP1InstantFlow() {
     // No events defined for this screen
 }
@@ -120,6 +124,10 @@ void RegisterEvents_ConfigS4MaxFlow() {
 }
 
 void RegisterAllEvents(const char* screenId) {
+    if (strcmp(screenId, "info-p0-global-status") == 0) {
+        RegisterEvents_InfoP0GlobalStatus();
+        return;
+    }
     if (strcmp(screenId, "info-p1-instant-flow") == 0) {
         RegisterEvents_InfoP1InstantFlow();
         return;

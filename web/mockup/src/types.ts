@@ -1,6 +1,6 @@
 import type { ThemeTokens } from "./theme/types.js";
 
-export type ElementKind = "text" | "value" | "badge" | "box" | "icon" | "animation" | "scrollbar";
+export type ElementKind = "text" | "value" | "badge" | "box" | "icon";
 export type DisplayOrientation = "portrait" | "landscape";
 
 export type ElementMetadataValue = string | number | boolean;
