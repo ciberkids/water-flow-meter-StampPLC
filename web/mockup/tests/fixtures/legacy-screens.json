@@ -1,0 +1,185 @@
+{
+  "screens": [
+    {
+      "id": "info-overview",
+      "name": "Instant Flow",
+      "description": "Live flow snapshot, propeller indicator, and LED legend.",
+      "elements": [
+        { "id": "title", "kind": "text", "x": 4, "y": 4, "content": "Instant Flow", "emphasis": "strong", "binding": "page.title" },
+        { "id": "subtitle", "kind": "text", "x": 4, "y": 16, "content": "Sensors 1-8", "emphasis": "muted" },
+        { "id": "sensor-grid-left", "kind": "box", "x": 4, "y": 28, "width": 60, "height": 96 },
+        { "id": "sensor-grid-right", "kind": "box", "x": 72, "y": 28, "width": 60, "height": 96 },
+        { "id": "s1", "kind": "value", "x": 8, "y": 32, "content": "S1 000.0 L/s", "binding": "sensor.1.flow" },
+        { "id": "s2", "kind": "value", "x": 8, "y": 46, "content": "S2 000.0 L/s", "binding": "sensor.2.flow" },
+        { "id": "s3", "kind": "value", "x": 8, "y": 60, "content": "S3 000.0 L/s", "binding": "sensor.3.flow" },
+        { "id": "s4", "kind": "value", "x": 8, "y": 74, "content": "S4 000.0 L/s", "binding": "sensor.4.flow" },
+        { "id": "s5", "kind": "value", "x": 76, "y": 32, "content": "S5 000.0 L/s", "binding": "sensor.5.flow" },
+        { "id": "s6", "kind": "value", "x": 76, "y": 46, "content": "S6 000.0 L/s", "binding": "sensor.6.flow" },
+        { "id": "s7", "kind": "value", "x": 76, "y": 60, "content": "S7 000.0 L/s", "binding": "sensor.7.flow" },
+        { "id": "s8", "kind": "value", "x": 76, "y": 74, "content": "S8 000.0 L/s", "binding": "sensor.8.flow" },
+        { "id": "propeller", "kind": "icon", "x": 60, "y": 120, "width": 16, "height": 16, "content": "assets/propeller.svg" },
+        { "id": "legend", "kind": "text", "x": 4, "y": 118, "content": "Red pulses per X L • Green=Ready • Blue=Flow", "binding": "legend.led" },
+        { "id": "diagnostics-badge", "kind": "badge", "x": 4, "y": 134, "content": "Diagnostics stable", "binding": "telemetry.status" }
+      ],
+      "flows": [
+        { "id": "info-prev", "label": "UP shows previous metric", "trigger": { "type": "button", "button": "up", "gesture": "short" }, "targetScreenId": "info-config-entry", "actionId": "ui.action.page.previous" },
+        { "id": "info-next", "label": "DOWN shows cumulative totals", "trigger": { "type": "button", "button": "down", "gesture": "short" }, "targetScreenId": "info-cumulative", "actionId": "ui.action.page.next" },
+        { "id": "info-enter-long", "label": "ENTER long dims display", "trigger": { "type": "button", "button": "enter", "gesture": "long" }, "actionId": "ui.action.mode.idle" }
+      ]
+    },
+    {
+      "id": "info-cumulative",
+      "name": "Cumulative Liters",
+      "description": "Totals per sensor and combined volume.",
+      "elements": [
+        { "id": "title", "kind": "text", "x": 4, "y": 4, "content": "Cumulative Liters", "emphasis": "strong" },
+        { "id": "total", "kind": "value", "x": 4, "y": 20, "content": "Total 000000 L", "binding": "totals.cumulativeLiters" },
+        { "id": "hint", "kind": "text", "x": 4, "y": 34, "content": "Hold ENTER 30s to reset all", "emphasis": "muted" },
+        { "id": "grid", "kind": "box", "x": 4, "y": 48, "width": 120, "height": 70 }
+      ],
+      "flows": [
+        { "id": "cumulative-prev", "label": "UP returns to instant flow", "trigger": { "type": "button", "button": "up", "gesture": "short" }, "targetScreenId": "info-overview", "actionId": "ui.action.page.previous" },
+        { "id": "cumulative-next", "label": "DOWN shows cubic meters", "trigger": { "type": "button", "button": "down", "gesture": "short" }, "targetScreenId": "info-session", "actionId": "ui.action.page.next" },
+        { "id": "cumulative-enter", "label": "ENTER holds reset all measured", "trigger": { "type": "button", "button": "enter", "gesture": "short" }, "targetScreenId": "countdown-reset-all", "actionId": "ui.action.mode.configuration" }
+      ]
+    },
+    {
+      "id": "info-session",
+      "name": "Session Liters",
+      "description": "Session totals per sensor.",
+      "elements": [
+        { "id": "title", "kind": "text", "x": 4, "y": 4, "content": "Session Liters", "emphasis": "strong" },
+        { "id": "hint", "kind": "text", "x": 4, "y": 18, "content": "Hold ENTER 3s to reset session", "emphasis": "muted" },
+        { "id": "grid", "kind": "box", "x": 4, "y": 32, "width": 120, "height": 80 }
+      ],
+      "flows": [
+        { "id": "session-prev", "label": "UP shows cumulative liters", "trigger": { "type": "button", "button": "up", "gesture": "short" }, "targetScreenId": "info-cumulative", "actionId": "ui.action.page.previous" },
+        { "id": "session-next", "label": "DOWN shows max flow", "trigger": { "type": "button", "button": "down", "gesture": "short" }, "targetScreenId": "info-max-flow", "actionId": "ui.action.page.next" },
+        { "id": "session-enter", "label": "ENTER starts 3s reset session", "trigger": { "type": "button", "button": "enter", "gesture": "short" }, "targetScreenId": "countdown-reset-session", "actionId": "ui.action.mode.configuration" }
+      ]
+    },
+    {
+      "id": "info-max-flow",
+      "name": "Max Flow",
+      "description": "Peak flow recorded since reset.",
+      "elements": [
+        { "id": "title", "kind": "text", "x": 4, "y": 4, "content": "Max Flow", "emphasis": "strong" },
+        { "id": "value", "kind": "value", "x": 4, "y": 22, "content": "000.0 L/s", "binding": "totals.maxFlow" },
+        { "id": "hint", "kind": "text", "x": 4, "y": 40, "content": "Hold ENTER 3s to clear peak", "emphasis": "muted" }
+      ],
+      "flows": [
+        { "id": "max-prev", "label": "UP shows session liters", "trigger": { "type": "button", "button": "up", "gesture": "short" }, "targetScreenId": "info-session", "actionId": "ui.action.page.previous" },
+        { "id": "max-next", "label": "DOWN shows configuration entry", "trigger": { "type": "button", "button": "down", "gesture": "short" }, "targetScreenId": "info-config-entry", "actionId": "ui.action.page.next" }
+      ]
+    },
+    {
+      "id": "info-config-entry",
+      "name": "Enter Configuration",
+      "description": "Gateway to configuration mode and factory reset.",
+      "elements": [
+        { "id": "title", "kind": "text", "x": 4, "y": 4, "content": "Configuration", "emphasis": "strong" },
+        { "id": "body", "kind": "text", "x": 4, "y": 20, "content": "Press ENTER to configure. Hold ENTER 30s for factory reset.", "emphasis": "muted" }
+      ],
+      "flows": [
+        { "id": "config-entry-prev", "label": "UP shows max flow", "trigger": { "type": "button", "button": "up", "gesture": "short" }, "targetScreenId": "info-max-flow", "actionId": "ui.action.page.previous" },
+        { "id": "config-entry-next", "label": "DOWN wraps to instant flow", "trigger": { "type": "button", "button": "down", "gesture": "short" }, "targetScreenId": "info-overview", "actionId": "ui.action.page.next" },
+        { "id": "config-entry-enter", "label": "ENTER starts 3s countdown", "trigger": { "type": "button", "button": "enter", "gesture": "short" }, "targetScreenId": "countdown-enter-config", "actionId": "ui.action.mode.configuration" },
+        { "id": "config-entry-enter-long", "label": "ENTER hold 30s factory reset", "trigger": { "type": "button", "button": "enter", "gesture": "long" }, "targetScreenId": "countdown-factory-reset", "actionId": "ui.action.mode.idle" }
+      ]
+    },
+    {
+      "id": "configuration",
+      "name": "Configuration Menu",
+      "description": "Device + sensor settings.",
+      "elements": [
+        { "id": "title", "kind": "text", "x": 4, "y": 4, "content": "Device Settings", "emphasis": "strong" },
+        { "id": "option-led", "kind": "badge", "x": 4, "y": 20, "content": "Status LED" },
+        { "id": "option-sensor", "kind": "badge", "x": 4, "y": 36, "content": "Sensor Setup" },
+        { "id": "option-threshold", "kind": "badge", "x": 4, "y": 52, "content": "Flow Threshold" },
+        { "id": "option-max", "kind": "badge", "x": 4, "y": 68, "content": "Reset Peak" }
+      ],
+      "flows": [
+        { "id": "config-prev", "label": "UP selects previous field", "trigger": { "type": "button", "button": "up", "gesture": "short" }, "actionId": "ui.action.page.previous" },
+        { "id": "config-next", "label": "DOWN selects next field", "trigger": { "type": "button", "button": "down", "gesture": "short" }, "actionId": "ui.action.page.next" },
+        { "id": "config-save", "label": "ENTER saves configuration", "trigger": { "type": "button", "button": "enter", "gesture": "short" }, "actionId": "core.action.save-config" },
+        { "id": "config-exit", "label": "ENTER hold returns to info", "trigger": { "type": "button", "button": "enter", "gesture": "long" }, "targetScreenId": "info-overview", "actionId": "ui.action.mode.info" }
+      ]
+    },
+    {
+      "id": "countdown-reset-session",
+      "name": "Reset Session",
+      "description": "Three second confirmation for session reset.",
+      "elements": [
+        { "id": "title", "kind": "text", "x": 8, "y": 10, "content": "Reset session totals", "emphasis": "strong" },
+        { "id": "body", "kind": "text", "x": 8, "y": 26, "content": "Hold ENTER to continue. Release to cancel.", "emphasis": "muted" },
+        { "id": "timer", "kind": "value", "x": 60, "y": 70, "content": "03", "align": "center", "binding": "countdown.value" }
+      ],
+      "flows": [
+        { "id": "session-countdown-cancel", "label": "Release cancels", "trigger": { "type": "button", "button": "enter", "gesture": "long" }, "targetScreenId": "info-session", "actionId": "ui.action.mode.info" }
+      ]
+    },
+    {
+      "id": "countdown-enter-config",
+      "name": "Enter Configuration Countdown",
+      "description": "Three second guard before entering configuration mode.",
+      "elements": [
+        { "id": "title", "kind": "text", "x": 12, "y": 12, "content": "Entering configuration", "emphasis": "strong" },
+        { "id": "body", "kind": "text", "x": 12, "y": 30, "content": "Hold ENTER for 3s to proceed", "emphasis": "muted" },
+        { "id": "timer", "kind": "value", "x": 60, "y": 70, "content": "03", "align": "center", "binding": "countdown.value" }
+      ],
+      "flows": [
+        { "id": "config-countdown-complete", "label": "Timer reaches zero", "trigger": { "type": "timeout", "durationMs": 3000 }, "targetScreenId": "configuration", "actionId": "ui.action.mode.configuration" }
+      ]
+    },
+    {
+      "id": "countdown-factory-reset",
+      "name": "Factory Reset",
+      "description": "Thirty second hold required to wipe configuration.",
+      "elements": [
+        { "id": "title", "kind": "text", "x": 12, "y": 12, "content": "Factory reset", "emphasis": "strong" },
+        { "id": "body", "kind": "text", "x": 12, "y": 30, "content": "Hold ENTER 30s to wipe all settings.", "emphasis": "muted" },
+        { "id": "timer", "kind": "value", "x": 60, "y": 70, "content": "30", "align": "center", "binding": "countdown.value" }
+      ],
+      "flows": [
+        { "id": "factory-reset-cancel", "label": "Release cancels", "trigger": { "type": "button", "button": "enter", "gesture": "long" }, "targetScreenId": "info-config-entry", "actionId": "ui.action.mode.info" }
+      ]
+    },
+    {
+      "id": "countdown-reset-all",
+      "name": "Reset Totals",
+      "description": "Thirty second confirmation for cumulative reset.",
+      "elements": [
+        { "id": "title", "kind": "text", "x": 12, "y": 12, "content": "Reset all measured", "emphasis": "strong" },
+        { "id": "body", "kind": "text", "x": 12, "y": 30, "content": "Hold ENTER 30s to clear totals.", "emphasis": "muted" },
+        { "id": "timer", "kind": "value", "x": 60, "y": 70, "content": "30", "align": "center", "binding": "countdown.value" }
+      ],
+      "flows": [
+        { "id": "reset-all-cancel", "label": "Release cancels", "trigger": { "type": "button", "button": "enter", "gesture": "long" }, "targetScreenId": "info-cumulative", "actionId": "ui.action.mode.info" }
+      ]
+    }
+  ],
+  "theme": {
+    "name": "StampPLC Default",
+    "colors": {
+      "displayBackground": "#000a17",
+      "textPrimary": "#f5faff",
+      "textMuted": "#9caec6",
+      "textStrong": "#ffffff",
+      "value": "#56d2ff",
+      "badgeBackground": "#0f1e33",
+      "badgeBorder": "#80a8c9",
+      "icon": "#56d2ff",
+      "legend": "#85bbe8",
+      "gridMinor": "rgba(124, 162, 206, 0.28)",
+      "gridMajor": "rgba(124, 162, 206, 0.55)"
+    },
+    "typography": {
+      "base": 8,
+      "value": 10,
+      "badge": 8
+    },
+    "animation": {
+      "easing": "ease-in-out"
+    }
+  }
+}

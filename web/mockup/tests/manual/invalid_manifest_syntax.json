@@ -1,0 +1,7 @@
+{
+    "actions": [
+        {
+            "id": "test.action.1""name": "Missing comma above"
+        }
+    ]
+}

@@ -1,0 +1,27 @@
+{
+    "actions": [
+        {
+            "id": "test.action.1",
+            "name": "Test Action 1",
+            "description": "A valid test action"
+        },
+        {
+            "id": "test.action.2",
+            "name": "Test Action 2"
+        }
+    ],
+    "values": [
+        {
+            "id": "test.value.1",
+            "name": "Test Value 1",
+            "type": "int",
+            "readOnly": true
+        },
+        {
+            "id": "test.value.2",
+            "name": "Test Value 2",
+            "type": "bool",
+            "readOnly": false
+        }
+    ]
+}

@@ -1,0 +1,8 @@
+# Ignore generated UI backups produced by exporter
+backups/
+
+# Ignore built web assets
+web/mockup/dist/
+
+# Node dependencies
+node_modules/

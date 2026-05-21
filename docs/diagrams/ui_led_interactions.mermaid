@@ -1,0 +1,49 @@
+%% RGB LED Interaction Overview
+flowchart TD
+    subgraph Sensors["Per-Sensor Metrics"]
+        instFlow["Instant Flow (L/s)"]
+        session["Session Liters"]
+        ready["isReady flags"]
+    end
+
+    subgraph Aggregator["Aggregation Logic"]
+        flowSum["Σ Instant Flow"]
+        volumeSum["Σ Session Liters"]
+        nyquist["Validation Result\n(Undersampling Flags)"]
+    end
+
+    Sensors --> Aggregator
+
+    subgraph Registers["Global Registers"]
+        reg30["Reg 30: Undersampling Flags"]
+        reg31["Reg 31: LED Red Volume Step"]
+        reg32["Reg 32: LED Red Pulse Period"]
+    end
+
+    Aggregator --> reg30
+    Aggregator --> flowSum
+    Aggregator --> volumeSum
+    reg31 --> redController
+    reg32 --> redController
+
+    subgraph LEDController["RGB LED Controller"]
+        redController["Red Channel:\nPulse when volumeSum crosses step"]
+        greenController["Green Channel:\nON if all ready == true"]
+        blueController["Blue Channel:\nBlink if flowSum > 0"]
+    end
+
+    flowSum --> blueController
+    ready --> greenController
+    nyquist --> greenController
+    volumeSum --> redController
+
+    LEDController --> PI4IOE["PI4IOE5V6408 Expander\n(P6/P5/P4)"] --> RGBLED["RGB LED"]
+
+    subgraph UI["On-Device UI"]
+        configPage["Configuration Pages\n(C5/C6 items)"]
+        infoLegend["Info Legend\n(Red pulse every X L...)"]
+    end
+
+    configPage --> reg31
+    configPage --> reg32
+    infoLegend --> User

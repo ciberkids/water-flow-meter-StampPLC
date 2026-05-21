@@ -1,0 +1,524 @@
+{
+  "updatedAt": "2026-03-05T13:00:00.000Z",
+  "values": [
+    {
+      "id": "sensor.1.instantFlow",
+      "type": "number",
+      "unit": "L/s",
+      "register": 101,
+      "description": "Sensor 1 instantaneous flow rate"
+    },
+    {
+      "id": "sensor.2.instantFlow",
+      "type": "number",
+      "unit": "L/s",
+      "register": 102,
+      "description": "Sensor 2 instantaneous flow rate"
+    },
+    {
+      "id": "sensor.3.instantFlow",
+      "type": "number",
+      "unit": "L/s",
+      "register": 103,
+      "description": "Sensor 3 instantaneous flow rate"
+    },
+    {
+      "id": "sensor.4.instantFlow",
+      "type": "number",
+      "unit": "L/s",
+      "register": 104,
+      "description": "Sensor 4 instantaneous flow rate"
+    },
+    {
+      "id": "sensor.5.instantFlow",
+      "type": "number",
+      "unit": "L/s",
+      "register": 105,
+      "description": "Sensor 5 instantaneous flow rate"
+    },
+    {
+      "id": "sensor.6.instantFlow",
+      "type": "number",
+      "unit": "L/s",
+      "register": 106,
+      "description": "Sensor 6 instantaneous flow rate"
+    },
+    {
+      "id": "sensor.7.instantFlow",
+      "type": "number",
+      "unit": "L/s",
+      "register": 107,
+      "description": "Sensor 7 instantaneous flow rate"
+    },
+    {
+      "id": "sensor.8.instantFlow",
+      "type": "number",
+      "unit": "L/s",
+      "register": 108,
+      "description": "Sensor 8 instantaneous flow rate"
+    },
+    {
+      "id": "sensor.1.status",
+      "type": "string",
+      "description": "Sensor 1 status badge (ready/offline/error)"
+    },
+    {
+      "id": "sensor.2.status",
+      "type": "string",
+      "description": "Sensor 2 status badge"
+    },
+    {
+      "id": "sensor.3.status",
+      "type": "string",
+      "description": "Sensor 3 status badge"
+    },
+    {
+      "id": "sensor.4.status",
+      "type": "string",
+      "description": "Sensor 4 status badge"
+    },
+    {
+      "id": "sensor.5.status",
+      "type": "string",
+      "description": "Sensor 5 status badge"
+    },
+    {
+      "id": "sensor.6.status",
+      "type": "string",
+      "description": "Sensor 6 status badge"
+    },
+    {
+      "id": "sensor.7.status",
+      "type": "string",
+      "description": "Sensor 7 status badge"
+    },
+    {
+      "id": "sensor.8.status",
+      "type": "string",
+      "description": "Sensor 8 status badge"
+    },
+    {
+      "id": "sensor.1.cumulativeLiters",
+      "type": "number",
+      "unit": "L",
+      "register": 103,
+      "description": "Sensor 1 cumulative litres"
+    },
+    {
+      "id": "sensor.2.cumulativeLiters",
+      "type": "number",
+      "unit": "L",
+      "register": 104,
+      "description": "Sensor 2 cumulative litres"
+    },
+    {
+      "id": "sensor.3.cumulativeLiters",
+      "type": "number",
+      "unit": "L",
+      "register": 105,
+      "description": "Sensor 3 cumulative litres"
+    },
+    {
+      "id": "sensor.4.cumulativeLiters",
+      "type": "number",
+      "unit": "L",
+      "register": 106,
+      "description": "Sensor 4 cumulative litres"
+    },
+    {
+      "id": "sensor.5.cumulativeLiters",
+      "type": "number",
+      "unit": "L",
+      "register": 107,
+      "description": "Sensor 5 cumulative litres"
+    },
+    {
+      "id": "sensor.6.cumulativeLiters",
+      "type": "number",
+      "unit": "L",
+      "register": 108,
+      "description": "Sensor 6 cumulative litres"
+    },
+    {
+      "id": "sensor.7.cumulativeLiters",
+      "type": "number",
+      "unit": "L",
+      "register": 109,
+      "description": "Sensor 7 cumulative litres"
+    },
+    {
+      "id": "sensor.8.cumulativeLiters",
+      "type": "number",
+      "unit": "L",
+      "register": 110,
+      "description": "Sensor 8 cumulative litres"
+    },
+    {
+      "id": "sensor.1.cumulativeM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 1 cumulative cubic metres (derived)"
+    },
+    {
+      "id": "sensor.2.cumulativeM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 2 cumulative cubic metres"
+    },
+    {
+      "id": "sensor.3.cumulativeM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 3 cumulative cubic metres"
+    },
+    {
+      "id": "sensor.4.cumulativeM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 4 cumulative cubic metres"
+    },
+    {
+      "id": "sensor.5.cumulativeM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 5 cumulative cubic metres"
+    },
+    {
+      "id": "sensor.6.cumulativeM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 6 cumulative cubic metres"
+    },
+    {
+      "id": "sensor.7.cumulativeM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 7 cumulative cubic metres"
+    },
+    {
+      "id": "sensor.8.cumulativeM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 8 cumulative cubic metres"
+    },
+    {
+      "id": "sensor.1.sessionLiters",
+      "type": "number",
+      "unit": "L",
+      "register": 111,
+      "description": "Sensor 1 session litres"
+    },
+    {
+      "id": "sensor.2.sessionLiters",
+      "type": "number",
+      "unit": "L",
+      "register": 112,
+      "description": "Sensor 2 session litres"
+    },
+    {
+      "id": "sensor.3.sessionLiters",
+      "type": "number",
+      "unit": "L",
+      "description": "Sensor 3 session litres"
+    },
+    {
+      "id": "sensor.4.sessionLiters",
+      "type": "number",
+      "unit": "L",
+      "description": "Sensor 4 session litres"
+    },
+    {
+      "id": "sensor.5.sessionLiters",
+      "type": "number",
+      "unit": "L",
+      "description": "Sensor 5 session litres"
+    },
+    {
+      "id": "sensor.6.sessionLiters",
+      "type": "number",
+      "unit": "L",
+      "description": "Sensor 6 session litres"
+    },
+    {
+      "id": "sensor.7.sessionLiters",
+      "type": "number",
+      "unit": "L",
+      "description": "Sensor 7 session litres"
+    },
+    {
+      "id": "sensor.8.sessionLiters",
+      "type": "number",
+      "unit": "L",
+      "description": "Sensor 8 session litres"
+    },
+    {
+      "id": "sensor.1.sessionM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 1 session cubic metres"
+    },
+    {
+      "id": "sensor.2.sessionM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 2 session cubic metres"
+    },
+    {
+      "id": "sensor.3.sessionM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 3 session cubic metres"
+    },
+    {
+      "id": "sensor.4.sessionM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 4 session cubic metres"
+    },
+    {
+      "id": "sensor.5.sessionM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 5 session cubic metres"
+    },
+    {
+      "id": "sensor.6.sessionM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 6 session cubic metres"
+    },
+    {
+      "id": "sensor.7.sessionM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 7 session cubic metres"
+    },
+    {
+      "id": "sensor.8.sessionM3",
+      "type": "number",
+      "unit": "m³",
+      "description": "Sensor 8 session cubic metres"
+    },
+    {
+      "id": "sensor.1.maxFlowSinceReset",
+      "type": "number",
+      "unit": "L/s",
+      "register": 115,
+      "description": "Sensor 1 max flow since reset"
+    },
+    {
+      "id": "sensor.2.maxFlowSinceReset",
+      "type": "number",
+      "unit": "L/s",
+      "description": "Sensor 2 max flow since reset"
+    },
+    {
+      "id": "sensor.3.maxFlowSinceReset",
+      "type": "number",
+      "unit": "L/s",
+      "description": "Sensor 3 max flow since reset"
+    },
+    {
+      "id": "sensor.4.maxFlowSinceReset",
+      "type": "number",
+      "unit": "L/s",
+      "description": "Sensor 4 max flow since reset"
+    },
+    {
+      "id": "sensor.5.maxFlowSinceReset",
+      "type": "number",
+      "unit": "L/s",
+      "description": "Sensor 5 max flow since reset"
+    },
+    {
+      "id": "sensor.6.maxFlowSinceReset",
+      "type": "number",
+      "unit": "L/s",
+      "description": "Sensor 6 max flow since reset"
+    },
+    {
+      "id": "sensor.7.maxFlowSinceReset",
+      "type": "number",
+      "unit": "L/s",
+      "description": "Sensor 7 max flow since reset"
+    },
+    {
+      "id": "sensor.8.maxFlowSinceReset",
+      "type": "number",
+      "unit": "L/s",
+      "description": "Sensor 8 max flow since reset"
+    },
+    {
+      "id": "countdown.value",
+      "type": "number",
+      "unit": "s",
+      "description": "Active countdown remaining seconds"
+    },
+    {
+      "id": "diagnostics.undersampling",
+      "type": "number",
+      "register": 30,
+      "description": "Undersampling flags bitmap (bits 0-7 = sensors 1-8)"
+    },
+    {
+      "id": "config.modbusSlaveId",
+      "type": "number",
+      "description": "Modbus slave ID (1-255)"
+    },
+    {
+      "id": "config.baudRate",
+      "type": "number",
+      "description": "Serial baud rate"
+    },
+    {
+      "id": "config.parity",
+      "type": "string",
+      "description": "Parity (None/Even/Odd)"
+    },
+    {
+      "id": "config.uartFrameSummary",
+      "type": "string",
+      "description": "UART frame display e.g. 8E1"
+    },
+    {
+      "id": "config.stopBits",
+      "type": "number",
+      "description": "Stop bits (1 or 2)"
+    },
+    {
+      "id": "config.ledPulseVolume",
+      "type": "number",
+      "unit": "L",
+      "register": 31,
+      "description": "LED pulse volume trigger"
+    },
+    {
+      "id": "config.ledPulsePeriod",
+      "type": "number",
+      "unit": "ms",
+      "register": 32,
+      "description": "LED pulse period"
+    },
+    {
+      "id": "config.selectedSensor",
+      "type": "number",
+      "description": "Currently selected sensor index (1-8)"
+    },
+    {
+      "id": "config.sensor.connected",
+      "type": "boolean",
+      "description": "Sensor connected flag"
+    },
+    {
+      "id": "config.sensor.multiplier",
+      "type": "number",
+      "register": 121,
+      "description": "Sensor multiplier (F)"
+    },
+    {
+      "id": "config.sensor.adjust",
+      "type": "number",
+      "register": 122,
+      "description": "Sensor adjustment offset"
+    },
+    {
+      "id": "config.sensor.maxFlow",
+      "type": "number",
+      "unit": "L/min",
+      "register": 120,
+      "description": "Sensor max flow rate (Q)"
+    },
+    {
+      "id": "config.sensor.undersamplingFlag",
+      "type": "boolean",
+      "description": "Sensor undersampling warning flag"
+    },
+    {
+      "id": "config.sensor.nyquistWarning",
+      "type": "string",
+      "description": "Nyquist validation warning text"
+    },
+    {
+      "id": "legend.led",
+      "type": "string",
+      "description": "RGB LED status legend text"
+    }
+  ],
+  "actions": [
+    {
+      "id": "ui.action.page.next",
+      "name": "Next page",
+      "description": "Advances to the next UI page"
+    },
+    {
+      "id": "ui.action.page.previous",
+      "name": "Previous page",
+      "description": "Returns to the previous UI page"
+    },
+    {
+      "id": "ui.action.mode.idle",
+      "name": "Enter idle",
+      "description": "Dims the display and enters idle mode"
+    },
+    {
+      "id": "ui.action.mode.info",
+      "name": "Return to info mode",
+      "description": "Leaves configuration and resumes info pages"
+    },
+    {
+      "id": "ui.action.mode.configuration",
+      "name": "Enter configuration mode",
+      "description": "Switches the firmware into configuration mode"
+    },
+    {
+      "id": "core.action.save-config",
+      "name": "Save configuration",
+      "description": "Persists the current configuration block to NVS and Modbus registers"
+    },
+    {
+      "id": "core.action.reset-session",
+      "name": "Reset session counters",
+      "description": "Issues the Reset Session Modbus command for all ready sensors"
+    },
+    {
+      "id": "core.action.reset-all-measured",
+      "name": "Reset all measured totals",
+      "description": "Issues the Reset All Measured Modbus command"
+    },
+    {
+      "id": "core.action.factory-reset",
+      "name": "Factory reset",
+      "description": "Wipes NVS, clears Modbus config, and reboots"
+    },
+    {
+      "id": "config.action.sensor.save",
+      "name": "Save sensor settings",
+      "description": "Commit sensor sub-menu values after Nyquist validation"
+    },
+    {
+      "id": "config.action.field.edit",
+      "name": "Begin field edit",
+      "description": "Put the focused configuration field into edit mode"
+    },
+    {
+      "id": "config.action.field.confirm",
+      "name": "Confirm field edit",
+      "description": "Accept the tentative value and write to Modbus register"
+    },
+    {
+      "id": "config.action.field.cancel",
+      "name": "Cancel field edit",
+      "description": "Discard tentative value and restore prior"
+    },
+    {
+      "id": "ui.mock.value-edit",
+      "name": "Value edited",
+      "description": "Simulation-only event fired when a value placeholder is modified"
+    },
+    {
+      "id": "ui.mock.value-save",
+      "name": "Value saved",
+      "description": "Simulation-only event fired when a value override is saved"
+    }
+  ]
+}

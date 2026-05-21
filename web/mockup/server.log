@@ -1,0 +1,30 @@
+
+> stampplc-ui-mockup@0.1.1 dev
+> vite
+
+
+  VITE v5.4.21  ready in 206 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+12:58:14 PM [vite] hmr update /src/components/design/EventBindingPanel.tsx
+12:58:18 PM [vite] hmr update /src/components/design/DesignToolbox.tsx
+12:58:39 PM [vite] hmr update /src/components/design/DesignToolbox.tsx
+12:58:41 PM [vite] hmr update /src/components/design/DesignToolbox.tsx
+12:58:43 PM [vite] hmr update /src/components/design/DesignToolbox.tsx
+1:33:57 PM [vite] hmr update /src/components/design/DesignToolbox.tsx
+1:34:44 PM [vite] hmr update /src/App.tsx
+1:34:46 PM [vite] hmr update /src/App.tsx
+1:35:41 PM [vite] hmr update /src/App.tsx
+1:35:43 PM [vite] hmr update /src/App.tsx
+1:42:46 PM [vite] hmr update /src/App.tsx
+1:43:23 PM [vite] hmr update /src/components/design/DesignToolbox.tsx
+1:43:49 PM [vite] hmr update /src/components/design/DesignToolbox.tsx
+1:44:28 PM [vite] hmr update /src/components/DisplayViewport.tsx
+1:44:39 PM [vite] hmr update /src/components/ThemeEditor.tsx
+1:44:40 PM [vite] hmr update /src/components/ThemeEditor.tsx
+1:44:51 PM [vite] hmr update /src/components/ThemeEditor.tsx
+1:44:53 PM [vite] hmr update /src/App.tsx
+1:44:55 PM [vite] hmr update /src/App.tsx

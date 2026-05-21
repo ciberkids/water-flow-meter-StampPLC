@@ -1,0 +1,62 @@
+{
+    "screens": [
+        {
+            "id": "test-screen",
+            "name": "Test Screen",
+            "elements": [
+                {
+                    "id": "val1",
+                    "kind": "value",
+                    "x": 10,
+                    "y": 10,
+                    "content": "0",
+                    "dataSourceId": "test.value.1"
+                },
+                {
+                    "id": "txt1",
+                    "kind": "text",
+                    "x": 10,
+                    "y": 30,
+                    "content": "Label",
+                    "dataSourceId": "test.string.1"
+                }
+            ],
+            "events": [
+                {
+                    "trigger": "Button A Click",
+                    "actionId": "test.action.1"
+                },
+                {
+                    "trigger": "Button B Click",
+                    "targetScreenId": "other-screen"
+                }
+            ],
+            "flows": [],
+            "submenus": []
+        }
+    ],
+    "theme": {
+        "name": "Test Theme",
+        "colors": {
+            "displayBackground": "#000000",
+            "textPrimary": "#ffffff",
+            "textMuted": "#cccccc",
+            "textStrong": "#ffffff",
+            "value": "#00ff00",
+            "badgeBackground": "#333333",
+            "badgeBorder": "#666666",
+            "icon": "#00ff00",
+            "legend": "#888888",
+            "gridMinor": "#111111",
+            "gridMajor": "#222222"
+        },
+        "typography": {
+            "base": 8,
+            "value": 10,
+            "badge": 8
+        },
+        "animation": {
+            "easing": "linear"
+        }
+    }
+}
