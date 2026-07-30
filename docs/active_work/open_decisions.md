@@ -490,6 +490,106 @@ should push unprompted).
 
 ---
 
+## H. Menu behaviour refinement
+
+Found while implementing D0(a). These are all requirement-level: the spec is either
+self-contradictory or silent, so the firmware cannot be "correct" until they're settled.
+
+### H1 🔴 ENTER-long is overloaded — P2–P7 can no longer reach Idle
+
+**Question.** §4.1 makes ENTER-long the global Info → Idle gesture ("Info → Idle: ENTER
+long (3s)"). §4.3's table gives P2–P6 a reset countdown and P7 an enter-config countdown.
+With D0(a) hold-to-confirm, ENTER-long on P2–P7 now arms those countdowns, so **manual
+idle is only reachable from P0 and P1**. The 120 s auto-idle still covers everything.
+
+**Options.**
+- **(a) Accept.** Idle from P0/P1 plus auto-idle. Simplest; costs nothing to implement.
+- **(b) Two-stage hold.** Holding ENTER on P2–P7 arms the countdown; continuing to hold
+  past it (say 5 s) goes idle instead. Discoverable? Doubtful.
+- **(c) A dedicated idle page.** Add P8 "Display Off" whose ENTER-hold goes idle. Costs a
+  page in the ring but is explicit and consistent.
+- **(d) Move the resets off ENTER.** e.g. UP-long on the relevant page. Frees ENTER-long
+  to be globally "idle", but invents a gesture the requirements don't have.
+
+**Recommendation.** (a) for now, (c) if you want manual idle from anywhere. Worth noting
+the display is off for burn-in reasons, and auto-idle already handles that.
+
+**Decision:**
+
+---
+
+### H2 🟡 Long-press threshold is 1.5 s, but the spec says 3 s
+
+**Question.** `ButtonInputManager::kLongPressThresholdMs = 1500`, and §2's button table
+says "Long Press (≥1.5 s)". But §4.1 and §4.3 both specify "ENTER long (3 s)" for
+back-to-idle, and §5.5 says "Releasing before 1.5 s cancels; holding to 3 s exits".
+
+So there are two different long-press meanings: a 1.5 s *gesture* threshold and a 3 s
+*hold-to-confirm* duration. Today only the 1.5 s one exists, so "ENTER long (3 s)" fires
+at 1.5 s.
+
+**Recommendation.** Keep 1.5 s as the gesture threshold (it arms), and express every 3 s
+requirement as a countdown duration in the dataset — which is what the countdown
+machinery now does. Then add a 3 s back-to-idle countdown (see H3) so §4.1 is honoured.
+
+**Decision:**
+
+---
+
+### H3 🟡 Back-to-idle has no countdown
+
+**Question.** §4.3 gives P0 and P1 "ENTER (long) → Back-to-idle countdown (3 s)", but the
+dataset fires `ui.action.mode.idle` immediately on ENTER-long, and there is no
+`countdown-idle` screen (C3 confirmed the existing six, none of which is one).
+
+**Options.** (a) add a `countdown-idle` screen and let the existing machinery handle it;
+(b) accept immediate idle — it is non-destructive and any button press wakes the display.
+
+**Recommendation.** (b), and correct §4.3's wording. A countdown to protect a reversible,
+harmless action is friction for no safety gain.
+
+**Decision:**
+
+---
+
+### H4 🟡 §5.5 contradicts itself on where config-exit lands
+
+**Question.** §5.5: "holding to 3 s **exits to Info mode** and **turns off the display
+(transition to Idle)**." Info and Idle are different states. The dataset hedges the same
+way: `countdown-config-exit` has `actionId: ui.action.mode.info` but
+`targetScreenId: state-idle`.
+
+**Recommendation.** Exit to **Info** (P0). Idle is what the 120 s timeout is for, and
+dropping straight to a dark screen after a deliberate save/exit reads as a fault.
+
+**Decision:**
+
+---
+
+### H5 🟢 UP/DOWN during a countdown — fixed to match the spec
+
+§4.3 note 2 says UP/DOWN have "no effect" during a countdown. The first cut of the
+countdown machine cancelled on UP/DOWN; corrected to ignore them. Only releasing ENTER
+aborts. No decision needed — recorded so the behaviour is traceable.
+
+**Decision:** ✅ ignore UP/DOWN, only ENTER release aborts (2026-07-30)
+
+---
+
+### H6 🟡 Per-page helper text and the LED legend are incomplete
+
+**Question.** §4.3 note 4 wants per-page helper text summarising the button hints, note 5
+and §6 note 6 want the RGB LED legend visible in info mode. Today `legend.led` appears on
+`info-p1-instant-flow` only, and every `footer-hint` sits at y≈226 — out of bounds once
+the display is landscape (D3).
+
+**Recommendation.** Fold into the D3 re-layout: give every info page a footer hint, and
+put the LED legend on P0 (the landing page) rather than P1.
+
+**Decision:**
+
+---
+
 ## G. Hardware risk
 
 ### G1 🔴 Polling rate regression from the M5StamPLC 1.2.0 API

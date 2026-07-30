@@ -264,10 +264,11 @@ void InteractionHandler::handleHoldCountdown(uint32_t nowMs,
     return;
   }
 
-  // §4.3 note 1: releasing ENTER before zero aborts. UP/DOWN are ignored while a
-  // countdown runs (§4.3 note 2), but pressing one also cancels rather than
-  // letting a stray combo through.
-  if (!enterHeld || otherHeld) {
+  // §4.3 note 1: releasing ENTER before zero aborts — and only that. §4.3 note 2
+  // says UP/DOWN have "no effect" during a countdown, so they must not cancel it
+  // either. UP+DOWN cannot arm a factory reset here regardless, because that
+  // combo requires ENTER to be up.
+  if (!enterHeld) {
     holdCountdown_ = HoldCountdownState{};
     uiController.notifyInteraction(nowMs);
     return;
