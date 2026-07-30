@@ -56,7 +56,7 @@ Proposed block:
 > (`9600, SERIAL_8N1`, `kDefaultModbusSlaveId`). That ordering has to flip, and
 > factory reset must restore link defaults.
 
-**Decision:**
+**Decision:** ✅ **(b)** full read/write with an explicit apply register, including rollback-on-silence. Specified in `Project_document.md` §4.1.1 (registers 40–47). (2026-07-30)
 
 ---
 
@@ -67,7 +67,7 @@ address. Correct to 1–247?
 
 **Recommendation.** Yes — 1–247.
 
-**Decision:**
+**Decision:** ✅ **yes** — 1–247. Applied to `Display_UI_Requirements.md` §5.2 and `Project_document.md` §4.1.1. (2026-07-30)
 
 ---
 
@@ -79,7 +79,7 @@ address. Correct to 1–247?
 **Recommendation.** C7 (matches the §5.2 table and `config-c7-sensor-select` in the
 dataset). Fix the §5.3 cross-reference.
 
-**Decision:**
+**Decision:** ✅ **C7** is correct. Resolved structurally: C7 is now a pure descent node ("Sensors ▸") with no value, so the C5 cross-reference disappears rather than being corrected. (2026-07-30)
 
 ---
 
@@ -91,7 +91,7 @@ two-register uint32?
 **Recommendation.** Index. It matches C2's "cycle list" semantics and keeps the block
 compact.
 
-**Decision:**
+**Decision:** ✅ **index** into the baud list, documented in `Project_document.md` §4.1.1 register 41 with the full list and the uint16 rationale. (2026-07-30)
 
 ---
 
@@ -114,7 +114,7 @@ such file exists in eModbus 1.7.4; the RTU server header is `ModbusServerRTU.h`.
 
 **Recommendation.** Correct the document. (Code is already fixed.)
 
-**Decision:**
+**Decision:** ✅ corrected — `Project_document.md` §3.1 now names `ModbusServerRTU.h`. (2026-07-30)
 
 ---
 
@@ -141,7 +141,7 @@ record: each of P1–P6 already authors exactly one metric suffix, so per-page s
 the page switch rather than adding anything — it is the smaller change, not the larger
 one. Reconfirm (b) or switch to (a).
 
-**Decision:** provisionally (b) — reconfirm
+**Decision:** ✅ **(a)** honour the metric suffix — "more flexible". Replaces the `context.page` switch in `resolveSensorBinding` with a suffix→metric table. (2026-07-30)
 
 ---
 
@@ -164,7 +164,7 @@ settings exist.
 
 **Blocks.** Config-mode slice.
 
-**Decision:**
+**Decision:** ✅ follow recommendation — add a `UiConfigContext` sub-struct. Shape now also constrained by `NF-20260730-01` (navigation stack replaces `selectedSensor`). (2026-07-30)
 
 ---
 
@@ -194,7 +194,7 @@ something you cannot ship.
 well-defined win; SVG animation on a 135×240 panel with a live polling task deserves
 its own story.
 
-**Decision:**
+**Decision:** ✅ **(b)** scrollbar only. Implement `scrollbar` end-to-end; `animation` stays authorable but export-blocked pending its own story. (2026-07-30)
 
 ---
 
@@ -212,7 +212,7 @@ PARKED.
 **Recommendation.** (b). The runtime resolver works, is already wired, and is
 compatible with page reuse (B1). Two mechanisms for one job is what produced this mess.
 
-**Decision:**
+**Decision:** ✅ **(b)** delete `eventEmitter.ts`, `valueEmitter.ts` and their tests. The runtime resolver is the surviving mechanism. (2026-07-30)
 
 ---
 
@@ -226,7 +226,7 @@ reset combo is the only countdown the firmware produces.
 **Recommendation.** Keep all six — §4.3 and §5.3 require each. They become reachable
 with the countdown state machine (next slice). Confirm none are redundant.
 
-**Decision:**
+**Decision:** ✅ keep all six. They become reachable via the confirm-screen model in `NF-20260730-01` §3.3, plus new toast screens. (2026-07-30)
 
 ---
 
@@ -279,8 +279,7 @@ enter-config 3 s, factory-reset 30 s, sensor-save 3 s, config-exit 3 s.
 `core.action.factory-reset` (handlers now implemented but not yet reachable), plus
 `ui.action.mode.configuration` from P7.
 
-**Decision:**
-
+**Decision:** ✅ **(a)** hold-to-confirm. Implemented in `b93a514`. Refined by `NF-20260730-01` §3.3: the countdown now lives on a dedicated confirm screen reached by ENTER-short, rather than being armed by ENTER-long from the info page. (2026-07-30)
 ---
 
 ### D1 🔴 How do config pages map to screens? — **SUPERSEDED**
@@ -323,6 +322,44 @@ guard, and models the sub-menu scoping §5.3 describes.
 
 ---
 
+### D5 ✅ Settable elements are a fixed catalogue, not free-form bindings
+
+**Decided 2026-07-30 (user).** The web design tool must offer the settable entities as
+**fixed, pre-declared items** rather than free-form elements carrying arbitrary binding
+strings. What the dataset controls is **screen order, sub-level nesting, and the placement
+and wording of text** — not which values exist.
+
+**Why this matters.** Today a designer types a binding string and nothing checks it against
+firmware until export (and until this session, not even then). That is how 13 `config.*`
+bindings and `diagnostics.undersampling` ended up rendering placeholder text on hardware
+while looking live in the mockup. A catalogue makes the connection **structural** rather
+than a name that has to match: you cannot place a value the firmware does not expose,
+because the palette only contains values it does expose.
+
+**Consequences to honour when the web UI is next touched:**
+
+1. The design tool's element palette splits in two: **layout elements** the designer places
+   freely (text, box, scrollbar) and **bound elements** chosen from the firmware catalogue
+   (values, settings, actions). A bound element cannot be created with a hand-typed ID.
+2. The catalogue is the firmware manifest, which makes **D2 (generate the manifest from
+   firmware) a prerequisite rather than an optimisation** — a hand-maintained catalogue can
+   still over-claim, which is exactly the current failure with six unimplemented actions.
+3. The manifest's value entries need the descriptor fields from
+   `Display_UI_Requirements.md` §8 item 6 — `min`, `max`, `step`, `enum`, `unit` — so one
+   declaration drives the editor behaviour in both the simulator and the firmware.
+4. `manifest-value-coverage` and `manifest-action-coverage` (added this session) become
+   belt-and-braces rather than the primary guard: the UI should make an unknown binding
+   impossible to author in the first place.
+5. Screen order and nesting become first-class dataset concepts — see
+   `NF-20260730-01` §3.1/§5.7 for the level-and-ring model the dataset must express.
+
+**Blocks.** Nothing immediately; it constrains the web-UI slice. Recorded so it is not
+rediscovered later.
+
+**Decision:** ✅ fixed catalogue (2026-07-30)
+
+---
+
 ### D2 🟡 Should the manifest be generated from firmware?
 
 **Question.** `actionManifest.json` is hand-maintained and must mirror three firmware
@@ -339,7 +376,7 @@ implementation steps were never carried out.
 **Recommendation.** Yes, implement Approach A, extended to cover values and screens.
 Until then, treat the manifest as an *intent* document and accept that it can over-claim.
 
-**Decision:**
+**Decision:** ✅ **yes** — implement the spike's Approach A, extended to values and screens. Promoted to a prerequisite by **D5**: a catalogue-driven design tool needs a manifest that cannot over-claim. (2026-07-30)
 
 ---
 
@@ -360,7 +397,7 @@ and the 240 literal look like leftovers.
 **Blocks.** Anything that trusts on-screen geometry. Cheap to fix, high value —
 worth doing in the next slice.
 
-**Decision:**
+**Decision:** ✅ **landscape 240 × 135.** Notation clarified: the first number is width, so the panel's native 135×240 is portrait and `setRotation(1)` gives landscape — meaning the firmware was already landscape and the *dataset* was authored portrait. 38 of 232 elements need repositioning and 105 px of width is currently unused. (2026-07-30)
 
 ---
 
@@ -378,7 +415,7 @@ export. Clicking Export without that manual step exports the previous dataset.
 **Recommendation.** (b) — it removes the stale-export trap entirely and keeps one
 round-trip. (a) is fine too if you want the file to be the durable record.
 
-**Decision:**
+**Decision:** ✅ **(b)** POST the dataset in the export request body, **plus a checked-in baseline** dataset so a reset never starts from scratch. (2026-07-30)
 
 ---
 
@@ -395,7 +432,7 @@ with `sensor.1.cumulativeLiters` (103). Many derived entries have `register: nul
 adopted, generate it instead of hand-fixing. Left untouched pending your call because
 it sits inside the A1/D2 discussion.
 
-**Decision:**
+**Decision:** ✅ fix the arithmetic to `sensorBaseAddress(n) + offset` (stride 40). If **D2** lands first, generate it instead of hand-fixing. (2026-07-30)
 
 ---
 
@@ -409,7 +446,7 @@ declared but unused by the dataset (it is needed by §5.1's ENTER-long-cancels-e
 so the firmware manifest only claims things firmware can do. Keep
 `config.action.field.cancel` — it becomes used in the config slice.
 
-**Decision:**
+**Decision:** ✅ follow recommendation — move `ui.mock.*` to a separate simulation catalogue; keep `config.action.field.cancel`. (2026-07-30)
 
 ---
 
@@ -426,7 +463,7 @@ untracked on this branch already.
 **Recommendation.** `git rm -r --cached web/mockup/node_modules`. One noisy commit, then
 clones get smaller and `npm ci` becomes the real install path.
 
-**Decision:**
+**Decision:** ✅ follow recommendation — `git rm -r --cached web/mockup/node_modules`. Extra justification found: the tracked copy is **stale** (no `vitest`), so a fresh clone cannot run the tests. (2026-07-30)
 
 ---
 
@@ -437,7 +474,7 @@ An untracked bare git repository at the repo root (`HEAD`, `config`, `hooks/`,
 
 **Recommendation.** Delete. Confirm you have nothing in it first.
 
-**Decision:**
+**Decision:** ✅ delete `carea/`. Verified empty of project content — a stray bare repo. (2026-07-30)
 
 ---
 
@@ -450,7 +487,7 @@ Restoring `animation`/`scrollbar` re-enables two DesignToolbox buttons, so the
 **Recommendation.** `npx playwright install chromium` (~150 MB), run the suite, and
 refresh the affected baselines. Until then treat visual regression as unverified.
 
-**Decision:**
+**Decision:** ✅ use the container if possible, otherwise install Playwright locally. (2026-07-30)
 
 ---
 
@@ -463,7 +500,7 @@ Every link is broken and the completion claims contradict the code.
 **Recommendation.** Rewrite from the real state, and point the SI-20251111/20260123
 entries at their actual `backlog/` paths.
 
-**Decision:**
+**Decision:** ✅ execute the clean-up — rewrite from real state, fix the broken links. (2026-07-30)
 
 ---
 
@@ -477,7 +514,7 @@ that do not exist (`web/backups/`, `web/Water Flow Meter PlatformIO/`,
 **Recommendation.** Rewrite both. Keep handoff docs claim-free unless a command backs
 the claim.
 
-**Decision:**
+**Decision:** ✅ rewrite both. (2026-07-30)
 
 ---
 
@@ -490,7 +527,7 @@ by one.
 `npm run test:exporter`, `npm run build`, and the containerised
 `pio run -e m5stack-stamplc`. That last one is the important one.
 
-**Decision:**
+**Decision:** ✅ follow recommendation, using containers for the firmware build step. (2026-07-30)
 
 ---
 
@@ -504,7 +541,7 @@ session did not follow, because it also mandates pushing.
 `AGENTS.md` with how you actually want sessions to end (in particular whether an agent
 should push unprompted).
 
-**Decision:**
+**Decision:** ✅ remove everything, keep only Claude Code. `.beads/issues.jsonl` verified **empty**, so no issue data is lost. Note `AGENTS.md` mandates the `bd` workflow and must go with it. (2026-07-30)
 
 ---
 
@@ -565,8 +602,7 @@ at 1.5 s.
 requirement as a countdown duration in the dataset — which is what the countdown
 machinery now does. Then add a 3 s back-to-idle countdown (see H3) so §4.1 is honoured.
 
-**Decision:**
-
+**Decision:** ✅ resolved by `Display_UI_Requirements.md` §3.1: **1.5 s is the gesture boundary**, and every longer duration (3 s, 30 s) is an on-screen countdown, never a gesture threshold. The two meanings of "long" are now separated. (2026-07-30)
 ---
 
 ### H3 ✅ Back-to-idle has no countdown
@@ -606,8 +642,7 @@ way: `countdown-config-exit` has `actionId: ui.action.mode.info` but
 **Recommendation.** Exit to **Info** (P0). Idle is what the 120 s timeout is for, and
 dropping straight to a dark screen after a deliberate save/exit reads as a fault.
 
-**Decision:**
-
+**Decision:** ✅ resolved by §5.6: leaving Configuration returns to **P0 (Info)** and does *not* turn the display off. Display-off is UP+DOWN or the 120 s timeout, both of which also clear the navigation stack. (2026-07-30)
 ---
 
 ### H5 🟢 UP/DOWN during a countdown — fixed to match the spec
@@ -630,8 +665,7 @@ the display is landscape (D3).
 **Recommendation.** Fold into the D3 re-layout: give every info page a footer hint, and
 put the LED legend on P0 (the landing page) rather than P1.
 
-**Decision:**
-
+**Decision:** ✅ resolved by §4.3 notes 4–5 and §6: **every** info page carries a footer hint, and the LED legend moves to P0. Element repositioning happens as part of the D3 landscape re-layout. (2026-07-30)
 ---
 
 ## G. Hardware risk
@@ -661,7 +695,7 @@ whether (b) is needed at all. Do not invest in (b) before the measurement.
 
 **Blocks.** Trusting the sensor configuration limits on real hardware.
 
-**Decision:**
+**Decision:** ✅ **(a) then (b)** — measure the real polling rate on hardware first; pursue the bulk expander read only if the measurement demands it. (a) needs you to flash and read register 0–1. (2026-07-30)
 
 ---
 

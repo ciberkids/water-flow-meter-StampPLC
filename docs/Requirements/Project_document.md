@@ -69,7 +69,7 @@ Each flow meter should be connected to the StampPLC as follows:
 *   **Platform:** Arduino IDE or PlatformIO
 *   **Core Libraries:**
     *   `M5StamPLC.h`: For hardware abstraction of the StampPLC.
-    *   `eModbus.h`: For implementing the Modbus RTU slave protocol.
+    *   `ModbusServerRTU.h` (eModbus): For implementing the Modbus RTU slave protocol. Note there is no umbrella `eModbus.h` header — this one pulls in `ModbusMessage`, `ModbusTypeDefs` and `RTUutils`.
     *   `Preferences.h`: For accessing the ESP32's non-volatile storage (NVS).
 
 ### 3.2. Dual-Core Task Allocation
@@ -117,6 +117,44 @@ The system functions as a Modbus slave with a defined map of Holding Registers.
 | 30      | Undersampling Flags                | `uint16_t`  | R   | Bitfield where bit *n* = 1 indicates sensor *n* exceeded the Nyquist limit during its last validation cycle. Resets automatically when the sensor passes validation. |
 | 31      | LED Red Volume Step                | `uint16_t`  | R/W | Defines the totalized volume (liters) per red LED pulse. Supported values: 1, 10, 100. Defaults to 1. |
 | 32      | LED Red Pulse Period (ms)          | `uint16_t`  | R/W | Sets the full on/off period for each red pulse (clamped 100–2000 ms, default 500 ms). |
+
+#### 4.1.1. Serial Link Configuration Block (40–47)
+
+These mirror the UART settings the operator can change from the on-device UI (see
+`feature addition/Display_UI_Requirements.md` §5.2, pages C1–C4). They are also writable
+over Modbus, but a write does **not** take effect immediately — see the apply protocol.
+
+| Address | Register Name             | Type       | R/W | Description |
+| :------ | :------------------------ | :--------- | :-- | :---------- |
+| 40      | Modbus Slave ID           | `uint16_t` | R/W | **1–247.** Address 0 is the broadcast address and 248–255 are reserved by the Modbus specification; both are rejected. |
+| 41      | Baud Rate Index           | `uint16_t` | R/W | Index into `{1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200}` (0–7). An index rather than the literal rate, because 115200 does not fit in a `uint16_t`. |
+| 42      | Parity                    | `uint16_t` | R/W | `0` = None, `1` = Even, `2` = Odd. |
+| 43      | Stop Bits                 | `uint16_t` | R/W | `1` or `2`. |
+| 44      | Link Apply                | `uint16_t` | W   | Write `0x5AA5` to commit registers 40–43 atomically. Any other value is rejected. |
+| 45      | Link Config Revision      | `uint16_t` | R   | Increments each time an apply succeeds, so a master can detect that the link was reconfigured. |
+| 46–47   | Reserved                  | —          | —   | Reserved for future link parameters. |
+
+**Why an explicit apply step.** These registers describe the transport carrying the request
+that modifies them. A master that writes baud = 19200 would receive its response at the old
+rate and then lose the link; changing the slave ID means the next poll addresses a device
+that no longer answers. Staging the values and committing them separately keeps the change
+deliberate and lets the firmware finish the in-flight response first.
+
+**Apply protocol.**
+
+1. The master writes any of 40–43. The values are **staged**; the live link is unchanged, and reads of 40–43 report the staged values.
+2. The master writes `0x5AA5` to register 44.
+3. The firmware completes and flushes the in-flight Modbus response, persists the staged values to NVS, increments register 45, then restarts the UART with the new settings.
+4. **Rollback on silence.** If no valid Modbus frame arrives within 60 s of an apply, the firmware reverts to the previous settings and restarts the UART again. Without this, one bad write permanently orphans the device.
+
+> Writes originating from the on-device UI skip staging and apply on commit: the operator is
+> physically present and is not depending on the link that is about to change.
+>
+> **Startup ordering requirement.** Link settings must load from NVS *before* the RS485
+> port is opened, so the firmware must initialise `Preferences` ahead of `Serial.begin()` in
+> the logic task.
+
+---
 
 ### 4.2. Per-Sensor Register Block
 
@@ -172,7 +210,7 @@ This allows the system to be adapted to a wide variety of flow sensors with diff
 1.  Red channel pulses whenever the aggregated session volume crosses the threshold defined in **LED Red Volume Step** (reg 31). The pulse period is taken from **LED Red Pulse Period** (reg 32) and applied with a 40 % duty cycle.
 2.  Green channel remains ON when every enabled sensor reports `isReady == true`; it turns OFF immediately if any sensor becomes invalid or is disabled.
 3.  Blue channel blinks at 2 Hz while the sum of instantaneous flows across ready sensors is greater than 0 L/s; it turns OFF after 500 ms of inactivity.
-4.  Factory reset (UP+DOWN 30 s) restores registers 31/32 to defaults and turns all LED channels off during the countdown.
+4.  Factory reset restores registers 31/32 to defaults and turns all LED channels off during the countdown. The trigger is the **P8 → `Factory reset?` confirm screen** (30 s hold); the former blind UP+DOWN combo was retired — see `feature addition/Display_UI_Requirements.md` §3.3.
 
 ---
 
@@ -189,4 +227,6 @@ This allows the system to be adapted to a wide variety of flow sensors with diff
 *   Development of a Modbus master client or HMI.
 *   Physical enclosure design or hardware assembly.
 *   Support for protocols other than Modbus RTU.
-*   User interface on the StampPLC's built-in screen.
+*   ~~User interface on the StampPLC's built-in screen.~~ **Now in scope** (decided
+    2026-07-30) — specified in `feature addition/Display_UI_Requirements.md`, with the
+    design/export toolchain in `feature addition/Display_Web_Mockup_and_Translator.md`.

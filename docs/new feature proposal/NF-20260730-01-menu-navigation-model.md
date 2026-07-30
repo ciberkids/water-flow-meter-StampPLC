@@ -92,7 +92,7 @@ L0  Info mode ............ P0 P1 P2 P3 P4 P5 P6 P7 P8           (no BACK — thi
 | UP / DOWN held | repeat sibling stepping every 250 ms | accelerating adjust, see §3.4 | no effect |
 | ENTER short | descend into the current entry; on `BACK`, ascend one level | **commit** and ascend one level | **exit** without acting |
 | ENTER long (≥1.5 s) | escape to the main screen (P0) | **discard** and ascend one level | **confirm** the action |
-| UP + DOWN short | **display off** (§3.5) | display off | display off |
+| UP + DOWN short | **display off + reset nav to P0** (§3.5) | same | same |
 
 **Gesture meaning differs by screen type, deliberately.** Editors put the easy gesture on
 the common outcome (you usually save), confirm screens put it on the safe one (you usually
@@ -186,18 +186,25 @@ at their range ends; enums and booleans wrap.
 
 ### 3.5. Reaching Idle, and retiring the UP+DOWN combo
 
-**Answer to Q1.** A short **UP + DOWN** press turns the display off, from any screen and
-any level. This is better than overloading ENTER-long, because it works at every depth
-without competing with the escape gesture, and it leaves ENTER-long meaning exactly one
-thing everywhere.
+**Answer to Q1.** A short **UP + DOWN** press turns the display off **and resets the
+navigation stack to P0**, from any screen and any level. This is better than overloading
+ENTER-long, because it works at every depth without competing with the escape gesture, and
+it leaves ENTER-long meaning exactly one thing everywhere.
 
-Waking is unchanged: §4.1 already says "Idle → Info: any button". So the gesture is
+Clearing the stack makes waking deterministic: the display always comes back on P0 rather
+than wherever the operator happened to be, which matches §4.1's "P0 is the landing page
+from Idle". Any uncommitted edit is discarded.
+
+For the same reason the **120 s inactivity timeout also resets to P0** — otherwise waking
+would be predictable after a manual off and arbitrary after an automatic one.
+
+Waking itself is unchanged: §4.1 already says "Idle → Info: any button". So the gesture is
 effectively **display off**, not a true toggle — see §7 item 10.
 
 Idle is therefore reached two ways:
 
-1. **Automatically** after 120 s without a button press (unchanged, §4.1).
-2. **Manually** by UP + DOWN short press, from anywhere.
+1. **Automatically** after 120 s without a button press (unchanged, §4.1), stack cleared.
+2. **Manually** by UP + DOWN short press, from anywhere, stack cleared.
 
 This settles **H1** (ENTER-long is unambiguously escape) and **H3** (no back-to-idle
 countdown — going idle is reversible by any button press).
