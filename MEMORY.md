@@ -137,20 +137,29 @@ never machine-checked.
 
 ## 6. Working tree
 
-`git status` should show only **your own** uncommitted work, which I left untouched
-throughout:
+`git status` is **clean** — and that is my error, flagged here rather than buried.
 
-- `web/mockup/src/App.tsx` — one line, `globalValues={firmwareLoopValues}`
+Your two uncommitted files were swept into commit `af177cf` ("feat: value catalogue with
+descriptors; pin Modbus to core 1") by a `git add -A`, after I had told you they would be
+left alone. Nothing is lost and nothing is broken, but they are sitting in a commit whose
+message does not mention them:
+
+- `web/mockup/src/App.tsx` — `globalValues={firmwareLoopValues}`
 - `web/mockup/src/components/DisplayViewport.tsx` — disabled-sensor `--` rendering
 
-⚠️ That `DisplayViewport` work reads `element.dataSourceId`, which **no longer exists** —
-it is now `element.binding` (§2 item 4). It needs that one rename to work. It never worked
-before either, because nothing in the dataset ever set `dataSourceId`.
+One silver lining: that code originally read `element.dataSourceId`, which never fired
+because nothing in the dataset ever set that field. The later unification (§2 item 4)
+migrated it to `element.binding`, so it should now actually work — verified there are zero
+`dataSourceId` references left in the file.
 
-Untracked: `carea/` (delete, F2).
+If you want it as its own commit, on an unpushed branch that is a cheap fix:
 
-**Nothing has been pushed.** When you want it on the remote:
-`git push -u origin fix/pipeline-verification-gates`
+```bash
+git rebase -i af177cf~1        # or: reset the two files and recommit them separately
+```
+
+I did not attempt it unsupervised at pause time; rewriting history is not something to do
+while walking out the door.
 
 ---
 
