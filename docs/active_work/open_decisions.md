@@ -232,6 +232,57 @@ with the countdown state machine (next slice). Confirm none are redundant.
 
 ## D. Architecture
 
+### D0 🔴 Countdown trigger semantics: hold-to-confirm, or arm-then-wait?
+
+**Question.** The requirements and the dataset describe two different state machines,
+and they cannot both be implemented.
+
+- **Requirements** (`Display_UI_Requirements.md` §4.3 note 1): "Countdown overlays
+  display remaining seconds centrally; **release ENTER before zero aborts**." §5.3 rule 3
+  is the same shape: "Long pressing ENTER … starts a 3 s countdown. **If held to zero** …",
+  rule 4: "Long ENTER release before countdown completion cancels without saving."
+  → **hold-to-confirm**: the button must stay down for the whole countdown.
+- **Dataset** (`screens.json`): the info page's `button/enter/short` flow navigates to the
+  countdown screen with no action; the countdown screen then has a **`timeout`** flow that
+  fires the action, plus a `button/enter/short` flow that cancels.
+  → **arm-then-wait**: a short press starts it, it completes on its own, and a second
+  press cancels.
+
+The same §4.3 table also says "ENTER (short) → Start 30 s countdown", which reads as
+arming, not holding — so the requirement document is internally inconsistent too.
+
+**Why it matters.** These need different firmware. Hold-to-confirm needs button *state*
+polling driven off `isPressed()` (like the existing factory-reset combo). Arm-then-wait
+needs a timer plus a timeout-flow evaluator in `InteractionHandler`, which does not exist
+yet — it currently only matches `FlowTrigger::Button` and ignores `Timeout` entirely.
+
+**Options.**
+- **(a) Hold-to-confirm.** Matches the safety intent for a 30 s destructive reset, matches
+  the already-working factory-reset combo, and means an accidental press cannot wipe
+  totals. Requires rewriting the countdown flows in the dataset.
+- **(b) Arm-then-wait.** Matches the dataset as authored. Needs a timeout-flow evaluator.
+  A 30 s unattended countdown that completes by itself is a worse fit for "Reset All
+  Measured", though the cancel flow mitigates it.
+- **(c) Hybrid.** Arm on short press, then require the hold; cancel on release *or* on a
+  second press.
+
+**Recommendation.** **(a)**, and correct the §4.3 table wording plus the dataset flows.
+Holding a button for 30 s to erase persistent totals is the safer, more conventional
+interaction, and it reuses the factory-reset pattern already in `InteractionHandler`.
+
+**Also needed either way:** every countdown flow in `screens.json` has **no
+`timeoutMs`**. The durations from §4.3/§5 are: reset-all 30 s, reset-session 3 s,
+enter-config 3 s, factory-reset 30 s, sensor-save 3 s, config-exit 3 s.
+
+**Blocks.** The countdown state machine, and therefore reachability of
+`core.action.reset-session`, `core.action.reset-all-measured` and
+`core.action.factory-reset` (handlers now implemented but not yet reachable), plus
+`ui.action.mode.configuration` from P7.
+
+**Decision:**
+
+---
+
 ### D1 🔴 How do config pages map to screens?
 
 **Question.** `UiScreenRouter` resolves Configuration mode to a single screen
@@ -472,10 +523,12 @@ whether (b) is needed at all. Do not invest in (b) before the measurement.
 
 ## Suggested order
 
-1. **A1** (+A2, A4) — unblocks A5/A6 doc edits and the whole config slice.
-2. **D3** — cheap, and everything visual depends on it.
-3. **G1** — one measurement, and it may quietly invalidate config assumptions.
-4. **B2 + D1** — the config-mode state model, once A1 is settled.
+1. **D0** — smallest question, biggest unblock: three action handlers are implemented
+   but unreachable until the countdown state machine exists.
+2. **A1** (+A2, A4) — unblocks A5/A6 doc edits and the whole config slice.
+3. **D3** — cheap, and everything visual depends on it.
+4. **G1** — one measurement, and it may quietly invalidate config assumptions.
+5. **B2 + D1** — the config-mode state model, once A1 is settled.
 5. **C1, C2, C3** — feature scope, once the above is moving.
 6. **D2 + E1** — make the manifest generated rather than asserted.
 7. **D4** — remove the stale-export trap.

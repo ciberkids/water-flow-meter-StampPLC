@@ -18,6 +18,12 @@ struct UiActionContext {
   LedController& leds;
   Preferences& preferences;
   uint32_t nowMs = 0;
+  /**
+   * Full factory reset (clears NVS, Modbus config and reboots). Owned by
+   * firmware.cpp because it touches every subsystem, so it reaches actions as a
+   * callback rather than through one of the references above. May be null.
+   */
+  void (*factoryReset)() = nullptr;
 };
 
 using UiActionFn = void (*)(const UiActionContext& ctx, const ui_exporter::Flow& flow);

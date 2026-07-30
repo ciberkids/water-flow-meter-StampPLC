@@ -4,6 +4,9 @@
 
 #include <Preferences.h>
 
+#include "modbus/modbus_manager.h"
+#include "modbus/register_map.h"
+
 namespace ui {
 
 namespace {
@@ -33,6 +36,26 @@ void handleSaveConfig(const UiActionContext& ctx, const ui_exporter::Flow&) {
   ctx.leds.saveToPreferences(ctx.preferences);
 }
 
+// Display_UI_Requirements §4.3 note 3: a completed reset must issue the matching
+// Modbus command so persisted state stays coherent, rather than mutating sensor
+// structs directly. Both go through the documented global command registers.
+void handleResetSession(const UiActionContext& ctx, const ui_exporter::Flow&) {
+  ctx.controller.notifyInteraction(ctx.nowMs);
+  ctx.modbus.applyHoldingWrite(plc::REG_MASTER_RESET_ALL_SESSION, 1);
+}
+
+void handleResetAllMeasured(const UiActionContext& ctx, const ui_exporter::Flow&) {
+  ctx.controller.notifyInteraction(ctx.nowMs);
+  ctx.modbus.applyHoldingWrite(plc::REG_MASTER_RESET_ALL_MEASURED, 1);
+}
+
+void handleFactoryReset(const UiActionContext& ctx, const ui_exporter::Flow&) {
+  ctx.controller.notifyInteraction(ctx.nowMs);
+  if (ctx.factoryReset) {
+    ctx.factoryReset();
+  }
+}
+
 const UiActionBinding kDefaultBindings[] = {
     {"ui.action.page.next", handlePageNext},
     {"ui.action.page.previous", handlePagePrevious},
@@ -40,6 +63,9 @@ const UiActionBinding kDefaultBindings[] = {
     {"ui.action.mode.info", handleEnterInfo},
     {"ui.action.mode.idle", handleEnterIdle},
     {"core.action.save-config", handleSaveConfig},
+    {"core.action.reset-session", handleResetSession},
+    {"core.action.reset-all-measured", handleResetAllMeasured},
+    {"core.action.factory-reset", handleFactoryReset},
 };
 
 UiActionRegistry initDefaultRegistry() {

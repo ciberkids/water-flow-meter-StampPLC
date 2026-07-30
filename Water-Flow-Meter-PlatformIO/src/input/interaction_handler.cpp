@@ -133,7 +133,8 @@ bool InteractionHandler::handleFlowEvent(uint32_t nowMs,
       .modbus = *deps_.modbus,
       .leds = *deps_.ledController,
       .preferences = *deps_.preferences,
-      .nowMs = nowMs};
+      .nowMs = nowMs,
+      .factoryReset = factoryResetFn_};
 
   if (deps_.actions->dispatch(flow->actionId, actionContext, *flow)) {
     return true;
