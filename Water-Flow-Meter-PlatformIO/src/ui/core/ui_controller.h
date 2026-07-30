@@ -10,8 +10,10 @@
 
 enum class UiMode { Idle, Info, Configuration };
 
+// Order MUST match kInfoScreenIds in ui_screen_router.cpp (P0..P7).
 enum class UiPage {
-  InstantFlow = 0,
+  GlobalStatus = 0,
+  InstantFlow,
   CumulativeLiters,
   CumulativeCubicMeters,
   SessionLiters,
@@ -32,9 +34,7 @@ struct SensorSnapshot {
 
 struct UiRenderContext {
   UiMode mode = UiMode::Info;
-  UiPage page = UiPage::InstantFlow;
-  bool propellerActive = false;
-  uint8_t propellerFrame = 0;
+  UiPage page = UiPage::GlobalStatus;
   uint16_t warningFlags = 0;
   uint16_t connectedBitmap = 0;
   double totalSessionLiters = 0.0;
@@ -83,15 +83,12 @@ class UiController {
 
  private:
   static constexpr uint32_t kIdleTimeoutMs = 120000;  // 2 minutes
-  static constexpr uint32_t kPropellerFrameIntervalMs = 166;  // ~6fps
 
   void updateIdleState(uint32_t nowMs);
 
   UiMode mode_ = UiMode::Info;
-  UiPage page_ = UiPage::InstantFlow;
+  UiPage page_ = UiPage::GlobalStatus;
   uint32_t lastInteractionMs_ = 0;
-  uint32_t lastPropellerUpdateMs_ = 0;
-  uint8_t propellerFrame_ = 0;
 
   UiRenderContext context_;
 };

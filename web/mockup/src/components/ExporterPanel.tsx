@@ -58,11 +58,19 @@ interface ExportResponse {
   summary?: ExportSummary;
   message?: string;
   issues?: string[];
+  warnings?: string[];
   validation?: ValidationReport;
   compilation?: AutomationCheck;
   backup?: BackupSummary;
   manifest?: ManifestStatus;
 }
+
+/**
+ * Statuses that mean the assets were written. "ok" means the output was compiled
+ * and verified; "ok-with-warnings" means it was written but something (usually a
+ * waived compile check) could not be verified.
+ */
+const successStatuses = new Set(["ok", "ok-with-warnings"]);
 
 type ExportState = "idle" | "running" | "success" | "error";
 
@@ -102,12 +110,14 @@ export function ExporterPanel({ disabled = false, onNavigateToScreen }: Exporter
   const [compilationReport, setCompilationReport] = useState<AutomationCheck | null>(null);
   const [backupSummary, setBackupSummary] = useState<BackupSummary | null>(null);
   const [manifestStatus, setManifestStatus] = useState<ManifestStatus | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
 
   const triggerExport = useCallback(async () => {
     setState("running");
     setSummary(null);
     setErrorMessage(null);
     setIssues([]);
+    setWarnings([]);
     setValidationReport(null);
     setCompilationReport(null);
     setBackupSummary(null);
@@ -122,13 +132,14 @@ export function ExporterPanel({ disabled = false, onNavigateToScreen }: Exporter
       setCompilationReport(payload.compilation ?? null);
       setBackupSummary(payload.backup ?? null);
       setManifestStatus(payload.manifest ?? null);
-      if (!response.ok || payload.status !== "ok") {
+      if (!response.ok || !successStatuses.has(payload.status)) {
         setState("error");
         setErrorMessage(payload.message ?? "Export failed");
         setIssues(payload.issues ?? []);
         return;
       }
       setSummary(payload.summary ?? null);
+      setWarnings(payload.warnings ?? []);
       setState("success");
     } catch (error) {
       setState("error");
@@ -174,6 +185,20 @@ export function ExporterPanel({ disabled = false, onNavigateToScreen }: Exporter
       </button>
       {disabled && state !== "running" && (
         <p className="exporter-hint">Resolve validation issues before exporting.</p>
+      )}
+
+      {state === "success" && warnings.length > 0 && (
+        <div className="exporter-warning" role="status">
+          <p>
+            <strong>Exported, but not fully verified.</strong> The assets were written and
+            the previous export was backed up, but the checks below could not confirm them.
+          </p>
+          <ul>
+            {warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {summary && state === "success" && (

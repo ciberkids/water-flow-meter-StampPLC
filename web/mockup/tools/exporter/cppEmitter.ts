@@ -51,6 +51,11 @@ enum class AnimationKind : std::uint8_t {
   Property = 1
 };
 
+struct KeyValue {
+  const char* key;
+  const char* value;
+};
+
 struct TextPayload {
   const char* text;
   TextAlign align;
@@ -83,11 +88,6 @@ struct Flow {
   const char* actionId;
   const KeyValue* actionParams;
   std::size_t actionParamCount;
-};
-
-struct KeyValue {
-  const char* key;
-  const char* value;
 };
 
 struct AnimationKeyframe {

@@ -1,53 +1,27 @@
 import Ajv from "ajv";
-import { FirmwareActionManifest } from "../types/firmwareActions";
+import { firmwareManifestSchema, type FirmwareManifest } from "../../shared/schemaDefinitions";
 
-const ajv = new Ajv();
+/**
+ * Validates a firmware manifest against the single canonical schema in
+ * shared/schemaDefinitions.ts — the same one tools/exporter/manifestLoader.ts
+ * uses.
+ *
+ * This file previously carried a second, hand-rolled schema that accepted
+ * manifests the exporter rejected and vice versa (it required `name` where the
+ * exporter required `label`, and made `values` optional with no field
+ * requirements). That divergence is why the checked-in manifest could not be
+ * passed to the exporter at all, leaving binding coverage unenforced.
+ */
+const AjvConstructor =
+    (Ajv as unknown as { default?: new (...args: unknown[]) => Ajv }).default ??
+    (Ajv as unknown as new (...args: unknown[]) => Ajv);
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const schema: Record<string, any> = {
-    type: "object",
-    properties: {
-        actions: {
-            type: "array",
-            items: {
-                type: "object",
-                properties: {
-                    id: { type: "string" },
-                    name: { type: "string" },
-                    description: { type: "string", nullable: true },
-                    triggers: { type: "array", items: { type: "string" }, nullable: true }
-                },
-                required: ["id", "name"]
-            }
-        },
-        values: {
-            type: "array",
-            nullable: true,
-            items: {
-                type: "object",
-                properties: {
-                    id: { type: "string" },
-                    type: { type: "string", nullable: true },
-                    unit: { type: "string", nullable: true },
-                    register: { type: "number", nullable: true },
-                    description: { type: "string", nullable: true },
-                    readOnly: { type: "boolean", nullable: true }
-                },
-                required: ["id"]
-            }
-        }
-    },
-    required: ["actions"],
-    additionalProperties: true
-};
+const ajv = new AjvConstructor({ strict: false });
+const validate = ajv.compile(firmwareManifestSchema);
 
-const validate = ajv.compile(schema);
-
-export function validateManifest(data: unknown): FirmwareActionManifest {
+export function validateManifest(data: unknown): FirmwareManifest {
     if (validate(data)) {
-        // Determine if we need to filter out unknown properties or if additionalProperties: true is enough to just let them pass.
-        // The type definition doesn't have an index signature, so technically unexpected fields won't be accessible via strict TS, which is fine.
-        return data as FirmwareActionManifest;
+        return data as FirmwareManifest;
     }
     throw new Error(`Manifest validation failed: ${ajv.errorsText(validate.errors)}`);
 }

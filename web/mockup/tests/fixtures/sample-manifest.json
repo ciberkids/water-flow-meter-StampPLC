@@ -87,5 +87,22 @@
                 }
             }
         }
+    ],
+    "values": [
+        {
+            "id": "legend.led",
+            "type": "string",
+            "description": "RGB LED status legend text"
+        },
+        {
+            "id": "telemetry.status",
+            "type": "string",
+            "description": "Aggregate readiness / warning summary"
+        },
+        {
+            "id": "countdown.value",
+            "type": "string",
+            "description": "Remaining seconds on the active countdown"
+        }
     ]
 }

@@ -116,18 +116,28 @@ describe("manifest binding validation check", () => {
         theme: kMinimalTheme
     };
 
-    it("produces warning when no manifest is provided", () => {
+    it("fails when no manifest is provided", () => {
         const report = runExportValidations(baseDataset, kMinimalIr, null);
-        const manifestCheck = report.checks.find(c => c.id === "manifest-binding-coverage");
-        assert.equal(manifestCheck?.status, "warning");
+        const manifestCheck = report.checks.find(c => c.id === "manifest-action-coverage");
+        // Previously a non-blocking "warning", which left the coverage gate off
+        // by default and let unimplemented actions through.
+        assert.equal(manifestCheck?.status, "fail");
     });
 
     it("produces pass when all actions are covered by the manifest", async () => {
         const manifestPath = path.resolve(fixturesDir, "sample-manifest.json");
         const result = await loadManifest(manifestPath);
         const report = runExportValidations(baseDataset, kMinimalIr, result.manifest);
-        const manifestCheck = report.checks.find(c => c.id === "manifest-binding-coverage");
+        const manifestCheck = report.checks.find(c => c.id === "manifest-action-coverage");
         assert.equal(manifestCheck?.status, "pass");
+    });
+
+    it("produces pass when all bindings are covered by the manifest", async () => {
+        const manifestPath = path.resolve(fixturesDir, "sample-manifest.json");
+        const result = await loadManifest(manifestPath);
+        const report = runExportValidations(baseDataset, kMinimalIr, result.manifest);
+        const valueCheck = report.checks.find(c => c.id === "manifest-value-coverage");
+        assert.equal(valueCheck?.status, "pass");
     });
 
     it("produces fail when an action is not found in the manifest", async () => {
@@ -152,17 +162,37 @@ describe("manifest binding validation check", () => {
         const manifestPath = path.resolve(fixturesDir, "sample-manifest.json");
         const result = await loadManifest(manifestPath);
         const report = runExportValidations(datasetWithUnknown, kMinimalIr, result.manifest);
-        const manifestCheck = report.checks.find(c => c.id === "manifest-binding-coverage");
+        const manifestCheck = report.checks.find(c => c.id === "manifest-action-coverage");
         assert.equal(manifestCheck?.status, "fail");
         assert.ok(manifestCheck?.message.includes("1 action binding(s)"));
     });
 
-    it("does not flag builtin action prefixes as missing even without manifest", async () => {
+    it("flags ui.* and core.* actions that the manifest does not declare", async () => {
+        // These prefixes used to be exempted as "builtin", which is backwards:
+        // they are exactly the IDs the firmware action registry must implement.
+        const datasetWithUnknownBuiltin: ScreenDataset = {
+            ...baseDataset,
+            screens: [
+                {
+                    ...baseDataset.screens[0],
+                    flows: [
+                        {
+                            id: "flow-ghost",
+                            label: "Ghost",
+                            trigger: { type: "button", button: "enter" },
+                            actionId: "core.action.not-implemented"
+                        }
+                    ]
+                },
+                baseDataset.screens[1]
+            ]
+        };
+
         const manifestPath = path.resolve(fixturesDir, "sample-manifest.json");
         const result = await loadManifest(manifestPath);
-        const report = runExportValidations(baseDataset, kMinimalIr, result.manifest);
-        const manifestCheck = report.checks.find(c => c.id === "manifest-binding-coverage");
-        // "ui.action.page.next" is a builtin and should NOT cause a failure
-        assert.equal(manifestCheck?.status, "pass");
+        const report = runExportValidations(datasetWithUnknownBuiltin, kMinimalIr, result.manifest);
+        const manifestCheck = report.checks.find(c => c.id === "manifest-action-coverage");
+        assert.equal(manifestCheck?.status, "fail");
+        assert.match(manifestCheck?.recommendation ?? "", /core\.action\.not-implemented/);
     });
 });

@@ -86,7 +86,9 @@ export function DesignToolbox({
     if (!firmwareValues) return [];
     return firmwareValues.filter((v) => {
       if (kind === "text") return v.type === "string";
-      if (kind === "value") return v.type === "number" || v.type === "int" || v.type === "float";
+      // The manifest value type vocabulary is string|number|boolean; the old
+      // "int"/"float" comparisons never matched any real manifest entry.
+      if (kind === "value") return v.type === "number";
       return false;
     });
   };

@@ -1,45 +1,68 @@
 import { describe, it, expect } from "vitest";
 import { validateManifest } from "../manifestValidation";
 
+/**
+ * These assert the canonical manifest schema from shared/schemaDefinitions.ts —
+ * the same one the exporter validates against. They previously described a
+ * second, app-only schema (`name` instead of `label`, no `version`), which is
+ * how the checked-in manifest ended up in a format the exporter rejected.
+ */
+const validManifest = () => ({
+    version: "1",
+    generatedAt: "2026-03-05T13:00:00.000Z",
+    actions: [{ id: "a1", label: "Action 1" }],
+    values: [{ id: "v1", type: "number", register: 101, readOnly: true }]
+});
+
 describe("validateManifest", () => {
-    it("should validate a correct manifest", () => {
+    it("validates a correct manifest", () => {
+        expect(() => validateManifest(validManifest())).not.toThrow();
+    });
+
+    it("fails if version is missing", () => {
+        const { version: _version, ...invalid } = validManifest();
+        expect(() => validateManifest(invalid)).toThrow(/version/);
+    });
+
+    it("fails if generatedAt is missing", () => {
+        const { generatedAt: _generatedAt, ...invalid } = validManifest();
+        expect(() => validateManifest(invalid)).toThrow(/generatedAt/);
+    });
+
+    it("fails if actions are missing", () => {
+        const { actions: _actions, ...invalid } = validManifest();
+        expect(() => validateManifest(invalid)).toThrow(/actions/);
+    });
+
+    it("fails if an action is missing its label", () => {
+        const invalid = { ...validManifest(), actions: [{ id: "a1" }] };
+        expect(() => validateManifest(invalid)).toThrow(/label/);
+    });
+
+    it("fails if a value is missing its id", () => {
+        const invalid = { ...validManifest(), values: [{ type: "number" }] };
+        expect(() => validateManifest(invalid)).toThrow(/id/);
+    });
+
+    it("rejects a value type outside string|number|boolean", () => {
+        const invalid = { ...validManifest(), values: [{ id: "v1", type: "int" }] };
+        expect(() => validateManifest(invalid)).toThrow();
+    });
+
+    it("rejects unknown top-level properties", () => {
+        const invalid = { ...validManifest(), updatedAt: "2026-03-05T13:00:00.000Z" };
+        expect(() => validateManifest(invalid)).toThrow();
+    });
+
+    it("allows values to be omitted entirely", () => {
+        const { values: _values, ...manifest } = validManifest();
+        expect(() => validateManifest(manifest)).not.toThrow();
+    });
+
+    it("allows optional action description", () => {
         const valid = {
-            actions: [{ id: "a1", name: "Action 1" }],
-            values: [{ id: "v1", name: "Value 1", type: "int", readOnly: true }]
-        };
-        expect(() => validateManifest(valid)).not.toThrow();
-    });
-
-    it("should fail if actions are missing", () => {
-        const invalid = { values: [] };
-        expect(() => validateManifest(invalid)).toThrow();
-    });
-
-    it("should fail if values are missing", () => {
-        const invalid = { actions: [] };
-        expect(() => validateManifest(invalid)).toThrow();
-    });
-
-    it("should fail if action is missing required fields", () => {
-        const invalid = {
-            actions: [{ id: "a1" }], // missing name
-            values: []
-        };
-        expect(() => validateManifest(invalid)).toThrow();
-    });
-
-    it("should fail if value is missing required fields", () => {
-        const invalid = {
-            actions: [],
-            values: [{ id: "v1", name: "Value 1" }] // missing type/readOnly
-        };
-        expect(() => validateManifest(invalid)).toThrow();
-    });
-
-    it("should allow optional fields", () => {
-        const valid = {
-            actions: [{ id: "a1", name: "Action 1", description: "Desc", triggers: ["t1"] }],
-            values: []
+            ...validManifest(),
+            actions: [{ id: "a1", label: "Action 1", description: "Desc" }]
         };
         expect(() => validateManifest(valid)).not.toThrow();
     });

@@ -1,5 +1,83 @@
 {
-  "updatedAt": "2026-03-05T13:00:00.000Z",
+  "version": "1",
+  "generatedAt": "2026-03-05T13:00:00.000Z",
+  "actions": [
+    {
+      "id": "ui.action.page.next",
+      "label": "Next page",
+      "description": "Advances to the next UI page"
+    },
+    {
+      "id": "ui.action.page.previous",
+      "label": "Previous page",
+      "description": "Returns to the previous UI page"
+    },
+    {
+      "id": "ui.action.mode.idle",
+      "label": "Enter idle",
+      "description": "Dims the display and enters idle mode"
+    },
+    {
+      "id": "ui.action.mode.info",
+      "label": "Return to info mode",
+      "description": "Leaves configuration and resumes info pages"
+    },
+    {
+      "id": "ui.action.mode.configuration",
+      "label": "Enter configuration mode",
+      "description": "Switches the firmware into configuration mode"
+    },
+    {
+      "id": "core.action.save-config",
+      "label": "Save configuration",
+      "description": "Persists the current configuration block to NVS and Modbus registers"
+    },
+    {
+      "id": "core.action.reset-session",
+      "label": "Reset session counters",
+      "description": "Issues the Reset Session Modbus command for all ready sensors"
+    },
+    {
+      "id": "core.action.reset-all-measured",
+      "label": "Reset all measured totals",
+      "description": "Issues the Reset All Measured Modbus command"
+    },
+    {
+      "id": "core.action.factory-reset",
+      "label": "Factory reset",
+      "description": "Wipes NVS, clears Modbus config, and reboots"
+    },
+    {
+      "id": "config.action.sensor.save",
+      "label": "Save sensor settings",
+      "description": "Commit sensor sub-menu values after Nyquist validation"
+    },
+    {
+      "id": "config.action.field.edit",
+      "label": "Begin field edit",
+      "description": "Put the focused configuration field into edit mode"
+    },
+    {
+      "id": "config.action.field.confirm",
+      "label": "Confirm field edit",
+      "description": "Accept the tentative value and write to Modbus register"
+    },
+    {
+      "id": "config.action.field.cancel",
+      "label": "Cancel field edit",
+      "description": "Discard tentative value and restore prior"
+    },
+    {
+      "id": "ui.mock.value-edit",
+      "label": "Value edited",
+      "description": "Simulation-only event fired when a value placeholder is modified"
+    },
+    {
+      "id": "ui.mock.value-save",
+      "label": "Value saved",
+      "description": "Simulation-only event fired when a value override is saved"
+    }
+  ],
   "values": [
     {
       "id": "sensor.1.instantFlow",
@@ -156,49 +234,49 @@
     {
       "id": "sensor.1.cumulativeM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 1 cumulative cubic metres (derived)"
     },
     {
       "id": "sensor.2.cumulativeM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 2 cumulative cubic metres"
     },
     {
       "id": "sensor.3.cumulativeM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 3 cumulative cubic metres"
     },
     {
       "id": "sensor.4.cumulativeM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 4 cumulative cubic metres"
     },
     {
       "id": "sensor.5.cumulativeM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 5 cumulative cubic metres"
     },
     {
       "id": "sensor.6.cumulativeM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 6 cumulative cubic metres"
     },
     {
       "id": "sensor.7.cumulativeM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 7 cumulative cubic metres"
     },
     {
       "id": "sensor.8.cumulativeM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 8 cumulative cubic metres"
     },
     {
@@ -254,49 +332,49 @@
     {
       "id": "sensor.1.sessionM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 1 session cubic metres"
     },
     {
       "id": "sensor.2.sessionM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 2 session cubic metres"
     },
     {
       "id": "sensor.3.sessionM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 3 session cubic metres"
     },
     {
       "id": "sensor.4.sessionM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 4 session cubic metres"
     },
     {
       "id": "sensor.5.sessionM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 5 session cubic metres"
     },
     {
       "id": "sensor.6.sessionM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 6 session cubic metres"
     },
     {
       "id": "sensor.7.sessionM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 7 session cubic metres"
     },
     {
       "id": "sensor.8.sessionM3",
       "type": "number",
-      "unit": "m³",
+      "unit": "m\u00b3",
       "description": "Sensor 8 session cubic metres"
     },
     {
@@ -442,83 +520,53 @@
       "id": "legend.led",
       "type": "string",
       "description": "RGB LED status legend text"
+    },
+    {
+      "id": "telemetry.total",
+      "type": "string",
+      "description": "Aggregate session volume and flow summary (Total <L> L | Flow <L/s> L/s)"
     }
   ],
-  "actions": [
+  "screens": [
     {
-      "id": "ui.action.page.next",
-      "name": "Next page",
-      "description": "Advances to the next UI page"
+      "id": "info-p0-global-status",
+      "role": "info-page-0 (UiPage::GlobalStatus)"
     },
     {
-      "id": "ui.action.page.previous",
-      "name": "Previous page",
-      "description": "Returns to the previous UI page"
+      "id": "info-p1-instant-flow",
+      "role": "info-page-1 (UiPage::InstantFlow)"
     },
     {
-      "id": "ui.action.mode.idle",
-      "name": "Enter idle",
-      "description": "Dims the display and enters idle mode"
+      "id": "info-p2-cumulative-liters",
+      "role": "info-page-2 (UiPage::CumulativeLiters)"
     },
     {
-      "id": "ui.action.mode.info",
-      "name": "Return to info mode",
-      "description": "Leaves configuration and resumes info pages"
+      "id": "info-p3-cumulative-m3",
+      "role": "info-page-3 (UiPage::CumulativeCubicMeters)"
     },
     {
-      "id": "ui.action.mode.configuration",
-      "name": "Enter configuration mode",
-      "description": "Switches the firmware into configuration mode"
+      "id": "info-p4-session-liters",
+      "role": "info-page-4 (UiPage::SessionLiters)"
     },
     {
-      "id": "core.action.save-config",
-      "name": "Save configuration",
-      "description": "Persists the current configuration block to NVS and Modbus registers"
+      "id": "info-p5-session-m3",
+      "role": "info-page-5 (UiPage::SessionCubicMeters)"
     },
     {
-      "id": "core.action.reset-session",
-      "name": "Reset session counters",
-      "description": "Issues the Reset Session Modbus command for all ready sensors"
+      "id": "info-p6-max-flow",
+      "role": "info-page-6 (UiPage::MaxFlow)"
     },
     {
-      "id": "core.action.reset-all-measured",
-      "name": "Reset all measured totals",
-      "description": "Issues the Reset All Measured Modbus command"
+      "id": "info-p7-enter-config",
+      "role": "info-page-7 (UiPage::EnterConfiguration)"
     },
     {
-      "id": "core.action.factory-reset",
-      "name": "Factory reset",
-      "description": "Wipes NVS, clears Modbus config, and reboots"
+      "id": "config-c1-modbus-id",
+      "role": "configuration-entry"
     },
     {
-      "id": "config.action.sensor.save",
-      "name": "Save sensor settings",
-      "description": "Commit sensor sub-menu values after Nyquist validation"
-    },
-    {
-      "id": "config.action.field.edit",
-      "name": "Begin field edit",
-      "description": "Put the focused configuration field into edit mode"
-    },
-    {
-      "id": "config.action.field.confirm",
-      "name": "Confirm field edit",
-      "description": "Accept the tentative value and write to Modbus register"
-    },
-    {
-      "id": "config.action.field.cancel",
-      "name": "Cancel field edit",
-      "description": "Discard tentative value and restore prior"
-    },
-    {
-      "id": "ui.mock.value-edit",
-      "name": "Value edited",
-      "description": "Simulation-only event fired when a value placeholder is modified"
-    },
-    {
-      "id": "ui.mock.value-save",
-      "name": "Value saved",
-      "description": "Simulation-only event fired when a value override is saved"
+      "id": "countdown-factory-reset",
+      "role": "countdown-overlay"
     }
   ]
 }

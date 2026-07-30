@@ -1,3 +1,4 @@
+import { FIRMWARE_RENDERABLE_KINDS } from "../../src/types.js";
 import type { ScreenDataset, ScreenDefinition, ScreenElement } from "../../src/types.js";
 import type { ExportIR, ValidationCheck, ValidationReport, FirmwareManifest } from "./types.js";
 
@@ -104,31 +105,29 @@ const validationChecks: Array<
     }
   ];
 
-/** Built-in action prefixes that don't need a manifest entry. */
-const BUILTIN_PREFIXES = ["ui.", "core."];
-
-function isBuiltinAction(actionId: string): boolean {
-  return BUILTIN_PREFIXES.some((prefix) => actionId.startsWith(prefix));
-}
-
 /**
- * Validates that every non-builtin actionId referenced in flows and screen events
- * is present in the firmware manifest.
+ * Validates that every actionId referenced in flows and screen events is present
+ * in the firmware manifest.
+ *
+ * There is deliberately no prefix exemption here. `ui.*` and `core.*` were
+ * previously treated as "built in" and skipped, which is exactly backwards:
+ * those are the IDs the firmware action registry must implement, and exempting
+ * them is how six unimplemented actions reached the dataset unnoticed.
  */
-function checkManifestBindingCoverage(
+function checkManifestActionCoverage(
   dataset: ScreenDataset,
   manifest: FirmwareManifest | null | undefined
 ): ValidationCheck {
   if (!manifest) {
     return {
-      id: "manifest-binding-coverage",
-      title: "Firmware manifest binding coverage",
-      status: "warning",
+      id: "manifest-action-coverage",
+      title: "Firmware manifest action coverage",
+      status: "fail",
       message:
-        "No firmware manifest provided. Custom action bindings cannot be verified. " +
-        "Upload a manifest via the Import tab to enable coverage checks.",
+        "No firmware manifest available, so action bindings cannot be verified against firmware.",
       recommendation:
-        "Run 'manifest_gen' from the firmware repo or upload ui_manifest.json via the Import & Export tab."
+        "The exporter defaults to src/data/actionManifest.json. Restore that file, or pass " +
+        "--manifest <path> explicitly."
     };
   }
 
@@ -138,13 +137,13 @@ function checkManifestBindingCoverage(
   for (const screen of dataset.screens) {
     for (const flow of screen.flows ?? []) {
       const id = flow.actionId;
-      if (id && !isBuiltinAction(id) && !knownIds.has(id)) {
+      if (id && !knownIds.has(id)) {
         missing.push(`${screen.id}/flow:${flow.id} references unknown action "${id}"`);
       }
     }
     for (const event of screen.events ?? []) {
       const id = event.actionId;
-      if (id && !isBuiltinAction(id) && !knownIds.has(id)) {
+      if (id && !knownIds.has(id)) {
         missing.push(`${screen.id}/event:"${event.trigger}" references unknown action "${id}"`);
       }
     }
@@ -152,8 +151,8 @@ function checkManifestBindingCoverage(
 
   if (missing.length > 0) {
     return {
-      id: "manifest-binding-coverage",
-      title: "Firmware manifest binding coverage",
+      id: "manifest-action-coverage",
+      title: "Firmware manifest action coverage",
       status: "fail",
       message: `${missing.length} action binding(s) reference functions not found in the manifest.`,
       recommendation: missing.join("; ")
@@ -161,10 +160,152 @@ function checkManifestBindingCoverage(
   }
 
   return {
-    id: "manifest-binding-coverage",
-    title: "Firmware manifest binding coverage",
+    id: "manifest-action-coverage",
+    title: "Firmware manifest action coverage",
     status: "pass",
     message: `All action bindings are covered by the manifest (${manifest.actions.length} actions).`
+  };
+}
+
+/**
+ * Validates that every element `binding` resolves to a value the firmware
+ * declares. An unknown binding renders its static placeholder text on hardware
+ * and looks like a live value in the mockup, so it must block the export.
+ */
+function checkManifestValueCoverage(
+  dataset: ScreenDataset,
+  manifest: FirmwareManifest | null | undefined
+): ValidationCheck {
+  if (!manifest) {
+    return {
+      id: "manifest-value-coverage",
+      title: "Firmware manifest value coverage",
+      status: "fail",
+      message:
+        "No firmware manifest available, so value bindings cannot be verified against firmware.",
+      recommendation: "See the action coverage check for how to supply a manifest."
+    };
+  }
+
+  const knownIds = new Set((manifest.values ?? []).map((v) => v.id));
+  const missing: string[] = [];
+
+  for (const screen of dataset.screens) {
+    for (const element of screen.elements) {
+      const binding = element.binding;
+      if (binding && !knownIds.has(binding)) {
+        missing.push(`${screen.id}/${element.id} binds unknown value "${binding}"`);
+      }
+    }
+  }
+
+  if (missing.length > 0) {
+    return {
+      id: "manifest-value-coverage",
+      title: "Firmware manifest value coverage",
+      status: "fail",
+      message: `${missing.length} element binding(s) reference values not found in the manifest.`,
+      recommendation: missing.join("; ")
+    };
+  }
+
+  return {
+    id: "manifest-value-coverage",
+    title: "Firmware manifest value coverage",
+    status: "pass",
+    message: `All element bindings are covered by the manifest (${(manifest.values ?? []).length} values).`
+  };
+}
+
+/**
+ * Validates that every screen ID the firmware router resolves by name exists in
+ * the dataset.
+ *
+ * This is the third vocabulary, and the one whose drift is hardest to notice:
+ * UiScreenRouter::findById returns nullptr for a missing ID, the renderer bails
+ * after clearing the display, and the only symptom is a blank page. Renaming a
+ * screen otherwise passes every other check and compiles cleanly.
+ */
+function checkManifestScreenCoverage(
+  dataset: ScreenDataset,
+  manifest: FirmwareManifest | null | undefined
+): ValidationCheck {
+  const required = manifest?.screens ?? [];
+  if (required.length === 0) {
+    return {
+      id: "manifest-screen-coverage",
+      title: "Firmware screen coverage",
+      status: "fail",
+      message:
+        "The manifest declares no required screens, so screen-ID drift cannot be detected.",
+      recommendation:
+        "Add a `screens` array to the manifest listing every ID the firmware router " +
+        "resolves (see kInfoScreenIds in ui_screen_router.cpp)."
+    };
+  }
+
+  const defined = new Set(dataset.screens.map((screen) => screen.id));
+  const missing = required
+    .filter((screen) => !defined.has(screen.id))
+    .map((screen) => `${screen.id}${screen.role ? ` (${screen.role})` : ""}`);
+
+  if (missing.length > 0) {
+    return {
+      id: "manifest-screen-coverage",
+      title: "Firmware screen coverage",
+      status: "fail",
+      message: `${missing.length} screen(s) required by firmware are not defined in the dataset.`,
+      recommendation:
+        `Missing: ${missing.join("; ")}. Renaming or deleting these makes the ` +
+        "corresponding page render blank on hardware."
+    };
+  }
+
+  return {
+    id: "manifest-screen-coverage",
+    title: "Firmware screen coverage",
+    status: "pass",
+    message: `All ${required.length} firmware-required screens are defined in the dataset.`
+  };
+}
+
+/**
+ * Blocks export of element kinds the firmware renderer cannot draw.
+ *
+ * "animation" and "scrollbar" are authorable in the design tool (both are
+ * requested features) but have no ui_exporter::ElementType and no UiRenderer
+ * case. Exporting them would silently drop them on hardware while the mockup
+ * kept showing them, so the export fails until firmware support lands.
+ */
+export function checkRenderableElementKinds(dataset: ScreenDataset): ValidationCheck {
+  const renderable = new Set<string>(FIRMWARE_RENDERABLE_KINDS);
+  const unsupported: string[] = [];
+
+  for (const screen of dataset.screens) {
+    for (const element of screen.elements) {
+      if (!renderable.has(element.kind)) {
+        unsupported.push(`${screen.id}/${element.id} uses kind "${element.kind}"`);
+      }
+    }
+  }
+
+  if (unsupported.length > 0) {
+    return {
+      id: "renderable-element-kinds",
+      title: "All element kinds are renderable by firmware",
+      status: "fail",
+      message:
+        `${unsupported.length} element(s) use a kind the firmware renderer cannot draw ` +
+        `(supported: ${FIRMWARE_RENDERABLE_KINDS.join(", ")}).`,
+      recommendation: unsupported.join("; ")
+    };
+  }
+
+  return {
+    id: "renderable-element-kinds",
+    title: "All element kinds are renderable by firmware",
+    status: "pass",
+    message: `Every element uses one of: ${FIRMWARE_RENDERABLE_KINDS.join(", ")}.`
   };
 }
 
@@ -175,7 +316,10 @@ export function runExportValidations(
 ): ValidationReport {
   const checks = [
     ...validationChecks.map((check) => check(dataset, ir)),
-    checkManifestBindingCoverage(dataset, manifest)
+    checkRenderableElementKinds(dataset),
+    checkManifestScreenCoverage(dataset, manifest),
+    checkManifestActionCoverage(dataset, manifest),
+    checkManifestValueCoverage(dataset, manifest)
   ];
   const failing = checks.filter((check) => check.status === "fail");
   const status: ValidationReport["status"] = failing.length > 0 ? "fail" : "pass";

@@ -114,7 +114,7 @@ bool InteractionHandler::handleFlowEvent(uint32_t nowMs,
   if (factoryResetState_.overlayActive) {
     screen = deps_.screenRouter->overlayForCountdown();
   } else {
-    screen = deps_.screenRouter->screenForMode(uiController.mode());
+    screen = deps_.screenRouter->screenForMode(uiController.mode(), uiController.page());
   }
 
   if (!screen || !screen->flows || screen->flowCount == 0) {

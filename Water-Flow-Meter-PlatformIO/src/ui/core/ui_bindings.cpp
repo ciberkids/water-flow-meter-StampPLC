@@ -15,6 +15,7 @@ constexpr std::size_t kBufferMin = 4;
 
 const char* pageTitle(UiPage page) {
   switch (page) {
+    case UiPage::GlobalStatus: return "System Status";
     case UiPage::InstantFlow: return "Instant Flow";
     case UiPage::CumulativeLiters: return "Cumulative Liters";
     case UiPage::CumulativeCubicMeters: return "Cumulative m^3";
@@ -45,7 +46,8 @@ bool parseSensorIndex(std::string_view binding, std::size_t* indexOut) {
   if (!indexOut) {
     return false;
   }
-  if (!binding.starts_with("sensor.")) {
+  // std::string_view::starts_with is C++20; the Arduino core builds this at C++17.
+  if (binding.rfind("sensor.", 0) != 0) {
     return false;
   }
   const char* start = binding.data() + std::strlen("sensor.");

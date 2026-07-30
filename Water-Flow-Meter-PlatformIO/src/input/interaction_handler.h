@@ -3,6 +3,9 @@
 #include <cstdint>
 #include "input/button_input.h"
 #include "ui/core/ui_controller.h"
+// Needed for the ui_exporter::Flow/Screen/FlowButton/FlowGesture types used in
+// the private member declarations below.
+#include "ui/generated/GeneratedUi.h"
 
 class Preferences;
 class ModbusManager;
@@ -14,8 +17,6 @@ class UiActionRegistry;
 }  // namespace ui
 
 namespace plc {
-
-class UiActionRegistry;
 
 struct InteractionResult {
   UiCountdownState countdown{};

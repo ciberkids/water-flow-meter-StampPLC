@@ -331,10 +331,45 @@ export interface FirmwareAction {
   params?: Record<string, FirmwareActionParam>;
 }
 
+/**
+ * A value the firmware can supply to an element `binding`. `register` is the
+ * Modbus holding-register address backing it, where one exists — derived values
+ * (m³ from litres, formatted legends, countdown text) have no register.
+ */
+export interface FirmwareValue {
+  id: string;
+  type?: "string" | "number" | "boolean";
+  unit?: string;
+  register?: number;
+  description?: string;
+  readOnly?: boolean;
+}
+
+/**
+ * A screen ID the firmware router resolves by name. If the dataset renames or
+ * drops one of these, UiScreenRouter::findById returns nullptr and the display
+ * goes blank with no other symptom — which is exactly what happened with the
+ * stale "info-overview"/"configuration"/"countdown" defaults.
+ */
+export interface FirmwareScreen {
+  id: string;
+  /** What the firmware uses it for, e.g. "info-page-3", "countdown-overlay". */
+  role?: string;
+  description?: string;
+}
+
 export interface FirmwareManifest {
   version: string;
   generatedAt: string;
   actions: FirmwareAction[];
+  /**
+   * Optional so a manifest emitted by a firmware build that only knows about
+   * actions still validates. Absent `values` makes every element binding
+   * unresolvable, which the value-coverage check reports as a failure.
+   */
+  values?: FirmwareValue[];
+  /** Screen IDs the firmware requires the dataset to define. */
+  screens?: FirmwareScreen[];
 }
 
 export const firmwareActionParamSchema: JSONSchemaType<FirmwareActionParam> = {
@@ -363,6 +398,31 @@ export const firmwareActionSchema: JSONSchemaType<FirmwareAction> = {
   }
 };
 
+export const firmwareValueSchema: JSONSchemaType<FirmwareValue> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["id"],
+  properties: {
+    id: { type: "string", minLength: 1 },
+    type: { type: "string", enum: ["string", "number", "boolean"], nullable: true },
+    unit: { type: "string", nullable: true },
+    register: { type: "integer", minimum: 0, nullable: true },
+    description: { type: "string", nullable: true },
+    readOnly: { type: "boolean", nullable: true }
+  }
+};
+
+export const firmwareScreenSchema: JSONSchemaType<FirmwareScreen> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["id"],
+  properties: {
+    id: { type: "string", minLength: 1 },
+    role: { type: "string", nullable: true },
+    description: { type: "string", nullable: true }
+  }
+};
+
 const firmwareManifestDefinition = {
   type: "object",
   additionalProperties: false,
@@ -374,6 +434,18 @@ const firmwareManifestDefinition = {
       type: "array",
       minItems: 0,
       items: firmwareActionSchema
+    },
+    values: {
+      type: "array",
+      minItems: 0,
+      nullable: true,
+      items: firmwareValueSchema
+    },
+    screens: {
+      type: "array",
+      minItems: 0,
+      nullable: true,
+      items: firmwareScreenSchema
     }
   }
 } as const;

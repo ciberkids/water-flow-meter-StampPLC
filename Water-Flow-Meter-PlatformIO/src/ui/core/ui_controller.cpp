@@ -4,10 +4,8 @@
 
 void UiController::begin(uint32_t nowMs) {
   mode_ = UiMode::Info;
-  page_ = UiPage::InstantFlow;
+  page_ = UiPage::GlobalStatus;
   lastInteractionMs_ = nowMs;
-  lastPropellerUpdateMs_ = nowMs;
-  propellerFrame_ = 0;
   context_ = UiRenderContext{};
   context_.mode = mode_;
   context_.page = page_;
@@ -79,19 +77,8 @@ void UiController::update(uint32_t nowMs,
   context_.warningCount = 0;
   context_.warningSummary.clear();
 
-  // Propeller animation
-  const bool active = aggregateFlowLps > 0.001;
-  context_.propellerActive = active;
-  if (active) {
-    if (nowMs - lastPropellerUpdateMs_ >= kPropellerFrameIntervalMs) {
-      propellerFrame_ = static_cast<uint8_t>((propellerFrame_ + 1) % 8);
-      lastPropellerUpdateMs_ = nowMs;
-    }
-  } else {
-    propellerFrame_ = 0;
-    lastPropellerUpdateMs_ = nowMs;
-  }
-  context_.propellerFrame = propellerFrame_;
+  // The P0 flow indicator is driven straight from aggregateFlowLps by
+  // UiRenderer::drawFlowDots(); no frame counter is kept here.
 
   for (std::size_t i = 0; i < plc::kNumSensors; ++i) {
     auto& dst = context_.sensors[i];
@@ -124,9 +111,5 @@ void UiController::updateIdleState(uint32_t nowMs) {
     if (nowMs - lastInteractionMs_ >= kIdleTimeoutMs) {
       mode_ = UiMode::Idle;
     }
-  }
-  if (mode_ == UiMode::Idle) {
-    context_.propellerActive = false;
-    propellerFrame_ = 0;
   }
 }

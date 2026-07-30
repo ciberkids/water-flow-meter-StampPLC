@@ -369,6 +369,26 @@ body {
   margin: 0.2rem 0;
 }
 
+/* Export succeeded but something could not be verified (e.g. a waived compile check). */
+.exporter-warning {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: rgba(130, 96, 20, 0.42);
+  border: 1px solid rgba(214, 168, 56, 0.65);
+  color: #ffeccc;
+  font-size: 0.8rem;
+}
+
+.exporter-warning ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+}
+
+.exporter-warning li {
+  margin: 0.2rem 0;
+}
+
 .simulation-trace-panel,
 .value-editor-panel {
   margin-top: 0.75rem;

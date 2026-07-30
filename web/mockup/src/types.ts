@@ -1,6 +1,19 @@
 import type { ThemeTokens } from "./theme/types.js";
 
-export type ElementKind = "text" | "value" | "badge" | "box" | "icon";
+/**
+ * Element kinds the design tool can author.
+ *
+ * "animation" and "scrollbar" are authorable but not yet renderable by the
+ * firmware (Improvement_of_the_web_ui.md asks for both). They were previously
+ * removed from this union while the editor, viewport and layout code that
+ * implements them was left in place, which broke the build without removing the
+ * feature. The exporter blocks any dataset that uses them — see
+ * FIRMWARE_RENDERABLE_KINDS in tools/exporter/validation.ts.
+ */
+export type ElementKind = "text" | "value" | "badge" | "box" | "icon" | "animation" | "scrollbar";
+
+/** Element kinds ui_exporter::ElementType and UiRenderer can actually draw. */
+export const FIRMWARE_RENDERABLE_KINDS = ["text", "value", "badge", "box", "icon"] as const;
 export type DisplayOrientation = "portrait" | "landscape";
 
 export type ElementMetadataValue = string | number | boolean;

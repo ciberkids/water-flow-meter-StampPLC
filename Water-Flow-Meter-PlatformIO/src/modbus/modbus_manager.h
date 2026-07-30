@@ -5,7 +5,9 @@
 #include <cstdint>
 
 #include <Preferences.h>
-#include <eModbus.h>
+// eModbus has no umbrella "eModbus.h"; the RTU server header pulls in
+// ModbusMessage, ModbusTypeDefs and RTUutils.
+#include <ModbusServerRTU.h>
 
 #include "led/led_controller.h"
 #include "modbus/register_bank.h"
@@ -16,7 +18,7 @@ struct ModbusDependencies {
   SensorData* sensors = nullptr;
   SensorCharacteristics* configs = nullptr;
   Preferences* preferences = nullptr;
-  RegisterBank* registers = nullptr;
+  plc::RegisterBank* registers = nullptr;
   LedController* ledController = nullptr;
   uint16_t* connectedBitmap = nullptr;
   uint16_t* undersamplingFlags = nullptr;

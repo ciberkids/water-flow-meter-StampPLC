@@ -1,3 +1,18 @@
+/**
+ * PARKED — these cover emitUiEvents/emitUiBindings, which the export pipeline no
+ * longer calls.
+ *
+ * Those emitters generate per-screen `RegisterEvents_` and `UpdateValues_`
+ * functions against headers that do not exist in the firmware (FirmwareAction.h,
+ * ScreenManager.h, FirmwareValues.h) and duplicate the runtime mechanism the
+ * firmware actually uses (ui/core/ui_bindings.cpp resolving bindingId against
+ * UiRenderContext, ui/core/ui_actions.cpp dispatching actionId). Writing their
+ * output into src/ui/generated/ put uncompilable translation units in the build.
+ *
+ * They are kept green rather than deleted because the compile-time binding
+ * design they represent is a real option that has not been formally dropped.
+ * Decide: implement the firmware side, or delete emitters + these tests.
+ */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { buildIntermediateRepresentation } from "../ir.js";

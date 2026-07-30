@@ -104,7 +104,7 @@ export function EventBindingPanel({
                     <option value="">(None)</option>
                     {actions.map((action) => (
                       <option key={action.id} value={action.id}>
-                        {action.name}
+                        {action.label}
                       </option>
                     ))}
                   </select>

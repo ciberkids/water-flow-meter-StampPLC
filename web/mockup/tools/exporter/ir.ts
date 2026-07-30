@@ -75,10 +75,14 @@ function normaliseTextPayload(element: ScreenElement): IRElementKind {
       };
     case "icon":
       return { type: "icon", payload: { assetId: element.metadata?.assetId ?? element.content } };
-    default: {
-      const exhaustive: never = element.kind;
-      return exhaustive;
-    }
+    default:
+      // "animation" and "scrollbar" are authorable in the design tool but have
+      // no ui_exporter::ElementType yet. runExportValidations() rejects them
+      // before we get here (checkRenderableElementKinds); this throw is the
+      // backstop so they can never be silently dropped from the IR.
+      throw new Error(
+        `Element ${element.id} uses kind "${element.kind}", which has no firmware IR mapping.`
+      );
   }
 }
 

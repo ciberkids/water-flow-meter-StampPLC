@@ -1,6 +1,6 @@
 #include <M5StamPLC.h>
 #include <Preferences.h>
-#include <eModbus.h>
+#include <ModbusServerRTU.h>
 #include <esp_system.h>
 
 #include <cstdint>
@@ -139,16 +139,42 @@ ModbusMessage handleWriteMultiple(ModbusMessage request) {
 
 }  // namespace
 
+namespace {
+
+// M5StamPLC 1.2.0 removed the bulk `IO.getDigitalInput()` accessor; the only
+// public input API is per-channel readPlcInput(ch), which performs one I2C
+// expander read each. That makes a full 8-channel sample eight I2C
+// transactions instead of one.
+//
+// PERFORMANCE WARNING: this lowers the achievable pollingRate_kHz roughly
+// 8-fold, and pollingRate_kHz is what the Nyquist check in
+// ModbusManager::meetsNyquistLimit() budgets against
+// (pollingRate_kHz * 1000 >= 2 * f_theoretical). Measure the real rate on
+// hardware before trusting the sensor configuration limits. Recovering the
+// single-transaction read needs a bulk register read on the PI4IOE5V6408
+// expander, which M5StamPLC keeps private.
+uint8_t readDigitalInputBitmap() {
+  uint8_t bitmap = 0;
+  for (uint8_t channel = 0; channel < kNumSensors; ++channel) {
+    if (M5StamPLC.readPlcInput(channel)) {
+      bitmap |= static_cast<uint8_t>(1u << channel);
+    }
+  }
+  return bitmap;
+}
+
+}  // namespace
+
 //===================================================================
 // TASK 1: Dedicated Flow Meter Polling (runs on Core 0)
 //===================================================================
 void pollingTaskCode(void * pvParameters) {
-  byte lastPinStates = M5StamPLC.IO.getDigitalInput();
+  uint8_t lastPinStates = readDigitalInputBitmap();
   uint32_t loopCounter = 0;
   unsigned long lastRateCalcTime = millis();
 
   for (;;) {
-    byte currentPinStates = M5StamPLC.IO.getDigitalInput();
+    uint8_t currentPinStates = readDigitalInputBitmap();
     for (std::size_t i = 0; i < kNumSensors; ++i) {
       if (sensors[i].inUse) {
         if ((currentPinStates & (1 << i)) && !(lastPinStates & (1 << i))) {
@@ -259,6 +285,14 @@ void logicTaskCode(void * pvParameters) {
 void setup() {
   M5StamPLC.begin();
   Serial.begin(115200);
+  // A screen ID the router expects but the exported dataset does not define
+  // renders as a blank page with no other symptom, so say so at boot. The
+  // exporter's manifest-screen-coverage check is the build-time counterpart.
+  if (!uiScreenRouter.isFullyResolved()) {
+    Serial.println(
+        "[ui] ERROR: generated UI assets are missing screens the router requires. "
+        "Re-run the UI exporter (npm run export:firmware).");
+  }
   uiRenderer.bindScreenRouter(&uiScreenRouter);
   uiRenderer.bindBindingResolver(&uiBindingResolver);
   uiRenderer.applyTheme(kUiAssets.palette);

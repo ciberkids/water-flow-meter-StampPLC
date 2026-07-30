@@ -1078,7 +1078,7 @@ export function App() {
         const next = [
           {
             ...entry,
-            functionName: entry.functionName ?? actionDefinition?.name,
+            functionName: entry.functionName ?? actionDefinition?.label,
             timestamp: entry.timestamp ?? Date.now()
           },
           ...current
@@ -1113,7 +1113,7 @@ export function App() {
         recordTraceEntry({
           id: "ui.mock.value-edit",
           label: "Value edited",
-          functionName: actionCatalog.get("ui.mock.value-edit")?.name,
+          functionName: actionCatalog.get("ui.mock.value-edit")?.label,
           trigger: `value.edit.${element.id}`,
           screenId,
           screenName: selectedScreen?.name,
@@ -1156,7 +1156,7 @@ export function App() {
       recordTraceEntry({
         id: "ui.mock.value-save",
         label: "Value saved",
-        functionName: actionCatalog.get("ui.mock.value-save")?.name,
+        functionName: actionCatalog.get("ui.mock.value-save")?.label,
         trigger: `value.save.${element.id}`,
         screenId,
         screenName: selectedScreen?.name,
@@ -1165,7 +1165,7 @@ export function App() {
       recordTraceEntry({
         id: "core.action.save-config",
         label: "Save configuration",
-        functionName: actionCatalog.get("core.action.save-config")?.name,
+        functionName: actionCatalog.get("core.action.save-config")?.label,
         trigger: `value.save.${element.id}`,
         screenId,
         screenName: selectedScreen?.name,
@@ -1262,7 +1262,7 @@ export function App() {
           recordTraceEntry({
             id: flow.actionId ?? "ui.action.unassigned",
             label: flow.label,
-            functionName: actionDefinition?.name,
+            functionName: actionDefinition?.label,
             trigger: `${event.button}.${event.kind}`,
             screenId: selectedScreen?.id ?? "unknown",
             screenName: selectedScreen?.name,
@@ -1272,7 +1272,7 @@ export function App() {
           previewTransition({
             targetScreenId: flow.targetScreenId,
             actionId: flow.actionId,
-            actionLabel: actionDefinition?.name ?? flow.label,
+            actionLabel: actionDefinition?.label ?? flow.label,
             triggerLabel,
             effect
           });

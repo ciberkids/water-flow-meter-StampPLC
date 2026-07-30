@@ -1,0 +1,5 @@
+# PlatformIO build tree — regenerated inside the container, and huge.
+.pio/
+# Editor/agent scaffolding, irrelevant to the build.
+.vscode/
+*.code-workspace

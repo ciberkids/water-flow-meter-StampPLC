@@ -85,8 +85,16 @@ void UiRenderer::update(uint32_t nowMs, const UiRenderContext& context) {
   lastRenderMs_ = nowMs;
   M5StamPLC.setBacklight(true);
 
-  const ui_exporter::Screen* screen = screenRouter_->screenForMode(context.mode);
+  const ui_exporter::Screen* screen = screenRouter_->screenForMode(context.mode, context.page);
   if (!screen) {
+    // Previously a silent `return`, which rendered an empty screen and gave no
+    // hint that the exported dataset was missing the ID the router asked for.
+    // A dataset/firmware screen-ID mismatch must be visible on the device.
+    auto& display = M5StamPLC.Display;
+    display.startWrite();
+    display.fillScreen(backgroundColor_);
+    drawAssetError(context);
+    display.endWrite();
     return;
   }
 
@@ -268,6 +276,29 @@ uint16_t UiRenderer::colorForText(const ui_exporter::Element& element,
     color = context.hasWarnings ? warningColor_ : legendColor_;
   }
   return color;
+}
+
+void UiRenderer::drawAssetError(const UiRenderContext& context) {
+  auto& display = M5StamPLC.Display;
+  display.setTextSize(1);
+  display.setTextColor(warningColor_, backgroundColor_);
+  display.setCursor(4, 4);
+  display.print("UI ASSET ERROR");
+  display.setTextColor(textColor_, backgroundColor_);
+  display.setCursor(4, 20);
+  display.print("No screen for");
+  char detail[40];
+  std::snprintf(detail,
+                sizeof(detail),
+                "mode %u page %u",
+                static_cast<unsigned>(context.mode),
+                static_cast<unsigned>(context.page));
+  display.setCursor(4, 32);
+  display.print(detail);
+  display.setCursor(4, 52);
+  display.print("Re-run the UI");
+  display.setCursor(4, 64);
+  display.print("exporter.");
 }
 
 void UiRenderer::drawWarningBanner(const UiRenderContext& context) {

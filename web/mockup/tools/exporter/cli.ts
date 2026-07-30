@@ -8,9 +8,7 @@ import { spawn } from "node:child_process";
 import { ensureValidDataset, ensureValidTheme, ExportValidationError } from "./schema.js";
 import { buildIntermediateRepresentation } from "./ir.js";
 import { emitCpp } from "./cppEmitter.js";
-import { emitUiEvents } from "./eventEmitter.js";
-import { emitUiBindings } from "./valueEmitter.js";
-import { runExportValidations } from "./validation.js";
+import { checkRenderableElementKinds, runExportValidations } from "./validation.js";
 import { loadManifest } from "./manifestLoader.js";
 import type {
   AutomationCheck,
@@ -26,6 +24,7 @@ interface CliOptions {
   out: string;
   dryRun: boolean;
   manifest?: string;
+  allowMissingToolchain: boolean;
 }
 
 interface CommandResult {
@@ -114,16 +113,19 @@ async function writeOutputs(ir: ExportIR, outDir: string, dryRun: boolean) {
   }
   await prepareOutputDirectory(outDir);
   const { header, source, metadataJson } = emitCpp(ir);
-  const eventsSource = emitUiEvents(ir);
-  const { header: bindingsHeader, source: bindingsSource } = emitUiBindings(ir);
+
+  // NOTE: emitUiEvents/emitUiBindings are deliberately NOT written into the
+  // firmware tree. They emit per-screen UpdateValues_*/RegisterEvents_* functions
+  // against headers that do not exist (FirmwareAction.h, ScreenManager.h,
+  // FirmwareValues.h) and duplicate the runtime mechanism the firmware actually
+  // uses (ui/core/ui_bindings.cpp resolving bindingId against UiRenderContext,
+  // ui/core/ui_actions.cpp dispatching actionId). Writing them here put
+  // uncompilable translation units into src/ui/generated/.
 
   const irJson = JSON.stringify(ir, null, 2);
   await Promise.all([
     fs.writeFile(path.join(outDir, "GeneratedUi.h"), header, "utf-8"),
     fs.writeFile(path.join(outDir, "GeneratedUi.cpp"), source, "utf-8"),
-    fs.writeFile(path.join(outDir, "ui_events.cpp"), eventsSource, "utf-8"),
-    fs.writeFile(path.join(outDir, "ui_bindings.h"), bindingsHeader, "utf-8"),
-    fs.writeFile(path.join(outDir, "ui_bindings.cpp"), bindingsSource, "utf-8"),
     fs.writeFile(path.join(outDir, "ui_export_metadata.json"), metadataJson, "utf-8"),
     fs.writeFile(path.join(outDir, "ui_export_ir.json"), irJson, "utf-8")
   ]);
@@ -141,6 +143,11 @@ function parseCliArgs(projectRoot: string, workspaceRoot: string): CliOptions {
     "generated"
   );
   const outDefault = path.relative(projectRoot, outDefaultPath);
+  // The manifest is the firmware's declared action/value vocabulary. It defaults
+  // to the checked-in copy so binding coverage is always enforced; passing an
+  // empty --manifest explicitly is the only way to skip it.
+  const manifestDefaultPath = path.join(workspaceRoot, "src", "data", "actionManifest.json");
+  const manifestDefault = path.relative(projectRoot, manifestDefaultPath);
 
   const { values } = parseArgs({
     options: {
@@ -148,7 +155,8 @@ function parseCliArgs(projectRoot: string, workspaceRoot: string): CliOptions {
       theme: { type: "string", default: themeDefault },
       out: { type: "string", default: outDefault },
       "dry-run": { type: "boolean", default: false },
-      manifest: { type: "string", default: "" }
+      manifest: { type: "string", default: manifestDefault },
+      "allow-missing-toolchain": { type: "boolean", default: false }
     }
   });
 
@@ -157,7 +165,8 @@ function parseCliArgs(projectRoot: string, workspaceRoot: string): CliOptions {
     theme: values.theme ? resolvePath(projectRoot, values.theme as string) : undefined,
     out: resolvePath(projectRoot, values.out as string),
     dryRun: Boolean(values["dry-run"]),
-    manifest: (values.manifest as string) ? resolvePath(projectRoot, values.manifest as string) : undefined
+    manifest: (values.manifest as string) ? resolvePath(projectRoot, values.manifest as string) : undefined,
+    allowMissingToolchain: Boolean(values["allow-missing-toolchain"])
   };
 }
 
@@ -191,17 +200,62 @@ async function runCommand(command: string, args: string[], cwd: string): Promise
   });
 }
 
-async function runPlatformioCheck(projectRoot: string): Promise<AutomationCheck> {
+/** Firmware build image produced by `podman build -t stampplc-fw .`. */
+const kFirmwareImage = "stampplc-fw";
+
+/** True when a container runtime failed because the firmware image is absent. */
+function isMissingImageError(log: string): boolean {
+  return /image not known|manifest unknown|Unable to find image|no such image|repository .* not found/i.test(
+    log
+  );
+}
+
+/**
+ * Ways to compile-check the generated assets, in preference order: a local
+ * PlatformIO install first, then the containerised toolchain. The container
+ * fallback matters because without it a machine with no local `pio` can only
+ * ever waive this check — which is how unverified output shipped before.
+ */
+function compileRunners(firmwareDir: string): Array<{ command: string; args: string[] }> {
+  const pioArgs = ["run", "-e", "m5stack-stamplc"];
+  const mount = `${firmwareDir}:/workspace:Z`;
+  return [
+    { command: "platformio", args: pioArgs },
+    { command: "pio", args: pioArgs },
+    {
+      command: "podman",
+      args: ["run", "--rm", "-v", mount, "-w", "/workspace", kFirmwareImage, "pio", ...pioArgs]
+    },
+    {
+      command: "docker",
+      args: ["run", "--rm", "-v", mount, "-w", "/workspace", kFirmwareImage, "pio", ...pioArgs]
+    }
+  ];
+}
+
+async function runPlatformioCheck(
+  projectRoot: string,
+  allowMissingToolchain: boolean
+): Promise<AutomationCheck> {
   const firmwareDir = path.join(projectRoot, "Water-Flow-Meter-PlatformIO");
-  const candidates = ["platformio", "pio"];
+  const candidates = compileRunners(firmwareDir);
   let missingExecutables = 0;
 
-  for (const executable of candidates) {
+  for (const runner of candidates) {
     try {
       const start = process.hrtime.bigint();
-      const result = await runCommand(executable, ["run", "-e", "m5stack-stamplc"], firmwareDir);
+      const result = await runCommand(runner.command, runner.args, firmwareDir);
       const durationMs = Number(process.hrtime.bigint() - start) / 1_000_000;
       const log = collectOutput(result.stdout, result.stderr);
+
+      // A container runtime that exists but has no firmware image is an
+      // unavailable runner, not a compile failure. Fall through to the next one
+      // rather than blaming the generated code.
+      if (result.code !== 0 && isMissingImageError(log)) {
+        missingExecutables += 1;
+        continue;
+      }
+
       if (result.code === 0) {
         return {
           id: "platformio-compile",
@@ -231,18 +285,35 @@ async function runPlatformioCheck(projectRoot: string): Promise<AutomationCheck>
     }
   }
 
-  const message =
-    missingExecutables === candidates.length
-      ? "PlatformIO CLI not found in PATH. Install platformio to enable compile checks."
-      : "PlatformIO command was not available.";
+  // A missing toolchain used to degrade to "warning" while the overall export
+  // still reported status "ok" — that is how an uncompilable GeneratedUi.h
+  // shipped. Unverifiable output is now a failure unless explicitly waived.
+  const baseMessage =
+    "No usable firmware toolchain found, so the generated assets could not be compile-checked. " +
+    "Tried: platformio, pio, and the containerised build " +
+    `(podman/docker run ${kFirmwareImage}).`;
+  const remedy =
+    "Install PlatformIO, or build the firmware image once with: " +
+    `cd Water-Flow-Meter-PlatformIO && podman build -t ${kFirmwareImage} .`;
+
+  if (allowMissingToolchain) {
+    return {
+      id: "platformio-compile",
+      title: "PlatformIO compile check",
+      status: "warning",
+      message: `${baseMessage} Waived via --allow-missing-toolchain.`,
+      command: "platformio run -e m5stack-stamplc",
+      details: `The exported C++ has NOT been verified to compile. ${remedy}`
+    };
+  }
 
   return {
     id: "platformio-compile",
     title: "PlatformIO compile check",
-    status: "warning",
-    message,
+    status: "fail",
+    message: `${baseMessage} Pass --allow-missing-toolchain to export without verification.`,
     command: "platformio run -e m5stack-stamplc",
-    details: message
+    details: remedy
   };
 }
 
@@ -268,6 +339,20 @@ async function run() {
     const themeTokens = options.theme
       ? ensureValidTheme(await readJsonFile(options.theme))
       : dataset.theme;
+
+    // Must run before buildIntermediateRepresentation: the IR converter throws a
+    // bare Error on an unmappable element kind, so checking first is what turns
+    // that into a reportable validation failure instead of a stack trace.
+    const kindCheck = checkRenderableElementKinds(dataset);
+    if (kindCheck.status === "fail") {
+      throw new ExportValidationError("Post-export validation failed", [kindCheck.message], {
+        status: "fail",
+        checks: [kindCheck],
+        issues: [kindCheck.message],
+        log: `[FAIL] ${kindCheck.title} — ${kindCheck.message}\n${kindCheck.recommendation ?? ""}`
+      });
+    }
+
     const ir = buildIntermediateRepresentation(dataset, themeTokens);
 
     // Load manifest (optional) and build the manifest status summary.
@@ -326,7 +411,7 @@ async function run() {
 
     let compilationReport: AutomationCheck;
     if (!options.dryRun) {
-      compilationReport = await runPlatformioCheck(projectRoot);
+      compilationReport = await runPlatformioCheck(projectRoot, options.allowMissingToolchain);
       if (compilationReport.status === "fail") {
         if (backupLocation) {
           await restoreGeneratedAssets(backupLocation, options.out);
@@ -371,11 +456,19 @@ async function run() {
       backup: options.dryRun ? null : backupLocation
     };
 
+    // "ok" means the output was verified. Anything the pipeline could not verify
+    // (unwaived compile check, validation warnings) must not read as a clean pass.
+    const warnings = [
+      ...validationReport.checks.filter((check) => check.status === "warning"),
+      ...(compilationReport.status === "warning" ? [compilationReport] : [])
+    ].map((check) => `${check.title}: ${check.message}`);
+
     console.log(
       JSON.stringify(
         {
-          status: "ok",
+          status: warnings.length > 0 ? "ok-with-warnings" : "ok",
           summary,
+          warnings,
           validation: validationReport,
           manifest: manifestSummary,
           backup: backupSummary,

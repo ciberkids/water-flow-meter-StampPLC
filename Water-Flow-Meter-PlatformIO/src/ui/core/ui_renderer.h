@@ -35,6 +35,7 @@ class UiRenderer {
   void drawIconElement(const ui_exporter::Element& element, const UiRenderContext& context);
   void drawFlowDots(const ui_exporter::Element& element, const UiRenderContext& context);
   void drawWarningBanner(const UiRenderContext& context);
+  void drawAssetError(const UiRenderContext& context);
   int16_t measureTextWidth(const ui_exporter::Element& element, const char* text) const;
   int16_t glyphWidthFor(const ui_exporter::Element& element) const;
   uint16_t colorForText(const ui_exporter::Element& element,
