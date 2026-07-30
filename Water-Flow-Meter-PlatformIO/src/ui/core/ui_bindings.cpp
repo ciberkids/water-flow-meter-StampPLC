@@ -23,6 +23,7 @@ const char* pageTitle(UiPage page) {
     case UiPage::SessionCubicMeters: return "Session m^3";
     case UiPage::MaxFlow: return "Max Flow";
     case UiPage::EnterConfiguration: return "Enter Configuration";
+    case UiPage::FactoryReset: return "Factory Reset";
     default: return "";
   }
 }

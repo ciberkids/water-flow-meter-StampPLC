@@ -78,7 +78,9 @@ const timeoutTriggerSchema: JSONSchemaType<TimeoutFlowTrigger> = {
   required: ["type", "durationMs"],
   properties: {
     type: { type: "string", const: "timeout" },
-    durationMs: { type: "integer", minimum: 1 }
+    durationMs: { type: "integer", minimum: 1 },
+    // "enter" = hold countdown (aborts on release); null/absent = auto timeout.
+    holdButton: { type: "string", enum: ["up", "down", "enter"], nullable: true }
   }
 };
 

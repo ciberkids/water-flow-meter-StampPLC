@@ -16,6 +16,7 @@ constexpr const char* kInfoScreenIds[] = {
     "info-p5-session-m3",          // UiPage::SessionCubicMeters
     "info-p6-max-flow",            // UiPage::MaxFlow
     "info-p7-enter-config",        // UiPage::EnterConfiguration
+    "info-p8-factory-reset",       // UiPage::FactoryReset
 };
 
 static_assert(sizeof(kInfoScreenIds) / sizeof(kInfoScreenIds[0]) ==
@@ -25,7 +26,7 @@ static_assert(sizeof(kInfoScreenIds) / sizeof(kInfoScreenIds[0]) ==
 // Configuration mode currently lands on its first page. Paging across
 // C1..C7/S1..S4 needs the edit-state model that UiController does not have yet.
 constexpr const char* kConfigurationScreenId = "config-c1-modbus-id";
-constexpr const char* kFactoryResetCountdownScreenId = "countdown-factory-reset";
+constexpr const char* kFactoryResetCountdownScreenId = "confirm-factory-reset";
 
 }  // namespace
 

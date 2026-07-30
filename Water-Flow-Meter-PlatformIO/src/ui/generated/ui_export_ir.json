@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-07-30T14:07:12.820Z",
-  "screenCount": 27,
-  "elementCount": 232,
+  "generatedAt": "2026-07-30T14:13:13.571Z",
+  "screenCount": 48,
+  "elementCount": 381,
   "dataset": [
     {
       "id": "info-p0-global-status",
@@ -75,7 +75,7 @@
           "id": "footer-hint",
           "position": {
             "x": 2,
-            "y": 226
+            "y": 124
           },
           "kind": {
             "type": "text",
@@ -84,6 +84,24 @@
               "emphasis": "muted",
               "align": "left"
             }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
           }
         }
       ],
@@ -108,7 +126,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "info-p7-enter-config",
+          "targetScreenId": "info-p8-factory-reset",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -545,7 +563,7 @@
           "id": "divider-2",
           "position": {
             "x": 0,
-            "y": 130
+            "y": 124
           },
           "kind": {
             "type": "box",
@@ -563,7 +581,7 @@
           "id": "legend-led",
           "position": {
             "x": 2,
-            "y": 133
+            "y": 124
           },
           "kind": {
             "type": "text",
@@ -579,7 +597,7 @@
           "id": "footer-hint",
           "position": {
             "x": 2,
-            "y": 226
+            "y": 124
           },
           "kind": {
             "type": "text",
@@ -588,6 +606,24 @@
               "emphasis": "muted",
               "align": "left"
             }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
           }
         }
       ],
@@ -937,7 +973,7 @@
           "id": "footer-hint",
           "position": {
             "x": 2,
-            "y": 226
+            "y": 124
           },
           "kind": {
             "type": "text",
@@ -963,6 +999,24 @@
             }
           },
           "binding": "diagnostics.undersampling"
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
         }
       ],
       "events": [],
@@ -990,14 +1044,26 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-reset-all",
-          "label": "Reset all hold countdown",
+          "id": "f-enter",
+          "label": "Open",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-totals",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Back to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-reset-all"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -1310,7 +1376,7 @@
           "id": "footer-hint",
           "position": {
             "x": 2,
-            "y": 226
+            "y": 124
           },
           "kind": {
             "type": "text",
@@ -1336,6 +1402,24 @@
             }
           },
           "binding": "diagnostics.undersampling"
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
         }
       ],
       "events": [],
@@ -1363,14 +1447,26 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-reset-all",
-          "label": "Reset all hold countdown",
+          "id": "f-enter",
+          "label": "Open",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-totals",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Back to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-reset-all"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -1681,7 +1777,7 @@
           "id": "footer-hint",
           "position": {
             "x": 2,
-            "y": 226
+            "y": 124
           },
           "kind": {
             "type": "text",
@@ -1690,6 +1786,24 @@
               "emphasis": "muted",
               "align": "left"
             }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
           }
         }
       ],
@@ -1718,14 +1832,26 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-countdown",
-          "label": "Session reset hold countdown",
+          "id": "f-enter",
+          "label": "Open",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-session",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Back to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-reset-session"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -2020,7 +2146,7 @@
           "id": "footer-hint",
           "position": {
             "x": 2,
-            "y": 226
+            "y": 124
           },
           "kind": {
             "type": "text",
@@ -2046,6 +2172,24 @@
             }
           },
           "binding": "diagnostics.undersampling"
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
         }
       ],
       "events": [],
@@ -2073,14 +2217,26 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-countdown",
-          "label": "Session reset hold countdown",
+          "id": "f-enter",
+          "label": "Open",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-session",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Back to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-reset-session"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -2375,7 +2531,7 @@
           "id": "footer-hint",
           "position": {
             "x": 2,
-            "y": 226
+            "y": 124
           },
           "kind": {
             "type": "text",
@@ -2401,6 +2557,24 @@
             }
           },
           "binding": "diagnostics.undersampling"
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
         }
       ],
       "events": [],
@@ -2428,14 +2602,26 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-countdown",
-          "label": "Session reset hold countdown",
+          "id": "f-enter",
+          "label": "Open",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-session",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Back to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-reset-session"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -2514,7 +2700,7 @@
           "id": "legend-led",
           "position": {
             "x": 2,
-            "y": 214
+            "y": 124
           },
           "kind": {
             "type": "text",
@@ -2530,7 +2716,7 @@
           "id": "footer-hint",
           "position": {
             "x": 2,
-            "y": 226
+            "y": 124
           },
           "kind": {
             "type": "text",
@@ -2539,6 +2725,24 @@
               "emphasis": "muted",
               "align": "left"
             }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
           }
         }
       ],
@@ -2552,7 +2756,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "info-p0-global-status",
+          "targetScreenId": "info-p8-factory-reset",
           "actionId": "ui.action.page.next"
         },
         {
@@ -2567,731 +2771,26 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-config-countdown",
-          "label": "Config hold countdown",
+          "id": "f-enter",
+          "label": "Open",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c1-modbus-id",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Back to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-enter-config"
-        }
-      ],
-      "assets": [],
-      "animations": [],
-      "submenus": []
-    },
-    {
-      "id": "countdown-enter-config",
-      "name": "Countdown — Enter Config",
-      "description": "3 s countdown overlay. If ENTER held to zero, transitions to configuration. Release early = cancel.",
-      "elements": [
-        {
-          "id": "overlay-bg",
-          "position": {
-            "x": 0,
-            "y": 0
-          },
-          "kind": {
-            "type": "box",
-            "payload": {
-              "width": 135,
-              "height": 240
-            }
-          },
-          "size": {
-            "width": 135,
-            "height": 240
-          }
-        },
-        {
-          "id": "title",
-          "position": {
-            "x": 10,
-            "y": 80
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Entering Config…",
-              "emphasis": "strong",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "timer-value",
-          "position": {
-            "x": 50,
-            "y": 110
-          },
-          "kind": {
-            "type": "value",
-            "payload": {
-              "text": "3",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          },
-          "binding": "countdown.value"
-        },
-        {
-          "id": "hint",
-          "position": {
-            "x": 5,
-            "y": 150
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Hold ENTER. Release to cancel.",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          }
-        }
-      ],
-      "events": [],
-      "flows": [
-        {
-          "id": "f-confirm",
-          "label": "Enter config mode",
-          "trigger": {
-            "type": "timeout",
-            "durationMs": 3000
-          },
-          "targetScreenId": "config-c1-modbus-id",
-          "actionId": "ui.action.mode.configuration"
-        },
-        {
-          "id": "f-cancel",
-          "label": "Cancel",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "info-p7-enter-config"
-        }
-      ],
-      "assets": [],
-      "animations": [],
-      "submenus": []
-    },
-    {
-      "id": "countdown-reset-session",
-      "name": "Countdown — Reset Session",
-      "description": "3 s countdown overlay for resetting session counters. Release ENTER to cancel.",
-      "elements": [
-        {
-          "id": "overlay-bg",
-          "position": {
-            "x": 0,
-            "y": 0
-          },
-          "kind": {
-            "type": "box",
-            "payload": {
-              "width": 135,
-              "height": 240
-            }
-          },
-          "size": {
-            "width": 135,
-            "height": 240
-          }
-        },
-        {
-          "id": "title",
-          "position": {
-            "x": 5,
-            "y": 80
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Reset session?",
-              "emphasis": "strong",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "timer-value",
-          "position": {
-            "x": 50,
-            "y": 110
-          },
-          "kind": {
-            "type": "value",
-            "payload": {
-              "text": "3",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          },
-          "binding": "countdown.value"
-        },
-        {
-          "id": "hint",
-          "position": {
-            "x": 5,
-            "y": 150
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Hold ENTER. Release to cancel.",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          }
-        }
-      ],
-      "events": [],
-      "flows": [
-        {
-          "id": "f-confirm",
-          "label": "Reset session",
-          "trigger": {
-            "type": "timeout",
-            "durationMs": 3000
-          },
-          "targetScreenId": "info-p4-session-liters",
-          "actionId": "core.action.reset-session"
-        },
-        {
-          "id": "f-cancel",
-          "label": "Cancel",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "info-p4-session-liters"
-        }
-      ],
-      "assets": [],
-      "animations": [],
-      "submenus": []
-    },
-    {
-      "id": "countdown-reset-all",
-      "name": "Countdown — Reset All Measured",
-      "description": "30 s countdown overlay. Must hold ENTER throughout. Release early cancels.",
-      "elements": [
-        {
-          "id": "overlay-bg",
-          "position": {
-            "x": 0,
-            "y": 0
-          },
-          "kind": {
-            "type": "box",
-            "payload": {
-              "width": 135,
-              "height": 240
-            }
-          },
-          "size": {
-            "width": 135,
-            "height": 240
-          }
-        },
-        {
-          "id": "title",
-          "position": {
-            "x": 5,
-            "y": 60
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Reset all totals?",
-              "emphasis": "strong",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "warning",
-          "position": {
-            "x": 5,
-            "y": 76
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Hold ENTER to reset totals",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "timer-value",
-          "position": {
-            "x": 40,
-            "y": 100
-          },
-          "kind": {
-            "type": "value",
-            "payload": {
-              "text": "30",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          },
-          "binding": "countdown.value"
-        },
-        {
-          "id": "hint-1",
-          "position": {
-            "x": 5,
-            "y": 140
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "(30 → 0)",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "hint-2",
-          "position": {
-            "x": 5,
-            "y": 155
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Release to cancel.",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          }
-        }
-      ],
-      "events": [],
-      "flows": [
-        {
-          "id": "f-confirm",
-          "label": "Reset all measured",
-          "trigger": {
-            "type": "timeout",
-            "durationMs": 30000
-          },
-          "targetScreenId": "info-p2-cumulative-liters",
-          "actionId": "core.action.reset-all-measured"
-        },
-        {
-          "id": "f-cancel",
-          "label": "Cancel",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "info-p2-cumulative-liters"
-        }
-      ],
-      "assets": [],
-      "animations": [],
-      "submenus": []
-    },
-    {
-      "id": "countdown-factory-reset",
-      "name": "Factory Reset Countdown",
-      "description": "30 s countdown for factory reset. Hold UP+DOWN throughout. Warning overlay after 3 s.",
-      "elements": [
-        {
-          "id": "overlay-bg",
-          "position": {
-            "x": 0,
-            "y": 0
-          },
-          "kind": {
-            "type": "box",
-            "payload": {
-              "width": 135,
-              "height": 240
-            }
-          },
-          "size": {
-            "width": 135,
-            "height": 240
-          }
-        },
-        {
-          "id": "title",
-          "position": {
-            "x": 5,
-            "y": 50
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "⚠ FACTORY RESET",
-              "emphasis": "strong",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "warning-text",
-          "position": {
-            "x": 5,
-            "y": 70
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Keep holding UP+DOWN",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "warning-detail",
-          "position": {
-            "x": 5,
-            "y": 86
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Wipes NVS & Modbus config!",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "timer-value",
-          "position": {
-            "x": 40,
-            "y": 110
-          },
-          "kind": {
-            "type": "value",
-            "payload": {
-              "text": "30",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          },
-          "binding": "countdown.value"
-        },
-        {
-          "id": "timer-unit",
-          "position": {
-            "x": 70,
-            "y": 110
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "s",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "footer-hint",
-          "position": {
-            "x": 5,
-            "y": 226
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Release to cancel",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        }
-      ],
-      "events": [],
-      "flows": [
-        {
-          "id": "f-execute",
-          "label": "Execute factory reset",
-          "trigger": {
-            "type": "timeout",
-            "durationMs": 30000
-          },
-          "targetScreenId": "info-p1-instant-flow",
-          "actionId": "core.action.factory-reset"
-        },
-        {
-          "id": "f-cancel",
-          "label": "Cancel",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "info-p1-instant-flow"
-        }
-      ],
-      "assets": [],
-      "animations": [],
-      "submenus": []
-    },
-    {
-      "id": "countdown-sensor-save",
-      "name": "Save & Validate Countdown",
-      "description": "3s countdown for saving sensor settings with Nyquist validation.",
-      "elements": [
-        {
-          "id": "overlay-bg",
-          "position": {
-            "x": 0,
-            "y": 0
-          },
-          "kind": {
-            "type": "box",
-            "payload": {
-              "width": 135,
-              "height": 240
-            }
-          },
-          "size": {
-            "width": 135,
-            "height": 240
-          }
-        },
-        {
-          "id": "title",
-          "position": {
-            "x": 5,
-            "y": 60
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Save & Validate?",
-              "emphasis": "strong",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "warning",
-          "position": {
-            "x": 5,
-            "y": 76
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Hold ENTER to save",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "timer-value",
-          "position": {
-            "x": 55,
-            "y": 100
-          },
-          "kind": {
-            "type": "value",
-            "payload": {
-              "text": "3",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          },
-          "binding": "countdown.value"
-        },
-        {
-          "id": "timer-unit",
-          "position": {
-            "x": 72,
-            "y": 100
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "s",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "footer-hint",
-          "position": {
-            "x": 5,
-            "y": 226
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Release to cancel",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        }
-      ],
-      "events": [],
-      "flows": [
-        {
-          "id": "f-confirm",
-          "label": "Save sensor settings",
-          "trigger": {
-            "type": "timeout",
-            "durationMs": 3000
-          },
-          "targetScreenId": "config-s1-connected",
-          "actionId": "config.action.sensor.save"
-        },
-        {
-          "id": "f-cancel",
-          "label": "Cancel",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-s1-connected"
-        }
-      ],
-      "assets": [],
-      "animations": [],
-      "submenus": []
-    },
-    {
-      "id": "countdown-config-exit",
-      "name": "Exit Configuration Countdown",
-      "description": "3s countdown to exit config. Release before 1.5s cancels; hold to 3s exits to idle.",
-      "elements": [
-        {
-          "id": "overlay-bg",
-          "position": {
-            "x": 0,
-            "y": 0
-          },
-          "kind": {
-            "type": "box",
-            "payload": {
-              "width": 135,
-              "height": 240
-            }
-          },
-          "size": {
-            "width": 135,
-            "height": 240
-          }
-        },
-        {
-          "id": "title",
-          "position": {
-            "x": 5,
-            "y": 60
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Exit Configuration?",
-              "emphasis": "strong",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "warning",
-          "position": {
-            "x": 5,
-            "y": 76
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Hold ENTER to exit",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "timer-value",
-          "position": {
-            "x": 55,
-            "y": 100
-          },
-          "kind": {
-            "type": "value",
-            "payload": {
-              "text": "3",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          },
-          "binding": "countdown.value"
-        },
-        {
-          "id": "timer-unit",
-          "position": {
-            "x": 72,
-            "y": 100
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "s",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "footer-hint",
-          "position": {
-            "x": 5,
-            "y": 226
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Release to cancel",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        }
-      ],
-      "events": [],
-      "flows": [
-        {
-          "id": "f-confirm",
-          "label": "Exit to info mode",
-          "trigger": {
-            "type": "timeout",
-            "durationMs": 3000
-          },
-          "targetScreenId": "state-idle",
-          "actionId": "ui.action.mode.info"
-        },
-        {
-          "id": "f-cancel",
-          "label": "Cancel",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c1-modbus-id"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -3312,13 +2811,13 @@
           "kind": {
             "type": "box",
             "payload": {
-              "width": 135,
-              "height": 240
+              "width": 240,
+              "height": 135
             }
           },
           "size": {
-            "width": 135,
-            "height": 240
+            "width": 240,
+            "height": 135
           }
         },
         {
@@ -3386,7 +2885,7 @@
           "id": "option-up",
           "position": {
             "x": 5,
-            "y": 130
+            "y": 124
           },
           "kind": {
             "type": "text",
@@ -3401,7 +2900,7 @@
           "id": "option-down",
           "position": {
             "x": 5,
-            "y": 150
+            "y": 124
           },
           "kind": {
             "type": "text",
@@ -3416,7 +2915,7 @@
           "id": "footer-hint",
           "position": {
             "x": 5,
-            "y": 226
+            "y": 124
           },
           "kind": {
             "type": "text",
@@ -3438,7 +2937,8 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-s4-max-flow"
+          "targetScreenId": "config-s4-max-flow",
+          "actionId": "ui.action.nav.back"
         },
         {
           "id": "f-force-save",
@@ -3449,7 +2949,7 @@
             "gesture": "short"
           },
           "targetScreenId": "config-s1-connected",
-          "actionId": "config.action.sensor.save"
+          "actionId": "config.action.value.commit-override"
         }
       ],
       "assets": [],
@@ -3487,8 +2987,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "info-p1-instant-flow",
-          "actionId": "ui.action.mode.info"
+          "targetScreenId": "info-p0-global-status"
         },
         {
           "id": "f-wake-up",
@@ -3498,8 +2997,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "info-p1-instant-flow",
-          "actionId": "ui.action.mode.info"
+          "targetScreenId": "info-p0-global-status"
         },
         {
           "id": "f-wake-down",
@@ -3509,8 +3007,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "info-p1-instant-flow",
-          "actionId": "ui.action.mode.info"
+          "targetScreenId": "info-p0-global-status"
         }
       ],
       "assets": [],
@@ -3519,20 +3016,20 @@
     },
     {
       "id": "config-c1-modbus-id",
-      "name": "C1 — Modbus Slave ID",
-      "description": "Configure the Modbus slave ID (1–255). Short ENTER edits, confirm to apply.",
+      "name": "C1 — Modbus ID",
+      "description": "Config root entry C1. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
           "position": {
-            "x": 2,
+            "x": 8,
             "y": 2
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Config: Modbus ID",
-              "emphasis": "strong",
+              "text": "Config > Modbus ID",
+              "emphasis": "normal",
               "align": "left"
             }
           }
@@ -3540,14 +3037,14 @@
         {
           "id": "field-label",
           "position": {
-            "x": 4,
-            "y": 90
+            "x": 8,
+            "y": 30
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Slave ID (1–255)",
-              "emphasis": "normal",
+              "text": "Current",
+              "emphasis": "muted",
               "align": "left"
             }
           }
@@ -3555,8 +3052,8 @@
         {
           "id": "field-value",
           "position": {
-            "x": 4,
-            "y": 104
+            "x": 8,
+            "y": 50
           },
           "kind": {
             "type": "value",
@@ -3571,16 +3068,34 @@
         {
           "id": "footer-hint",
           "position": {
-            "x": 2,
-            "y": 226
+            "x": 8,
+            "y": 124
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "ENTER=edit  ↑↓=adjust  Long=exit",
+              "text": "UP/DN page  ENTER edit  hold ENTER exit",
               "emphasis": "muted",
               "align": "left"
             }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
           }
         }
       ],
@@ -3588,46 +3103,47 @@
       "flows": [
         {
           "id": "f-next",
-          "label": "Next config",
+          "label": "Next entry",
           "trigger": {
             "type": "button",
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "config-c2-baud-rate"
+          "targetScreenId": "config-c2-baud-rate",
+          "actionId": "ui.action.page.next"
         },
         {
           "id": "f-prev",
-          "label": "Prev config",
+          "label": "Previous entry",
           "trigger": {
             "type": "button",
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-c7-sensor-select"
+          "targetScreenId": "config-root-back",
+          "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-edit",
-          "label": "Edit field",
+          "id": "f-enter",
+          "label": "Edit value",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "short"
           },
-          "actionId": "config.action.field.edit",
-          "actionParams": {
-            "fieldId": "modbusSlaveId"
-          }
+          "targetScreenId": "config-c1-modbus-id-edit",
+          "actionId": "ui.action.nav.descend"
         },
         {
-          "id": "f-exit",
-          "label": "Exit config",
+          "id": "f-escape",
+          "label": "Exit to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-config-exit"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -3637,19 +3153,19 @@
     {
       "id": "config-c2-baud-rate",
       "name": "C2 — Baud Rate",
-      "description": "Select baud rate from {1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200}.",
+      "description": "Config root entry C2. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
           "position": {
-            "x": 2,
+            "x": 8,
             "y": 2
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Config: Baud Rate",
-              "emphasis": "strong",
+              "text": "Config > Baud Rate",
+              "emphasis": "normal",
               "align": "left"
             }
           }
@@ -3657,14 +3173,14 @@
         {
           "id": "field-label",
           "position": {
-            "x": 4,
-            "y": 90
+            "x": 8,
+            "y": 30
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Baud Rate",
-              "emphasis": "normal",
+              "text": "Current",
+              "emphasis": "muted",
               "align": "left"
             }
           }
@@ -3672,8 +3188,8 @@
         {
           "id": "field-value",
           "position": {
-            "x": 4,
-            "y": 104
+            "x": 8,
+            "y": 50
           },
           "kind": {
             "type": "value",
@@ -3688,16 +3204,34 @@
         {
           "id": "footer-hint",
           "position": {
-            "x": 2,
-            "y": 226
+            "x": 8,
+            "y": 124
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "ENTER=cycle  Long=exit config",
+              "text": "UP/DN page  ENTER edit  hold ENTER exit",
               "emphasis": "muted",
               "align": "left"
             }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
           }
         }
       ],
@@ -3705,46 +3239,47 @@
       "flows": [
         {
           "id": "f-next",
-          "label": "Next config",
+          "label": "Next entry",
           "trigger": {
             "type": "button",
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "config-c3-parity"
+          "targetScreenId": "config-c3-parity",
+          "actionId": "ui.action.page.next"
         },
         {
           "id": "f-prev",
-          "label": "Prev config",
+          "label": "Previous entry",
           "trigger": {
             "type": "button",
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-c1-modbus-id"
+          "targetScreenId": "config-c1-modbus-id",
+          "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-edit",
-          "label": "Cycle baud rate",
+          "id": "f-enter",
+          "label": "Edit value",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "short"
           },
-          "actionId": "config.action.field.edit",
-          "actionParams": {
-            "fieldId": "baudRate"
-          }
+          "targetScreenId": "config-c2-baud-rate-edit",
+          "actionId": "ui.action.nav.descend"
         },
         {
-          "id": "f-exit",
-          "label": "Exit config",
+          "id": "f-escape",
+          "label": "Exit to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-config-exit"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -3754,19 +3289,19 @@
     {
       "id": "config-c3-parity",
       "name": "C3 — Parity",
-      "description": "Select parity: None, Even, Odd. Displays UART frame summary e.g. 8E1.",
+      "description": "Config root entry C3. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
           "position": {
-            "x": 2,
+            "x": 8,
             "y": 2
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Config: Parity",
-              "emphasis": "strong",
+              "text": "Config > Parity",
+              "emphasis": "normal",
               "align": "left"
             }
           }
@@ -3774,14 +3309,14 @@
         {
           "id": "field-label",
           "position": {
-            "x": 4,
-            "y": 90
+            "x": 8,
+            "y": 30
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Parity",
-              "emphasis": "normal",
+              "text": "Current",
+              "emphasis": "muted",
               "align": "left"
             }
           }
@@ -3789,8 +3324,8 @@
         {
           "id": "field-value",
           "position": {
-            "x": 4,
-            "y": 104
+            "x": 8,
+            "y": 50
           },
           "kind": {
             "type": "value",
@@ -3803,34 +3338,36 @@
           "binding": "config.parity"
         },
         {
-          "id": "frame-summary",
-          "position": {
-            "x": 4,
-            "y": 118
-          },
-          "kind": {
-            "type": "value",
-            "payload": {
-              "text": "",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          },
-          "binding": "config.uartFrameSummary"
-        },
-        {
           "id": "footer-hint",
           "position": {
-            "x": 2,
-            "y": 226
+            "x": 8,
+            "y": 124
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "ENTER=cycle  Long=exit config",
+              "text": "UP/DN page  ENTER edit  hold ENTER exit",
               "emphasis": "muted",
               "align": "left"
             }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
           }
         }
       ],
@@ -3838,46 +3375,47 @@
       "flows": [
         {
           "id": "f-next",
-          "label": "Next config",
+          "label": "Next entry",
           "trigger": {
             "type": "button",
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "config-c4-stop-bits"
+          "targetScreenId": "config-c4-stop-bits",
+          "actionId": "ui.action.page.next"
         },
         {
           "id": "f-prev",
-          "label": "Prev config",
+          "label": "Previous entry",
           "trigger": {
             "type": "button",
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-c2-baud-rate"
+          "targetScreenId": "config-c2-baud-rate",
+          "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-edit",
-          "label": "Cycle parity",
+          "id": "f-enter",
+          "label": "Edit value",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "short"
           },
-          "actionId": "config.action.field.edit",
-          "actionParams": {
-            "fieldId": "parity"
-          }
+          "targetScreenId": "config-c3-parity-edit",
+          "actionId": "ui.action.nav.descend"
         },
         {
-          "id": "f-exit",
-          "label": "Exit config",
+          "id": "f-escape",
+          "label": "Exit to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-config-exit"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -3887,19 +3425,19 @@
     {
       "id": "config-c4-stop-bits",
       "name": "C4 — Stop Bits",
-      "description": "Toggle stop bits between 1 and 2.",
+      "description": "Config root entry C4. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
           "position": {
-            "x": 2,
+            "x": 8,
             "y": 2
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Config: Stop Bits",
-              "emphasis": "strong",
+              "text": "Config > Stop Bits",
+              "emphasis": "normal",
               "align": "left"
             }
           }
@@ -3907,14 +3445,14 @@
         {
           "id": "field-label",
           "position": {
-            "x": 4,
-            "y": 90
+            "x": 8,
+            "y": 30
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Stop Bits",
-              "emphasis": "normal",
+              "text": "Current",
+              "emphasis": "muted",
               "align": "left"
             }
           }
@@ -3922,8 +3460,8 @@
         {
           "id": "field-value",
           "position": {
-            "x": 4,
-            "y": 104
+            "x": 8,
+            "y": 50
           },
           "kind": {
             "type": "value",
@@ -3938,16 +3476,34 @@
         {
           "id": "footer-hint",
           "position": {
-            "x": 2,
-            "y": 226
+            "x": 8,
+            "y": 124
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "ENTER=toggle  Long=exit config",
+              "text": "UP/DN page  ENTER edit  hold ENTER exit",
               "emphasis": "muted",
               "align": "left"
             }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
           }
         }
       ],
@@ -3955,46 +3511,47 @@
       "flows": [
         {
           "id": "f-next",
-          "label": "Next config",
+          "label": "Next entry",
           "trigger": {
             "type": "button",
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "config-c5-led-pulse-vol"
+          "targetScreenId": "config-c5-led-pulse-vol",
+          "actionId": "ui.action.page.next"
         },
         {
           "id": "f-prev",
-          "label": "Prev config",
+          "label": "Previous entry",
           "trigger": {
             "type": "button",
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-c3-parity"
+          "targetScreenId": "config-c3-parity",
+          "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-edit",
-          "label": "Toggle stop bits",
+          "id": "f-enter",
+          "label": "Edit value",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "short"
           },
-          "actionId": "config.action.field.edit",
-          "actionParams": {
-            "fieldId": "stopBits"
-          }
+          "targetScreenId": "config-c4-stop-bits-edit",
+          "actionId": "ui.action.nav.descend"
         },
         {
-          "id": "f-exit",
-          "label": "Exit config",
+          "id": "f-escape",
+          "label": "Exit to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-config-exit"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -4004,19 +3561,19 @@
     {
       "id": "config-c5-led-pulse-vol",
       "name": "C5 — LED Pulse Volume",
-      "description": "Set the LED pulse volume trigger: 1 L, 10 L, or 100 L. Maps to Modbus register 31.",
+      "description": "Config root entry C5. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
           "position": {
-            "x": 2,
+            "x": 8,
             "y": 2
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Config: LED Volume",
-              "emphasis": "strong",
+              "text": "Config > LED Pulse Volume",
+              "emphasis": "normal",
               "align": "left"
             }
           }
@@ -4024,14 +3581,14 @@
         {
           "id": "field-label",
           "position": {
-            "x": 4,
-            "y": 90
+            "x": 8,
+            "y": 30
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Pulse Volume",
-              "emphasis": "normal",
+              "text": "Current L",
+              "emphasis": "muted",
               "align": "left"
             }
           }
@@ -4039,8 +3596,8 @@
         {
           "id": "field-value",
           "position": {
-            "x": 4,
-            "y": 104
+            "x": 8,
+            "y": 50
           },
           "kind": {
             "type": "value",
@@ -4055,16 +3612,34 @@
         {
           "id": "footer-hint",
           "position": {
-            "x": 2,
-            "y": 226
+            "x": 8,
+            "y": 124
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "ENTER=cycle  Long=exit config",
+              "text": "UP/DN page  ENTER edit  hold ENTER exit",
               "emphasis": "muted",
               "align": "left"
             }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
           }
         }
       ],
@@ -4072,46 +3647,47 @@
       "flows": [
         {
           "id": "f-next",
-          "label": "Next config",
+          "label": "Next entry",
           "trigger": {
             "type": "button",
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "config-c6-led-pulse-period"
+          "targetScreenId": "config-c6-led-pulse-period",
+          "actionId": "ui.action.page.next"
         },
         {
           "id": "f-prev",
-          "label": "Prev config",
+          "label": "Previous entry",
           "trigger": {
             "type": "button",
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-c4-stop-bits"
+          "targetScreenId": "config-c4-stop-bits",
+          "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-edit",
-          "label": "Cycle pulse volume",
+          "id": "f-enter",
+          "label": "Edit value",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "short"
           },
-          "actionId": "config.action.field.edit",
-          "actionParams": {
-            "fieldId": "ledPulseVolume"
-          }
+          "targetScreenId": "config-c5-led-pulse-vol-edit",
+          "actionId": "ui.action.nav.descend"
         },
         {
-          "id": "f-exit",
-          "label": "Exit config",
+          "id": "f-escape",
+          "label": "Exit to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-config-exit"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -4121,19 +3697,19 @@
     {
       "id": "config-c6-led-pulse-period",
       "name": "C6 — LED Pulse Period",
-      "description": "Set the LED pulse period 100–2000 ms. Maps to Modbus register 32.",
+      "description": "Config root entry C6. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
           "position": {
-            "x": 2,
+            "x": 8,
             "y": 2
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Config: LED Period",
-              "emphasis": "strong",
+              "text": "Config > LED Pulse Period",
+              "emphasis": "normal",
               "align": "left"
             }
           }
@@ -4141,14 +3717,14 @@
         {
           "id": "field-label",
           "position": {
-            "x": 4,
-            "y": 90
+            "x": 8,
+            "y": 30
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Pulse Period (ms)",
-              "emphasis": "normal",
+              "text": "Current ms",
+              "emphasis": "muted",
               "align": "left"
             }
           }
@@ -4156,8 +3732,8 @@
         {
           "id": "field-value",
           "position": {
-            "x": 4,
-            "y": 104
+            "x": 8,
+            "y": 50
           },
           "kind": {
             "type": "value",
@@ -4172,16 +3748,34 @@
         {
           "id": "footer-hint",
           "position": {
-            "x": 2,
-            "y": 226
+            "x": 8,
+            "y": 124
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "ENTER=edit  ↑↓=adjust  Long=exit",
+              "text": "UP/DN page  ENTER edit  hold ENTER exit",
               "emphasis": "muted",
               "align": "left"
             }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
           }
         }
       ],
@@ -4189,46 +3783,47 @@
       "flows": [
         {
           "id": "f-next",
-          "label": "Next config",
+          "label": "Next entry",
           "trigger": {
             "type": "button",
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "config-c7-sensor-select"
+          "targetScreenId": "config-c7-sensor-select",
+          "actionId": "ui.action.page.next"
         },
         {
           "id": "f-prev",
-          "label": "Prev config",
+          "label": "Previous entry",
           "trigger": {
             "type": "button",
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-c5-led-pulse-vol"
+          "targetScreenId": "config-c5-led-pulse-vol",
+          "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-edit",
-          "label": "Edit period",
+          "id": "f-enter",
+          "label": "Edit value",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "short"
           },
-          "actionId": "config.action.field.edit",
-          "actionParams": {
-            "fieldId": "ledPulsePeriod"
-          }
+          "targetScreenId": "config-c6-led-pulse-period-edit",
+          "actionId": "ui.action.nav.descend"
         },
         {
-          "id": "f-exit",
-          "label": "Exit config",
+          "id": "f-escape",
+          "label": "Exit to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-config-exit"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -4237,20 +3832,20 @@
     },
     {
       "id": "config-c7-sensor-select",
-      "name": "C7 — Sensor Select",
-      "description": "Select sensor 1–8 to enter its sub-menu.",
+      "name": "C7 — Sensors",
+      "description": "Config root entry C7. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
           "position": {
-            "x": 2,
+            "x": 8,
             "y": 2
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Config: Sensor",
-              "emphasis": "strong",
+              "text": "Config > Sensors",
+              "emphasis": "normal",
               "align": "left"
             }
           }
@@ -4258,14 +3853,14 @@
         {
           "id": "field-label",
           "position": {
-            "x": 4,
-            "y": 90
+            "x": 8,
+            "y": 30
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Select sensor (1–8)",
-              "emphasis": "normal",
+              "text": "Select a sensor",
+              "emphasis": "muted",
               "align": "left"
             }
           }
@@ -4273,8 +3868,277 @@
         {
           "id": "field-value",
           "position": {
-            "x": 4,
-            "y": 104
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Sensors 1-8 >",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN page  ENTER open  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-root-back",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c6-led-pulse-period",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open sensor list",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-1",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-root-back",
+      "name": "C.BACK — Back",
+      "description": "Ascends one level, out of Configuration.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Config",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "back-label",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "< BACK",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "ENTER go back",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c1-modbus-id",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c7-sensor-select",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-back",
+          "label": "Back one level",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.nav.back"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-c1-modbus-id-edit",
+      "name": "C1.V — Edit Modbus ID",
+      "description": "Value editor for C1. ENTER commits and ascends; hold ENTER discards.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Edit > Modbus ID",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "range-hint",
+          "position": {
+            "x": 8,
+            "y": 16
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "1 to 247",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "New value",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-value",
+          "position": {
+            "x": 8,
+            "y": 50
           },
           "kind": {
             "type": "value",
@@ -4284,18 +4148,49 @@
               "align": "left"
             }
           },
-          "binding": "config.selectedSensor"
+          "binding": "config.modbusSlaveId"
         },
         {
-          "id": "footer-hint",
+          "id": "saved-label",
           "position": {
-            "x": 2,
-            "y": 226
+            "x": 8,
+            "y": 78
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "↑↓=select  ENTER=open sub-menu",
+              "text": "Saved",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "saved-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.modbusSlaveId"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN adjust  ENTER save  hold ENTER discard",
               "emphasis": "muted",
               "align": "left"
             }
@@ -4305,44 +4200,2183 @@
       "events": [],
       "flows": [
         {
-          "id": "f-next",
-          "label": "Next config",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c1-modbus-id"
-        },
-        {
-          "id": "f-prev",
-          "label": "Prev config",
+          "id": "f-inc",
+          "label": "Increase",
           "trigger": {
             "type": "button",
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-c6-led-pulse-period"
+          "actionId": "config.action.value.increment"
         },
         {
-          "id": "f-open-sensor",
-          "label": "Open sensor sub-menu",
+          "id": "f-dec",
+          "label": "Decrease",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.decrement"
+        },
+        {
+          "id": "f-commit",
+          "label": "Save and go back",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-s1-connected"
+          "targetScreenId": "config-c1-modbus-id",
+          "actionId": "config.action.value.commit"
         },
         {
-          "id": "f-exit",
-          "label": "Exit config",
+          "id": "f-discard",
+          "label": "Discard and go back",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-config-exit"
+          "targetScreenId": "config-c1-modbus-id",
+          "actionId": "config.action.value.discard"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-c2-baud-rate-edit",
+      "name": "C2.V — Edit Baud Rate",
+      "description": "Value editor for C2. ENTER commits and ascends; hold ENTER discards.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Edit > Baud Rate",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "range-hint",
+          "position": {
+            "x": 8,
+            "y": 16
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "1200 / 2400 / 4800 / 9600 / 19200 / 38400 / 57600 / 115200",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "New value",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.baudRate"
+        },
+        {
+          "id": "saved-label",
+          "position": {
+            "x": 8,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Saved",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "saved-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.baudRate"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN adjust  ENTER save  hold ENTER discard",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-inc",
+          "label": "Increase",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.increment"
+        },
+        {
+          "id": "f-dec",
+          "label": "Decrease",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.decrement"
+        },
+        {
+          "id": "f-commit",
+          "label": "Save and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c2-baud-rate",
+          "actionId": "config.action.value.commit"
+        },
+        {
+          "id": "f-discard",
+          "label": "Discard and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "config-c2-baud-rate",
+          "actionId": "config.action.value.discard"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-c3-parity-edit",
+      "name": "C3.V — Edit Parity",
+      "description": "Value editor for C3. ENTER commits and ascends; hold ENTER discards.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Edit > Parity",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "range-hint",
+          "position": {
+            "x": 8,
+            "y": 16
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "None / Even / Odd",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "New value",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.parity"
+        },
+        {
+          "id": "saved-label",
+          "position": {
+            "x": 8,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Saved",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "saved-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.parity"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN adjust  ENTER save  hold ENTER discard",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-inc",
+          "label": "Increase",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.increment"
+        },
+        {
+          "id": "f-dec",
+          "label": "Decrease",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.decrement"
+        },
+        {
+          "id": "f-commit",
+          "label": "Save and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c3-parity",
+          "actionId": "config.action.value.commit"
+        },
+        {
+          "id": "f-discard",
+          "label": "Discard and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "config-c3-parity",
+          "actionId": "config.action.value.discard"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-c4-stop-bits-edit",
+      "name": "C4.V — Edit Stop Bits",
+      "description": "Value editor for C4. ENTER commits and ascends; hold ENTER discards.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Edit > Stop Bits",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "range-hint",
+          "position": {
+            "x": 8,
+            "y": 16
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "1 / 2",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "New value",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.stopBits"
+        },
+        {
+          "id": "saved-label",
+          "position": {
+            "x": 8,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Saved",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "saved-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.stopBits"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN adjust  ENTER save  hold ENTER discard",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-inc",
+          "label": "Increase",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.increment"
+        },
+        {
+          "id": "f-dec",
+          "label": "Decrease",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.decrement"
+        },
+        {
+          "id": "f-commit",
+          "label": "Save and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c4-stop-bits",
+          "actionId": "config.action.value.commit"
+        },
+        {
+          "id": "f-discard",
+          "label": "Discard and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "config-c4-stop-bits",
+          "actionId": "config.action.value.discard"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-c5-led-pulse-vol-edit",
+      "name": "C5.V — Edit LED Pulse Volume",
+      "description": "Value editor for C5. ENTER commits and ascends; hold ENTER discards.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Edit > LED Pulse Volume",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "range-hint",
+          "position": {
+            "x": 8,
+            "y": 16
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "1 / 10 / 100",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "New value",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.ledPulseVolume"
+        },
+        {
+          "id": "saved-label",
+          "position": {
+            "x": 8,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Saved",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "saved-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.ledPulseVolume"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN adjust  ENTER save  hold ENTER discard",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-inc",
+          "label": "Increase",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.increment"
+        },
+        {
+          "id": "f-dec",
+          "label": "Decrease",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.decrement"
+        },
+        {
+          "id": "f-commit",
+          "label": "Save and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c5-led-pulse-vol",
+          "actionId": "config.action.value.commit"
+        },
+        {
+          "id": "f-discard",
+          "label": "Discard and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "config-c5-led-pulse-vol",
+          "actionId": "config.action.value.discard"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-c6-led-pulse-period-edit",
+      "name": "C6.V — Edit LED Pulse Period",
+      "description": "Value editor for C6. ENTER commits and ascends; hold ENTER discards.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Edit > LED Pulse Period",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "range-hint",
+          "position": {
+            "x": 8,
+            "y": 16
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "100 to 2000 ms",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "New value",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.ledPulsePeriod"
+        },
+        {
+          "id": "saved-label",
+          "position": {
+            "x": 8,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Saved",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "saved-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.ledPulsePeriod"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN adjust  ENTER save  hold ENTER discard",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-inc",
+          "label": "Increase",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.increment"
+        },
+        {
+          "id": "f-dec",
+          "label": "Decrease",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.decrement"
+        },
+        {
+          "id": "f-commit",
+          "label": "Save and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c6-led-pulse-period",
+          "actionId": "config.action.value.commit"
+        },
+        {
+          "id": "f-discard",
+          "label": "Discard and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "config-c6-led-pulse-period",
+          "actionId": "config.action.value.discard"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-sensor-1",
+      "name": "SEN1 — Sensor 1",
+      "description": "Sensor list entry. ENTER descends into sensor 1's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Config > Sensors",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Sensor",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "1 >",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.1.status"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN sensor  ENTER open  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-2",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-back",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open sensor 1 settings",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s1-connected",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-sensor-2",
+      "name": "SEN2 — Sensor 2",
+      "description": "Sensor list entry. ENTER descends into sensor 2's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Config > Sensors",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Sensor",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "2 >",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.2.status"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN sensor  ENTER open  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-3",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-1",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open sensor 2 settings",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s1-connected",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-sensor-3",
+      "name": "SEN3 — Sensor 3",
+      "description": "Sensor list entry. ENTER descends into sensor 3's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Config > Sensors",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Sensor",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "3 >",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.3.status"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN sensor  ENTER open  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-4",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-2",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open sensor 3 settings",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s1-connected",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-sensor-4",
+      "name": "SEN4 — Sensor 4",
+      "description": "Sensor list entry. ENTER descends into sensor 4's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Config > Sensors",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Sensor",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "4 >",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.4.status"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN sensor  ENTER open  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-5",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-3",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open sensor 4 settings",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s1-connected",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-sensor-5",
+      "name": "SEN5 — Sensor 5",
+      "description": "Sensor list entry. ENTER descends into sensor 5's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Config > Sensors",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Sensor",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "5 >",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.5.status"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN sensor  ENTER open  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-6",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-4",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open sensor 5 settings",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s1-connected",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-sensor-6",
+      "name": "SEN6 — Sensor 6",
+      "description": "Sensor list entry. ENTER descends into sensor 6's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Config > Sensors",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Sensor",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "6 >",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.6.status"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN sensor  ENTER open  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-7",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-5",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open sensor 6 settings",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s1-connected",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-sensor-7",
+      "name": "SEN7 — Sensor 7",
+      "description": "Sensor list entry. ENTER descends into sensor 7's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Config > Sensors",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Sensor",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "7 >",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.7.status"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN sensor  ENTER open  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-8",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-6",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open sensor 7 settings",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s1-connected",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-sensor-8",
+      "name": "SEN8 — Sensor 8",
+      "description": "Sensor list entry. ENTER descends into sensor 8's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Config > Sensors",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Sensor",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "8 >",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.8.status"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN sensor  ENTER open  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-back",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-7",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open sensor 8 settings",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s1-connected",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-sensor-back",
+      "name": "SEN.BACK — Back",
+      "description": "Ascends from the sensor list to the config root.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Config > Sensors",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "back-label",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "< BACK",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "ENTER go back",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-1",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-8",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-back",
+          "label": "Back one level",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.nav.back"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -4352,28 +6386,28 @@
     {
       "id": "config-s1-connected",
       "name": "S1 — Connected",
-      "description": "Toggle sensor connected state (inUse flag). Maps to Connected Sensors Bitmap.",
+      "description": "Sensor settings entry S1, scoped to the sensor of the current level.",
       "elements": [
         {
           "id": "hdr-title",
           "position": {
-            "x": 2,
+            "x": 8,
             "y": 2
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Sensor: Connected",
-              "emphasis": "strong",
+              "text": "Sensor > Connected",
+              "emphasis": "normal",
               "align": "left"
             }
           }
         },
         {
-          "id": "sensor-label",
+          "id": "sensor-index",
           "position": {
-            "x": 4,
-            "y": 18
+            "x": 200,
+            "y": 2
           },
           "kind": {
             "type": "value",
@@ -4386,10 +6420,25 @@
           "binding": "config.selectedSensor"
         },
         {
+          "id": "field-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Current",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
           "id": "field-value",
           "position": {
-            "x": 4,
-            "y": 104
+            "x": 8,
+            "y": 50
           },
           "kind": {
             "type": "value",
@@ -4402,15 +6451,198 @@
           "binding": "config.sensor.connected"
         },
         {
+          "id": "nyquist-warning",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.nyquistWarning"
+        },
+        {
           "id": "footer-hint",
           "position": {
-            "x": 2,
-            "y": 226
+            "x": 8,
+            "y": 124
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "ENTER=toggle  Long→save&validate",
+              "text": "UP/DN page  ENTER edit  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s2-multiplier",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-settings-back",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Edit value",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s1-connected-edit",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-s1-connected-edit",
+      "name": "S1.V — Edit Connected",
+      "description": "Value editor for S1. ENTER commits and ascends; hold ENTER discards.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Edit > Connected",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "New value",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.connected"
+        },
+        {
+          "id": "saved-label",
+          "position": {
+            "x": 8,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Saved",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "saved-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.connected"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN adjust  ENTER save  hold ENTER discard",
               "emphasis": "muted",
               "align": "left"
             }
@@ -4420,58 +6652,46 @@
       "events": [],
       "flows": [
         {
-          "id": "f-next",
-          "label": "Next sensor page",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-s2-multiplier"
-        },
-        {
-          "id": "f-prev",
-          "label": "Back to sensor select",
+          "id": "f-inc",
+          "label": "Increase",
           "trigger": {
             "type": "button",
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-c7-sensor-select"
+          "actionId": "config.action.value.increment"
         },
         {
-          "id": "f-toggle",
-          "label": "Toggle connected",
+          "id": "f-dec",
+          "label": "Decrease",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.decrement"
+        },
+        {
+          "id": "f-commit",
+          "label": "Save and go back",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "short"
           },
-          "actionId": "config.action.field.edit",
-          "actionParams": {
-            "fieldId": "connected"
-          }
+          "targetScreenId": "config-s1-connected",
+          "actionId": "config.action.value.commit"
         },
         {
-          "id": "f-save",
-          "label": "Save & validate",
+          "id": "f-discard",
+          "label": "Discard and go back",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-sensor-save"
-        },
-        {
-          "id": "f-inactive-exit",
-          "label": "Exit if sensor inactive",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "config-c7-sensor-select",
-          "guard": "sensor.connected == false"
+          "targetScreenId": "config-s1-connected",
+          "actionId": "config.action.value.discard"
         }
       ],
       "assets": [],
@@ -4481,28 +6701,28 @@
     {
       "id": "config-s2-multiplier",
       "name": "S2 — Multiplier (F)",
-      "description": "Set signed 16-bit multiplier for selected sensor. Maps to register 121.",
+      "description": "Sensor settings entry S2, scoped to the sensor of the current level.",
       "elements": [
         {
           "id": "hdr-title",
           "position": {
-            "x": 2,
+            "x": 8,
             "y": 2
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Sensor: Multiplier F",
-              "emphasis": "strong",
+              "text": "Sensor > Multiplier (F)",
+              "emphasis": "normal",
               "align": "left"
             }
           }
         },
         {
-          "id": "sensor-label",
+          "id": "sensor-index",
           "position": {
-            "x": 4,
-            "y": 18
+            "x": 200,
+            "y": 2
           },
           "kind": {
             "type": "value",
@@ -4515,10 +6735,25 @@
           "binding": "config.selectedSensor"
         },
         {
+          "id": "field-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Current",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
           "id": "field-value",
           "position": {
-            "x": 4,
-            "y": 104
+            "x": 8,
+            "y": 50
           },
           "kind": {
             "type": "value",
@@ -4531,31 +6766,213 @@
           "binding": "config.sensor.multiplier"
         },
         {
-          "id": "undersampling-warn",
+          "id": "nyquist-warning",
           "position": {
-            "x": 4,
-            "y": 120
+            "x": 8,
+            "y": 92
           },
           "kind": {
-            "type": "badge",
+            "type": "value",
             "payload": {
               "text": "",
-              "emphasis": "normal",
+              "emphasis": "muted",
               "align": "left"
             }
           },
-          "binding": "config.sensor.undersamplingFlag"
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "position": {
-            "x": 2,
-            "y": 226
+            "x": 8,
+            "y": 124
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "↑↓=adjust  ENTER=commit  Long=save",
+              "text": "UP/DN page  ENTER edit  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s3-adjust",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s1-connected",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Edit value",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s2-multiplier-edit",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-s2-multiplier-edit",
+      "name": "S2.V — Edit Multiplier (F)",
+      "description": "Value editor for S2. ENTER commits and ascends; hold ENTER discards.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Edit > Multiplier (F)",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "range-hint",
+          "position": {
+            "x": 8,
+            "y": 16
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "-32768 to 32767",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "New value",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.multiplier"
+        },
+        {
+          "id": "saved-label",
+          "position": {
+            "x": 8,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Saved",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "saved-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.multiplier"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN adjust  ENTER save  hold ENTER discard",
               "emphasis": "muted",
               "align": "left"
             }
@@ -4565,47 +6982,46 @@
       "events": [],
       "flows": [
         {
-          "id": "f-next",
-          "label": "Next sensor page",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-s3-adjust"
-        },
-        {
-          "id": "f-prev",
-          "label": "Prev sensor page",
+          "id": "f-inc",
+          "label": "Increase",
           "trigger": {
             "type": "button",
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-s1-connected"
+          "actionId": "config.action.value.increment"
+        },
+        {
+          "id": "f-dec",
+          "label": "Decrease",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.decrement"
         },
         {
           "id": "f-commit",
-          "label": "Commit value",
+          "label": "Save and go back",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "short"
           },
-          "actionId": "config.action.field.confirm",
-          "actionParams": {
-            "fieldId": "multiplier"
-          }
+          "targetScreenId": "config-s2-multiplier",
+          "actionId": "config.action.value.commit"
         },
         {
-          "id": "f-save",
-          "label": "Save & validate",
+          "id": "f-discard",
+          "label": "Discard and go back",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-sensor-save"
+          "targetScreenId": "config-s2-multiplier",
+          "actionId": "config.action.value.discard"
         }
       ],
       "assets": [],
@@ -4615,28 +7031,28 @@
     {
       "id": "config-s3-adjust",
       "name": "S3 — Adjust",
-      "description": "Set signed 16-bit adjustment offset for selected sensor. Maps to register 122.",
+      "description": "Sensor settings entry S3, scoped to the sensor of the current level.",
       "elements": [
         {
           "id": "hdr-title",
           "position": {
-            "x": 2,
+            "x": 8,
             "y": 2
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Sensor: Adjust",
-              "emphasis": "strong",
+              "text": "Sensor > Adjust",
+              "emphasis": "normal",
               "align": "left"
             }
           }
         },
         {
-          "id": "sensor-label",
+          "id": "sensor-index",
           "position": {
-            "x": 4,
-            "y": 18
+            "x": 200,
+            "y": 2
           },
           "kind": {
             "type": "value",
@@ -4649,10 +7065,25 @@
           "binding": "config.selectedSensor"
         },
         {
+          "id": "field-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Current",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
           "id": "field-value",
           "position": {
-            "x": 4,
-            "y": 104
+            "x": 8,
+            "y": 50
           },
           "kind": {
             "type": "value",
@@ -4665,15 +7096,213 @@
           "binding": "config.sensor.adjust"
         },
         {
+          "id": "nyquist-warning",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.nyquistWarning"
+        },
+        {
           "id": "footer-hint",
           "position": {
-            "x": 2,
-            "y": 226
+            "x": 8,
+            "y": 124
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "↑↓=adjust  ENTER=commit  Long=save",
+              "text": "UP/DN page  ENTER edit  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s4-max-flow",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s2-multiplier",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Edit value",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s3-adjust-edit",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-s3-adjust-edit",
+      "name": "S3.V — Edit Adjust",
+      "description": "Value editor for S3. ENTER commits and ascends; hold ENTER discards.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Edit > Adjust",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "range-hint",
+          "position": {
+            "x": 8,
+            "y": 16
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "-32768 to 32767",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "New value",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.adjust"
+        },
+        {
+          "id": "saved-label",
+          "position": {
+            "x": 8,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Saved",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "saved-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.adjust"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN adjust  ENTER save  hold ENTER discard",
               "emphasis": "muted",
               "align": "left"
             }
@@ -4683,47 +7312,46 @@
       "events": [],
       "flows": [
         {
-          "id": "f-next",
-          "label": "Next sensor page",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-s4-max-flow"
-        },
-        {
-          "id": "f-prev",
-          "label": "Prev sensor page",
+          "id": "f-inc",
+          "label": "Increase",
           "trigger": {
             "type": "button",
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-s2-multiplier"
+          "actionId": "config.action.value.increment"
+        },
+        {
+          "id": "f-dec",
+          "label": "Decrease",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.decrement"
         },
         {
           "id": "f-commit",
-          "label": "Commit value",
+          "label": "Save and go back",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "short"
           },
-          "actionId": "config.action.field.confirm",
-          "actionParams": {
-            "fieldId": "adjust"
-          }
+          "targetScreenId": "config-s3-adjust",
+          "actionId": "config.action.value.commit"
         },
         {
-          "id": "f-save",
-          "label": "Save & validate",
+          "id": "f-discard",
+          "label": "Discard and go back",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-sensor-save"
+          "targetScreenId": "config-s3-adjust",
+          "actionId": "config.action.value.discard"
         }
       ],
       "assets": [],
@@ -4732,29 +7360,29 @@
     },
     {
       "id": "config-s4-max-flow",
-      "name": "S4 — Max Flow (Q, L/min)",
-      "description": "Set max flow rate 0–65535 L/min for selected sensor. Maps to register 120.",
+      "name": "S4 — Max Flow (Q)",
+      "description": "Sensor settings entry S4, scoped to the sensor of the current level.",
       "elements": [
         {
           "id": "hdr-title",
           "position": {
-            "x": 2,
+            "x": 8,
             "y": 2
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Sensor: Max Flow Q",
-              "emphasis": "strong",
+              "text": "Sensor > Max Flow (Q)",
+              "emphasis": "normal",
               "align": "left"
             }
           }
         },
         {
-          "id": "sensor-label",
+          "id": "sensor-index",
           "position": {
-            "x": 4,
-            "y": 18
+            "x": 200,
+            "y": 2
           },
           "kind": {
             "type": "value",
@@ -4767,10 +7395,25 @@
           "binding": "config.selectedSensor"
         },
         {
+          "id": "field-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Current L/min",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
           "id": "field-value",
           "position": {
-            "x": 4,
-            "y": 104
+            "x": 8,
+            "y": 50
           },
           "kind": {
             "type": "value",
@@ -4783,31 +7426,16 @@
           "binding": "config.sensor.maxFlow"
         },
         {
-          "id": "field-unit",
+          "id": "nyquist-warning",
           "position": {
-            "x": 60,
-            "y": 104
+            "x": 8,
+            "y": 92
           },
           "kind": {
-            "type": "text",
-            "payload": {
-              "text": "L/min",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "nyquist-warn",
-          "position": {
-            "x": 4,
-            "y": 120
-          },
-          "kind": {
-            "type": "badge",
+            "type": "value",
             "payload": {
               "text": "",
-              "emphasis": "normal",
+              "emphasis": "muted",
               "align": "left"
             }
           },
@@ -4816,13 +7444,195 @@
         {
           "id": "footer-hint",
           "position": {
-            "x": 2,
-            "y": 226
+            "x": 8,
+            "y": 124
           },
           "kind": {
             "type": "text",
             "payload": {
-              "text": "↑↓=adjust  ENTER=commit  Long=save",
+              "text": "UP/DN page  ENTER edit  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-settings-back",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s3-adjust",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Edit value",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s4-max-flow-edit",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-s4-max-flow-edit",
+      "name": "S4.V — Edit Max Flow (Q)",
+      "description": "Value editor for S4. ENTER commits and ascends; hold ENTER discards.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Edit > Max Flow (Q)",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "range-hint",
+          "position": {
+            "x": 8,
+            "y": 16
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "0 to 65535 L/min",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "New value",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.maxFlow"
+        },
+        {
+          "id": "saved-label",
+          "position": {
+            "x": 8,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Saved",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "saved-value",
+          "position": {
+            "x": 8,
+            "y": 92
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.maxFlow"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN adjust  ENTER save  hold ENTER discard",
               "emphasis": "muted",
               "align": "left"
             }
@@ -4832,47 +7642,838 @@
       "events": [],
       "flows": [
         {
-          "id": "f-next",
-          "label": "Back to S1",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-s1-connected"
-        },
-        {
-          "id": "f-prev",
-          "label": "Prev sensor page",
+          "id": "f-inc",
+          "label": "Increase",
           "trigger": {
             "type": "button",
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-s3-adjust"
+          "actionId": "config.action.value.increment"
+        },
+        {
+          "id": "f-dec",
+          "label": "Decrease",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.decrement"
         },
         {
           "id": "f-commit",
-          "label": "Commit value",
+          "label": "Save and go back",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "short"
           },
-          "actionId": "config.action.field.confirm",
-          "actionParams": {
-            "fieldId": "maxFlow"
-          }
+          "targetScreenId": "config-s4-max-flow",
+          "actionId": "config.action.value.commit"
         },
         {
-          "id": "f-save",
-          "label": "Save & validate",
+          "id": "f-discard",
+          "label": "Discard and go back",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "countdown-sensor-save"
+          "targetScreenId": "config-s4-max-flow",
+          "actionId": "config.action.value.discard"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-sensor-settings-back",
+      "name": "S.BACK — Back",
+      "description": "Ascends from sensor settings to the sensor list.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Sensor",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "back-label",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "< BACK",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "ENTER go back",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s1-connected",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s4-max-flow",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-back",
+          "label": "Back one level",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.nav.back"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "info-p8-factory-reset",
+      "name": "P8 — Factory Reset",
+      "description": "Info-level entry point for a full factory reset. ENTER opens the confirm screen.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "P8 FACTORY RESET",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "warning-1",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Erases all totals, sensor",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "warning-2",
+          "position": {
+            "x": 8,
+            "y": 42
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "config and LED settings.",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "prompt",
+          "position": {
+            "x": 8,
+            "y": 64
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "ENTER to continue >",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN page  ENTER confirm screen",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next page",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous page",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "info-p7-enter-config",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open confirm screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-factory-reset",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Back to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "confirm-reset-totals",
+      "name": "Reset totals?",
+      "description": "Confirm screen. Inverted gestures per §3.2: ENTER-short exits, ENTER held 3000 ms confirms.",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "kind": {
+            "type": "box",
+            "payload": {
+              "width": 240,
+              "height": 135
+            }
+          },
+          "size": {
+            "width": 240,
+            "height": 135
+          }
+        },
+        {
+          "id": "title",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "RESET TOTALS?",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "warning-1",
+          "position": {
+            "x": 8,
+            "y": 48
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Persistent cumulative volume",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "warning-2",
+          "position": {
+            "x": 8,
+            "y": 60
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "cannot be recovered.",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "timer-value",
+          "position": {
+            "x": 104,
+            "y": 84
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "countdown.value"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "ENTER exit  hold ENTER confirm",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-exit",
+          "label": "Exit without acting",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.nav.back"
+        },
+        {
+          "id": "f-confirm",
+          "label": "Reset totals",
+          "trigger": {
+            "type": "timeout",
+            "durationMs": 3000,
+            "holdButton": "enter"
+          },
+          "actionId": "core.action.reset-all-measured",
+          "targetScreenId": "toast-totals-reset"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "confirm-reset-session",
+      "name": "Reset session?",
+      "description": "Confirm screen. Inverted gestures per §3.2: ENTER-short exits, ENTER held 1500 ms confirms.",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "kind": {
+            "type": "box",
+            "payload": {
+              "width": 240,
+              "height": 135
+            }
+          },
+          "size": {
+            "width": 240,
+            "height": 135
+          }
+        },
+        {
+          "id": "title",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "RESET SESSION?",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "warning-1",
+          "position": {
+            "x": 8,
+            "y": 48
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Session totals and max flow",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "warning-2",
+          "position": {
+            "x": 8,
+            "y": 60
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "return to zero.",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "timer-value",
+          "position": {
+            "x": 104,
+            "y": 84
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "countdown.value"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "ENTER exit  hold ENTER confirm",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-exit",
+          "label": "Exit without acting",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.nav.back"
+        },
+        {
+          "id": "f-confirm",
+          "label": "Reset session",
+          "trigger": {
+            "type": "timeout",
+            "durationMs": 1500,
+            "holdButton": "enter"
+          },
+          "actionId": "core.action.reset-session",
+          "targetScreenId": "toast-session-reset"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "confirm-factory-reset",
+      "name": "Factory reset?",
+      "description": "Confirm screen. Inverted gestures per §3.2: ENTER-short exits, ENTER held 30000 ms confirms.",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "kind": {
+            "type": "box",
+            "payload": {
+              "width": 240,
+              "height": 135
+            }
+          },
+          "size": {
+            "width": 240,
+            "height": 135
+          }
+        },
+        {
+          "id": "title",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "FACTORY RESET?",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "warning-1",
+          "position": {
+            "x": 8,
+            "y": 48
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Wipes NVS and reboots.",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "warning-2",
+          "position": {
+            "x": 8,
+            "y": 60
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "This cannot be undone.",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "timer-value",
+          "position": {
+            "x": 104,
+            "y": 84
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "countdown.value"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "ENTER exit  hold ENTER confirm",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-exit",
+          "label": "Exit without acting",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.nav.back"
+        },
+        {
+          "id": "f-confirm",
+          "label": "Factory reset",
+          "trigger": {
+            "type": "timeout",
+            "durationMs": 30000,
+            "holdButton": "enter"
+          },
+          "actionId": "core.action.factory-reset"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "toast-totals-reset",
+      "name": "Totals reset",
+      "description": "Acknowledgement toast. Auto-dismisses after 2 s with no button held (§3.8 auto timeout).",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "kind": {
+            "type": "box",
+            "payload": {
+              "width": 240,
+              "height": 135
+            }
+          },
+          "size": {
+            "width": 240,
+            "height": 135
+          }
+        },
+        {
+          "id": "message",
+          "position": {
+            "x": 8,
+            "y": 58
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "TOTALS RESET",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "sub",
+          "position": {
+            "x": 8,
+            "y": 74
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Returning...",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-dismiss",
+          "label": "Dismiss",
+          "trigger": {
+            "type": "timeout",
+            "durationMs": 2000
+          },
+          "actionId": "ui.action.nav.back"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "toast-session-reset",
+      "name": "Session reset",
+      "description": "Acknowledgement toast. Auto-dismisses after 2 s with no button held (§3.8 auto timeout).",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "kind": {
+            "type": "box",
+            "payload": {
+              "width": 240,
+              "height": 135
+            }
+          },
+          "size": {
+            "width": 240,
+            "height": 135
+          }
+        },
+        {
+          "id": "message",
+          "position": {
+            "x": 8,
+            "y": 58
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "SESSION RESET",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "sub",
+          "position": {
+            "x": 8,
+            "y": 74
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Returning...",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-dismiss",
+          "label": "Dismiss",
+          "trigger": {
+            "type": "timeout",
+            "durationMs": 2000
+          },
+          "actionId": "ui.action.nav.back"
         }
       ],
       "assets": [],

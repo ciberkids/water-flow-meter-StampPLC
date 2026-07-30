@@ -18,16 +18,6 @@
       "description": "Dims the display and enters idle mode"
     },
     {
-      "id": "ui.action.mode.info",
-      "label": "Return to info mode",
-      "description": "Leaves configuration and resumes info pages"
-    },
-    {
-      "id": "ui.action.mode.configuration",
-      "label": "Enter configuration mode",
-      "description": "Switches the firmware into configuration mode"
-    },
-    {
       "id": "core.action.save-config",
       "label": "Save configuration",
       "description": "Persists the current configuration block to NVS and Modbus registers"
@@ -48,34 +38,44 @@
       "description": "Wipes NVS, clears Modbus config, and reboots"
     },
     {
-      "id": "config.action.sensor.save",
-      "label": "Save sensor settings",
-      "description": "Commit sensor sub-menu values after Nyquist validation"
+      "id": "ui.action.nav.descend",
+      "label": "Descend one level",
+      "description": "Push the flow's target level onto the navigation stack"
     },
     {
-      "id": "config.action.field.edit",
-      "label": "Begin field edit",
-      "description": "Put the focused configuration field into edit mode"
+      "id": "ui.action.nav.back",
+      "label": "Back one level",
+      "description": "Pop one level off the navigation stack"
     },
     {
-      "id": "config.action.field.confirm",
-      "label": "Confirm field edit",
-      "description": "Accept the tentative value and write to Modbus register"
+      "id": "ui.action.nav.escape",
+      "label": "Escape to main screen",
+      "description": "Clear the navigation stack back to P0, discarding any uncommitted edit"
     },
     {
-      "id": "config.action.field.cancel",
-      "label": "Cancel field edit",
-      "description": "Discard tentative value and restore prior"
+      "id": "config.action.value.increment",
+      "label": "Increment value",
+      "description": "Raise the pending value by its step, with hold acceleration"
     },
     {
-      "id": "ui.mock.value-edit",
-      "label": "Value edited",
-      "description": "Simulation-only event fired when a value placeholder is modified"
+      "id": "config.action.value.decrement",
+      "label": "Decrement value",
+      "description": "Lower the pending value by its step, with hold acceleration"
     },
     {
-      "id": "ui.mock.value-save",
-      "label": "Value saved",
-      "description": "Simulation-only event fired when a value override is saved"
+      "id": "config.action.value.commit",
+      "label": "Commit value",
+      "description": "Clamp, write the mapped register, validate, then ascend one level"
+    },
+    {
+      "id": "config.action.value.discard",
+      "label": "Discard edit",
+      "description": "Abandon the pending value and ascend one level"
+    },
+    {
+      "id": "config.action.value.commit-override",
+      "label": "Save despite Nyquist warning",
+      "description": "Forces the pending value past a failed Nyquist check and raises bit n of register 30 (\u00a75.5)"
     }
   ],
   "values": [
@@ -816,7 +816,11 @@
       "role": "configuration-entry"
     },
     {
-      "id": "countdown-factory-reset",
+      "id": "info-p8-factory-reset",
+      "role": "info-page-8 (UiPage::FactoryReset)"
+    },
+    {
+      "id": "confirm-factory-reset",
       "role": "countdown-overlay"
     }
   ]

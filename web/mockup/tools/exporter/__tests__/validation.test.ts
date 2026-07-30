@@ -66,6 +66,16 @@ function makeDataset(): ScreenDataset {
             content: "30 s",
             binding: "countdown.value"
           }
+        ],
+        // The confirm-screen check is semantic now: a hold countdown is a timeout
+        // trigger carrying holdButton, not a screen whose id says "countdown".
+        flows: [
+          {
+            id: "f-confirm",
+            label: "Confirm",
+            trigger: { type: "timeout", durationMs: 3000, holdButton: "enter" },
+            actionId: "ui.action.page.next"
+          }
         ]
       }
     ],

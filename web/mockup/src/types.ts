@@ -62,9 +62,20 @@ export interface ButtonFlowTrigger {
   gesture?: ButtonGesture;
 }
 
+/**
+ * Two distinct behaviours share this trigger, distinguished by `holdButton`:
+ *  - `holdButton: "enter"` — a hold countdown. Requires ENTER held for the whole
+ *    duration and aborts on release. Used by confirm screens.
+ *  - `holdButton: null`/absent — an auto timeout. Fires regardless of buttons.
+ *    Used by acknowledgement toasts.
+ * Without the discriminator the firmware treats every timeout as a hold, so a 2 s
+ * toast would need ENTER held to dismiss — the opposite of intended.
+ */
 export interface TimeoutFlowTrigger {
   type: "timeout";
   durationMs: number;
+  /** "enter" = hold countdown. Absent = auto timeout that fires regardless. */
+  holdButton?: ButtonName;
 }
 
 export interface DataFlowTrigger {

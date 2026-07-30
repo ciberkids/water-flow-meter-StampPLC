@@ -264,6 +264,12 @@ function flowTriggerLiteral(trigger: IRFlow["trigger"] | undefined): string {
 }
 
 function flowButtonLiteral(trigger: IRFlow["trigger"] | undefined): string {
+  if (trigger?.type === "timeout") {
+    // Carries the §3.8 discriminator: Enter = hold countdown, None = auto timeout.
+    return trigger.holdButton === "enter"
+      ? "ui_exporter::FlowButton::Enter"
+      : "ui_exporter::FlowButton::None";
+  }
   if (!trigger || trigger.type !== "button") {
     return "ui_exporter::FlowButton::None";
   }

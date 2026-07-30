@@ -12,7 +12,7 @@ namespace plc {
 
 namespace {
 
-constexpr const char* kFactoryResetCountdownScreenId = "countdown-factory-reset";
+constexpr const char* kFactoryResetCountdownScreenId = "confirm-factory-reset";
 
 /**
  * Finds the Timeout flow on a countdown screen. That flow carries the duration

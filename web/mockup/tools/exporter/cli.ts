@@ -9,6 +9,7 @@ import { ensureValidDataset, ensureValidTheme, ExportValidationError } from "./s
 import { buildIntermediateRepresentation } from "./ir.js";
 import { emitCpp } from "./cppEmitter.js";
 import { checkRenderableElementKinds, runExportValidations } from "./validation.js";
+import { checkFirmwareActionCoverage, scrapeFirmwareActions } from "./firmwareActions.js";
 import { loadManifest } from "./manifestLoader.js";
 import type {
   AutomationCheck,
@@ -382,6 +383,30 @@ async function run() {
     }
 
     const validationReport = runExportValidations(dataset, ir, manifestResult.manifest);
+
+    // manifest -> firmware. runExportValidations covers dataset -> manifest; without
+    // this, an action can be declared, authored into a flow, pass every check, and
+    // still dispatch to nothing on hardware.
+    const usedActionIds = new Set<string>();
+    for (const screen of dataset.screens) {
+      for (const flow of screen.flows ?? []) {
+        if (flow.actionId) usedActionIds.add(flow.actionId);
+      }
+      for (const event of screen.events ?? []) {
+        if (event.actionId) usedActionIds.add(event.actionId);
+      }
+    }
+    const firmwareCheck = checkFirmwareActionCoverage(
+      manifestResult.manifest,
+      await scrapeFirmwareActions(projectRoot),
+      usedActionIds
+    );
+    validationReport.checks.push(firmwareCheck);
+    if (firmwareCheck.status === "fail") {
+      validationReport.status = "fail";
+      validationReport.issues.push(firmwareCheck.message);
+    }
+    validationReport.log += `\n[${firmwareCheck.status.toUpperCase()}] ${firmwareCheck.title} — ${firmwareCheck.message}`;
 
     if (validationReport.status === "fail") {
       throw new ExportValidationError(

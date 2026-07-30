@@ -20,6 +20,7 @@ enum class UiPage {
   SessionCubicMeters,
   MaxFlow,
   EnterConfiguration,
+  FactoryReset,
   Count
 };
 

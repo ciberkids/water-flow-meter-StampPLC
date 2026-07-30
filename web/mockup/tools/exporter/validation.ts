@@ -45,36 +45,48 @@ const validationChecks: Array<
       };
     },
     (dataset) => {
-      const countdownScreen = dataset.screens.find((screen) => /countdown/i.test(screen.id));
-      if (!countdownScreen) {
+      // Semantic, not name-based: a confirm screen is one carrying a hold
+      // countdown (a timeout trigger with holdButton) and showing the timer.
+      // Matching on an id containing "countdown" broke the moment the screens
+      // were renamed confirm-*, while the behaviour was still present.
+      const confirmScreens = dataset.screens.filter((screen) =>
+        (screen.flows ?? []).some(
+          (flow) => flow.trigger.type === "timeout" && flow.trigger.holdButton !== undefined
+        )
+      );
+      if (confirmScreens.length === 0) {
         return {
           id: "countdown-overlay",
-          title: "Countdown overlay exists",
+          title: "Hold-to-confirm screen exists",
           status: "fail",
-          message: "Provide a screen with an id containing 'countdown' to cover factory reset overlays.",
-          recommendation: "Duplicate the reference countdown screen and ensure it maps to UiMode::Idle hold logic."
+          message:
+            "No screen declares a hold countdown (timeout trigger with holdButton), so no " +
+            "destructive action can be confirmed.",
+          recommendation:
+            "Add a confirm screen with a timeout flow carrying holdButton: \"enter\"."
         };
       }
-      const timerElement = countdownScreen.elements.find(
-        (element) => element.binding === "countdown.value"
+      const withoutTimer = confirmScreens.filter(
+        (screen) => !screen.elements.some((element) => element.binding === "countdown.value")
       );
-      if (!timerElement) {
+      if (withoutTimer.length > 0) {
         return {
           id: "countdown-overlay",
-          title: "Countdown overlay exists",
+          title: "Hold-to-confirm screen exists",
           status: "fail",
-          message: "Countdown screen is missing an element bound to countdown.value.",
-          screenId: countdownScreen.id,
-          recommendation: "Add a value element with binding countdown.value to show the timer."
+          message: `${withoutTimer.length} confirm screen(s) do not show the remaining seconds.`,
+          screenId: withoutTimer[0].id,
+          recommendation:
+            "Add a value element bound to countdown.value so the operator sees the timer " +
+            `(missing on: ${withoutTimer.map((s2) => s2.id).join(", ")}).`
         };
       }
       return {
         id: "countdown-overlay",
-        title: "Countdown overlay exists",
+        title: "Hold-to-confirm screen exists",
         status: "pass",
-        message: `Screen ${countdownScreen.id} exposes countdown.value via ${timerElement.id}.`,
-        screenId: countdownScreen.id,
-        elementId: timerElement.id
+        message: `${confirmScreens.length} confirm screen(s) show countdown.value.`,
+        screenId: confirmScreens[0].id
       };
     },
     (dataset) => {

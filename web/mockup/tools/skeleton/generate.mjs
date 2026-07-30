@@ -1,0 +1,436 @@
+#!/usr/bin/env node
+/**
+ * One-shot scaffold generator for the hierarchical navigation model
+ * (docs/Requirements/feature addition/Display_UI_Requirements.md §5).
+ *
+ * This is NOT part of the build. It derives the *structure* of the screen tree
+ * from the firmware catalogue (actionManifest.json) so that ~27 near-identical
+ * screens are consistent by construction rather than hand-authored 27 times.
+ * Once generated, the dataset is the source of truth again: per decision D5 the
+ * JSON owns screen order, sub-level nesting, and the placement and wording of
+ * text, and a designer is expected to tune placement in the design tool.
+ *
+ * Deliberately does NOT regenerate the existing info pages P0-P6. Their
+ * two-column 8-sensor layouts were hand-tuned and already fit landscape
+ * (y = 2..133); only their footers sat out of bounds. Regenerating them would be
+ * inventing a design nobody asked for.
+ *
+ * Usage: node tools/skeleton/generate.mjs [--write]
+ */
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
+
+const ROOT = path.resolve(import.meta.dirname, "..", "..");
+const SCREENS = path.join(ROOT, "src", "data", "screens.json");
+const MANIFEST = path.join(ROOT, "src", "data", "actionManifest.json");
+
+// ── Landscape geometry (decision D3): 240 wide x 135 tall ────────────────────
+const W = 240;
+const H = 135;
+const L = {
+  headerY: 2,
+  bodyY: 30,
+  valueY: 50,
+  savedLabelY: 78,
+  savedValueY: 92,
+  footerY: 124,
+  padX: 8,
+  scrollbar: { x: 232, y: 14, width: 5, height: 104 }
+};
+
+const manifest = JSON.parse(fs.readFileSync(MANIFEST, "utf8"));
+const byId = new Map(manifest.values.map((v) => [v.id, v]));
+
+const A = {
+  next: "ui.action.page.next",
+  prev: "ui.action.page.previous",
+  descend: "ui.action.nav.descend",
+  back: "ui.action.nav.back",
+  escape: "ui.action.nav.escape",
+  inc: "config.action.value.increment",
+  dec: "config.action.value.decrement",
+  commit: "config.action.value.commit",
+  discard: "config.action.value.discard"
+};
+
+const text = (id, y, content, extra = {}) => ({
+  id, kind: "text", x: L.padX, y, content, ...extra
+});
+const value = (id, y, binding, extra = {}) => ({
+  id, kind: "value", x: L.padX, y, binding, ...extra
+});
+const scrollbar = () => ({ id: "level-position", kind: "scrollbar", ...L.scrollbar });
+const overlay = () => ({ id: "overlay-bg", kind: "box", x: 0, y: 0, width: W, height: H });
+
+const btn = (id, label, button, gesture, actionId, targetScreenId) => {
+  const flow = { id, label, trigger: { type: "button", button, gesture } };
+  if (targetScreenId) flow.targetScreenId = targetScreenId;
+  if (actionId) flow.actionId = actionId;
+  return flow;
+};
+
+/** Wires a level into a ring: UP/DOWN step siblings and wrap. */
+function ringFlows(ids, index) {
+  const prev = ids[(index - 1 + ids.length) % ids.length];
+  const next = ids[(index + 1) % ids.length];
+  return [
+    btn("f-next", "Next entry", "down", "short", A.next, next),
+    btn("f-prev", "Previous entry", "up", "short", A.prev, prev)
+  ];
+}
+
+const screens = [];
+
+// ── L1 Config root: C1..C7 + BACK ───────────────────────────────────────────
+const DEVICE = [
+  { page: "C1", id: "config-c1-modbus-id", title: "Modbus ID", binding: "config.modbusSlaveId" },
+  { page: "C2", id: "config-c2-baud-rate", title: "Baud Rate", binding: "config.baudRate" },
+  { page: "C3", id: "config-c3-parity", title: "Parity", binding: "config.parity" },
+  { page: "C4", id: "config-c4-stop-bits", title: "Stop Bits", binding: "config.stopBits" },
+  { page: "C5", id: "config-c5-led-pulse-vol", title: "LED Pulse Volume", binding: "config.ledPulseVolume" },
+  { page: "C6", id: "config-c6-led-pulse-period", title: "LED Pulse Period", binding: "config.ledPulsePeriod" },
+  { page: "C7", id: "config-c7-sensor-select", title: "Sensors", binding: null }
+];
+const CONFIG_RING = [...DEVICE.map((d) => d.id), "config-root-back"];
+
+const editorId = (settingScreenId) => `${settingScreenId}-edit`;
+
+DEVICE.forEach((d, i) => {
+  const isDescent = d.binding === null;
+  const target = isDescent ? "config-sensor-1" : editorId(d.id);
+  const v = d.binding ? byId.get(d.binding) : null;
+  const unit = v?.unit ? ` ${v.unit}` : "";
+  screens.push({
+    id: d.id,
+    name: `${d.page} — ${d.title}`,
+    description: `Config root entry ${d.page}. ENTER descends; UP/DOWN move within the level.`,
+    elements: [
+      text("hdr-title", L.headerY, `Config > ${d.title}`),
+      text("field-label", L.bodyY, isDescent ? "Select a sensor" : `Current${unit}`, { emphasis: "muted" }),
+      ...(d.binding ? [value("field-value", L.valueY, d.binding, { emphasis: "strong" })]
+                    : [text("field-value", L.valueY, "Sensors 1-8 >", { emphasis: "strong" })]),
+      text("footer-hint", L.footerY,
+        isDescent ? "UP/DN page  ENTER open  hold ENTER exit"
+                  : "UP/DN page  ENTER edit  hold ENTER exit",
+        { emphasis: "muted" }),
+      scrollbar()
+    ],
+    flows: [
+      ...ringFlows(CONFIG_RING, i),
+      btn("f-enter", isDescent ? "Open sensor list" : "Edit value", "enter", "short", A.descend, target),
+      btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+    ]
+  });
+});
+
+// BACK page for the config root
+screens.push({
+  id: "config-root-back",
+  name: "C.BACK — Back",
+  description: "Ascends one level, out of Configuration.",
+  elements: [
+    text("hdr-title", L.headerY, "Config"),
+    text("back-label", L.valueY, "< BACK", { emphasis: "strong" }),
+    text("footer-hint", L.footerY, "ENTER go back", { emphasis: "muted" }),
+    scrollbar()
+  ],
+  flows: [
+    ...ringFlows(CONFIG_RING, CONFIG_RING.length - 1),
+    btn("f-back", "Back one level", "enter", "short", A.back),
+    btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+  ]
+});
+
+// ── L2 Value editors for C1..C6 ─────────────────────────────────────────────
+function editorScreen({ page, screenId, title, binding, parentId }) {
+  const v = byId.get(binding);
+  if (!v) throw new Error(`catalogue has no value "${binding}"`);
+  const unit = v.unit ? ` ${v.unit}` : "";
+  const range = v.enum
+    ? v.enum.join(" / ")
+    : (v.min !== undefined && v.max !== undefined ? `${v.min} to ${v.max}${unit}` : "");
+  return {
+    id: screenId,
+    name: `${page}.V — Edit ${title}`,
+    description: `Value editor for ${page}. ENTER commits and ascends; hold ENTER discards.`,
+    elements: [
+      text("hdr-title", L.headerY, `Edit > ${title}`),
+      ...(range ? [text("range-hint", L.bodyY - 14, range, { emphasis: "muted" })] : []),
+      text("pending-label", L.bodyY, "New value", { emphasis: "muted" }),
+      value("pending-value", L.valueY, binding, { emphasis: "strong" }),
+      text("saved-label", L.savedLabelY, "Saved", { emphasis: "muted" }),
+      value("saved-value", L.savedValueY, binding, { emphasis: "muted" }),
+      text("footer-hint", L.footerY, "UP/DN adjust  ENTER save  hold ENTER discard", { emphasis: "muted" })
+    ],
+    flows: [
+      btn("f-inc", "Increase", "up", "short", A.inc),
+      btn("f-dec", "Decrease", "down", "short", A.dec),
+      btn("f-commit", "Save and go back", "enter", "short", A.commit, parentId),
+      btn("f-discard", "Discard and go back", "enter", "long", A.discard, parentId)
+    ]
+  };
+}
+
+DEVICE.filter((d) => d.binding).forEach((d) => {
+  screens.push(editorScreen({
+    page: d.page, screenId: editorId(d.id), title: d.title,
+    binding: d.binding, parentId: d.id
+  }));
+});
+
+// ── L2 Sensor list: Sensor 1..8 + BACK ──────────────────────────────────────
+const SENSOR_IDS = [...Array.from({ length: 8 }, (_, i) => `config-sensor-${i + 1}`), "config-sensor-back"];
+
+for (let n = 1; n <= 8; n += 1) {
+  screens.push({
+    id: `config-sensor-${n}`,
+    name: `SEN${n} — Sensor ${n}`,
+    description: `Sensor list entry. ENTER descends into sensor ${n}'s settings; the level carries the sensor index, so no selectedSensor state exists.`,
+    elements: [
+      text("hdr-title", L.headerY, "Config > Sensors"),
+      text("field-label", L.bodyY, "Sensor", { emphasis: "muted" }),
+      text("field-value", L.valueY, `${n} >`, { emphasis: "strong" }),
+      value("status-value", L.savedValueY, `sensor.${n}.status`, { emphasis: "muted" }),
+      text("footer-hint", L.footerY, "UP/DN sensor  ENTER open  hold ENTER exit", { emphasis: "muted" }),
+      scrollbar()
+    ],
+    flows: [
+      ...ringFlows(SENSOR_IDS, n - 1),
+      btn("f-enter", `Open sensor ${n} settings`, "enter", "short", A.descend, "config-s1-connected"),
+      btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+    ]
+  });
+}
+screens.push({
+  id: "config-sensor-back",
+  name: "SEN.BACK — Back",
+  description: "Ascends from the sensor list to the config root.",
+  elements: [
+    text("hdr-title", L.headerY, "Config > Sensors"),
+    text("back-label", L.valueY, "< BACK", { emphasis: "strong" }),
+    text("footer-hint", L.footerY, "ENTER go back", { emphasis: "muted" }),
+    scrollbar()
+  ],
+  flows: [
+    ...ringFlows(SENSOR_IDS, SENSOR_IDS.length - 1),
+    btn("f-back", "Back one level", "enter", "short", A.back),
+    btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+  ]
+});
+
+// ── L3 Sensor settings: S1..S4 + BACK, and L4 their editors ─────────────────
+const SENSOR_SETTINGS = [
+  { page: "S1", id: "config-s1-connected", title: "Connected", binding: "config.sensor.connected" },
+  { page: "S2", id: "config-s2-multiplier", title: "Multiplier (F)", binding: "config.sensor.multiplier" },
+  { page: "S3", id: "config-s3-adjust", title: "Adjust", binding: "config.sensor.adjust" },
+  { page: "S4", id: "config-s4-max-flow", title: "Max Flow (Q)", binding: "config.sensor.maxFlow" }
+];
+const S_RING = [...SENSOR_SETTINGS.map((s) => s.id), "config-sensor-settings-back"];
+
+SENSOR_SETTINGS.forEach((s, i) => {
+  const v = byId.get(s.binding);
+  const unit = v?.unit ? ` ${v.unit}` : "";
+  screens.push({
+    id: s.id,
+    name: `${s.page} — ${s.title}`,
+    description: `Sensor settings entry ${s.page}, scoped to the sensor of the current level.`,
+    elements: [
+      text("hdr-title", L.headerY, `Sensor > ${s.title}`),
+      value("sensor-index", L.headerY, "config.selectedSensor", { emphasis: "muted", x: 200 }),
+      text("field-label", L.bodyY, `Current${unit}`, { emphasis: "muted" }),
+      value("field-value", L.valueY, s.binding, { emphasis: "strong" }),
+      value("nyquist-warning", L.savedValueY, "config.sensor.nyquistWarning", { emphasis: "muted" }),
+      text("footer-hint", L.footerY, "UP/DN page  ENTER edit  hold ENTER exit", { emphasis: "muted" }),
+      scrollbar()
+    ],
+    flows: [
+      ...ringFlows(S_RING, i),
+      btn("f-enter", "Edit value", "enter", "short", A.descend, editorId(s.id)),
+      btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+    ]
+  });
+  screens.push(editorScreen({
+    page: s.page, screenId: editorId(s.id), title: s.title,
+    binding: s.binding, parentId: s.id
+  }));
+});
+screens.push({
+  id: "config-sensor-settings-back",
+  name: "S.BACK — Back",
+  description: "Ascends from sensor settings to the sensor list.",
+  elements: [
+    text("hdr-title", L.headerY, "Sensor"),
+    text("back-label", L.valueY, "< BACK", { emphasis: "strong" }),
+    text("footer-hint", L.footerY, "ENTER go back", { emphasis: "muted" }),
+    scrollbar()
+  ],
+  flows: [
+    ...ringFlows(S_RING, S_RING.length - 1),
+    btn("f-back", "Back one level", "enter", "short", A.back),
+    btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+  ]
+});
+
+// ── P8 Factory Reset info page ───────────────────────────────────────────────
+screens.push({
+  id: "info-p8-factory-reset",
+  name: "P8 — Factory Reset",
+  description: "Info-level entry point for a full factory reset. ENTER opens the confirm screen.",
+  elements: [
+    text("hdr-title", L.headerY, "P8 FACTORY RESET"),
+    text("warning-1", L.bodyY, "Erases all totals, sensor", { emphasis: "muted" }),
+    text("warning-2", L.bodyY + 12, "config and LED settings.", { emphasis: "muted" }),
+    text("prompt", L.valueY + 14, "ENTER to continue >", { emphasis: "strong" }),
+    text("footer-hint", L.footerY, "UP/DN page  ENTER confirm screen", { emphasis: "muted" }),
+    scrollbar()
+  ],
+  flows: [
+    btn("f-next", "Next page", "down", "short", A.next, "info-p0-global-status"),
+    btn("f-prev", "Previous page", "up", "short", A.prev, "info-p7-enter-config"),
+    btn("f-enter", "Open confirm screen", "enter", "short", A.descend, "confirm-factory-reset"),
+    btn("f-escape", "Back to main screen", "enter", "long", A.escape, "info-p0-global-status")
+  ]
+});
+
+// ── L1 Confirm screens + acknowledgement toasts ─────────────────────────────
+const CONFIRMS = [
+  {
+    id: "confirm-reset-totals", name: "Reset totals?", title: "RESET TOTALS?",
+    warn: "Persistent cumulative volume", warn2: "cannot be recovered.",
+    holdMs: 3000, action: "core.action.reset-all-measured", toast: "toast-totals-reset"
+  },
+  {
+    id: "confirm-reset-session", name: "Reset session?", title: "RESET SESSION?",
+    warn: "Session totals and max flow", warn2: "return to zero.",
+    holdMs: 1500, action: "core.action.reset-session", toast: "toast-session-reset"
+  },
+  {
+    id: "confirm-factory-reset", name: "Factory reset?", title: "FACTORY RESET?",
+    warn: "Wipes NVS and reboots.", warn2: "This cannot be undone.",
+    holdMs: 30000, action: "core.action.factory-reset", toast: null
+  }
+];
+
+for (const c of CONFIRMS) {
+  screens.push({
+    id: c.id,
+    name: c.name,
+    description: `Confirm screen. Inverted gestures per §3.2: ENTER-short exits, ENTER held ${c.holdMs} ms confirms.`,
+    elements: [
+      overlay(),
+      text("title", L.bodyY, c.title, { emphasis: "strong" }),
+      text("warning-1", L.bodyY + 18, c.warn, { emphasis: "muted" }),
+      text("warning-2", L.bodyY + 30, c.warn2, { emphasis: "muted" }),
+      { id: "timer-value", kind: "value", x: 104, y: L.valueY + 34, binding: "countdown.value", emphasis: "strong" },
+      text("footer-hint", L.footerY, "ENTER exit  hold ENTER confirm", { emphasis: "muted" })
+    ],
+    flows: [
+      btn("f-exit", "Exit without acting", "enter", "short", A.back),
+      {
+        id: "f-confirm",
+        label: c.name.replace("?", ""),
+        trigger: { type: "timeout", durationMs: c.holdMs, holdButton: "enter" },
+        actionId: c.action,
+        ...(c.toast ? { targetScreenId: c.toast } : {})
+      }
+    ]
+  });
+}
+
+const TOASTS = [
+  { id: "toast-totals-reset", name: "Totals reset", message: "TOTALS RESET" },
+  { id: "toast-session-reset", name: "Session reset", message: "SESSION RESET" }
+];
+for (const t of TOASTS) {
+  screens.push({
+    id: t.id,
+    name: t.name,
+    description: "Acknowledgement toast. Auto-dismisses after 2 s with no button held (§3.8 auto timeout).",
+    elements: [
+      overlay(),
+      text("message", 58, t.message, { emphasis: "strong" }),
+      text("sub", 74, "Returning...", { emphasis: "muted" })
+    ],
+    flows: [
+      {
+        id: "f-dismiss",
+        label: "Dismiss",
+        // No holdButton: absent means auto timeout (§3.8). Emitting an explicit
+        // null fails the schema enum, and absence is the clearer encoding anyway.
+        trigger: { type: "timeout", durationMs: 2000 },
+        actionId: A.back
+      }
+    ]
+  });
+}
+
+// ── Merge: replace generated ids, keep hand-tuned info pages ─────────────────
+const dataset = JSON.parse(fs.readFileSync(SCREENS, "utf8"));
+const generatedIds = new Set(screens.map((s) => s.id));
+const RETIRED = new Set([
+  // Replaced by confirm screens; enter-config, sensor-save and config-exit are no
+  // longer guarded actions at all under the new model.
+  "countdown-enter-config", "countdown-reset-session", "countdown-reset-all",
+  "countdown-factory-reset", "countdown-sensor-save", "countdown-config-exit"
+]);
+
+const kept = dataset.screens.filter((s) => !generatedIds.has(s.id) && !RETIRED.has(s.id));
+
+// Bring the retained hand-tuned screens into landscape bounds and give the info
+// pages a level indicator. Layouts are otherwise untouched.
+let moved = 0, resized = 0, barsAdded = 0;
+for (const s of kept) {
+  for (const e of s.elements) {
+    if (e.id === "footer-hint" && e.y > L.footerY) { e.y = L.footerY; moved += 1; }
+    if (e.kind === "box" && e.width === 135 && e.height === 240) { e.width = W; e.height = H; resized += 1; }
+    if (e.y > H - 8) { e.y = Math.max(0, H - 11); moved += 1; }
+  }
+  if (s.id.startsWith("info-p") && !s.elements.some((e) => e.kind === "scrollbar")) {
+    s.elements.push(scrollbar()); barsAdded += 1;
+  }
+  // Info pages: ENTER-short now descends into a confirm screen or Configuration.
+  const descend = {
+    "info-p2-cumulative-liters": "confirm-reset-totals",
+    "info-p3-cumulative-m3": "confirm-reset-totals",
+    "info-p4-session-liters": "confirm-reset-session",
+    "info-p5-session-m3": "confirm-reset-session",
+    "info-p6-max-flow": "confirm-reset-session",
+    "info-p7-enter-config": "config-c1-modbus-id"
+  }[s.id];
+  if (descend) {
+    s.flows = (s.flows ?? []).filter((f) => f.trigger.type !== "button" || f.trigger.button !== "enter");
+    s.flows.push(btn("f-enter", "Open", "enter", "short", A.descend, descend));
+    s.flows.push(btn("f-escape", "Back to main screen", "enter", "long", A.escape, "info-p0-global-status"));
+  }
+  // P7 now wraps to P8 rather than back to P0.
+  if (s.id === "info-p7-enter-config") {
+    for (const f of s.flows) {
+      if (f.id === "f-next") f.targetScreenId = "info-p8-factory-reset";
+    }
+  }
+  if (s.id === "info-p0-global-status") {
+    for (const f of s.flows) {
+      if (f.id === "f-prev") f.targetScreenId = "info-p8-factory-reset";
+    }
+  }
+}
+
+const merged = { ...dataset, screens: [...kept, ...screens] };
+
+const report = {
+  kept: kept.length,
+  generated: screens.length,
+  retired: [...RETIRED].filter((id) => dataset.screens.some((s) => s.id === id)).length,
+  total: merged.screens.length,
+  footersMoved: moved,
+  overlaysResized: resized,
+  scrollbarsAdded: barsAdded,
+  newActions: [...new Set(screens.flatMap((s) => (s.flows ?? []).map((f) => f.actionId)).filter(Boolean))].sort()
+};
+
+if (process.argv.includes("--write")) {
+  fs.writeFileSync(SCREENS, `${JSON.stringify(merged, null, 2)}\n`);
+  console.log("written:", SCREENS);
+}
+console.log(JSON.stringify(report, null, 2));
