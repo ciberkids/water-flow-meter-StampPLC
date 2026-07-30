@@ -283,7 +283,23 @@ enter-config 3 s, factory-reset 30 s, sensor-save 3 s, config-exit 3 s.
 
 ---
 
-### D1 🔴 How do config pages map to screens?
+### D1 🔴 How do config pages map to screens? — **SUPERSEDED**
+
+**Superseded 2026-07-30** by
+[`NF-20260730-01-menu-navigation-model.md`](../new%20feature%20proposal/NF-20260730-01-menu-navigation-model.md),
+which replaces the flat page model with a navigation tree: every level is a ring of
+sibling pages ending in `BACK`, ENTER-short descends or commits, ENTER-long escapes to
+the main screen. Answer that proposal instead of this entry.
+
+The proposal also supersedes or resolves: **A3** (the C5-vs-C7 contradiction disappears
+because C7 becomes a pure descent node with no value), **H1** (ENTER-long is the escape
+gesture; Idle is manual from P0 only), **H3** (no back-to-idle countdown), and **H6**
+(footer hints and LED legend placement).
+
+<details>
+<summary>Original entry</summary>
+
+### D1 (original) How do config pages map to screens?
 
 **Question.** `UiScreenRouter` resolves Configuration mode to a single screen
 (`config-c1-modbus-id`). The requirements need C1–C7 plus the per-sensor sub-menu
@@ -301,7 +317,9 @@ guard, and models the sub-menu scoping §5.3 describes.
 
 **Blocks.** Config-mode slice. Depends on A1 and B2.
 
-**Decision:**
+**Decision:** superseded — see the proposal linked above.
+
+</details>
 
 ---
 
