@@ -10,6 +10,7 @@ interface DisplayViewportProps {
   zoomPercent: number;
   showGrid: boolean;
   valueOverrides?: Record<string, string>;
+  globalValues?: Record<string, string>;
   pendingTransition?: TransitionPreviewState | null;
   scrollIndicator?: string;
   firmwareValues?: import("../types/firmwareActions").FirmwareValueDefinition[];
@@ -24,6 +25,7 @@ export function DisplayViewport({
   zoomPercent,
   showGrid,
   valueOverrides,
+  globalValues,
   pendingTransition,
   scrollIndicator,
   firmwareValues
@@ -157,6 +159,19 @@ export function DisplayViewport({
           displayContent = overrideValue;
         }
 
+        // §4.3.19: Disabled sensors render `--`
+        let isDisabledSensor = false;
+        if (element.dataSourceId && globalValues && element.dataSourceId.startsWith("sensor.") && !element.dataSourceId.endsWith(".connected")) {
+          const match = element.dataSourceId.match(/^sensor\.(\d+)\./);
+          if (match) {
+            const sensorId = match[1];
+            if (globalValues[`sensor.${sensorId}.connected`] === "false") {
+              displayContent = "--";
+              isDisabledSensor = true;
+            }
+          }
+        }
+
         const isOverridden =
           element.kind === "value" && overrideValue !== undefined && displayContent !== element.content;
 
@@ -164,18 +179,25 @@ export function DisplayViewport({
           "display-element",
           `kind-${element.kind}`,
           item.outOfBounds ? "overflow" : "",
-          isOverridden ? "value-overridden" : ""
+          isOverridden ? "value-overridden" : "",
+          isDisabledSensor ? "value-disabled" : ""
         ]
           .filter(Boolean)
           .join(" ");
 
         switch (element.kind) {
           case "text":
-          case "value":
           case "badge":
             return (
               <div key={element.id} className={className} style={style}>
                 {displayContent}
+              </div>
+            );
+          case "value":
+            return (
+              <div key={element.id} className={className} style={style}>
+                {displayContent}
+                {isDisabledSensor && <span style={{ fontSize: "0.5em", marginLeft: "2px" }}>x</span>}
               </div>
             );
           case "box":

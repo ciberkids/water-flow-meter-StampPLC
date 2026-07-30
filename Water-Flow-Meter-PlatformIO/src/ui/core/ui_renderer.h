@@ -50,7 +50,13 @@ class UiRenderer {
   static uint16_t toRgb565(std::uint32_t argb);
 
   uint32_t lastRenderMs_ = 0;
+  /** Info mode is telemetry at 1 Hz; nothing changes faster than that. */
   static constexpr uint32_t kRefreshIntervalMs = 1000;
+  /**
+   * Configuration and countdown screens must feel responsive to button presses
+   * (§7: acknowledge within 100 ms) without redrawing on every logic-loop tick.
+   */
+  static constexpr uint32_t kInteractiveRefreshIntervalMs = 80;
   uint16_t backgroundColor_ = 0x0000;
   uint16_t textColor_ = 0xFFFF;
   uint16_t highlightColor_ = 0x07FF;

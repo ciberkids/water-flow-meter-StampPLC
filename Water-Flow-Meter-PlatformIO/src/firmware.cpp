@@ -229,7 +229,18 @@ void logicTaskCode(void * pvParameters) {
   modbus.registerWorker(kDefaultModbusSlaveId, Modbus::READ_HOLD_REGISTER, handleReadHolding);
   modbus.registerWorker(kDefaultModbusSlaveId, Modbus::WRITE_HOLD_REGISTER, handleWriteSingle);
   modbus.registerWorker(kDefaultModbusSlaveId, Modbus::WRITE_MULT_REGISTERS, handleWriteMultiple);
-  modbus.begin(RS485_SERIAL_PORT);
+  // Pin the eModbus server task to core 1, alongside this logic task.
+  //
+  // Without the explicit coreID, ModbusServerRTU::doBegin() creates its task with
+  // tskNO_AFFINITY at priority 8 — free to be scheduled on core 0, where it would
+  // preempt the priority-2 polling task. That contradicts Project_document §3.2's
+  // guarantee that "pulse counting is never delayed or interrupted by other
+  // application logic, such as Modbus communication delays".
+  //
+  // Priority 8 also means Modbus still preempts this task (priority 1) on core 1,
+  // so a slow UI redraw cannot delay a Modbus response.
+  constexpr int kModbusCoreId = 1;
+  modbus.begin(RS485_SERIAL_PORT, kModbusCoreId);
 
   for (;;) {
     unsigned long now = millis();

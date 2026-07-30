@@ -668,6 +668,47 @@ put the LED legend on P0 (the landing page) rather than P1.
 **Decision:** ✅ resolved by §4.3 notes 4–5 and §6: **every** info page carries a footer hint, and the LED legend moves to P0. Element repositioning happens as part of the D3 landscape re-layout. (2026-07-30)
 ---
 
+### G2 ✅ Modbus task affinity broke the dedicated-core guarantee — FIXED
+
+**Found 2026-07-30** while reviewing whether the two-core split still holds.
+
+`firmware.cpp` called `modbus.begin(RS485_SERIAL_PORT)` without a core ID.
+`ModbusServerRTU::doBegin()` defaults `coreID = -1`, which becomes
+**`tskNO_AFFINITY`**, and the task is created at **priority 8**. So the Modbus server
+task was free to be scheduled on **core 0**, where it preempts the priority-2 polling
+task — directly contradicting `Project_document.md` §3.2: "pulse counting is never
+delayed or interrupted by other application logic, such as Modbus communication delays."
+
+**Fixed:** `modbus.begin(RS485_SERIAL_PORT, 1)` pins it to core 1. Priority 8 also means
+Modbus still preempts the logic/UI task (priority 1) on core 1, so a slow redraw cannot
+delay a Modbus response — the ordering is now correct on both cores.
+
+Resulting layout:
+
+| Core | Task | Priority |
+| --- | --- | --- |
+| 0 | `PollingTask` (+ IDLE0) | 2 |
+| 1 | eModbus server | 8 |
+| 1 | `LogicTask` (sensors, LED, UI) | 1 |
+
+**Decision:** ✅ fixed (2026-07-30)
+
+---
+
+### G3 ✅ Configuration mode redrew on every loop tick — FIXED
+
+`UiRenderer::update()` throttled to 1 Hz only when `context.mode == UiMode::Info`, so
+Configuration and countdown screens redrew on **every logic-loop iteration (~1 ms)** — a
+full 240x135x16bpp SPI transfer each time. Harmless today because Configuration mode is
+unreachable, but it would have surfaced the moment the config slice landed.
+
+**Fixed:** interactive modes throttle to 80 ms (fast enough for §7's "acknowledge within
+100 ms"), Info stays at 1 s.
+
+**Decision:** ✅ fixed (2026-07-30)
+
+---
+
 ## G. Hardware risk
 
 ### G1 🔴 Polling rate regression from the M5StamPLC 1.2.0 API

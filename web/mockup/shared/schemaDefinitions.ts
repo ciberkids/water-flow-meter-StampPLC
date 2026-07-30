@@ -332,17 +332,56 @@ export interface FirmwareAction {
 }
 
 /**
- * A value the firmware can supply to an element `binding`. `register` is the
- * Modbus holding-register address backing it, where one exists — derived values
- * (m³ from litres, formatted legends, countdown text) have no register.
+ * What kind of thing a firmware value is. The design tool groups its palette by
+ * this, and it is the difference between "place a reading" and "place a setting
+ * the operator can edit".
+ */
+export type FirmwareValueCategory =
+  /** Operator-editable setting with its own value editor screen. */
+  | "setting"
+  /** Live per-sensor reading (instant flow, status). */
+  | "reading"
+  /** Accumulated per-sensor total (cumulative, session, max). */
+  | "accumulated"
+  /** System-wide aggregate or diagnostic. */
+  | "system"
+  /** UI-supplied text with no register behind it (legends, countdown text). */
+  | "derived";
+
+/**
+ * A value the firmware can supply to an element `binding`.
+ *
+ * This is the **catalogue** the design tool offers: a designer picks a value from
+ * here rather than typing a binding string, so an element cannot reference
+ * something the firmware does not expose. `register` is the Modbus holding
+ * register backing it, where one exists — derived values (m³ from litres,
+ * formatted legends, countdown text) have none.
+ *
+ * For `category: "setting"`, the editor behaviour is fully described here:
+ * `min`/`max`/`step` for numerics, `enum` for cycle lists. One declaration drives
+ * the web simulator and the firmware editor alike, so they cannot drift.
  */
 export interface FirmwareValue {
   id: string;
   type?: "string" | "number" | "boolean";
+  category?: FirmwareValueCategory;
   unit?: string;
   register?: number;
   description?: string;
   readOnly?: boolean;
+  /** Inclusive lower bound for a numeric setting. */
+  min?: number;
+  /** Inclusive upper bound for a numeric setting. */
+  max?: number;
+  /** Increment applied by a single short UP/DOWN press. */
+  step?: number;
+  /** Ordered option list for a cycle-list setting; the register stores the index. */
+  enum?: string[];
+  /**
+   * True when the value is scoped to the sensor implied by the current navigation
+   * level rather than naming one. Lets one editor screen serve all 8 sensors.
+   */
+  perSensor?: boolean;
 }
 
 /**
@@ -405,10 +444,20 @@ export const firmwareValueSchema: JSONSchemaType<FirmwareValue> = {
   properties: {
     id: { type: "string", minLength: 1 },
     type: { type: "string", enum: ["string", "number", "boolean"], nullable: true },
+    category: {
+      type: "string",
+      enum: ["setting", "reading", "accumulated", "system", "derived"],
+      nullable: true
+    },
     unit: { type: "string", nullable: true },
     register: { type: "integer", minimum: 0, nullable: true },
     description: { type: "string", nullable: true },
-    readOnly: { type: "boolean", nullable: true }
+    readOnly: { type: "boolean", nullable: true },
+    min: { type: "number", nullable: true },
+    max: { type: "number", nullable: true },
+    step: { type: "number", nullable: true },
+    enum: { type: "array", items: { type: "string" }, minItems: 1, nullable: true },
+    perSensor: { type: "boolean", nullable: true }
   }
 };
 

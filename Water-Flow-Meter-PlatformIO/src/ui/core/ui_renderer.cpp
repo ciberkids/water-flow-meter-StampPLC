@@ -79,7 +79,13 @@ void UiRenderer::update(uint32_t nowMs, const UiRenderContext& context) {
     return;
   }
 
-  if (nowMs - lastRenderMs_ < kRefreshIntervalMs && context.mode == UiMode::Info) {
+  // Throttle every mode, not just Info. Configuration mode was exempt, so it
+  // redrew on every logic-loop iteration (~1 ms) — a full 240x135x16bpp SPI blast
+  // each time. Interactive modes get a faster cadence so edits feel immediate
+  // without saturating the bus.
+  const uint32_t interval =
+      (context.mode == UiMode::Info) ? kRefreshIntervalMs : kInteractiveRefreshIntervalMs;
+  if (nowMs - lastRenderMs_ < interval) {
     return;
   }
   lastRenderMs_ = nowMs;

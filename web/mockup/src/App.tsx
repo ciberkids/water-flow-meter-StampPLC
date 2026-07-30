@@ -1570,6 +1570,7 @@ export function App() {
                       zoomPercent={zoom}
                       showGrid={showGrid}
                       valueOverrides={selectedScreenOverrides}
+                      globalValues={firmwareLoopValues}
                       pendingTransition={transitionPreview}
                       scrollIndicator={scrollIndicator}
                       firmwareValues={firmwareManifest.values ?? []}
