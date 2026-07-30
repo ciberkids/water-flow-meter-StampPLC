@@ -3,17 +3,25 @@ import type { ThemeTokens } from "./theme/types.js";
 /**
  * Element kinds the design tool can author.
  *
- * "animation" and "scrollbar" are authorable but not yet renderable by the
- * firmware (Improvement_of_the_web_ui.md asks for both). They were previously
- * removed from this union while the editor, viewport and layout code that
- * implements them was left in place, which broke the build without removing the
- * feature. The exporter blocks any dataset that uses them — see
- * FIRMWARE_RENDERABLE_KINDS in tools/exporter/validation.ts.
+ * "scrollbar" renders a level-position indicator: the firmware derives the step
+ * count and current step from the active navigation level, so it carries no
+ * binding.
+ *
+ * "animation" (SVG frame sequences) was dropped for now — it was half-removed
+ * before, breaking the build while leaving the feature in place. It is recoverable
+ * from git history when we come back to it.
  */
-export type ElementKind = "text" | "value" | "badge" | "box" | "icon" | "animation" | "scrollbar";
+export type ElementKind = "text" | "value" | "badge" | "box" | "icon" | "scrollbar";
 
 /** Element kinds ui_exporter::ElementType and UiRenderer can actually draw. */
-export const FIRMWARE_RENDERABLE_KINDS = ["text", "value", "badge", "box", "icon"] as const;
+export const FIRMWARE_RENDERABLE_KINDS = [
+  "text",
+  "value",
+  "badge",
+  "box",
+  "icon",
+  "scrollbar"
+] as const;
 export type DisplayOrientation = "portrait" | "landscape";
 
 export type ElementMetadataValue = string | number | boolean;
@@ -34,9 +42,15 @@ export interface ScreenElement {
   content?: string;
   align?: "left" | "center" | "right";
   emphasis?: "normal" | "strong" | "muted";
+  /**
+   * Catalogue value this element displays. The single binding field: there used
+   * to also be `dataSourceId`, which the design tool wrote and the mockup read,
+   * while the exporter emitted firmware bindings from `binding` only — so
+   * anything bound through the UI rendered in the mockup and was silently
+   * dropped from the firmware output.
+   */
   binding?: string;
   metadata?: ScreenElementMetadata;
-  dataSourceId?: string;
 }
 
 export type ButtonName = "up" | "down" | "enter";

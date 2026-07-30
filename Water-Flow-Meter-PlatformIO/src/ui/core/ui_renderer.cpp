@@ -142,7 +142,44 @@ void UiRenderer::drawElement(const ui_exporter::Element& element,
     case ui_exporter::ElementType::Icon:
       drawIconElement(element, context);
       break;
+    case ui_exporter::ElementType::Scrollbar:
+      drawScrollbarElement(element, context);
+      break;
   }
+}
+
+void UiRenderer::drawScrollbarElement(const ui_exporter::Element& element,
+                                      const UiRenderContext& context) {
+  // Carries no binding: the step count and current step come from the active
+  // navigation level, so one authored element works on every page of that level.
+  const int steps = (context.mode == UiMode::Info)
+                        ? static_cast<int>(UiPage::Count)
+                        : 1;
+  const int index = (context.mode == UiMode::Info)
+                        ? static_cast<int>(context.page)
+                        : 0;
+  if (steps <= 0) {
+    return;
+  }
+
+  auto& display = M5StamPLC.Display;
+  const int16_t width = element.width > 0 ? element.width : 4;
+  const int16_t height = element.height > 0 ? element.height : 60;
+
+  display.drawRect(element.x, element.y, width, height, badgeBorderColor_);
+
+  // One segment per step, with a 1 px gap so adjacent segments stay legible.
+  const int16_t segment = static_cast<int16_t>(height / steps);
+  if (segment <= 0) {
+    return;
+  }
+  const int16_t thumbY = static_cast<int16_t>(element.y + segment * index);
+  const int16_t thumbH = static_cast<int16_t>(segment > 2 ? segment - 1 : segment);
+  display.fillRect(static_cast<int16_t>(element.x + 1),
+                   thumbY,
+                   static_cast<int16_t>(width - 2 > 0 ? width - 2 : 1),
+                   thumbH,
+                   highlightColor_);
 }
 
 bool UiRenderer::resolveElementText(const ui_exporter::Element& element,

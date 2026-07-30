@@ -8,7 +8,6 @@ const ELEMENT_LABELS: Array<{ kind: ElementKind; label: string }> = [
   { kind: "box", label: "Box" },
   { kind: "badge", label: "Badge" },
   { kind: "icon", label: "SVG Ref" },
-  { kind: "animation", label: "Animation box" },
   { kind: "scrollbar", label: "Scroll bar" }
 ];
 
@@ -35,7 +34,7 @@ interface DesignToolboxProps {
   onRemoveEvent: (screenId: string, index: number) => void;
 }
 
-const SIZE_ELEMENT_KINDS: ElementKind[] = ["box", "icon", "animation", "scrollbar"];
+const SIZE_ELEMENT_KINDS: ElementKind[] = ["box", "icon", "scrollbar"];
 const BINDABLE_ELEMENT_KINDS: ElementKind[] = ["text", "value"];
 
 const sanitizeNumericInput = (raw: string, maxDigits: number, max: number): number => {
@@ -160,12 +159,12 @@ export function DesignToolbox({
 
                     {compatibleValues.length > 0 ? (
                       <label>
-                        Data Source
+                        Bound value
                         <select
-                          value={element.dataSourceId ?? ""}
+                          value={element.binding ?? ""}
                           onChange={(e) =>
                             onUpdateElement(element.id, {
-                              dataSourceId: e.target.value || undefined
+                              binding: e.target.value || undefined
                             })
                           }
                         >
@@ -186,7 +185,7 @@ export function DesignToolbox({
                           onChange={(event) =>
                             onUpdateElement(element.id, { content: event.target.value })
                           }
-                          disabled={!!element.dataSourceId}
+                          disabled={!!element.binding}
                         />
                       </label>
                     )}

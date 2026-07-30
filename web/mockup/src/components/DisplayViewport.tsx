@@ -81,17 +81,6 @@ export function DisplayViewport({
       icon: {
         backgroundColor: theme.colors.icon
       },
-      animation: {
-        border: `1px dashed ${theme.colors.legend}`,
-        backgroundColor: "rgba(133, 187, 232, 0.08)",
-        color: theme.colors.legend,
-        textTransform: "uppercase",
-        letterSpacing: "0.08em",
-        fontSize: "0.6rem",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center"
-      },
       scrollbar: {
         border: `1px solid ${theme.colors.badgeBorder}`,
         backgroundColor: "rgba(255, 255, 255, 0.04)",
@@ -147,8 +136,8 @@ export function DisplayViewport({
         const overrideValue = overrides ? overrides[element.id] : undefined;
         let displayContent = element.content;
 
-        if (element.dataSourceId && firmwareValues) {
-          const boundValue = firmwareValues.find((v) => v.id === element.dataSourceId);
+        if (element.binding && firmwareValues) {
+          const boundValue = firmwareValues.find((v) => v.id === element.binding);
           if (boundValue) {
             displayContent = `{{${boundValue.description ?? boundValue.id}}}`;
           }
@@ -161,8 +150,8 @@ export function DisplayViewport({
 
         // §4.3.19: Disabled sensors render `--`
         let isDisabledSensor = false;
-        if (element.dataSourceId && globalValues && element.dataSourceId.startsWith("sensor.") && !element.dataSourceId.endsWith(".connected")) {
-          const match = element.dataSourceId.match(/^sensor\.(\d+)\./);
+        if (element.binding && globalValues && element.binding.startsWith("sensor.") && !element.binding.endsWith(".connected")) {
+          const match = element.binding.match(/^sensor\.(\d+)\./);
           if (match) {
             const sensorId = match[1];
             if (globalValues[`sensor.${sensorId}.connected`] === "false") {
@@ -203,12 +192,6 @@ export function DisplayViewport({
           case "box":
           case "icon":
             return <div key={element.id} className={className} style={style} />;
-          case "animation":
-            return (
-              <div key={element.id} className={`${className} animation-block`} style={style}>
-                <span>{element.metadata?.assetId ?? "Animation"}</span>
-              </div>
-            );
           case "scrollbar":
             return (
               <div key={element.id} className={`${className} scrollbar-block`} style={style}>

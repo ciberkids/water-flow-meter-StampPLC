@@ -272,10 +272,9 @@ function checkManifestScreenCoverage(
 /**
  * Blocks export of element kinds the firmware renderer cannot draw.
  *
- * "animation" and "scrollbar" are authorable in the design tool (both are
- * requested features) but have no ui_exporter::ElementType and no UiRenderer
- * case. Exporting them would silently drop them on hardware while the mockup
- * kept showing them, so the export fails until firmware support lands.
+ * Every kind in FIRMWARE_RENDERABLE_KINDS has an ir.ts case, a cppEmitter
+ * mapping and a UiRenderer case. Anything else would be silently dropped on
+ * hardware while the mockup kept showing it, so the export fails instead.
  */
 export function checkRenderableElementKinds(dataset: ScreenDataset): ValidationCheck {
   const renderable = new Set<string>(FIRMWARE_RENDERABLE_KINDS);

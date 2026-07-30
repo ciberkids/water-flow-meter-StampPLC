@@ -45,7 +45,6 @@ import { ScreenHierarchyPanel } from "./components/design/ScreenHierarchyPanel";
 import { buildScreenHierarchy } from "./utils/screenHierarchy";
 import { DesignToolbox } from "./components/design/DesignToolbox";
 import { LiveJsonEditorPanel } from "./components/design/LiveJsonEditorPanel";
-import { AnimationInspector } from "./components/design/AnimationInspector";
 import { validateManifest } from "./schema/manifestValidation";
 import { FirmwareLoopPanel } from "./components/FirmwareLoopPanel";
 
@@ -120,13 +119,6 @@ const createElementTemplate = (kind: ElementKind, screen: ScreenDefinition): Scr
         ...baseElement,
         width: 12,
         height: 12,
-        metadata: { assetId: screen.assets?.[0]?.id }
-      };
-    case "animation":
-      return {
-        ...baseElement,
-        width: 50,
-        height: 24,
         metadata: { assetId: screen.assets?.[0]?.id }
       };
     case "scrollbar":
@@ -1803,11 +1795,6 @@ export function App() {
                     stackControls
                   />
                 </div>
-                <AnimationInspector
-                  screen={selectedScreen}
-                  onUploadFrames={handleUploadFrames}
-                  onReorderFrame={handleReorderFrame}
-                />
                 <LiveJsonEditorPanel
                   dataset={dataset}
                   onApplyDataset={handleApplyDatasetFromJson}

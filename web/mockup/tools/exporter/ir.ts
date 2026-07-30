@@ -75,11 +75,19 @@ function normaliseTextPayload(element: ScreenElement): IRElementKind {
       };
     case "icon":
       return { type: "icon", payload: { assetId: element.metadata?.assetId ?? element.content } };
+    case "scrollbar":
+      // Carries no binding: the firmware derives step count and current step from
+      // the active navigation level.
+      return {
+        type: "scrollbar",
+        payload: {
+          width: element.width ?? 0,
+          height: element.height ?? 0
+        }
+      };
     default:
-      // "animation" and "scrollbar" are authorable in the design tool but have
-      // no ui_exporter::ElementType yet. runExportValidations() rejects them
-      // before we get here (checkRenderableElementKinds); this throw is the
-      // backstop so they can never be silently dropped from the IR.
+      // Backstop: a kind with no IR mapping must never be silently dropped.
+      // checkRenderableElementKinds() rejects these before we get here.
       throw new Error(
         `Element ${element.id} uses kind "${element.kind}", which has no firmware IR mapping.`
       );
@@ -101,9 +109,6 @@ function convertElement(element: ScreenElement): IRScreenElement {
   }
   if (element.binding) {
     base.binding = element.binding;
-  }
-  if (element.dataSourceId) {
-    base.dataSourceId = element.dataSourceId;
   }
   return base;
 }

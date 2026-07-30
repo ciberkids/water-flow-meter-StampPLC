@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { checkRenderableElementKinds, runExportValidations } from "../validation.js";
 import { buildIntermediateRepresentation } from "../ir.js";
-import type { ScreenDataset } from "../../../src/types.js";
+import type { ScreenDataset, ScreenElement } from "../../../src/types.js";
 import { cloneTheme } from "../../../src/theme/types.js";
 import { defaultTheme } from "../../../src/theme/defaultTheme.js";
 import type { FirmwareManifest } from "../../../shared/schemaDefinitions.js";
@@ -147,7 +147,9 @@ test("checkRenderableElementKinds rejects kinds firmware cannot render", () => {
   const dataset = makeDataset();
   dataset.screens[0].elements.push({
     id: "flow-animation",
-    kind: "animation",
+    // Deliberately not an ElementKind: the guard must reject anything without an
+    // IR mapping, including a kind added to the union but not yet plumbed through.
+    kind: "animation" as unknown as ScreenElement["kind"],
     x: 0,
     y: 40,
     width: 50,
@@ -168,8 +170,8 @@ test("checkRenderableElementKinds passes on a firmware-renderable dataset", () =
 test("buildIntermediateRepresentation throws on an unmappable element kind", () => {
   const dataset = makeDataset();
   dataset.screens[0].elements.push({
-    id: "flow-scrollbar",
-    kind: "scrollbar",
+    id: "flow-mystery",
+    kind: "mystery" as unknown as ScreenElement["kind"],
     x: 0,
     y: 60,
     width: 10,

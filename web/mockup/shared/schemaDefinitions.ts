@@ -25,7 +25,7 @@ export const elementSchema: JSONSchemaType<ScreenElement> = {
     id: { type: "string", minLength: 1 },
     kind: {
       type: "string",
-      enum: ["text", "value", "badge", "box", "icon"]
+      enum: ["text", "value", "badge", "box", "icon", "scrollbar"]
     },
     x: { type: "integer" },
     y: { type: "integer" },
@@ -39,7 +39,6 @@ export const elementSchema: JSONSchemaType<ScreenElement> = {
       nullable: true
     },
     binding: { type: "string", nullable: true },
-    dataSourceId: { type: "string", nullable: true },
     metadata: {
       type: "object",
       nullable: true,

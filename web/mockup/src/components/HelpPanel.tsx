@@ -8,7 +8,7 @@ interface HelpPanelProps {
 }
 
 // Derived from schemaDefinitions.ts element kind enum
-const ELEMENT_KINDS = ["text", "value", "badge", "box", "icon", "animation", "scrollbar"] as const;
+const ELEMENT_KINDS = ["text", "value", "badge", "box", "icon", "scrollbar"] as const;
 
 const ELEMENT_KIND_DOCS: Record<string, { description: string; keyProps: string; example: string }> = {
   text: {
@@ -18,7 +18,7 @@ const ELEMENT_KIND_DOCS: Record<string, { description: string; keyProps: string;
   },
   value: {
     description: "Live value — content is replaced at runtime by a firmware data source.",
-    keyProps: "content (default), binding or dataSourceId",
+    keyProps: "content (default) or binding",
     example: `{ "id": "flow-rate", "kind": "value", "x": 10, "y": 20, "binding": "sensor.flow.instant" }`
   },
   badge: {
@@ -39,7 +39,7 @@ const ELEMENT_KIND_DOCS: Record<string, { description: string; keyProps: string;
   animation: {
     description: "Animated asset — plays SVG frames from a graphic asset on the screen.",
     keyProps: "metadata.assetId, and a matching animation definition",
-    example: `{ "id": "ring", "kind": "animation", "x": 50, "y": 80, "metadata": { "assetId": "countdown-ring" } }`
+    example: `{ "id": "level-pos", "kind": "scrollbar", "x": 232, "y": 20, "width": 6, "height": 100 }`
   },
   scrollbar: {
     description: "Scroll position indicator — auto-indexed by position in the element list.",

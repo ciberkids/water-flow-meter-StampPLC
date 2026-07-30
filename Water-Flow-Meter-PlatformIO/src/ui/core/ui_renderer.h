@@ -33,6 +33,7 @@ class UiRenderer {
                        const UiRenderContext& context);
   void drawBoxElement(const ui_exporter::Element& element, uint16_t fillColor, uint16_t borderColor);
   void drawIconElement(const ui_exporter::Element& element, const UiRenderContext& context);
+  void drawScrollbarElement(const ui_exporter::Element& element, const UiRenderContext& context);
   void drawFlowDots(const ui_exporter::Element& element, const UiRenderContext& context);
   void drawWarningBanner(const UiRenderContext& context);
   void drawAssetError(const UiRenderContext& context);

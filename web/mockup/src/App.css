@@ -551,7 +551,7 @@ body {
   outline: 1px dashed rgba(86, 210, 255, 0.9);
 }
 
-.animation-block {
+.legacy-animation-block {
   font-family: "JetBrains Mono", monospace;
 }
 

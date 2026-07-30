@@ -10,7 +10,8 @@ enum class ElementType : std::uint8_t {
   Value = 1,
   Badge = 2,
   Box = 3,
-  Icon = 4
+  Icon = 4,
+  Scrollbar = 5
 };
 
 enum class TextAlign : std::uint8_t {

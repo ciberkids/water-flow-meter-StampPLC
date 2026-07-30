@@ -30,7 +30,8 @@ export type IRElementKind =
   | { type: "value"; payload: IRElementTextContent }
   | { type: "badge"; payload: IRElementTextContent }
   | { type: "box"; payload: { width: number; height: number } }
-  | { type: "icon"; payload: { assetId?: string } };
+  | { type: "icon"; payload: { assetId?: string } }
+  | { type: "scrollbar"; payload: { width: number; height: number } };
 
 export interface IRScreenElement {
   id: string;
@@ -38,7 +39,6 @@ export interface IRScreenElement {
   kind: IRElementKind;
   size?: { width: number; height: number };
   binding?: string;
-  dataSourceId?: string;
 }
 
 export interface IRFlow extends ScreenFlow { }

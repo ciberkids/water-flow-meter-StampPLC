@@ -42,21 +42,49 @@ std::string_view bindingView(const ui_exporter::Element& element) {
   return std::string_view(element.bindingId);
 }
 
-bool parseSensorIndex(std::string_view binding, std::size_t* indexOut) {
-  if (!indexOut) {
+/**
+ * Splits `sensor.<n>.<metric>` into a zero-based index and the metric suffix.
+ *
+ * The suffix used to be ignored: the metric came from `context.page` instead, so
+ * an element authored as `sensor.3.sessionLiters` rendered whatever the current
+ * page's metric happened to be. The mockup and the device could therefore
+ * disagree about what a number meant. Reading the suffix also *removes* the page
+ * switch below rather than adding to it.
+ */
+bool parseSensorBinding(std::string_view binding,
+                        std::size_t* indexOut,
+                        std::string_view* metricOut) {
+  if (!indexOut || !metricOut) {
     return false;
   }
   // std::string_view::starts_with is C++20; the Arduino core builds this at C++17.
-  if (binding.rfind("sensor.", 0) != 0) {
+  constexpr std::string_view kPrefix = "sensor.";
+  if (binding.rfind(kPrefix, 0) != 0) {
     return false;
   }
-  const char* start = binding.data() + std::strlen("sensor.");
-  char* end = nullptr;
-  const unsigned long value = std::strtoul(start, &end, 10);
-  if (end == start || value == 0 || value > plc::kNumSensors) {
+  const std::string_view rest = binding.substr(kPrefix.size());
+  const std::size_t dot = rest.find('.');
+  const std::string_view digits = (dot == std::string_view::npos) ? rest : rest.substr(0, dot);
+  if (digits.empty()) {
     return false;
   }
+
+  unsigned long value = 0;
+  for (const char c : digits) {
+    if (c < '0' || c > '9') {
+      return false;
+    }
+    value = value * 10 + static_cast<unsigned long>(c - '0');
+    if (value > plc::kNumSensors) {
+      return false;
+    }
+  }
+  if (value == 0) {
+    return false;
+  }
+
   *indexOut = static_cast<std::size_t>(value - 1);
+  *metricOut = (dot == std::string_view::npos) ? std::string_view{} : rest.substr(dot + 1);
   return true;
 }
 
@@ -132,7 +160,8 @@ bool UiBindingResolver::resolveSensorBinding(const UiRenderContext& context,
                                              char* buffer,
                                              std::size_t bufferSize) const {
   std::size_t sensorIndex = 0;
-  if (!parseSensorIndex(bindingId, &sensorIndex)) {
+  std::string_view metric;
+  if (!parseSensorBinding(bindingId, &sensorIndex, &metric)) {
     return false;
   }
   if (sensorIndex >= context.sensors.size()) {
@@ -142,6 +171,13 @@ bool UiBindingResolver::resolveSensorBinding(const UiRenderContext& context,
   const auto& sensor = context.sensors[sensorIndex];
   const unsigned sensorLabel = static_cast<unsigned>(sensorIndex + 1);
 
+  // "status" reports readiness regardless of whether a metric is available.
+  if (metric == "status") {
+    const char* state = !sensor.enabled ? "--" : (sensor.ready ? "OK" : "WAIT");
+    std::snprintf(buffer, bufferSize, "%s", state);
+    return true;
+  }
+
   if (!sensor.enabled) {
     std::snprintf(buffer, bufferSize, "%u: --", sensorLabel);
     return true;
@@ -150,40 +186,30 @@ bool UiBindingResolver::resolveSensorBinding(const UiRenderContext& context,
     std::snprintf(buffer, bufferSize, "%u: WAIT", sensorLabel);
     return true;
   }
-  if (context.page == UiPage::EnterConfiguration) {
-    std::snprintf(buffer, bufferSize, "%u: Hold ENTER", sensorLabel);
-    return true;
-  }
 
   double value = 0.0;
   const char* unit = "";
-  switch (context.page) {
-    case UiPage::InstantFlow:
-      value = sensor.instantFlow;
-      unit = "L/s";
-      break;
-    case UiPage::CumulativeLiters:
-      value = sensor.cumulativeLiters;
-      unit = "L";
-      break;
-    case UiPage::CumulativeCubicMeters:
-      value = sensor.cumulativeLiters / 1000.0;
-      unit = "m^3";
-      break;
-    case UiPage::SessionLiters:
-      value = sensor.sessionLiters;
-      unit = "L";
-      break;
-    case UiPage::SessionCubicMeters:
-      value = sensor.sessionLiters / 1000.0;
-      unit = "m^3";
-      break;
-    case UiPage::MaxFlow:
-      value = sensor.maxFlow;
-      unit = "L/s";
-      break;
-    default:
-      break;
+  if (metric == "instantFlow") {
+    value = sensor.instantFlow;
+    unit = "L/s";
+  } else if (metric == "cumulativeLiters") {
+    value = sensor.cumulativeLiters;
+    unit = "L";
+  } else if (metric == "cumulativeM3") {
+    value = sensor.cumulativeLiters / 1000.0;
+    unit = "m^3";
+  } else if (metric == "sessionLiters") {
+    value = sensor.sessionLiters;
+    unit = "L";
+  } else if (metric == "sessionM3") {
+    value = sensor.sessionLiters / 1000.0;
+    unit = "m^3";
+  } else if (metric == "maxFlowSinceReset") {
+    value = sensor.maxFlow;
+    unit = "L/s";
+  } else {
+    // Unknown metric: fail rather than render a plausible-looking wrong number.
+    return false;
   }
 
   std::snprintf(buffer, bufferSize, "%u: %6.2f %s", sensorLabel, value, unit);
