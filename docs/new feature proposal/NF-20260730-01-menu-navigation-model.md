@@ -1,9 +1,15 @@
 # Requirement: Hierarchical Menu Navigation Model
 
-**Version:** 0.1 (proposal)
+**Version:** 0.2 (proposal)
 **Date:** 2026-07-30
 **Status:** proposal — supersedes `Display_UI_Requirements.md` §5 and amends §2 and §4.3
 **Supersedes decision:** D1 in `docs/active_work/open_decisions.md`
+
+**Changes in 0.2** — incorporates answers to Q1–Q3: UP+DOWN short-press turns the display
+off (§3.5), `BACK` confirmed as a screen (§3.1), and reset confirmation moves to a
+dedicated screen with **inverted** gesture logic plus a timed acknowledgement toast
+(§3.3). Adds §3.8 on the two kinds of timeout, which the schema does not currently
+distinguish.
 
 ---
 
@@ -53,10 +59,11 @@ Every level is a **ring**: UP/DOWN step through siblings and wrap around. The la
 of every non-root level is `BACK`.
 
 ```
-L0  Info mode ................ P0 P1 P2 P3 P4 P5 P6 P7          (no BACK — this is the root)
+L0  Info mode ............ P0 P1 P2 P3 P4 P5 P6 P7 P8           (no BACK — this is the root)
      │
-     ├─ P2/P3 ENTER-short ──▶ L1  Confirm: Reset Totals         (hold-to-confirm, 30 s)
-     ├─ P4/P5/P6 ENTER-short▶ L1  Confirm: Reset Session        (hold-to-confirm, 3 s)
+     ├─ P2/P3 ENTER-short ──▶ L1  Confirm "Reset totals?"   ─▶ toast ─▶ back to P2/P3
+     ├─ P4/P5/P6 ENTER-short▶ L1  Confirm "Reset session?"  ─▶ toast ─▶ back to P4/P5/P6
+     ├─ P8 ENTER-short ─────▶ L1  Confirm "Factory reset?"  ─▶ wipe NVS + reboot
      └─ P7 ENTER-short ─────▶ L1  Config root
                                    │  C1 C2 C3 C4 C5 C6 C7 BACK
                                    │
@@ -83,35 +90,69 @@ L0  Info mode ................ P0 P1 P2 P3 P4 P5 P6 P7          (no BACK — thi
 | --- | --- | --- | --- |
 | UP / DOWN short | previous / next sibling (wraps) | −1 / +1 (or previous / next enum) | no effect |
 | UP / DOWN held | repeat sibling stepping every 250 ms | accelerating adjust, see §3.4 | no effect |
-| ENTER short | descend into the highlighted entry; on `BACK`, ascend one level | **commit** and ascend one level | no effect |
-| ENTER long (≥1.5 s) | escape to the main screen (P0) | **discard** and ascend one level | — |
-| ENTER held | — | — | run the countdown; release aborts |
-| UP + DOWN held 30 s | factory reset (unchanged, §2) | factory reset | factory reset |
+| ENTER short | descend into the current entry; on `BACK`, ascend one level | **commit** and ascend one level | **exit** without acting |
+| ENTER long (≥1.5 s) | escape to the main screen (P0) | **discard** and ascend one level | **confirm** the action |
+| UP + DOWN short | **display off** (§3.5) | display off | display off |
 
-> **Proposed change to the original model (R1).** The original proposal put a 3 s
+**Gesture meaning differs by screen type, deliberately.** Editors put the easy gesture on
+the common outcome (you usually save), confirm screens put it on the safe one (you usually
+back out). That optimises for expected frequency, and the irreversible action always
+requires the deliberate gesture:
+
+| Screen type | ENTER short | ENTER long |
+| --- | --- | --- |
+| Navigation | descend | escape to P0 |
+| Value editor | commit | discard |
+| Confirm | exit | confirm |
+
+Because the mapping is not uniform, **the footer legend must state it on every screen**
+(§5). The three screen types are visually distinct — an editor shows a value, a confirm
+screen asks a question — so the legend is a reminder rather than the only cue.
+
+> **Proposed change to the original model (R1).** The original sketch put a 3 s
 > hold-to-discard countdown on the editor's ENTER-long. This proposal discards
-> **immediately** instead. Discarding an unsaved edit is harmless — the operator simply
-> re-enters and tries again — so a 3 s hold buys no safety while adding friction, and it
-> inverts the convention used everywhere else, where holding *commits* the dangerous
-> action. Countdowns are reserved for irreversible operations: §3.3.
+> **immediately**. Discarding an unsaved edit is harmless — the operator re-enters and
+> tries again — so a countdown buys no safety while adding friction. Countdowns are
+> reserved for irreversible operations (§3.3).
 
-### 3.3. Countdowns are only for irreversible actions
+### 3.3. Confirm screens and acknowledgement toasts
 
-A hold-to-confirm countdown appears on a **confirm screen**, never on a navigation or
-editor screen. Releasing ENTER before zero aborts; UP/DOWN have no effect (§4.3 note 2).
+Destructive actions live behind a **confirm screen** reached by ENTER-short from the
+relevant info page. On a confirm screen ENTER-short **exits** and ENTER-long **confirms**.
+UP/DOWN have no effect (§4.3 note 2).
 
-| Confirm screen | Reached from | Duration | Action at zero |
+Confirming pushes an **acknowledgement toast** — a screen showing e.g.
+`TOTALS RESET` — which displays for 2 s and then returns automatically to the info page
+the operator started from. This satisfies §6 note 4 ("feedback within 1 s of an action")
+and gives the operator proof the action happened rather than an unexplained screen change.
+
+| Confirm screen | Reached from | On confirm | Toast |
 | --- | --- | --- | --- |
-| Reset Totals | P2, P3 (ENTER-short) | 30 s | `core.action.reset-all-measured` |
-| Reset Session | P4, P5, P6 (ENTER-short) | 3 s | `core.action.reset-session` |
-| Factory Reset | UP+DOWN combo, any screen | 30 s | `core.action.factory-reset` |
-| Nyquist override | sensor editor commit failure | — | see §3.6 |
+| `Reset totals?` | P2, P3 (ENTER-short) | `core.action.reset-all-measured` | `TOTALS RESET`, 2 s |
+| `Reset session?` | P4, P5, P6 (ENTER-short) | `core.action.reset-session` | `SESSION RESET`, 2 s |
+| `Factory reset?` | **P8** (ENTER-short) | `core.action.factory-reset` | reboot, no toast |
+| Nyquist override | sensor editor commit failure | see §3.6 | `SAVED (WARNING)`, 2 s |
+
+Editors should use the same toast pattern on commit (`SAVED`, 2 s) so feedback is
+consistent across the UI.
 
 > **Proposed change (Q3).** In the current requirement P2–P6 arm their countdown with
-> ENTER-**long**, which collides with ENTER-long as the escape gesture. Moving the
-> countdown behind an ENTER-short descent into a confirm screen restores one meaning per
-> gesture, and it makes the confirmation visible as an authorable screen. It also
-> resolves decision **H1**.
+> ENTER-**long** directly from the info page, which collides with ENTER-long as the escape
+> gesture. Routing through a confirm screen restores one meaning per gesture per screen
+> type, makes the confirmation an authorable screen, and resolves decision **H1**.
+>
+> **Open: does the confirm screen still need a hold countdown?** §4.3 specifies 30 s for
+> "Reset All Measured" and 3 s for session resets. Those durations were sized for a reset
+> armed *directly* from an info page, where an accidental press was the risk. A dedicated
+> confirm screen already removes that risk, so a 30 s hold is now punitive.
+>
+> **Recommendation:** keep a **3 s** hold-to-confirm on `Reset totals?` — cumulative
+> litres are persisted in NVS and are the one value in the system that cannot be
+> recovered — and use a plain ENTER-long (1.5 s) for `Reset session?`, which is
+> non-persistent and re-accumulates on its own. `Factory reset?` keeps a **30 s** hold: it
+> wipes NVS and reboots, and unlike the other two it is now reachable by ordinary page
+> flipping (§3.7), so the long hold is the only thing standing between a browsing operator
+> and a wiped device. See §7 item 9.
 
 ### 3.4. Value editors
 
@@ -143,19 +184,37 @@ see both what they are about to commit and what is in force.
 A short press is always exactly ±1 regardless of what preceded it. Numeric values clamp
 at their range ends; enums and booleans wrap.
 
-### 3.5. Reaching Idle
+### 3.5. Reaching Idle, and retiring the UP+DOWN combo
 
-**Proposed answer to Q1/H1.** ENTER-long is the escape gesture, so it cannot also mean
-Idle. Idle is reached two ways:
+**Answer to Q1.** A short **UP + DOWN** press turns the display off, from any screen and
+any level. This is better than overloading ENTER-long, because it works at every depth
+without competing with the escape gesture, and it leaves ENTER-long meaning exactly one
+thing everywhere.
+
+Waking is unchanged: §4.1 already says "Idle → Info: any button". So the gesture is
+effectively **display off**, not a true toggle — see §7 item 10.
+
+Idle is therefore reached two ways:
 
 1. **Automatically** after 120 s without a button press (unchanged, §4.1).
-2. **Manually** from `P0` only, where ENTER-long has no level to escape to and therefore
-   means "display off".
+2. **Manually** by UP + DOWN short press, from anywhere.
 
-At any deeper level ENTER-long escapes to P0; a second ENTER-long there goes Idle. This
-keeps one meaning per gesture and makes manual idle reachable from anywhere in two
-presses. It also settles **H3**: no back-to-idle countdown, because going idle is
-reversible by any button press.
+This settles **H1** (ENTER-long is unambiguously escape) and **H3** (no back-to-idle
+countdown — going idle is reversible by any button press).
+
+**Consequence: §2's UP+DOWN factory-reset combo is retired.** With factory reset promoted
+to a navigable page (P8, §3.1) and UP+DOWN reassigned to display-off, the blind 30 s combo
+and its 3 s warning overlay are no longer needed. That is a net gain:
+
+- A blind button combo is **undiscoverable** — nothing on screen tells an operator it
+  exists, and nothing tells them they are 12 seconds into triggering it.
+- A menu entry is self-documenting, shows a confirm screen, and reports what happened.
+- It deletes a bespoke state machine from `InteractionHandler` (`FactoryResetState`, the
+  overlay delay, the restart scheduling) in favour of the same confirm-screen path every
+  other destructive action uses.
+
+The one thing lost is a recovery route when the UI is unusable — a blind combo works even
+if the display is broken. See §7 item 11.
 
 ### 3.6. Committing, validation and the Nyquist path
 
@@ -182,6 +241,9 @@ ID is **derived** from its parent page:
 
 | Level | Page ID | Screen ID |
 | --- | --- | --- |
+| Info page | `P8` | `info-p8-factory-reset` |
+| Confirm | `P8.C` | `confirm-factory-reset` |
+| Toast | `P2.T` | `toast-totals-reset` |
 | Config root | `C1` | `config-c1-modbus-id` |
 | Value editor | `C1.V` | `config-c1-modbus-id-edit` |
 | Sensor list | `SEN3` | `config-sensor-3` |
@@ -190,7 +252,27 @@ ID is **derived** from its parent page:
 | BACK entry | `<parent>.BACK` | `config-<level>-back` |
 
 No lookup table is needed, and the exporter can verify mechanically that every setting
-page has a matching `-edit` screen.
+page has a matching `-edit` screen and every confirm screen a matching toast.
+
+### 3.8. Two kinds of timeout
+
+The schema has one `trigger.type: "timeout"`, but this model needs two behaviours that
+must not be conflated:
+
+| Kind | Requires a button held | Aborts on release | Used by |
+| --- | --- | --- | --- |
+| **Hold countdown** | yes (ENTER) | yes | confirm screens (§3.3) |
+| **Auto timeout** | no | n/a | acknowledgement toasts (§3.3), idle timeout |
+
+Today `InteractionHandler` treats every `FlowTrigger::Timeout` as a hold countdown, so a
+2 s toast authored with the current schema would require the operator to keep ENTER pressed
+for it to dismiss — the opposite of intended.
+
+**Proposal:** add a discriminator to the timeout trigger, e.g.
+`{ "type": "timeout", "durationMs": 2000, "holdButton": null }`, where `holdButton` is
+`"enter"` for a hold countdown and `null` for an auto timeout. The exporter emits it as a
+`FlowButton` on the flow (`FlowButton::None` meaning auto), so the firmware can dispatch on
+one field without a second trigger enum.
 
 ---
 
@@ -210,11 +292,17 @@ page has a matching `-edit` screen.
    sensor index implied by the navigation stack, and Nyquist prompt state.
 6. Commit path per §3.6, including register write, NVS persistence, and register 30
    maintenance.
-7. Countdown machinery is reused unchanged from the existing hold-to-confirm
-   implementation; only the arming site moves from the info page to the confirm screen.
-8. `UiScreenRouter` gains per-level screen tables, each guarded by `static_assert` against
+7. Countdown machinery is reused from the existing hold-to-confirm implementation; the
+   arming site moves from the info page to the confirm screen.
+8. Add an **auto-timeout** path alongside the hold countdown (§3.8): a timer started on
+   screen entry that fires its flow without requiring a button, used by toasts.
+9. `UiScreenRouter` gains per-level screen tables, each guarded by `static_assert` against
    its page-count enum, matching the existing `kInfoScreenIds` pattern.
-9. No dynamic allocation; the navigation stack and editor state are fixed-size members.
+10. **Retire `FactoryResetState`** and the UP+DOWN combo machinery from
+    `InteractionHandler`. Replace with: UP+DOWN short press → `UiController::enterIdle()`.
+    Factory reset becomes an ordinary confirm-screen action via `core.action.factory-reset`,
+    which is already implemented and registered.
+11. No dynamic allocation; the navigation stack and editor state are fixed-size members.
 
 ---
 
@@ -254,13 +342,11 @@ page has a matching `-edit` screen.
 
 ## 7. Open Questions / Follow-Up
 
-1. **Q1 answered by proposal** (§3.5): ENTER-long escapes; Idle is manual from P0 only.
-   Confirm or override.
-2. **Q2 answered by proposal** (§3.1): `BACK` is a page in the ring, not a highlighted row
-   in a list, because the existing dataset is already one-setting-per-page and no cursor
-   concept exists. Confirm.
-3. **Q3 answered by proposal** (§3.3): info-mode resets move from ENTER-long to
-   ENTER-short-into-a-confirm-screen. Confirm.
+1. ✅ **Q1 answered** (§3.5): UP+DOWN short press turns the display off. ENTER-long is
+   therefore unambiguously "escape" at every level.
+2. ✅ **Q2 answered** (§3.1): `BACK` is a screen in the ring, not a highlighted row.
+3. ✅ **Q3 answered** (§3.3): resets move to a confirm screen with inverted gestures
+   (short = exit, long = confirm) plus a 2 s acknowledgement toast.
 4. **Latent dataset bug (R7):** `config-s1-connected` declares two `button/enter/long`
    flows. `InteractionHandler::matchFlow` returns the first, so the second — §5.3 rule 5's
    "exit immediately for an inactive sensor" — is dead. Fix the dataset and add the
@@ -276,7 +362,27 @@ page has a matching `-edit` screen.
 7. **Depth cost:** reaching `S2.V` from P0 is five ENTER presses. ENTER-long-to-P0 makes
    the return one press. Confirm the depth is acceptable, or consider hoisting the most
    used sensor settings.
-8. **Documents to amend once accepted:** `Display_UI_Requirements.md` §2 (gesture table),
-   §4.1 (state machine), §4.3 (P2–P7 ENTER semantics), §5 (replaced wholesale), §6;
-   `docs/diagrams/ui_state_machine.mermaid`; `docs/diagrams/ui_config_layout.mermaid`;
-   `docs/diagrams/ui_sensor_submenu.mermaid`.
+8. **Documents to amend once accepted:** `Display_UI_Requirements.md` §2 (gesture table —
+   the UP+DOWN row changes meaning entirely), §4.1 (state machine), §4.3 (P2–P8 ENTER
+   semantics, new P8 row), §5 (replaced wholesale), §6. Also `Project_document.md` §5.3
+   item 4 and `RGB_LED_Behavior.md` line 70, both of which name the retired "UP+DOWN 30 s"
+   combo when describing LED suppression during the reset countdown — the behaviour
+   survives, the trigger changes. Diagrams: `ui_state_machine.mermaid`,
+   `ui_config_layout.mermaid`, `ui_sensor_submenu.mermaid`.
+9. **Hold duration on confirm screens (§3.3).** Recommendation: 3 s for `Reset totals?`,
+   plain ENTER-long for `Reset session?`, 30 s for `Factory reset?`. Confirm or set your
+   own durations.
+10. **Is UP+DOWN a toggle or off-only?** §4.1's "any button wakes" already covers turning
+    the display on, so the gesture only ever needs to mean "off". If you want a true
+    toggle, "any button wakes" has to be narrowed, which costs the operator the ability to
+    wake the device with whichever button is nearest. Recommendation: off-only.
+11. **Recovery when the display is unusable.** The retired UP+DOWN combo worked blind; a
+    menu entry does not. If a bricked-display recovery route matters, options are: keep a
+    blind combo as a hidden fallback (e.g. all three buttons held 30 s), or rely on the
+    Modbus master (register 20 already does "Master Reset All Configs"). Recommendation:
+    rely on register 20, since a device with a dead display is already a bench repair.
+12. **Should P8 live at the info level or inside Config?** As specified it is a sibling of
+    P7, so ordinary page flipping surfaces "Factory Reset" to any operator. Putting it in
+    the Config root instead adds one deliberate descent. Neither is access control — the
+    30 s hold is the real guard. Recommendation: follow the answer given (info level), and
+    make the page title unambiguous (`FACTORY RESET`, not `Reset`).

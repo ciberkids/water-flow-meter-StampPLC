@@ -513,7 +513,19 @@ should push unprompted).
 Found while implementing D0(a). These are all requirement-level: the spec is either
 self-contradictory or silent, so the firmware cannot be "correct" until they're settled.
 
-### H1 🔴 ENTER-long is overloaded — P2–P7 can no longer reach Idle
+### H1 ✅ ENTER-long is overloaded — P2–P7 can no longer reach Idle
+
+**Resolved 2026-07-30** by
+[`NF-20260730-01`](../new%20feature%20proposal/NF-20260730-01-menu-navigation-model.md) §3.5:
+a short **UP + DOWN** press turns the display off from any screen, so ENTER-long means
+"escape to the main screen" and nothing else. Consequence: §2's UP+DOWN 30 s factory-reset
+combo is retired and factory reset becomes page **P8** with a confirm screen. H3 is
+resolved with it (no back-to-idle countdown).
+
+<details>
+<summary>Original entry</summary>
+
+### H1 (original) ENTER-long is overloaded
 
 **Question.** §4.1 makes ENTER-long the global Info → Idle gesture ("Info → Idle: ENTER
 long (3s)"). §4.3's table gives P2–P6 a reset countdown and P7 an enter-config countdown.
@@ -532,7 +544,10 @@ idle is only reachable from P0 and P1**. The 120 s auto-idle still covers everyt
 **Recommendation.** (a) for now, (c) if you want manual idle from anywhere. Worth noting
 the display is off for burn-in reasons, and auto-idle already handles that.
 
-**Decision:**
+**Decision:** superseded — resolved by a fifth option not listed here: move the gesture off
+ENTER entirely and onto UP+DOWN. See the proposal linked above.
+
+</details>
 
 ---
 
@@ -554,7 +569,16 @@ machinery now does. Then add a 3 s back-to-idle countdown (see H3) so §4.1 is h
 
 ---
 
-### H3 🟡 Back-to-idle has no countdown
+### H3 ✅ Back-to-idle has no countdown
+
+**Resolved 2026-07-30** by `NF-20260730-01` §3.5: option (b), accept immediate idle. Going
+idle is reversible by any button press, so a countdown protects nothing. The gesture is now
+UP+DOWN rather than ENTER-long.
+
+<details>
+<summary>Original entry</summary>
+
+### H3 (original) Back-to-idle has no countdown
 
 **Question.** §4.3 gives P0 and P1 "ENTER (long) → Back-to-idle countdown (3 s)", but the
 dataset fires `ui.action.mode.idle` immediately on ENTER-long, and there is no
@@ -566,7 +590,9 @@ dataset fires `ui.action.mode.idle` immediately on ENTER-long, and there is no
 **Recommendation.** (b), and correct §4.3's wording. A countdown to protect a reversible,
 harmless action is friction for no safety gain.
 
-**Decision:**
+**Decision:** ✅ (b) — see the proposal linked above.
+
+</details>
 
 ---
 
