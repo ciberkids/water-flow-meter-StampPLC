@@ -44,6 +44,13 @@ struct UiRenderContext {
   bool countdownActive = false;
   uint32_t countdownSeconds = 0;
   std::string countdownLabel;
+  /**
+   * Exporter screen ID of the overlay to draw while a countdown runs, or nullptr
+   * to fall back to the default. Each guarded action has its own countdown
+   * screen (Display_UI_Requirements §4.3, §5.3), so the overlay cannot be a
+   * single fixed screen.
+   */
+  const char* countdownScreenId = nullptr;
   bool hasWarnings = false;
   uint8_t warningCount = 0;
   std::string warningSummary;
@@ -54,6 +61,8 @@ struct UiCountdownState {
   bool active = false;
   uint32_t secondsRemaining = 0;
   std::string label;
+  /** Exporter screen ID of the overlay for this countdown; may be nullptr. */
+  const char* screenId = nullptr;
 };
 
 class UiController {

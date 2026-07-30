@@ -138,7 +138,7 @@ static constexpr ui_exporter::Element kInfoP2CumulativeLitersElements[] = {
 static constexpr ui_exporter::Flow kInfoP2CumulativeLitersFlows[] = {
     { "f-next", "Next page", "info-p3-cumulative-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Prev page", "info-p1-instant-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-reset-all", "Reset all countdown", "countdown-reset-all", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
+    { "f-reset-all", "Reset all hold countdown", "countdown-reset-all", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3HdrTitle_Text = { "Cumulative (m³)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -190,7 +190,7 @@ static constexpr ui_exporter::Element kInfoP3CumulativeM3Elements[] = {
 static constexpr ui_exporter::Flow kInfoP3CumulativeM3Flows[] = {
     { "f-next", "Next page", "info-p4-session-liters", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Prev page", "info-p2-cumulative-liters", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-reset-all", "Reset all countdown", "countdown-reset-all", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
+    { "f-reset-all", "Reset all hold countdown", "countdown-reset-all", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersHdrTitle_Text = { "Session (L)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -241,7 +241,7 @@ static constexpr ui_exporter::Element kInfoP4SessionLitersElements[] = {
 static constexpr ui_exporter::Flow kInfoP4SessionLitersFlows[] = {
     { "f-next", "Next page", "info-p5-session-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Prev page", "info-p3-cumulative-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-countdown", "Session reset countdown", "countdown-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
+    { "f-countdown", "Session reset hold countdown", "countdown-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3HdrTitle_Text = { "Session (m³)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -292,7 +292,7 @@ static constexpr ui_exporter::Element kInfoP5SessionM3Elements[] = {
 static constexpr ui_exporter::Flow kInfoP5SessionM3Flows[] = {
     { "f-next", "Next page", "info-p6-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Prev page", "info-p4-session-liters", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-countdown", "Session reset countdown", "countdown-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
+    { "f-countdown", "Session reset hold countdown", "countdown-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowHdrTitle_Text = { "Max Flow (L/s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -343,7 +343,7 @@ static constexpr ui_exporter::Element kInfoP6MaxFlowElements[] = {
 static constexpr ui_exporter::Flow kInfoP6MaxFlowFlows[] = {
     { "f-next", "Next page", "info-p7-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Prev page", "info-p5-session-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-countdown", "Session reset countdown", "countdown-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
+    { "f-countdown", "Session reset hold countdown", "countdown-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kInfoP7EnterConfig_InfoP7EnterConfigHdrTitle_Text = { "Configuration", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -365,7 +365,7 @@ static constexpr ui_exporter::Element kInfoP7EnterConfigElements[] = {
 static constexpr ui_exporter::Flow kInfoP7EnterConfigFlows[] = {
     { "f-next", "Next page", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Prev page", "info-p6-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-config-countdown", "Config countdown", "countdown-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
+    { "f-config-countdown", "Config hold countdown", "countdown-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kCountdownEnterConfig_CountdownEnterConfigTitle_Text = { "Entering Config…", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -846,7 +846,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-07-30T12:01:23.568Z", 27, 232
+    "2026-07-30T13:02:46.032Z", 27, 232
 };
 
 }  // namespace ui_exporter

@@ -104,7 +104,7 @@ void UiRenderer::update(uint32_t nowMs, const UiRenderContext& context) {
   drawWarningBanner(context);
   drawScreen(*screen, context, false);
   if (context.countdownActive) {
-    if (const auto* overlay = screenRouter_->overlayForCountdown()) {
+    if (const auto* overlay = screenRouter_->overlayForCountdown(context.countdownScreenId)) {
       drawScreen(*overlay, context, true);
     }
   }

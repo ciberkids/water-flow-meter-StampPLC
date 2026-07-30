@@ -2,7 +2,7 @@
   "screens": [
     {
       "id": "info-p0-global-status",
-      "name": "P0 — Global Status",
+      "name": "P0 \u2014 Global Status",
       "description": "Live aggregate metrics for all active sensors and global flow animation.",
       "elements": [
         {
@@ -45,7 +45,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "↑↓ pages  ENTER 3s→idle",
+          "content": "\u2191\u2193 pages  ENTER 3s\u2192idle",
           "emphasis": "muted"
         }
       ],
@@ -87,7 +87,7 @@
     },
     {
       "id": "info-p1-instant-flow",
-      "name": "P1 — Instant Flow",
+      "name": "P1 \u2014 Instant Flow",
       "description": "Live instantaneous flow rate (L/s) for all 8 sensors. Shows propeller animation when any sensor is active.",
       "elements": [
         {
@@ -295,7 +295,7 @@
           "kind": "text",
           "x": 2,
           "y": 133,
-          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
+          "content": "Red=Pulse \u2022 Grn=Ready \u2022 Blu=Flow",
           "binding": "legend.led",
           "emphasis": "muted"
         },
@@ -304,7 +304,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "↑↓ pages  ENTER 3s→idle",
+          "content": "\u2191\u2193 pages  ENTER 3s\u2192idle",
           "emphasis": "muted"
         }
       ],
@@ -346,7 +346,7 @@
     },
     {
       "id": "info-p2-cumulative-liters",
-      "name": "P2 — Cumulative Liters",
+      "name": "P2 \u2014 Cumulative Liters",
       "description": "Cumulative flow totals in litres for all 8 sensors. Long ENTER starts 30 s reset countdown.",
       "elements": [
         {
@@ -490,7 +490,7 @@
           "kind": "text",
           "x": 2,
           "y": 70,
-          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
+          "content": "Red=Pulse \u2022 Grn=Ready \u2022 Blu=Flow",
           "binding": "legend.led",
           "emphasis": "muted"
         },
@@ -499,7 +499,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "ENTER→30s reset  ↑↓ pages",
+          "content": "ENTER\u219230s reset  \u2191\u2193 pages",
           "emphasis": "muted"
         },
         {
@@ -507,7 +507,7 @@
           "kind": "badge",
           "x": 2,
           "y": 4,
-          "content": "⚠ Undersampling",
+          "content": "\u26a0 Undersampling",
           "binding": "diagnostics.undersampling",
           "emphasis": "muted"
         }
@@ -537,11 +537,11 @@
         },
         {
           "id": "f-reset-all",
-          "label": "Reset all countdown",
+          "label": "Reset all hold countdown",
           "trigger": {
             "type": "button",
             "button": "enter",
-            "gesture": "short"
+            "gesture": "long"
           },
           "targetScreenId": "countdown-reset-all"
         }
@@ -549,7 +549,7 @@
     },
     {
       "id": "info-p3-cumulative-m3",
-      "name": "P3 — Cumulative m³",
+      "name": "P3 \u2014 Cumulative m\u00b3",
       "description": "Cumulative totals in cubic metres (derived from P2 registers).",
       "elements": [
         {
@@ -557,7 +557,7 @@
           "kind": "text",
           "x": 2,
           "y": 2,
-          "content": "Cumulative (m³)",
+          "content": "Cumulative (m\u00b3)",
           "emphasis": "strong"
         },
         {
@@ -693,7 +693,7 @@
           "kind": "text",
           "x": 2,
           "y": 70,
-          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
+          "content": "Red=Pulse \u2022 Grn=Ready \u2022 Blu=Flow",
           "binding": "legend.led",
           "emphasis": "muted"
         },
@@ -702,7 +702,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "ENTER→30s reset  ↑↓ pages",
+          "content": "ENTER\u219230s reset  \u2191\u2193 pages",
           "emphasis": "muted"
         },
         {
@@ -710,7 +710,7 @@
           "kind": "badge",
           "x": 2,
           "y": 4,
-          "content": "⚠ Undersampling",
+          "content": "\u26a0 Undersampling",
           "binding": "diagnostics.undersampling",
           "emphasis": "muted"
         }
@@ -740,11 +740,11 @@
         },
         {
           "id": "f-reset-all",
-          "label": "Reset all countdown",
+          "label": "Reset all hold countdown",
           "trigger": {
             "type": "button",
             "button": "enter",
-            "gesture": "short"
+            "gesture": "long"
           },
           "targetScreenId": "countdown-reset-all"
         }
@@ -752,7 +752,7 @@
     },
     {
       "id": "info-p4-session-liters",
-      "name": "P4 — Session Liters",
+      "name": "P4 \u2014 Session Liters",
       "description": "Session flow totals in litres. Long ENTER starts 3 s countdown to reset session.",
       "elements": [
         {
@@ -896,7 +896,7 @@
           "kind": "text",
           "x": 2,
           "y": 78,
-          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
+          "content": "Red=Pulse \u2022 Grn=Ready \u2022 Blu=Flow",
           "binding": "legend.led",
           "emphasis": "muted"
         },
@@ -905,7 +905,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "ENTER→3s reset  ↑↓ pages",
+          "content": "ENTER\u21923s reset  \u2191\u2193 pages",
           "emphasis": "muted"
         }
       ],
@@ -934,11 +934,11 @@
         },
         {
           "id": "f-countdown",
-          "label": "Session reset countdown",
+          "label": "Session reset hold countdown",
           "trigger": {
             "type": "button",
             "button": "enter",
-            "gesture": "short"
+            "gesture": "long"
           },
           "targetScreenId": "countdown-reset-session"
         }
@@ -946,7 +946,7 @@
     },
     {
       "id": "info-p5-session-m3",
-      "name": "P5 — Session m³",
+      "name": "P5 \u2014 Session m\u00b3",
       "description": "Session totals in cubic metres (derived from P4 registers).",
       "elements": [
         {
@@ -954,7 +954,7 @@
           "kind": "text",
           "x": 2,
           "y": 2,
-          "content": "Session (m³)",
+          "content": "Session (m\u00b3)",
           "emphasis": "strong"
         },
         {
@@ -1082,7 +1082,7 @@
           "kind": "text",
           "x": 2,
           "y": 66,
-          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
+          "content": "Red=Pulse \u2022 Grn=Ready \u2022 Blu=Flow",
           "binding": "legend.led",
           "emphasis": "muted"
         },
@@ -1091,7 +1091,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "ENTER→3s reset  ↑↓ pages",
+          "content": "ENTER\u21923s reset  \u2191\u2193 pages",
           "emphasis": "muted"
         },
         {
@@ -1099,7 +1099,7 @@
           "kind": "badge",
           "x": 2,
           "y": 4,
-          "content": "⚠ Undersampling",
+          "content": "\u26a0 Undersampling",
           "binding": "diagnostics.undersampling",
           "emphasis": "muted"
         }
@@ -1129,11 +1129,11 @@
         },
         {
           "id": "f-countdown",
-          "label": "Session reset countdown",
+          "label": "Session reset hold countdown",
           "trigger": {
             "type": "button",
             "button": "enter",
-            "gesture": "short"
+            "gesture": "long"
           },
           "targetScreenId": "countdown-reset-session"
         }
@@ -1141,7 +1141,7 @@
     },
     {
       "id": "info-p6-max-flow",
-      "name": "P6 — Max Flow Since Reset",
+      "name": "P6 \u2014 Max Flow Since Reset",
       "description": "Maximum flow rate since last reset for each sensor.",
       "elements": [
         {
@@ -1277,7 +1277,7 @@
           "kind": "text",
           "x": 2,
           "y": 66,
-          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
+          "content": "Red=Pulse \u2022 Grn=Ready \u2022 Blu=Flow",
           "binding": "legend.led",
           "emphasis": "muted"
         },
@@ -1286,7 +1286,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "ENTER→3s reset  ↑↓ pages",
+          "content": "ENTER\u21923s reset  \u2191\u2193 pages",
           "emphasis": "muted"
         },
         {
@@ -1294,7 +1294,7 @@
           "kind": "badge",
           "x": 2,
           "y": 4,
-          "content": "⚠ Undersampling",
+          "content": "\u26a0 Undersampling",
           "binding": "diagnostics.undersampling",
           "emphasis": "muted"
         }
@@ -1324,11 +1324,11 @@
         },
         {
           "id": "f-countdown",
-          "label": "Session reset countdown",
+          "label": "Session reset hold countdown",
           "trigger": {
             "type": "button",
             "button": "enter",
-            "gesture": "short"
+            "gesture": "long"
           },
           "targetScreenId": "countdown-reset-session"
         }
@@ -1336,7 +1336,7 @@
     },
     {
       "id": "info-p7-enter-config",
-      "name": "P7 — Enter Configuration",
+      "name": "P7 \u2014 Enter Configuration",
       "description": "Text-only prompt to enter configuration mode. Short ENTER starts 3 s countdown.",
       "elements": [
         {
@@ -1374,7 +1374,7 @@
           "kind": "text",
           "x": 2,
           "y": 214,
-          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
+          "content": "Red=Pulse \u2022 Grn=Ready \u2022 Blu=Flow",
           "binding": "legend.led",
           "emphasis": "muted"
         },
@@ -1383,7 +1383,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "Short ENTER→3s config countdown",
+          "content": "Short ENTER\u21923s config countdown",
           "emphasis": "muted"
         }
       ],
@@ -1412,11 +1412,11 @@
         },
         {
           "id": "f-config-countdown",
-          "label": "Config countdown",
+          "label": "Config hold countdown",
           "trigger": {
             "type": "button",
             "button": "enter",
-            "gesture": "short"
+            "gesture": "long"
           },
           "targetScreenId": "countdown-enter-config"
         }
@@ -1424,7 +1424,7 @@
     },
     {
       "id": "countdown-enter-config",
-      "name": "Countdown — Enter Config",
+      "name": "Countdown \u2014 Enter Config",
       "description": "3 s countdown overlay. If ENTER held to zero, transitions to configuration. Release early = cancel.",
       "elements": [
         {
@@ -1440,7 +1440,7 @@
           "kind": "text",
           "x": 10,
           "y": 80,
-          "content": "Entering Config…",
+          "content": "Entering Config\u2026",
           "emphasis": "strong"
         },
         {
@@ -1484,7 +1484,7 @@
     },
     {
       "id": "countdown-reset-session",
-      "name": "Countdown — Reset Session",
+      "name": "Countdown \u2014 Reset Session",
       "description": "3 s countdown overlay for resetting session counters. Release ENTER to cancel.",
       "elements": [
         {
@@ -1544,7 +1544,7 @@
     },
     {
       "id": "countdown-reset-all",
-      "name": "Countdown — Reset All Measured",
+      "name": "Countdown \u2014 Reset All Measured",
       "description": "30 s countdown overlay. Must hold ENTER throughout. Release early cancels.",
       "elements": [
         {
@@ -1584,7 +1584,7 @@
           "kind": "text",
           "x": 5,
           "y": 140,
-          "content": "(30 → 0)"
+          "content": "(30 \u2192 0)"
         },
         {
           "id": "hint-2",
@@ -1635,7 +1635,7 @@
           "kind": "text",
           "x": 5,
           "y": 50,
-          "content": "⚠ FACTORY RESET",
+          "content": "\u26a0 FACTORY RESET",
           "emphasis": "strong"
         },
         {
@@ -1871,7 +1871,7 @@
           "kind": "text",
           "x": 5,
           "y": 40,
-          "content": "⚠ Sampling too slow",
+          "content": "\u26a0 Sampling too slow",
           "emphasis": "strong"
         },
         {
@@ -1894,7 +1894,7 @@
           "kind": "value",
           "x": 5,
           "y": 92,
-          "content": "—",
+          "content": "\u2014",
           "binding": "config.sensor.nyquistWarning"
         },
         {
@@ -1956,7 +1956,7 @@
           "kind": "text",
           "x": 2,
           "y": 110,
-          "content": "— Display off —",
+          "content": "\u2014 Display off \u2014",
           "emphasis": "muted"
         }
       ],
@@ -1998,8 +1998,8 @@
     },
     {
       "id": "config-c1-modbus-id",
-      "name": "C1 — Modbus Slave ID",
-      "description": "Configure the Modbus slave ID (1–255). Short ENTER edits, confirm to apply.",
+      "name": "C1 \u2014 Modbus Slave ID",
+      "description": "Configure the Modbus slave ID (1\u2013255). Short ENTER edits, confirm to apply.",
       "elements": [
         {
           "id": "hdr-title",
@@ -2014,7 +2014,7 @@
           "kind": "text",
           "x": 4,
           "y": 90,
-          "content": "Slave ID (1–255)"
+          "content": "Slave ID (1\u2013255)"
         },
         {
           "id": "field-value",
@@ -2029,7 +2029,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "ENTER=edit  ↑↓=adjust  Long=exit",
+          "content": "ENTER=edit  \u2191\u2193=adjust  Long=exit",
           "emphasis": "muted"
         }
       ],
@@ -2081,7 +2081,7 @@
     },
     {
       "id": "config-c2-baud-rate",
-      "name": "C2 — Baud Rate",
+      "name": "C2 \u2014 Baud Rate",
       "description": "Select baud rate from {1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200}.",
       "elements": [
         {
@@ -2164,7 +2164,7 @@
     },
     {
       "id": "config-c3-parity",
-      "name": "C3 — Parity",
+      "name": "C3 \u2014 Parity",
       "description": "Select parity: None, Even, Odd. Displays UART frame summary e.g. 8E1.",
       "elements": [
         {
@@ -2255,7 +2255,7 @@
     },
     {
       "id": "config-c4-stop-bits",
-      "name": "C4 — Stop Bits",
+      "name": "C4 \u2014 Stop Bits",
       "description": "Toggle stop bits between 1 and 2.",
       "elements": [
         {
@@ -2338,7 +2338,7 @@
     },
     {
       "id": "config-c5-led-pulse-vol",
-      "name": "C5 — LED Pulse Volume",
+      "name": "C5 \u2014 LED Pulse Volume",
       "description": "Set the LED pulse volume trigger: 1 L, 10 L, or 100 L. Maps to Modbus register 31.",
       "elements": [
         {
@@ -2421,8 +2421,8 @@
     },
     {
       "id": "config-c6-led-pulse-period",
-      "name": "C6 — LED Pulse Period",
-      "description": "Set the LED pulse period 100–2000 ms. Maps to Modbus register 32.",
+      "name": "C6 \u2014 LED Pulse Period",
+      "description": "Set the LED pulse period 100\u20132000 ms. Maps to Modbus register 32.",
       "elements": [
         {
           "id": "hdr-title",
@@ -2452,7 +2452,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "ENTER=edit  ↑↓=adjust  Long=exit",
+          "content": "ENTER=edit  \u2191\u2193=adjust  Long=exit",
           "emphasis": "muted"
         }
       ],
@@ -2504,8 +2504,8 @@
     },
     {
       "id": "config-c7-sensor-select",
-      "name": "C7 — Sensor Select",
-      "description": "Select sensor 1–8 to enter its sub-menu.",
+      "name": "C7 \u2014 Sensor Select",
+      "description": "Select sensor 1\u20138 to enter its sub-menu.",
       "elements": [
         {
           "id": "hdr-title",
@@ -2520,7 +2520,7 @@
           "kind": "text",
           "x": 4,
           "y": 90,
-          "content": "Select sensor (1–8)"
+          "content": "Select sensor (1\u20138)"
         },
         {
           "id": "field-value",
@@ -2535,7 +2535,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "↑↓=select  ENTER=open sub-menu",
+          "content": "\u2191\u2193=select  ENTER=open sub-menu",
           "emphasis": "muted"
         }
       ],
@@ -2584,7 +2584,7 @@
     },
     {
       "id": "config-s1-connected",
-      "name": "S1 — Connected",
+      "name": "S1 \u2014 Connected",
       "description": "Toggle sensor connected state (inUse flag). Maps to Connected Sensors Bitmap.",
       "elements": [
         {
@@ -2616,7 +2616,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "ENTER=toggle  Long→save&validate",
+          "content": "ENTER=toggle  Long\u2192save&validate",
           "emphasis": "muted"
         }
       ],
@@ -2679,7 +2679,7 @@
     },
     {
       "id": "config-s2-multiplier",
-      "name": "S2 — Multiplier (F)",
+      "name": "S2 \u2014 Multiplier (F)",
       "description": "Set signed 16-bit multiplier for selected sensor. Maps to register 121.",
       "elements": [
         {
@@ -2718,7 +2718,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "↑↓=adjust  ENTER=commit  Long=save",
+          "content": "\u2191\u2193=adjust  ENTER=commit  Long=save",
           "emphasis": "muted"
         }
       ],
@@ -2770,7 +2770,7 @@
     },
     {
       "id": "config-s3-adjust",
-      "name": "S3 — Adjust",
+      "name": "S3 \u2014 Adjust",
       "description": "Set signed 16-bit adjustment offset for selected sensor. Maps to register 122.",
       "elements": [
         {
@@ -2802,7 +2802,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "↑↓=adjust  ENTER=commit  Long=save",
+          "content": "\u2191\u2193=adjust  ENTER=commit  Long=save",
           "emphasis": "muted"
         }
       ],
@@ -2854,8 +2854,8 @@
     },
     {
       "id": "config-s4-max-flow",
-      "name": "S4 — Max Flow (Q, L/min)",
-      "description": "Set max flow rate 0–65535 L/min for selected sensor. Maps to register 120.",
+      "name": "S4 \u2014 Max Flow (Q, L/min)",
+      "description": "Set max flow rate 0\u201365535 L/min for selected sensor. Maps to register 120.",
       "elements": [
         {
           "id": "hdr-title",
@@ -2901,7 +2901,7 @@
           "kind": "text",
           "x": 2,
           "y": 226,
-          "content": "↑↓=adjust  ENTER=commit  Long=save",
+          "content": "\u2191\u2193=adjust  ENTER=commit  Long=save",
           "emphasis": "muted"
         }
       ],

@@ -73,6 +73,7 @@ void UiController::update(uint32_t nowMs,
   context_.countdownActive = countdown.active;
   context_.countdownSeconds = countdown.secondsRemaining;
   context_.countdownLabel = countdown.label;
+  context_.countdownScreenId = countdown.screenId;
   context_.hasWarnings = warningFlags != 0;
   context_.warningCount = 0;
   context_.warningSummary.clear();

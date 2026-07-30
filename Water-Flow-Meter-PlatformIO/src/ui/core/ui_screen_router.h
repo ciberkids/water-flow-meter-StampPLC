@@ -21,11 +21,11 @@ class UiScreenRouter {
   // dataset does not define one.
   const ui_exporter::Screen* screenForMode(UiMode mode, UiPage page) const;
 
-  // Overlay drawn while a hold-to-confirm countdown is running. Only the
-  // factory-reset countdown is currently produced by InteractionHandler; the
-  // remaining countdown screens in the dataset become reachable once the
-  // per-action countdown state machine exists (Display_UI_Requirements §4.3).
-  const ui_exporter::Screen* overlayForCountdown() const;
+  // Overlay drawn while a hold-to-confirm countdown is running. Each guarded
+  // action has its own countdown screen, so the caller passes the ID from the
+  // active countdown; nullptr or an unknown ID falls back to the factory-reset
+  // overlay so a countdown is never invisible.
+  const ui_exporter::Screen* overlayForCountdown(const char* screenId = nullptr) const;
 
   const ui_exporter::Screen* screenById(const char* id) const;
 

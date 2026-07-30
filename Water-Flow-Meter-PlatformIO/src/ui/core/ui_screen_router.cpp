@@ -56,7 +56,12 @@ const ui_exporter::Screen* UiScreenRouter::screenForMode(UiMode mode, UiPage pag
   }
 }
 
-const ui_exporter::Screen* UiScreenRouter::overlayForCountdown() const {
+const ui_exporter::Screen* UiScreenRouter::overlayForCountdown(const char* screenId) const {
+  if (screenId) {
+    if (const auto* screen = findById(screenId)) {
+      return screen;
+    }
+  }
   return countdown_;
 }
 
