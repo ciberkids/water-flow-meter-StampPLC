@@ -31,12 +31,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: web/mockup/package-lock.json
 
-      # Deliberately not `npm ci`: node_modules is still tracked in git (decision F1),
-      # and the tracked copy is incomplete — it has no vitest. Once F1 untracks it this
-      # becomes `npm ci` with a cache.
+      # `npm ci` installs exactly the lockfile, so CI and a fresh clone agree. This was
+      # `npm install` while node_modules was tracked in git (decision F1) — and the tracked
+      # copy had no vitest, so a fresh clone could not run the tests at all.
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Typecheck
         run: npx tsc --noEmit
