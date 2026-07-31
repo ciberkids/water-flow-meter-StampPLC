@@ -58,6 +58,7 @@ const char* settingTypeName(ui::SettingKind kind) {
     case ui::SettingKind::Numeric: return "number";
     case ui::SettingKind::Enum:    return "number";
     case ui::SettingKind::Boolean: return "boolean";
+    case ui::SettingKind::Text:    return "string";
   }
   return "unknown";
 }
@@ -140,6 +141,14 @@ int main() {
     }
     if (setting.registerOffset != ui::kNoRegister) {
       fields.push_back({"registerOffset", num(setting.registerOffset)});
+    }
+    if (setting.kind == ui::SettingKind::Text) {
+      fields.push_back({"maxLength", num(setting.maxLength)});
+    }
+    // A secret is advertised as such so the designer can see it will render masked, and so
+    // the export can refuse to bind it anywhere it would be displayed in full.
+    if (setting.writeOnly) {
+      fields.push_back({"writeOnly", "true"});
     }
     fields.push_back({"description", str(setting.description)});
     values.push_back(std::move(fields));

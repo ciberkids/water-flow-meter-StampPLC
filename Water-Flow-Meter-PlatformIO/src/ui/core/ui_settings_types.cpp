@@ -22,30 +22,30 @@ constexpr SettingOption kBoolOptions[] = {{"Off", 0}, {"On", 1}};
 // Ranges and steps mirror Display_UI_Requirements §5.2 and §5.3.
 constexpr SettingDescriptor kSettings[] = {
     {"config.modbusSlaveId", SettingTarget::LinkSlaveId, SettingKind::Numeric,
-     LinkLimits::kMinSlaveId, LinkLimits::kMaxSlaveId, 1, nullptr, 0, nullptr, false, 40, kNoRegister, "Modbus slave address"},
+     LinkLimits::kMinSlaveId, LinkLimits::kMaxSlaveId, 1, nullptr, 0, nullptr, false, 40, kNoRegister, "Modbus slave address", 0, false},
     {"config.baudRate", SettingTarget::LinkBaudIndex, SettingKind::Enum,
      0, LinkLimits::kBaudCount - 1, 1, kBaudOptions,
-     static_cast<uint8_t>(sizeof(kBaudOptions) / sizeof(kBaudOptions[0])), nullptr, false, 41, kNoRegister, "RS485 baud rate (register stores the list index)"},
+     static_cast<uint8_t>(sizeof(kBaudOptions) / sizeof(kBaudOptions[0])), nullptr, false, 41, kNoRegister, "RS485 baud rate (register stores the list index)", 0, false},
     {"config.parity", SettingTarget::LinkParity, SettingKind::Enum,
      0, 2, 1, kParityOptions,
-     static_cast<uint8_t>(sizeof(kParityOptions) / sizeof(kParityOptions[0])), nullptr, false, 42, kNoRegister, "UART parity"},
+     static_cast<uint8_t>(sizeof(kParityOptions) / sizeof(kParityOptions[0])), nullptr, false, 42, kNoRegister, "UART parity", 0, false},
     {"config.stopBits", SettingTarget::LinkStopBits, SettingKind::Enum,
      1, 2, 1, kStopBitOptions,
-     static_cast<uint8_t>(sizeof(kStopBitOptions) / sizeof(kStopBitOptions[0])), nullptr, false, 43, kNoRegister, "UART stop bits"},
+     static_cast<uint8_t>(sizeof(kStopBitOptions) / sizeof(kStopBitOptions[0])), nullptr, false, 43, kNoRegister, "UART stop bits", 0, false},
     {"config.ledPulseVolume", SettingTarget::LedVolumeStep, SettingKind::Enum,
      1, 100, 1, kLedVolumeOptions,
-     static_cast<uint8_t>(sizeof(kLedVolumeOptions) / sizeof(kLedVolumeOptions[0])), "L", false, 31, kNoRegister, "Volume per red LED pulse"},
+     static_cast<uint8_t>(sizeof(kLedVolumeOptions) / sizeof(kLedVolumeOptions[0])), "L", false, 31, kNoRegister, "Volume per red LED pulse", 0, false},
     {"config.ledPulsePeriod", SettingTarget::LedPulsePeriod, SettingKind::Numeric,
-     100, 2000, 1, nullptr, 0, "ms", false, 32, kNoRegister, "Red LED pulse period"},
+     100, 2000, 1, nullptr, 0, "ms", false, 32, kNoRegister, "Red LED pulse period", 0, false},
     {"config.sensor.connected", SettingTarget::SensorConnected, SettingKind::Boolean,
      0, 1, 1, kBoolOptions,
-     static_cast<uint8_t>(sizeof(kBoolOptions) / sizeof(kBoolOptions[0])), nullptr, true, 10, kNoRegister, "Sensor enabled (bit n of the connected-sensors bitmap)"},
+     static_cast<uint8_t>(sizeof(kBoolOptions) / sizeof(kBoolOptions[0])), nullptr, true, 10, kNoRegister, "Sensor enabled (bit n of the connected-sensors bitmap)", 0, false},
     {"config.sensor.multiplier", SettingTarget::SensorMultiplier, SettingKind::Numeric,
-     -32768, 32767, 1, nullptr, 0, nullptr, true, kNoRegister, plc::OFF_CFG_F_MULT, "Frequency multiplier F"},
+     -32768, 32767, 1, nullptr, 0, nullptr, true, kNoRegister, plc::OFF_CFG_F_MULT, "Frequency multiplier F", 0, false},
     {"config.sensor.adjust", SettingTarget::SensorAdjust, SettingKind::Numeric,
-     -32768, 32767, 1, nullptr, 0, nullptr, true, kNoRegister, plc::OFF_CFG_ADJUST, "Frequency offset Adjust"},
+     -32768, 32767, 1, nullptr, 0, nullptr, true, kNoRegister, plc::OFF_CFG_ADJUST, "Frequency offset Adjust", 0, false},
     {"config.sensor.maxFlow", SettingTarget::SensorMaxFlow, SettingKind::Numeric,
-     0, 65535, 1, nullptr, 0, "L/min", true, kNoRegister, plc::OFF_CFG_Q_MAX, "Nominal max flow Q"}};
+     0, 65535, 1, nullptr, 0, "L/min", true, kNoRegister, plc::OFF_CFG_Q_MAX, "Nominal max flow Q", 0, false}};
 
 constexpr std::size_t kSettingCount = sizeof(kSettings) / sizeof(kSettings[0]);
 
@@ -121,6 +121,28 @@ void formatSetting(const SettingDescriptor& setting,
   } else {
     std::snprintf(out, size, "%ld", static_cast<long>(value));
   }
+}
+
+void formatSettingText(const SettingDescriptor& setting,
+                       const char* value,
+                       char* out,
+                       std::size_t size) {
+  if (!out || size == 0) {
+    return;
+  }
+  if (!value || value[0] == '\0') {
+    // An empty credential is the default state, not an error. Saying so beats a blank line
+    // that could equally mean "failed to read".
+    std::snprintf(out, size, "%s", "(not set)");
+    return;
+  }
+  if (setting.writeOnly) {
+    // Length is deliberately not revealed either — a fixed run of asterisks tells an
+    // onlooker nothing about the passphrase.
+    std::snprintf(out, size, "%s", "********");
+    return;
+  }
+  std::snprintf(out, size, "%s", value);
 }
 
 }  // namespace ui

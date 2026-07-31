@@ -389,6 +389,15 @@ export interface FirmwareValue {
    * therefore have no single absolute address.
    */
   registerOffset?: number;
+  /** Capacity in bytes of a string setting, excluding the terminator. */
+  maxLength?: number;
+  /**
+   * A secret — the WiFi passphrase or MQTT password.
+   *
+   * Renders masked on the device and reads back as zeros over Modbus, so a design must not
+   * bind it anywhere the full value would be displayed.
+   */
+  writeOnly?: boolean;
   /**
    * True when the value is scoped to the sensor implied by the current navigation
    * level rather than naming one. Lets one editor screen serve all 8 sensors.
@@ -482,6 +491,8 @@ export const firmwareValueSchema: JSONSchemaType<FirmwareValue> = {
       }
     },
     registerOffset: { type: "integer", minimum: 0, nullable: true },
+    maxLength: { type: "integer", minimum: 1, nullable: true },
+    writeOnly: { type: "boolean", nullable: true },
     perSensor: { type: "boolean", nullable: true }
   }
 };

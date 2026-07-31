@@ -7,7 +7,17 @@
 
 namespace ui {
 
-enum class SettingKind : uint8_t { Numeric, Enum, Boolean };
+/**
+ * Text is deliberately a separate kind rather than a numeric with a wide range.
+ *
+ * A numeric editor is built from increment/decrement/commit/discard with hold
+ * acceleration; a string has no step, so the model does not extend — it is joined by a
+ * second one (ui_text_editor.h). Keeping them distinct means the int32_t API below stays
+ * exactly as it was, and no existing caller has to learn which kind it is holding.
+ *
+ * See WiFi_MQTT_Connectivity.md §2.2 and §6.2.
+ */
+enum class SettingKind : uint8_t { Numeric, Enum, Boolean, Text };
 
 /** Which piece of state a setting reads from and writes to. */
 enum class SettingTarget : uint8_t {
@@ -60,6 +70,16 @@ struct SettingDescriptor {
    */
   uint16_t registerOffset;
   const char* description;
+  /** Capacity in bytes for a Text setting, excluding the terminator. Zero otherwise. */
+  uint16_t maxLength;
+  /**
+   * A secret: never rendered in full, never readable back over Modbus, never logged.
+   *
+   * Applies to the WiFi passphrase and the MQTT password. Reading such a register returns
+   * zeros rather than raising an exception, so a master doing a block read across the
+   * region does not fail (WiFi_MQTT_Connectivity.md §5.1, §8.1).
+   */
+  bool writeOnly;
 };
 
 /** Sentinel for settings that have no single holding register of their own. */
@@ -77,5 +97,17 @@ void formatSetting(const SettingDescriptor& setting,
                    int32_t value,
                    char* out,
                    std::size_t size);
+
+/**
+ * Renders a Text setting for display, masking it when the descriptor says writeOnly.
+ *
+ * Separate from formatSetting rather than an overload, for the same reason the kinds are
+ * separate: a caller holding a descriptor knows which one to reach for, and the compiler
+ * enforces it.
+ */
+void formatSettingText(const SettingDescriptor& setting,
+                       const char* value,
+                       char* out,
+                       std::size_t size);
 
 }  // namespace ui
