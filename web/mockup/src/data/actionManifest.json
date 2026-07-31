@@ -1,6 +1,5 @@
 {
-  "version": "2",
-  "generatedAt": "2026-03-05T13:00:00.000Z",
+  "version": "3",
   "actions": [
     {
       "id": "ui.action.page.next",
@@ -68,605 +67,620 @@
       "description": "Clamp, write the mapped register, validate, then ascend one level"
     },
     {
+      "id": "config.action.value.commit-override",
+      "label": "Save despite Nyquist warning",
+      "description": "Forces the pending value past a failed Nyquist check and raises bit n of register 30 (§5.5)"
+    },
+    {
       "id": "config.action.value.discard",
       "label": "Discard edit",
       "description": "Abandon the pending value and ascend one level"
-    },
-    {
-      "id": "config.action.value.commit-override",
-      "label": "Save despite Nyquist warning",
-      "description": "Forces the pending value past a failed Nyquist check and raises bit n of register 30 (\u00a75.5)"
     }
   ],
   "values": [
     {
       "id": "config.modbusSlaveId",
-      "type": "number",
       "category": "setting",
-      "register": 40,
-      "description": "Modbus slave address",
+      "type": "number",
       "min": 1,
       "max": 247,
-      "step": 1
+      "step": 1,
+      "register": 40,
+      "description": "Modbus slave address"
     },
     {
       "id": "config.baudRate",
-      "type": "number",
       "category": "setting",
+      "type": "number",
+      "min": 0,
+      "max": 7,
+      "step": 1,
+      "options": [{"label": "1200", "value": 0}, {"label": "2400", "value": 1}, {"label": "4800", "value": 2}, {"label": "9600", "value": 3}, {"label": "19200", "value": 4}, {"label": "38400", "value": 5}, {"label": "57600", "value": 6}, {"label": "115200", "value": 7}],
       "register": 41,
-      "description": "RS485 baud rate (register stores the list index)",
-      "enum": [
-        "1200",
-        "2400",
-        "4800",
-        "9600",
-        "19200",
-        "38400",
-        "57600",
-        "115200"
-      ]
+      "description": "RS485 baud rate (register stores the list index)"
     },
     {
       "id": "config.parity",
-      "type": "number",
       "category": "setting",
+      "type": "number",
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "options": [{"label": "None", "value": 0}, {"label": "Even", "value": 1}, {"label": "Odd", "value": 2}],
       "register": 42,
-      "description": "UART parity",
-      "enum": [
-        "None",
-        "Even",
-        "Odd"
-      ]
+      "description": "UART parity"
     },
     {
       "id": "config.stopBits",
-      "type": "number",
       "category": "setting",
+      "type": "number",
+      "min": 1,
+      "max": 2,
+      "step": 1,
+      "options": [{"label": "1", "value": 1}, {"label": "2", "value": 2}],
       "register": 43,
-      "description": "UART stop bits",
-      "enum": [
-        "1",
-        "2"
-      ]
+      "description": "UART stop bits"
     },
     {
       "id": "config.ledPulseVolume",
-      "type": "number",
       "category": "setting",
-      "register": 31,
+      "type": "number",
       "unit": "L",
-      "description": "Volume per red LED pulse",
-      "enum": [
-        "1",
-        "10",
-        "100"
-      ]
+      "min": 1,
+      "max": 100,
+      "step": 1,
+      "options": [{"label": "1", "value": 1}, {"label": "10", "value": 10}, {"label": "100", "value": 100}],
+      "register": 31,
+      "description": "Volume per red LED pulse"
     },
     {
       "id": "config.ledPulsePeriod",
-      "type": "number",
       "category": "setting",
-      "register": 32,
+      "type": "number",
       "unit": "ms",
-      "description": "Red LED pulse period",
       "min": 100,
       "max": 2000,
-      "step": 1
+      "step": 1,
+      "register": 32,
+      "description": "Red LED pulse period"
     },
     {
       "id": "config.sensor.connected",
-      "type": "boolean",
       "category": "setting",
+      "type": "boolean",
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "options": [{"label": "Off", "value": 0}, {"label": "On", "value": 1}],
+      "perSensor": true,
       "register": 10,
-      "description": "Sensor enabled (bit n of the connected-sensors bitmap)",
-      "perSensor": true
+      "description": "Sensor enabled (bit n of the connected-sensors bitmap)"
     },
     {
       "id": "config.sensor.multiplier",
-      "type": "number",
       "category": "setting",
-      "description": "Frequency multiplier F",
+      "type": "number",
       "min": -32768,
       "max": 32767,
       "step": 1,
-      "perSensor": true
+      "perSensor": true,
+      "registerOffset": 21,
+      "description": "Frequency multiplier F"
     },
     {
       "id": "config.sensor.adjust",
-      "type": "number",
       "category": "setting",
-      "description": "Frequency offset Adjust",
+      "type": "number",
       "min": -32768,
       "max": 32767,
       "step": 1,
-      "perSensor": true
+      "perSensor": true,
+      "registerOffset": 22,
+      "description": "Frequency offset Adjust"
     },
     {
       "id": "config.sensor.maxFlow",
-      "type": "number",
       "category": "setting",
+      "type": "number",
       "unit": "L/min",
-      "description": "Nominal max flow Q",
       "min": 0,
       "max": 65535,
       "step": 1,
-      "perSensor": true
+      "perSensor": true,
+      "registerOffset": 20,
+      "description": "Nominal max flow Q"
     },
     {
       "id": "sensor.1.instantFlow",
-      "type": "number",
       "category": "reading",
+      "type": "number",
       "unit": "L/s",
       "register": 101,
       "readOnly": true,
       "description": "Sensor 1 instantaneous flow"
     },
     {
-      "id": "sensor.2.instantFlow",
-      "type": "number",
-      "category": "reading",
-      "unit": "L/s",
-      "register": 141,
-      "readOnly": true,
-      "description": "Sensor 2 instantaneous flow"
-    },
-    {
-      "id": "sensor.3.instantFlow",
-      "type": "number",
-      "category": "reading",
-      "unit": "L/s",
-      "register": 181,
-      "readOnly": true,
-      "description": "Sensor 3 instantaneous flow"
-    },
-    {
-      "id": "sensor.4.instantFlow",
-      "type": "number",
-      "category": "reading",
-      "unit": "L/s",
-      "register": 221,
-      "readOnly": true,
-      "description": "Sensor 4 instantaneous flow"
-    },
-    {
-      "id": "sensor.5.instantFlow",
-      "type": "number",
-      "category": "reading",
-      "unit": "L/s",
-      "register": 261,
-      "readOnly": true,
-      "description": "Sensor 5 instantaneous flow"
-    },
-    {
-      "id": "sensor.6.instantFlow",
-      "type": "number",
-      "category": "reading",
-      "unit": "L/s",
-      "register": 301,
-      "readOnly": true,
-      "description": "Sensor 6 instantaneous flow"
-    },
-    {
-      "id": "sensor.7.instantFlow",
-      "type": "number",
-      "category": "reading",
-      "unit": "L/s",
-      "register": 341,
-      "readOnly": true,
-      "description": "Sensor 7 instantaneous flow"
-    },
-    {
-      "id": "sensor.8.instantFlow",
-      "type": "number",
-      "category": "reading",
-      "unit": "L/s",
-      "register": 381,
-      "readOnly": true,
-      "description": "Sensor 8 instantaneous flow"
-    },
-    {
       "id": "sensor.1.status",
-      "type": "string",
       "category": "reading",
+      "type": "string",
       "register": 100,
       "readOnly": true,
       "description": "Sensor 1 status flags (bit 0 inUse, bit 1 isReady)"
     },
     {
-      "id": "sensor.2.status",
-      "type": "string",
-      "category": "reading",
-      "register": 140,
-      "readOnly": true,
-      "description": "Sensor 2 status flags (bit 0 inUse, bit 1 isReady)"
-    },
-    {
-      "id": "sensor.3.status",
-      "type": "string",
-      "category": "reading",
-      "register": 180,
-      "readOnly": true,
-      "description": "Sensor 3 status flags (bit 0 inUse, bit 1 isReady)"
-    },
-    {
-      "id": "sensor.4.status",
-      "type": "string",
-      "category": "reading",
-      "register": 220,
-      "readOnly": true,
-      "description": "Sensor 4 status flags (bit 0 inUse, bit 1 isReady)"
-    },
-    {
-      "id": "sensor.5.status",
-      "type": "string",
-      "category": "reading",
-      "register": 260,
-      "readOnly": true,
-      "description": "Sensor 5 status flags (bit 0 inUse, bit 1 isReady)"
-    },
-    {
-      "id": "sensor.6.status",
-      "type": "string",
-      "category": "reading",
-      "register": 300,
-      "readOnly": true,
-      "description": "Sensor 6 status flags (bit 0 inUse, bit 1 isReady)"
-    },
-    {
-      "id": "sensor.7.status",
-      "type": "string",
-      "category": "reading",
-      "register": 340,
-      "readOnly": true,
-      "description": "Sensor 7 status flags (bit 0 inUse, bit 1 isReady)"
-    },
-    {
-      "id": "sensor.8.status",
-      "type": "string",
-      "category": "reading",
-      "register": 380,
-      "readOnly": true,
-      "description": "Sensor 8 status flags (bit 0 inUse, bit 1 isReady)"
-    },
-    {
       "id": "sensor.1.cumulativeLiters",
-      "type": "number",
       "category": "accumulated",
+      "type": "number",
       "unit": "L",
       "register": 103,
       "readOnly": true,
       "description": "Sensor 1 cumulative volume"
     },
     {
-      "id": "sensor.2.cumulativeLiters",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "L",
-      "register": 143,
-      "readOnly": true,
-      "description": "Sensor 2 cumulative volume"
-    },
-    {
-      "id": "sensor.3.cumulativeLiters",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "L",
-      "register": 183,
-      "readOnly": true,
-      "description": "Sensor 3 cumulative volume"
-    },
-    {
-      "id": "sensor.4.cumulativeLiters",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "L",
-      "register": 223,
-      "readOnly": true,
-      "description": "Sensor 4 cumulative volume"
-    },
-    {
-      "id": "sensor.5.cumulativeLiters",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "L",
-      "register": 263,
-      "readOnly": true,
-      "description": "Sensor 5 cumulative volume"
-    },
-    {
-      "id": "sensor.6.cumulativeLiters",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "L",
-      "register": 303,
-      "readOnly": true,
-      "description": "Sensor 6 cumulative volume"
-    },
-    {
-      "id": "sensor.7.cumulativeLiters",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "L",
-      "register": 343,
-      "readOnly": true,
-      "description": "Sensor 7 cumulative volume"
-    },
-    {
-      "id": "sensor.8.cumulativeLiters",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "L",
-      "register": 383,
-      "readOnly": true,
-      "description": "Sensor 8 cumulative volume"
-    },
-    {
       "id": "sensor.1.cumulativeM3",
-      "type": "number",
       "category": "accumulated",
+      "type": "number",
       "unit": "m3",
+      "register": 107,
       "readOnly": true,
       "description": "Sensor 1 cumulative volume (derived from litres)"
     },
     {
-      "id": "sensor.2.cumulativeM3",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "m3",
-      "readOnly": true,
-      "description": "Sensor 2 cumulative volume (derived from litres)"
-    },
-    {
-      "id": "sensor.3.cumulativeM3",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "m3",
-      "readOnly": true,
-      "description": "Sensor 3 cumulative volume (derived from litres)"
-    },
-    {
-      "id": "sensor.4.cumulativeM3",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "m3",
-      "readOnly": true,
-      "description": "Sensor 4 cumulative volume (derived from litres)"
-    },
-    {
-      "id": "sensor.5.cumulativeM3",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "m3",
-      "readOnly": true,
-      "description": "Sensor 5 cumulative volume (derived from litres)"
-    },
-    {
-      "id": "sensor.6.cumulativeM3",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "m3",
-      "readOnly": true,
-      "description": "Sensor 6 cumulative volume (derived from litres)"
-    },
-    {
-      "id": "sensor.7.cumulativeM3",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "m3",
-      "readOnly": true,
-      "description": "Sensor 7 cumulative volume (derived from litres)"
-    },
-    {
-      "id": "sensor.8.cumulativeM3",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "m3",
-      "readOnly": true,
-      "description": "Sensor 8 cumulative volume (derived from litres)"
-    },
-    {
       "id": "sensor.1.sessionLiters",
-      "type": "number",
       "category": "accumulated",
+      "type": "number",
       "unit": "L",
       "register": 111,
       "readOnly": true,
       "description": "Sensor 1 session volume"
     },
     {
-      "id": "sensor.2.sessionLiters",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "L",
-      "register": 151,
-      "readOnly": true,
-      "description": "Sensor 2 session volume"
-    },
-    {
-      "id": "sensor.3.sessionLiters",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "L",
-      "register": 191,
-      "readOnly": true,
-      "description": "Sensor 3 session volume"
-    },
-    {
-      "id": "sensor.4.sessionLiters",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "L",
-      "register": 231,
-      "readOnly": true,
-      "description": "Sensor 4 session volume"
-    },
-    {
-      "id": "sensor.5.sessionLiters",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "L",
-      "register": 271,
-      "readOnly": true,
-      "description": "Sensor 5 session volume"
-    },
-    {
-      "id": "sensor.6.sessionLiters",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "L",
-      "register": 311,
-      "readOnly": true,
-      "description": "Sensor 6 session volume"
-    },
-    {
-      "id": "sensor.7.sessionLiters",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "L",
-      "register": 351,
-      "readOnly": true,
-      "description": "Sensor 7 session volume"
-    },
-    {
-      "id": "sensor.8.sessionLiters",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "L",
-      "register": 391,
-      "readOnly": true,
-      "description": "Sensor 8 session volume"
-    },
-    {
       "id": "sensor.1.sessionM3",
-      "type": "number",
       "category": "accumulated",
+      "type": "number",
       "unit": "m3",
+      "register": 113,
       "readOnly": true,
       "description": "Sensor 1 session volume (derived from litres)"
     },
     {
-      "id": "sensor.2.sessionM3",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "m3",
-      "readOnly": true,
-      "description": "Sensor 2 session volume (derived from litres)"
-    },
-    {
-      "id": "sensor.3.sessionM3",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "m3",
-      "readOnly": true,
-      "description": "Sensor 3 session volume (derived from litres)"
-    },
-    {
-      "id": "sensor.4.sessionM3",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "m3",
-      "readOnly": true,
-      "description": "Sensor 4 session volume (derived from litres)"
-    },
-    {
-      "id": "sensor.5.sessionM3",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "m3",
-      "readOnly": true,
-      "description": "Sensor 5 session volume (derived from litres)"
-    },
-    {
-      "id": "sensor.6.sessionM3",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "m3",
-      "readOnly": true,
-      "description": "Sensor 6 session volume (derived from litres)"
-    },
-    {
-      "id": "sensor.7.sessionM3",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "m3",
-      "readOnly": true,
-      "description": "Sensor 7 session volume (derived from litres)"
-    },
-    {
-      "id": "sensor.8.sessionM3",
-      "type": "number",
-      "category": "accumulated",
-      "unit": "m3",
-      "readOnly": true,
-      "description": "Sensor 8 session volume (derived from litres)"
-    },
-    {
       "id": "sensor.1.maxFlowSinceReset",
-      "type": "number",
       "category": "accumulated",
+      "type": "number",
       "unit": "L/s",
       "register": 115,
       "readOnly": true,
       "description": "Sensor 1 peak flow since last session reset"
     },
     {
-      "id": "sensor.2.maxFlowSinceReset",
+      "id": "sensor.2.instantFlow",
+      "category": "reading",
       "type": "number",
+      "unit": "L/s",
+      "register": 141,
+      "readOnly": true,
+      "description": "Sensor 2 instantaneous flow"
+    },
+    {
+      "id": "sensor.2.status",
+      "category": "reading",
+      "type": "string",
+      "register": 140,
+      "readOnly": true,
+      "description": "Sensor 2 status flags (bit 0 inUse, bit 1 isReady)"
+    },
+    {
+      "id": "sensor.2.cumulativeLiters",
       "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "register": 143,
+      "readOnly": true,
+      "description": "Sensor 2 cumulative volume"
+    },
+    {
+      "id": "sensor.2.cumulativeM3",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "register": 147,
+      "readOnly": true,
+      "description": "Sensor 2 cumulative volume (derived from litres)"
+    },
+    {
+      "id": "sensor.2.sessionLiters",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "register": 151,
+      "readOnly": true,
+      "description": "Sensor 2 session volume"
+    },
+    {
+      "id": "sensor.2.sessionM3",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "register": 153,
+      "readOnly": true,
+      "description": "Sensor 2 session volume (derived from litres)"
+    },
+    {
+      "id": "sensor.2.maxFlowSinceReset",
+      "category": "accumulated",
+      "type": "number",
       "unit": "L/s",
       "register": 155,
       "readOnly": true,
       "description": "Sensor 2 peak flow since last session reset"
     },
     {
-      "id": "sensor.3.maxFlowSinceReset",
+      "id": "sensor.3.instantFlow",
+      "category": "reading",
       "type": "number",
+      "unit": "L/s",
+      "register": 181,
+      "readOnly": true,
+      "description": "Sensor 3 instantaneous flow"
+    },
+    {
+      "id": "sensor.3.status",
+      "category": "reading",
+      "type": "string",
+      "register": 180,
+      "readOnly": true,
+      "description": "Sensor 3 status flags (bit 0 inUse, bit 1 isReady)"
+    },
+    {
+      "id": "sensor.3.cumulativeLiters",
       "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "register": 183,
+      "readOnly": true,
+      "description": "Sensor 3 cumulative volume"
+    },
+    {
+      "id": "sensor.3.cumulativeM3",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "register": 187,
+      "readOnly": true,
+      "description": "Sensor 3 cumulative volume (derived from litres)"
+    },
+    {
+      "id": "sensor.3.sessionLiters",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "register": 191,
+      "readOnly": true,
+      "description": "Sensor 3 session volume"
+    },
+    {
+      "id": "sensor.3.sessionM3",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "register": 193,
+      "readOnly": true,
+      "description": "Sensor 3 session volume (derived from litres)"
+    },
+    {
+      "id": "sensor.3.maxFlowSinceReset",
+      "category": "accumulated",
+      "type": "number",
       "unit": "L/s",
       "register": 195,
       "readOnly": true,
       "description": "Sensor 3 peak flow since last session reset"
     },
     {
-      "id": "sensor.4.maxFlowSinceReset",
+      "id": "sensor.4.instantFlow",
+      "category": "reading",
       "type": "number",
+      "unit": "L/s",
+      "register": 221,
+      "readOnly": true,
+      "description": "Sensor 4 instantaneous flow"
+    },
+    {
+      "id": "sensor.4.status",
+      "category": "reading",
+      "type": "string",
+      "register": 220,
+      "readOnly": true,
+      "description": "Sensor 4 status flags (bit 0 inUse, bit 1 isReady)"
+    },
+    {
+      "id": "sensor.4.cumulativeLiters",
       "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "register": 223,
+      "readOnly": true,
+      "description": "Sensor 4 cumulative volume"
+    },
+    {
+      "id": "sensor.4.cumulativeM3",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "register": 227,
+      "readOnly": true,
+      "description": "Sensor 4 cumulative volume (derived from litres)"
+    },
+    {
+      "id": "sensor.4.sessionLiters",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "register": 231,
+      "readOnly": true,
+      "description": "Sensor 4 session volume"
+    },
+    {
+      "id": "sensor.4.sessionM3",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "register": 233,
+      "readOnly": true,
+      "description": "Sensor 4 session volume (derived from litres)"
+    },
+    {
+      "id": "sensor.4.maxFlowSinceReset",
+      "category": "accumulated",
+      "type": "number",
       "unit": "L/s",
       "register": 235,
       "readOnly": true,
       "description": "Sensor 4 peak flow since last session reset"
     },
     {
-      "id": "sensor.5.maxFlowSinceReset",
+      "id": "sensor.5.instantFlow",
+      "category": "reading",
       "type": "number",
+      "unit": "L/s",
+      "register": 261,
+      "readOnly": true,
+      "description": "Sensor 5 instantaneous flow"
+    },
+    {
+      "id": "sensor.5.status",
+      "category": "reading",
+      "type": "string",
+      "register": 260,
+      "readOnly": true,
+      "description": "Sensor 5 status flags (bit 0 inUse, bit 1 isReady)"
+    },
+    {
+      "id": "sensor.5.cumulativeLiters",
       "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "register": 263,
+      "readOnly": true,
+      "description": "Sensor 5 cumulative volume"
+    },
+    {
+      "id": "sensor.5.cumulativeM3",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "register": 267,
+      "readOnly": true,
+      "description": "Sensor 5 cumulative volume (derived from litres)"
+    },
+    {
+      "id": "sensor.5.sessionLiters",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "register": 271,
+      "readOnly": true,
+      "description": "Sensor 5 session volume"
+    },
+    {
+      "id": "sensor.5.sessionM3",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "register": 273,
+      "readOnly": true,
+      "description": "Sensor 5 session volume (derived from litres)"
+    },
+    {
+      "id": "sensor.5.maxFlowSinceReset",
+      "category": "accumulated",
+      "type": "number",
       "unit": "L/s",
       "register": 275,
       "readOnly": true,
       "description": "Sensor 5 peak flow since last session reset"
     },
     {
-      "id": "sensor.6.maxFlowSinceReset",
+      "id": "sensor.6.instantFlow",
+      "category": "reading",
       "type": "number",
+      "unit": "L/s",
+      "register": 301,
+      "readOnly": true,
+      "description": "Sensor 6 instantaneous flow"
+    },
+    {
+      "id": "sensor.6.status",
+      "category": "reading",
+      "type": "string",
+      "register": 300,
+      "readOnly": true,
+      "description": "Sensor 6 status flags (bit 0 inUse, bit 1 isReady)"
+    },
+    {
+      "id": "sensor.6.cumulativeLiters",
       "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "register": 303,
+      "readOnly": true,
+      "description": "Sensor 6 cumulative volume"
+    },
+    {
+      "id": "sensor.6.cumulativeM3",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "register": 307,
+      "readOnly": true,
+      "description": "Sensor 6 cumulative volume (derived from litres)"
+    },
+    {
+      "id": "sensor.6.sessionLiters",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "register": 311,
+      "readOnly": true,
+      "description": "Sensor 6 session volume"
+    },
+    {
+      "id": "sensor.6.sessionM3",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "register": 313,
+      "readOnly": true,
+      "description": "Sensor 6 session volume (derived from litres)"
+    },
+    {
+      "id": "sensor.6.maxFlowSinceReset",
+      "category": "accumulated",
+      "type": "number",
       "unit": "L/s",
       "register": 315,
       "readOnly": true,
       "description": "Sensor 6 peak flow since last session reset"
     },
     {
-      "id": "sensor.7.maxFlowSinceReset",
+      "id": "sensor.7.instantFlow",
+      "category": "reading",
       "type": "number",
+      "unit": "L/s",
+      "register": 341,
+      "readOnly": true,
+      "description": "Sensor 7 instantaneous flow"
+    },
+    {
+      "id": "sensor.7.status",
+      "category": "reading",
+      "type": "string",
+      "register": 340,
+      "readOnly": true,
+      "description": "Sensor 7 status flags (bit 0 inUse, bit 1 isReady)"
+    },
+    {
+      "id": "sensor.7.cumulativeLiters",
       "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "register": 343,
+      "readOnly": true,
+      "description": "Sensor 7 cumulative volume"
+    },
+    {
+      "id": "sensor.7.cumulativeM3",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "register": 347,
+      "readOnly": true,
+      "description": "Sensor 7 cumulative volume (derived from litres)"
+    },
+    {
+      "id": "sensor.7.sessionLiters",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "register": 351,
+      "readOnly": true,
+      "description": "Sensor 7 session volume"
+    },
+    {
+      "id": "sensor.7.sessionM3",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "register": 353,
+      "readOnly": true,
+      "description": "Sensor 7 session volume (derived from litres)"
+    },
+    {
+      "id": "sensor.7.maxFlowSinceReset",
+      "category": "accumulated",
+      "type": "number",
       "unit": "L/s",
       "register": 355,
       "readOnly": true,
       "description": "Sensor 7 peak flow since last session reset"
     },
     {
-      "id": "sensor.8.maxFlowSinceReset",
+      "id": "sensor.8.instantFlow",
+      "category": "reading",
       "type": "number",
+      "unit": "L/s",
+      "register": 381,
+      "readOnly": true,
+      "description": "Sensor 8 instantaneous flow"
+    },
+    {
+      "id": "sensor.8.status",
+      "category": "reading",
+      "type": "string",
+      "register": 380,
+      "readOnly": true,
+      "description": "Sensor 8 status flags (bit 0 inUse, bit 1 isReady)"
+    },
+    {
+      "id": "sensor.8.cumulativeLiters",
       "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "register": 383,
+      "readOnly": true,
+      "description": "Sensor 8 cumulative volume"
+    },
+    {
+      "id": "sensor.8.cumulativeM3",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "register": 387,
+      "readOnly": true,
+      "description": "Sensor 8 cumulative volume (derived from litres)"
+    },
+    {
+      "id": "sensor.8.sessionLiters",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "register": 391,
+      "readOnly": true,
+      "description": "Sensor 8 session volume"
+    },
+    {
+      "id": "sensor.8.sessionM3",
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "register": 393,
+      "readOnly": true,
+      "description": "Sensor 8 session volume (derived from litres)"
+    },
+    {
+      "id": "sensor.8.maxFlowSinceReset",
+      "category": "accumulated",
+      "type": "number",
       "unit": "L/s",
       "register": 395,
       "readOnly": true,
@@ -674,38 +688,38 @@
     },
     {
       "id": "telemetry.totalFlowLps",
-      "type": "number",
       "category": "system",
+      "type": "number",
       "unit": "L/s",
       "readOnly": true,
       "description": "Aggregate instantaneous flow across ready sensors"
     },
     {
       "id": "telemetry.totalVolumeLiters",
-      "type": "number",
       "category": "system",
+      "type": "number",
       "unit": "L",
       "readOnly": true,
       "description": "Aggregate session volume across ready sensors"
     },
     {
       "id": "telemetry.total",
-      "type": "string",
       "category": "system",
+      "type": "string",
       "readOnly": true,
       "description": "Aggregate volume and flow summary line"
     },
     {
       "id": "telemetry.status",
-      "type": "string",
       "category": "system",
+      "type": "string",
       "readOnly": true,
       "description": "Readiness / warning summary"
     },
     {
       "id": "diagnostics.pollingRateKhz",
-      "type": "number",
       "category": "system",
+      "type": "number",
       "unit": "kHz",
       "register": 0,
       "readOnly": true,
@@ -713,74 +727,74 @@
     },
     {
       "id": "diagnostics.undersampling",
-      "type": "number",
       "category": "system",
+      "type": "number",
       "register": 30,
       "readOnly": true,
       "description": "Undersampling flags bitmap (bits 0-7 = sensors 1-8)"
     },
     {
       "id": "legend.led",
-      "type": "string",
       "category": "derived",
+      "type": "string",
       "readOnly": true,
       "description": "RGB LED status legend text"
     },
     {
       "id": "legend.warning",
-      "type": "string",
       "category": "derived",
+      "type": "string",
       "readOnly": true,
       "description": "Active sampling-warning summary"
     },
     {
       "id": "page.title",
-      "type": "string",
       "category": "derived",
+      "type": "string",
       "readOnly": true,
       "description": "Title of the current page"
     },
     {
       "id": "countdown.value",
-      "type": "string",
       "category": "derived",
+      "type": "string",
       "readOnly": true,
       "description": "Remaining seconds on the active countdown"
     },
     {
       "id": "config.uartFrameSummary",
-      "type": "string",
       "category": "derived",
+      "type": "string",
       "readOnly": true,
       "description": "UART frame summary derived from parity and stop bits, e.g. 8E1"
     },
     {
       "id": "config.sensor.nyquistWarning",
-      "type": "string",
       "category": "derived",
+      "type": "string",
+      "perSensor": true,
       "readOnly": true,
-      "description": "Nyquist validation prompt for the current sensor",
-      "perSensor": true
+      "description": "Nyquist validation prompt for the current sensor"
     },
     {
       "id": "config.selectedSensor",
-      "type": "number",
       "category": "derived",
+      "type": "number",
       "readOnly": true,
       "description": "Index (1-8) of the sensor implied by the current navigation level"
     },
     {
       "id": "config.sensor.undersamplingFlag",
-      "type": "boolean",
       "category": "derived",
+      "type": "boolean",
+      "perSensor": true,
       "readOnly": true,
-      "description": "Whether the current sensor failed its last Nyquist validation",
-      "perSensor": true
+      "description": "Whether the current sensor failed its last Nyquist validation"
     },
     {
       "id": "config.editor.pending",
-      "type": "string",
       "category": "derived",
+      "type": "string",
       "readOnly": true,
       "description": "The value currently being edited, before it is committed"
     }

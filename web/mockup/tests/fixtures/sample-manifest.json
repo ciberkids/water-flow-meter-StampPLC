@@ -1,108 +1,107 @@
 {
-    "version": "1",
-    "generatedAt": "2026-03-03T14:56:00Z",
-    "actions": [
-        {
-            "id": "ui.action.page.next",
-            "label": "Next page",
-            "description": "Advance to the next info page (DOWN button)."
-        },
-        {
-            "id": "ui.action.page.previous",
-            "label": "Previous page",
-            "description": "Go back to the previous info page (UP button)."
-        },
-        {
-            "id": "ui.action.mode.idle",
-            "label": "Enter idle",
-            "description": "Turn off the backlight and enter low-power idle state."
-        },
-        {
-            "id": "ui.action.mode.info",
-            "label": "Enter info",
-            "description": "Return to the Info telemetry page carousel."
-        },
-        {
-            "id": "ui.action.mode.configuration",
-            "label": "Enter configuration",
-            "description": "Switch to Configuration mode (requires P7 countdown to complete)."
-        },
-        {
-            "id": "core.action.save-config",
-            "label": "Save configuration",
-            "description": "Commit pending configuration changes to NVS and Modbus registers."
-        },
-        {
-            "id": "core.action.reset-session",
-            "label": "Reset session counters",
-            "description": "Issues the Reset Session Modbus command for all ready sensors."
-        },
-        {
-            "id": "core.action.reset-all-measured",
-            "label": "Reset all measured totals",
-            "description": "Issues the Reset All Measured Modbus command."
-        },
-        {
-            "id": "core.action.factory-reset",
-            "label": "Factory reset",
-            "description": "Wipes NVS, clears Modbus config, and reboots after 30 s countdown."
-        },
-        {
-            "id": "config.action.sensor.save",
-            "label": "Save sensor settings",
-            "description": "Commit sensor sub-menu values after Nyquist validation.",
-            "params": {
-                "sensorIndex": {
-                    "type": "number"
-                }
-            }
-        },
-        {
-            "id": "config.action.field.edit",
-            "label": "Begin field edit",
-            "description": "Put the focused configuration field into edit mode.",
-            "params": {
-                "fieldId": {
-                    "type": "string"
-                }
-            }
-        },
-        {
-            "id": "config.action.field.confirm",
-            "label": "Confirm field edit",
-            "description": "Accept the tentative value and write to Modbus register.",
-            "params": {
-                "fieldId": {
-                    "type": "string"
-                }
-            }
-        },
-        {
-            "id": "config.action.field.cancel",
-            "label": "Cancel field edit",
-            "description": "Discard tentative value and restore prior.",
-            "params": {
-                "fieldId": {
-                    "type": "string"
-                }
-            }
+  "version": "1",
+  "actions": [
+    {
+      "id": "ui.action.page.next",
+      "label": "Next page",
+      "description": "Advance to the next info page (DOWN button)."
+    },
+    {
+      "id": "ui.action.page.previous",
+      "label": "Previous page",
+      "description": "Go back to the previous info page (UP button)."
+    },
+    {
+      "id": "ui.action.mode.idle",
+      "label": "Enter idle",
+      "description": "Turn off the backlight and enter low-power idle state."
+    },
+    {
+      "id": "ui.action.mode.info",
+      "label": "Enter info",
+      "description": "Return to the Info telemetry page carousel."
+    },
+    {
+      "id": "ui.action.mode.configuration",
+      "label": "Enter configuration",
+      "description": "Switch to Configuration mode (requires P7 countdown to complete)."
+    },
+    {
+      "id": "core.action.save-config",
+      "label": "Save configuration",
+      "description": "Commit pending configuration changes to NVS and Modbus registers."
+    },
+    {
+      "id": "core.action.reset-session",
+      "label": "Reset session counters",
+      "description": "Issues the Reset Session Modbus command for all ready sensors."
+    },
+    {
+      "id": "core.action.reset-all-measured",
+      "label": "Reset all measured totals",
+      "description": "Issues the Reset All Measured Modbus command."
+    },
+    {
+      "id": "core.action.factory-reset",
+      "label": "Factory reset",
+      "description": "Wipes NVS, clears Modbus config, and reboots after 30 s countdown."
+    },
+    {
+      "id": "config.action.sensor.save",
+      "label": "Save sensor settings",
+      "description": "Commit sensor sub-menu values after Nyquist validation.",
+      "params": {
+        "sensorIndex": {
+          "type": "number"
         }
-    ],
-    "values": [
-        {
-            "id": "legend.led",
-            "type": "string",
-            "description": "RGB LED status legend text"
-        },
-        {
-            "id": "telemetry.status",
-            "type": "string",
-            "description": "Aggregate readiness / warning summary"
-        },
-        {
-            "id": "countdown.value",
-            "type": "string",
-            "description": "Remaining seconds on the active countdown"
+      }
+    },
+    {
+      "id": "config.action.field.edit",
+      "label": "Begin field edit",
+      "description": "Put the focused configuration field into edit mode.",
+      "params": {
+        "fieldId": {
+          "type": "string"
         }
-    ]
+      }
+    },
+    {
+      "id": "config.action.field.confirm",
+      "label": "Confirm field edit",
+      "description": "Accept the tentative value and write to Modbus register.",
+      "params": {
+        "fieldId": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "id": "config.action.field.cancel",
+      "label": "Cancel field edit",
+      "description": "Discard tentative value and restore prior.",
+      "params": {
+        "fieldId": {
+          "type": "string"
+        }
+      }
+    }
+  ],
+  "values": [
+    {
+      "id": "legend.led",
+      "type": "string",
+      "description": "RGB LED status legend text"
+    },
+    {
+      "id": "telemetry.status",
+      "type": "string",
+      "description": "Aggregate readiness / warning summary"
+    },
+    {
+      "id": "countdown.value",
+      "type": "string",
+      "description": "Remaining seconds on the active countdown"
+    }
+  ]
 }

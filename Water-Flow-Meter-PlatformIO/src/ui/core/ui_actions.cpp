@@ -1,5 +1,7 @@
 #include "ui/core/ui_actions.h"
 
+#include "ui/core/ui_action_catalogue.h"
+
 #include <cstring>
 
 #include <Preferences.h>
@@ -175,7 +177,7 @@ void handleValueDiscard(const UiActionContext& ctx, const ui_exporter::Flow&) {
   }
 }
 
-const UiActionBinding kDefaultBindings[] = {
+constexpr UiActionBinding kDefaultBindings[] = {
     {"ui.action.page.next", handlePageNext},
     {"ui.action.page.previous", handlePagePrevious},
     {"ui.action.mode.idle", handleEnterIdle},
@@ -192,6 +194,29 @@ const UiActionBinding kDefaultBindings[] = {
     {"config.action.value.commit-override", handleValueCommitOverride},
     {"config.action.value.discard", handleValueDiscard},
 };
+
+constexpr std::size_t kBindingCount = sizeof(kDefaultBindings) / sizeof(kDefaultBindings[0]);
+
+/**
+ * The catalogue the design tool sees and the handler table the firmware dispatches through
+ * must agree exactly. Eight actions were once advertised with no handler behind them, so a
+ * designer could wire a button to nothing and the export still passed.
+ */
+static_assert(kBindingCount == kActionCatalogueCount,
+              "kActionCatalogue (ui_action_catalogue.h) must have one entry per handler");
+
+constexpr bool actionCatalogueMatchesHandlers() {
+  for (std::size_t i = 0; i < kBindingCount; ++i) {
+    if (!actionIdsEqual(kDefaultBindings[i].actionId, kActionCatalogue[i].id)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+static_assert(actionCatalogueMatchesHandlers(),
+              "kActionCatalogue must list the same action ids, in the same order, as "
+              "kDefaultBindings");
 
 UiActionRegistry initDefaultRegistry() {
   return UiActionRegistry(kDefaultBindings, sizeof(kDefaultBindings) / sizeof(kDefaultBindings[0]));

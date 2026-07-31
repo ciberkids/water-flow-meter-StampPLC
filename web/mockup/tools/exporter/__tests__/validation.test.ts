@@ -15,7 +15,6 @@ import type { FirmwareManifest } from "../../../shared/schemaDefinitions.js";
 function makeManifest(): FirmwareManifest {
   return {
     version: "1",
-    generatedAt: "2026-03-05T13:00:00.000Z",
     actions: [{ id: "ui.action.page.next", label: "Next page" }],
     values: [
       { id: "legend.led", type: "string" },

@@ -147,6 +147,14 @@ bool UiBindingResolver::resolveTelemetryBinding(const UiRenderContext& context,
                   context.aggregateFlowLps);
     return true;
   }
+  if (binding == "telemetry.totalFlowLps") {
+    std::snprintf(buffer, bufferSize, "%.2f", context.aggregateFlowLps);
+    return true;
+  }
+  if (binding == "telemetry.totalVolumeLiters") {
+    std::snprintf(buffer, bufferSize, "%.2f", context.totalSessionLiters);
+    return true;
+  }
   if (binding == "telemetry.status") {
     if (context.hasWarnings) {
       std::snprintf(buffer, bufferSize, "%u warning%s", context.warningCount,
@@ -228,6 +236,10 @@ bool UiBindingResolver::resolveDiagnosticsBinding(const UiRenderContext& context
   // gate scrapes that pattern to learn which bindings the firmware can resolve, and an
   // inverted comparison here read as unresolvable long after it worked.
   const std::string_view binding(bindingId);
+  if (binding == "diagnostics.pollingRateKhz") {
+    std::snprintf(buffer, bufferSize, "%.1f", static_cast<double>(context.pollingRateKhz));
+    return true;
+  }
   if (binding != "diagnostics.undersampling") {
     return false;
   }

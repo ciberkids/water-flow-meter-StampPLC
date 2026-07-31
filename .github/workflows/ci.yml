@@ -79,7 +79,13 @@ jobs:
       - uses: actions/checkout@v4
       # No toolchain needed: the navigator, the acceleration tiers and the LED patterns
       # are deliberately Arduino-free so they can be checked in a second.
-      - name: Host tests
+      #
+      # This job also verifies that the committed manifest matches a fresh generation from
+      # the firmware catalogues (decision D2). That is what keeps the design tool's idea of
+      # the firmware's vocabulary honest — the manifest used to be hand-maintained, and it
+      # advertised eight actions with no handler and omitted registers the firmware
+      # published.
+      - name: Host tests and manifest freshness
         run: Water-Flow-Meter-PlatformIO/test/host/run.sh
 
   firmware-build:

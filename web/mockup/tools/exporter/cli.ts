@@ -10,9 +10,8 @@ import { buildIntermediateRepresentation } from "./ir.js";
 import { emitCpp } from "./cppEmitter.js";
 import { checkRenderableElementKinds, runExportValidations } from "./validation.js";
 import {
-  checkFirmwareActionCoverage,
   checkFirmwareBindingCoverage,
-  scrapeFirmwareActions,
+  checkManifestResolvable,
   scrapeFirmwareBindings
 } from "./firmwareActions.js";
 import { loadManifest } from "./manifestLoader.js";
@@ -411,23 +410,10 @@ async function run() {
 
     const validationReport = runExportValidations(dataset, ir, manifestResult.manifest);
 
-    // manifest -> firmware. runExportValidations covers dataset -> manifest; without
-    // this, an action can be declared, authored into a flow, pass every check, and
-    // still dispatch to nothing on hardware.
-    const usedActionIds = new Set<string>();
-    for (const screen of dataset.screens) {
-      for (const flow of screen.flows ?? []) {
-        if (flow.actionId) usedActionIds.add(flow.actionId);
-      }
-      for (const event of screen.events ?? []) {
-        if (event.actionId) usedActionIds.add(event.actionId);
-      }
-    }
-    const firmwareCheck = checkFirmwareActionCoverage(
-      manifestResult.manifest,
-      await scrapeFirmwareActions(projectRoot),
-      usedActionIds
-    );
+    // manifest -> firmware for the values the dataset binds. The action direction is now
+    // covered without scraping: the firmware static_asserts its catalogue against its
+    // handler table, and CI diffs the committed manifest against a fresh generation from
+    // that catalogue. See the note in firmwareActions.ts.
     const usedBindings = new Map<string, string[]>();
     for (const screen of dataset.screens) {
       for (const element of screen.elements) {
@@ -437,12 +423,12 @@ async function run() {
         usedBindings.set(element.binding, where);
       }
     }
-    const bindingCheck = checkFirmwareBindingCoverage(
-      usedBindings,
-      await scrapeFirmwareBindings(projectRoot)
-    );
-
-    for (const check of [firmwareCheck, bindingCheck]) {
+    // Scraped once and shared: both checks ask the same question of the resolver, one for
+    // the bindings this design uses and one for everything the manifest advertises.
+    const bindingScrape = await scrapeFirmwareBindings(projectRoot);
+    const bindingCheck = checkFirmwareBindingCoverage(usedBindings, bindingScrape);
+    const advertisedCheck = checkManifestResolvable(manifestResult.manifest, bindingScrape);
+    for (const check of [bindingCheck, advertisedCheck]) {
       validationReport.checks.push(check);
       if (check.status === "fail") {
         validationReport.status = "fail";

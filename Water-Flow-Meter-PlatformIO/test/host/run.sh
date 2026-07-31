@@ -32,3 +32,10 @@ echo
 "$OUT/accel_test"
 echo
 "$OUT/led_test"
+echo
+
+# The manifest the design tool validates against is generated from the firmware's own
+# catalogues. Checking it here means a catalogue change that nobody regenerated fails in
+# under a second, rather than surfacing as a design that passes every gate and then renders
+# blank on the device.
+tools/manifest_gen/run.sh --check

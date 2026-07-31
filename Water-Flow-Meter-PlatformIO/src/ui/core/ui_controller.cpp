@@ -108,6 +108,7 @@ void UiController::update(uint32_t nowMs,
                           uint16_t connectedBitmap,
                           double totalSessionLiters,
                           double aggregateFlowLps,
+                          float pollingRateKhz,
                           const LedController& ledController,
                           const UiCountdownState& countdown) {
   updateIdleState(nowMs);
@@ -118,6 +119,7 @@ void UiController::update(uint32_t nowMs,
   context_.connectedBitmap = connectedBitmap;
   context_.totalSessionLiters = totalSessionLiters;
   context_.aggregateFlowLps = aggregateFlowLps;
+  context_.pollingRateKhz = pollingRateKhz;
   context_.ledVolumeStep = ledController.volumeStepLiters();
   context_.ledPulsePeriodMs = ledController.pulsePeriodMs();
   context_.countdownActive = countdown.active;

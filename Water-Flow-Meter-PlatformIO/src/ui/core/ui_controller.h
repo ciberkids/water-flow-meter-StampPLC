@@ -6,25 +6,12 @@
 
 #include "led/led_controller.h"
 #include "ui/core/ui_navigator.h"
+#include "ui/core/ui_pages.h"
 #include "ui/core/ui_settings.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
 
 enum class UiMode { Idle, Info, Configuration };
-
-// Order MUST match kInfoScreenIds in ui_screen_router.cpp (P0..P7).
-enum class UiPage {
-  GlobalStatus = 0,
-  InstantFlow,
-  CumulativeLiters,
-  CumulativeCubicMeters,
-  SessionLiters,
-  SessionCubicMeters,
-  MaxFlow,
-  EnterConfiguration,
-  FactoryReset,
-  Count
-};
 
 struct SensorSnapshot {
   bool enabled = false;
@@ -42,6 +29,13 @@ struct UiRenderContext {
   uint16_t connectedBitmap = 0;
   double totalSessionLiters = 0.0;
   double aggregateFlowLps = 0.0;
+  /**
+   * Core-0 sampling rate, as published in register 0.
+   *
+   * Surfaced on screen because the achievable rate depends on the wiring and the load,
+   * so it has to be read off the device rather than assumed (open decision G1).
+   */
+  float pollingRateKhz = 0.0f;
   uint16_t ledVolumeStep = 1;
   uint16_t ledPulsePeriodMs = 500;
   bool countdownActive = false;
@@ -115,6 +109,7 @@ class UiController {
               uint16_t connectedBitmap,
               double totalSessionLiters,
               double aggregateFlowLps,
+              float pollingRateKhz,
               const LedController& ledController,
               const UiCountdownState& countdown);
 

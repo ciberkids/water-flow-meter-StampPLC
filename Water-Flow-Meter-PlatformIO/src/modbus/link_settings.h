@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "modbus/link_limits.h"
 #include "modbus/register_bank.h"
 
 namespace plc {
@@ -23,10 +24,10 @@ struct LinkSettings {
   uint8_t parity = 0;     // 0 None, 1 Even, 2 Odd
   uint8_t stopBits = 1;   // 1 or 2
 
-  static constexpr uint32_t kBaudRates[] = {1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200};
-  static constexpr uint8_t kBaudCount = 8;
-  static constexpr uint8_t kMinSlaveId = 1;
-  static constexpr uint8_t kMaxSlaveId = 247;
+  static constexpr auto& kBaudRates = LinkLimits::kBaudRates;
+  static constexpr uint8_t kBaudCount = LinkLimits::kBaudCount;
+  static constexpr uint8_t kMinSlaveId = LinkLimits::kMinSlaveId;
+  static constexpr uint8_t kMaxSlaveId = LinkLimits::kMaxSlaveId;
 
   uint32_t baudRate() const {
     return kBaudRates[baudIndex < kBaudCount ? baudIndex : 3];

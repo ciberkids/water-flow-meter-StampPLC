@@ -359,7 +359,7 @@ export type FirmwareValueCategory =
  * formatted legends, countdown text) have none.
  *
  * For `category: "setting"`, the editor behaviour is fully described here:
- * `min`/`max`/`step` for numerics, `enum` for cycle lists. One declaration drives
+ * `min`/`max`/`step` for numerics, `options` for cycle lists. One declaration drives
  * the web simulator and the firmware editor alike, so they cannot drift.
  */
 export interface FirmwareValue {
@@ -376,8 +376,19 @@ export interface FirmwareValue {
   max?: number;
   /** Increment applied by a single short UP/DOWN press. */
   step?: number;
-  /** Ordered option list for a cycle-list setting; the register stores the index. */
-  enum?: string[];
+  /**
+   * Option list for a cycle-list or boolean setting.
+   *
+   * Each option carries the value actually written to the register, not just a label. A
+   * bare label list was ambiguous: `stopBits` offers "1" and "2" but stores 1 and 2, while
+   * `baudRate` offers "1200".."115200" and stores 0..7. Position was not the value.
+   */
+  options?: { label: string; value: number }[];
+  /**
+   * Offset within a sensor's register block, for settings that exist once per sensor and
+   * therefore have no single absolute address.
+   */
+  registerOffset?: number;
   /**
    * True when the value is scoped to the sensor implied by the current navigation
    * level rather than naming one. Lets one editor screen serve all 8 sensors.
@@ -400,7 +411,6 @@ export interface FirmwareScreen {
 
 export interface FirmwareManifest {
   version: string;
-  generatedAt: string;
   actions: FirmwareAction[];
   /**
    * Optional so a manifest emitted by a firmware build that only knows about
@@ -457,7 +467,21 @@ export const firmwareValueSchema: JSONSchemaType<FirmwareValue> = {
     min: { type: "number", nullable: true },
     max: { type: "number", nullable: true },
     step: { type: "number", nullable: true },
-    enum: { type: "array", items: { type: "string" }, minItems: 1, nullable: true },
+    options: {
+      type: "array",
+      minItems: 1,
+      nullable: true,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["label", "value"],
+        properties: {
+          label: { type: "string", minLength: 1 },
+          value: { type: "number" }
+        }
+      }
+    },
+    registerOffset: { type: "integer", minimum: 0, nullable: true },
     perSensor: { type: "boolean", nullable: true }
   }
 };
@@ -476,10 +500,11 @@ export const firmwareScreenSchema: JSONSchemaType<FirmwareScreen> = {
 const firmwareManifestDefinition = {
   type: "object",
   additionalProperties: false,
-  required: ["version", "generatedAt", "actions"],
+  // No `generatedAt`: the manifest is generated from the firmware catalogues and committed,
+  // then CI diffs it against a fresh generation. A timestamp would make every run a change.
+  required: ["version", "actions"],
   properties: {
     version: { type: "string", minLength: 1 },
-    generatedAt: { type: "string", minLength: 1 },
     actions: {
       type: "array",
       minItems: 0,

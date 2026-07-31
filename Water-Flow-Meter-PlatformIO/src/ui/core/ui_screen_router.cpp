@@ -2,33 +2,12 @@
 
 #include <cstring>
 
+#include "ui/core/ui_pages.h"
+
 namespace ui {
 
-namespace {
-
-// Order MUST match the UiPage enum in ui_controller.h.
-constexpr const char* kInfoScreenIds[] = {
-    "info-p0-global-status",       // UiPage::GlobalStatus
-    "info-p1-instant-flow",        // UiPage::InstantFlow
-    "info-p2-cumulative-liters",   // UiPage::CumulativeLiters
-    "info-p3-cumulative-m3",       // UiPage::CumulativeCubicMeters
-    "info-p4-session-liters",      // UiPage::SessionLiters
-    "info-p5-session-m3",          // UiPage::SessionCubicMeters
-    "info-p6-max-flow",            // UiPage::MaxFlow
-    "info-p7-enter-config",        // UiPage::EnterConfiguration
-    "info-p8-factory-reset",       // UiPage::FactoryReset
-};
-
-static_assert(sizeof(kInfoScreenIds) / sizeof(kInfoScreenIds[0]) ==
-                  static_cast<std::size_t>(UiPage::Count),
-              "kInfoScreenIds must have one entry per UiPage");
-
-// Configuration mode currently lands on its first page. Paging across
-// C1..C7/S1..S4 needs the edit-state model that UiController does not have yet.
-constexpr const char* kConfigurationScreenId = "config-c1-modbus-id";
-constexpr const char* kFactoryResetCountdownScreenId = "confirm-factory-reset";
-
-}  // namespace
+// Screen ids and their UiPage mapping now live in ui/core/ui_pages.h, so the manifest
+// generator declares exactly what this router resolves.
 
 UiScreenRouter::UiScreenRouter(const UiAssets& assets) : assets_(assets) {
   bool resolved = true;

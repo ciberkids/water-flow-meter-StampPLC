@@ -92,79 +92,39 @@ export async function scrapeFirmwareActions(projectRoot: string): Promise<Firmwa
  * is legitimately built ahead of the firmware — but the count is always stated, so
  * the interim state can never read as complete.
  */
-export function checkFirmwareActionCoverage(
-  manifest: FirmwareManifest | null | undefined,
-  scrape: FirmwareActionScrape,
-  usedActionIds: Set<string>
-): ValidationCheck {
-  const id = "firmware-action-coverage";
-  const title = "Firmware implements the declared actions";
-
-  if (!scrape.ok) {
-    return {
-      id,
-      title,
-      status: "fail",
-      message: "Could not determine which actions the firmware implements.",
-      recommendation: scrape.error
-    };
-  }
-  if (!manifest) {
-    return { id, title, status: "fail", message: "No manifest to compare against." };
-  }
-
-  const implemented = new Set(scrape.actionIds);
-  // Only actions the dataset actually uses matter: an unused declaration is
-  // harmless, an unimplemented *used* one is a dead button.
-  const declaredAndUsed = manifest.actions.map((a) => a.id).filter((a) => usedActionIds.has(a));
-  const dead = declaredAndUsed.filter((a) => !implemented.has(a)).sort();
-  const orphaned = scrape.actionIds.filter((a) => !manifest.actions.some((m) => m.id === a)).sort();
-
-  if (dead.length > 0) {
-    return {
-      id,
-      title,
-      status: "warning",
-      message:
-        `${dead.length} action(s) used by the dataset are declared in the manifest but have ` +
-        `no handler in ui_actions.cpp — those buttons will do nothing on hardware.`,
-      recommendation:
-        `Dead: ${dead.join(", ")}. Register each in kDefaultBindings.` +
-        (orphaned.length > 0 ? ` Implemented but undeclared: ${orphaned.join(", ")}.` : "")
-    };
-  }
-
-  return {
-    id,
-    title,
-    status: "pass",
-    message: `All ${declaredAndUsed.length} action(s) used by the dataset have a firmware handler.`,
-    recommendation:
-      orphaned.length > 0 ? `Implemented but undeclared: ${orphaned.join(", ")}.` : undefined
-  };
-}
-
-/** `binding == "x"` / `metric == "y"` comparisons in the resolver. */
-// Matches both directions of comparison. Requiring `==` meant a resolver written as
-// `if (binding != "x") return false;` — a perfectly ordinary guard clause — was
-// reported as unresolvable.
-const kExactBindingPattern = /binding\s*[!=]=\s*"([^"]+)"/g;
-const kMetricPattern = /metric\s*==\s*"([^"]+)"/g;
+/*
+ * `checkFirmwareActionCoverage` used to scrape `kDefaultBindings` and compare it with the
+ * manifest. It is gone because the firmware now proves the same property better:
+ *
+ *   - ui_actions.cpp static_asserts that kActionCatalogue and kDefaultBindings hold the
+ *     same ids in the same order, so an action cannot be advertised without a handler.
+ *     (Verified by renaming an id and watching the build fail.)
+ *   - tools/manifest_gen emits the manifest FROM kActionCatalogue, and CI diffs the
+ *     committed manifest against a fresh generation.
+ *   - `manifest-action-coverage` then checks the dataset only uses manifest actions.
+ *
+ * The scrape was also the wrong mechanism: it broke three times on innocuous refactors
+ * (a renamed table, a moved file, `const` becoming `constexpr`) and on the third occasion
+ * reported "could not determine which actions the firmware implements" as a hard failure
+ * when nothing was actually wrong. A compile-time assertion cannot be fooled or outrun.
+ */
 
 /**
- * Binding IDs in the firmware's settings catalogue.
+ * What the resolver understands, read out of its source.
  *
- * Settings do not appear as `binding == "..."` comparisons — they are resolved by
- * looking the id up in `kSettings` — so scraping only the resolver reported them as
- * unresolvable long after they worked. The gate has to read both places or it lies in
- * the safe-looking direction.
+ * Still a scrape, and still the weakest link in the chain — but it checks something no
+ * generated artefact can: whether UiBindingResolver has a case for each id. Both `==` and
+ * `!=` are matched, because the resolver uses either depending on how the branch reads.
  */
+const kExactBindingPattern = /binding\s*[!=]=\s*"([^"]+)"/g;
+const kMetricPattern = /metric\s*==\s*"([^"]+)"/g;
 const kSettingIdPattern = /\{\s*"(config\.[A-Za-z0-9_.]+)"\s*,\s*SettingTarget::/g;
 
 export async function scrapeFirmwareBindings(projectRoot: string): Promise<FirmwareBindingScrape> {
   const dir = path.join(projectRoot, "Water-Flow-Meter-PlatformIO", "src", "ui", "core");
   const resolverPath = path.join(dir, "ui_bindings.cpp");
-  const settingsPath = path.join(dir, "ui_settings.cpp");
+  // The settings table moved to an Arduino-free unit so tools/manifest_gen can link it.
+  const settingsPath = path.join(dir, "ui_settings_types.cpp");
 
   let source: string;
   let settingsSource = "";
@@ -237,5 +197,49 @@ export function checkFirmwareBindingCoverage(
   return {
     id, title, status: "pass",
     message: `All ${usedBindings.size} bound value(s) are resolvable by the firmware.`
+  };
+}
+
+/**
+ * Every value the manifest advertises must be resolvable, not just the ones this dataset
+ * happens to bind.
+ *
+ * `checkFirmwareBindingCoverage` only sees bindings the current design uses, so a
+ * catalogue entry no screen references yet is unchecked — and will be discovered as a
+ * blank element by whoever first designs with it. The manifest is the promise made to the
+ * designer; this verifies the firmware can keep all of it.
+ */
+export function checkManifestResolvable(
+  manifest: FirmwareManifest | null,
+  scrape: FirmwareBindingScrape
+): ValidationCheck {
+  const id = "firmware-manifest-resolvable";
+  const title = "Firmware resolves every value it advertises";
+
+  if (!manifest) {
+    return { id, title, status: "fail", message: "No manifest was loaded." };
+  }
+  if (!scrape.ok) {
+    return {
+      id, title, status: "fail",
+      message: "Could not determine which bindings the firmware resolves.",
+      recommendation: scrape.error
+    };
+  }
+
+  const ids = (manifest.values ?? []).map((v) => v.id);
+  const unresolved = ids.filter((b) => !isResolvable(b, scrape)).sort();
+  if (unresolved.length > 0) {
+    return {
+      id, title, status: "warning",
+      message:
+        `${unresolved.length} of ${ids.length} advertised value(s) have no case in ` +
+        `UiBindingResolver. A designer can bind them and get a blank element.`,
+      recommendation: `Unresolved: ${unresolved.join(", ")}.`
+    };
+  }
+  return {
+    id, title, status: "pass",
+    message: `All ${ids.length} advertised value(s) are resolvable by the firmware.`
   };
 }

@@ -9,7 +9,6 @@ import { validateManifest } from "../manifestValidation";
  */
 const validManifest = () => ({
     version: "1",
-    generatedAt: "2026-03-05T13:00:00.000Z",
     actions: [{ id: "a1", label: "Action 1" }],
     values: [{ id: "v1", type: "number", register: 101, readOnly: true }]
 });
@@ -24,9 +23,11 @@ describe("validateManifest", () => {
         expect(() => validateManifest(invalid)).toThrow(/version/);
     });
 
-    it("fails if generatedAt is missing", () => {
-        const { generatedAt: _generatedAt, ...invalid } = validManifest();
-        expect(() => validateManifest(invalid)).toThrow(/generatedAt/);
+    it("rejects generatedAt, which the generated manifest deliberately omits", () => {
+        // A self-reported timestamp would make every regeneration look like a change, so
+        // the manifest carries none and provenance comes from git.
+        const invalid = { ...validManifest(), generatedAt: "2026-03-05T13:00:00.000Z" };
+        expect(() => validateManifest(invalid)).toThrow(/additional properties/);
     });
 
     it("fails if actions are missing", () => {

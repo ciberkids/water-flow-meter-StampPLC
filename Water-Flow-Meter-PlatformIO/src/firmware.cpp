@@ -439,6 +439,7 @@ void logicTaskCode(void * pvParameters) {
                         connectedSensorsBitmap,
                         totalSessionLitersCache,
                         aggregateFlowLpsCache,
+                        pollingRate_kHz,
                         ledController,
                         interactions.countdown);
 

@@ -31,7 +31,9 @@ const kMinimalTheme: ThemeTokens = {
 };
 
 const kMinimalIr: ExportIR = {
-    generatedAt: new Date().toISOString(),
+    // The export IR keeps its timestamp — unlike the manifest it is not a committed,
+    // diffed artefact, and the firmware records it so a device can report what it is running.
+    generatedAt: "2026-03-05T13:00:00.000Z",
     screenCount: 1,
     elementCount: 0,
     dataset: [],
