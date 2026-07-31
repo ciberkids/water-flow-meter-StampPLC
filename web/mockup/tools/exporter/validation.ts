@@ -145,16 +145,21 @@ function checkManifestActionCoverage(
 
   const knownIds = new Set(manifest.actions.map((a) => a.id));
   const missing: string[] = [];
+  // Tracked so the pass message can report what was checked. Reporting the manifest's
+  // size instead read as reassurance regardless of whether the dataset used anything.
+  const checked = new Set<string>();
 
   for (const screen of dataset.screens) {
     for (const flow of screen.flows ?? []) {
       const id = flow.actionId;
+      if (id) checked.add(id);
       if (id && !knownIds.has(id)) {
         missing.push(`${screen.id}/flow:${flow.id} references unknown action "${id}"`);
       }
     }
     for (const event of screen.events ?? []) {
       const id = event.actionId;
+      if (id) checked.add(id);
       if (id && !knownIds.has(id)) {
         missing.push(`${screen.id}/event:"${event.trigger}" references unknown action "${id}"`);
       }
@@ -175,7 +180,9 @@ function checkManifestActionCoverage(
     id: "manifest-action-coverage",
     title: "Firmware manifest action coverage",
     status: "pass",
-    message: `All action bindings are covered by the manifest (${manifest.actions.length} actions).`
+    message:
+      `${checked.size} distinct action(s) used by the dataset are all present in the ` +
+      `manifest, which declares ${manifest.actions.length}.`
   };
 }
 
@@ -202,9 +209,11 @@ function checkManifestValueCoverage(
   const knownIds = new Set((manifest.values ?? []).map((v) => v.id));
   const missing: string[] = [];
 
+  const checkedBindings = new Set<string>();
   for (const screen of dataset.screens) {
     for (const element of screen.elements) {
       const binding = element.binding;
+      if (binding) checkedBindings.add(binding);
       if (binding && !knownIds.has(binding)) {
         missing.push(`${screen.id}/${element.id} binds unknown value "${binding}"`);
       }
@@ -225,7 +234,9 @@ function checkManifestValueCoverage(
     id: "manifest-value-coverage",
     title: "Firmware manifest value coverage",
     status: "pass",
-    message: `All element bindings are covered by the manifest (${(manifest.values ?? []).length} values).`
+    message:
+      `${checkedBindings.size} distinct binding(s) used by the dataset are all present in ` +
+      `the manifest, which declares ${(manifest.values ?? []).length}.`
   };
 }
 
