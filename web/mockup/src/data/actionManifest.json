@@ -776,6 +776,13 @@
       "readOnly": true,
       "description": "Whether the current sensor failed its last Nyquist validation",
       "perSensor": true
+    },
+    {
+      "id": "config.editor.pending",
+      "type": "string",
+      "category": "derived",
+      "readOnly": true,
+      "description": "The value currently being edited, before it is committed"
     }
   ],
   "screens": [

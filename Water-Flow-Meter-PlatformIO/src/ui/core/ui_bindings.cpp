@@ -114,6 +114,9 @@ bool UiBindingResolver::resolveText(const UiRenderContext& context,
   if (resolveConfigBinding(context, element.bindingId, buffer, bufferSize)) {
     return true;
   }
+  if (resolveDiagnosticsBinding(context, element.bindingId, buffer, bufferSize)) {
+    return true;
+  }
   if (resolveCountdownBinding(context, element.bindingId, buffer, bufferSize)) {
     return true;
   }
@@ -217,6 +220,33 @@ bool UiBindingResolver::resolveSensorBinding(const UiRenderContext& context,
   return true;
 }
 
+bool UiBindingResolver::resolveDiagnosticsBinding(const UiRenderContext& context,
+                                                 const char* bindingId,
+                                                 char* buffer,
+                                                 std::size_t bufferSize) const {
+  // Uses the same `binding == "..."` idiom as its siblings, deliberately: the export
+  // gate scrapes that pattern to learn which bindings the firmware can resolve, and an
+  // inverted comparison here read as unresolvable long after it worked.
+  const std::string_view binding(bindingId);
+  if (binding != "diagnostics.undersampling") {
+    return false;
+  }
+  if (context.warningFlags == 0) {
+    return copyLiteral("OK", buffer, bufferSize);
+  }
+  // Name the offending channels rather than printing a bitmask.
+  char list[24] = {};
+  std::size_t used = 0;
+  for (unsigned i = 0; i < plc::kNumSensors && used + 3 < sizeof(list); ++i) {
+    if ((context.warningFlags >> i) & 0x01) {
+      used += static_cast<std::size_t>(
+          std::snprintf(list + used, sizeof(list) - used, used ? ",%u" : "%u", i + 1));
+    }
+  }
+  std::snprintf(buffer, bufferSize, "! S%s", list);
+  return true;
+}
+
 bool UiBindingResolver::resolveLegendBinding(const UiRenderContext& context,
                                              const char* bindingId,
                                              char* buffer,
@@ -247,6 +277,66 @@ bool UiBindingResolver::resolveConfigBinding(const UiRenderContext& context,
     }
     return copyLiteral("Config Preview", buffer, bufferSize);
   }
+
+  const uint8_t sensor = controller_ ? controller_->navigator().sensorIndex() : 0;
+
+  // The value being edited, as opposed to the one in force. Bound by an editor's
+  // pending-value element; the saved-value element binds the setting id itself and so
+  // falls through to the live read below.
+  if (binding == "config.editor.pending") {
+    if (!controller_ || !controller_->editor().active || !controller_->editor().setting) {
+      return false;
+    }
+    const auto& editor = controller_->editor();
+    formatSetting(*editor.setting, editor.pending, buffer, bufferSize);
+    return true;
+  }
+
+  if (binding == "config.selectedSensor") {
+    if (sensor == 0) {
+      return copyLiteral("-", buffer, bufferSize);
+    }
+    std::snprintf(buffer, bufferSize, "%u", static_cast<unsigned>(sensor));
+    return true;
+  }
+
+  if (binding == "config.uartFrameSummary") {
+    if (!settings_ || !settings_->link) {
+      return false;
+    }
+    char frame[8] = {};
+    settings_->link->staged().frameSummary(frame, sizeof(frame));
+    return copyLiteral(frame, buffer, bufferSize);
+  }
+
+  if (binding == "config.sensor.undersamplingFlag") {
+    if (sensor == 0) {
+      return copyLiteral("-", buffer, bufferSize);
+    }
+    const bool flagged = (context.warningFlags >> (sensor - 1)) & 0x01;
+    return copyLiteral(flagged ? "WARN" : "OK", buffer, bufferSize);
+  }
+
+  if (binding == "config.sensor.nyquistWarning") {
+    if (!controller_ || !controller_->editor().nyquistPrompt) {
+      // Not a failure: with no prompt pending there is simply nothing to say, and the
+      // element keeps whatever static text it was authored with.
+      return copyLiteral("", buffer, bufferSize);
+    }
+    return copyLiteral("Sampling too slow. UP=Edit DOWN=Save anyway", buffer, bufferSize);
+  }
+
+  // Everything else in the catalogue: read the live value and format it with its
+  // unit or enum label.
+  if (const auto* setting = findSetting(bindingId)) {
+    if (!settings_) {
+      return false;
+    }
+    const int32_t value = readSetting(*setting, sensor, *settings_);
+    formatSetting(*setting, value, buffer, bufferSize);
+    return true;
+  }
+
   return false;
 }
 

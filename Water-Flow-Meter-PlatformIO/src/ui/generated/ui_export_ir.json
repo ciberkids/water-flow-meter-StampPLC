@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-31T12:47:18.527Z",
+  "generatedAt": "2026-07-31T13:04:23.344Z",
   "screenCount": 48,
   "elementCount": 375,
   "dataset": [
@@ -4050,7 +4050,7 @@
               "align": "left"
             }
           },
-          "binding": "config.modbusSlaveId"
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
@@ -4212,7 +4212,7 @@
               "align": "left"
             }
           },
-          "binding": "config.baudRate"
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
@@ -4374,7 +4374,7 @@
               "align": "left"
             }
           },
-          "binding": "config.parity"
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
@@ -4536,7 +4536,7 @@
               "align": "left"
             }
           },
-          "binding": "config.stopBits"
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
@@ -4698,7 +4698,7 @@
               "align": "left"
             }
           },
-          "binding": "config.ledPulseVolume"
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
@@ -4860,7 +4860,7 @@
               "align": "left"
             }
           },
-          "binding": "config.ledPulsePeriod"
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
@@ -6502,7 +6502,7 @@
               "align": "left"
             }
           },
-          "binding": "config.sensor.connected"
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
@@ -6832,7 +6832,7 @@
               "align": "left"
             }
           },
-          "binding": "config.sensor.multiplier"
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
@@ -7162,7 +7162,7 @@
               "align": "left"
             }
           },
-          "binding": "config.sensor.adjust"
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
@@ -7492,7 +7492,7 @@
               "align": "left"
             }
           },
-          "binding": "config.sensor.maxFlow"
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",

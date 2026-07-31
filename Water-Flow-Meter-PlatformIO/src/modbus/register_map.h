@@ -18,6 +18,15 @@ inline constexpr uint16_t REG_UNDERSAMPLING_FLAGS = 30;
 inline constexpr uint16_t REG_LED_RED_VOLUME_STEP = 31;
 inline constexpr uint16_t REG_LED_RED_PULSE_PERIOD = 32;
 
+// Serial link configuration block — Project_document.md §4.1.1.
+// Writes to 40-43 are staged; register 44 commits them.
+inline constexpr uint16_t REG_LINK_SLAVE_ID = 40;
+inline constexpr uint16_t REG_LINK_BAUD_INDEX = 41;
+inline constexpr uint16_t REG_LINK_PARITY = 42;
+inline constexpr uint16_t REG_LINK_STOP_BITS = 43;
+inline constexpr uint16_t REG_LINK_APPLY = 44;
+inline constexpr uint16_t REG_LINK_REVISION = 45;
+
 // Sensor register layout
 inline constexpr uint16_t SENSOR_BLOCK_SIZE = 40;
 inline constexpr uint16_t SENSOR_1_BASE_ADDR = 100;

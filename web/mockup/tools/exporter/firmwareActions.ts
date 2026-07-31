@@ -145,21 +145,46 @@ export function checkFirmwareActionCoverage(
 }
 
 /** `binding == "x"` / `metric == "y"` comparisons in the resolver. */
-const kExactBindingPattern = /binding\s*==\s*"([^"]+)"/g;
+// Matches both directions of comparison. Requiring `==` meant a resolver written as
+// `if (binding != "x") return false;` — a perfectly ordinary guard clause — was
+// reported as unresolvable.
+const kExactBindingPattern = /binding\s*[!=]=\s*"([^"]+)"/g;
 const kMetricPattern = /metric\s*==\s*"([^"]+)"/g;
 
+/**
+ * Binding IDs in the firmware's settings catalogue.
+ *
+ * Settings do not appear as `binding == "..."` comparisons — they are resolved by
+ * looking the id up in `kSettings` — so scraping only the resolver reported them as
+ * unresolvable long after they worked. The gate has to read both places or it lies in
+ * the safe-looking direction.
+ */
+const kSettingIdPattern = /\{\s*"(config\.[A-Za-z0-9_.]+)"\s*,\s*SettingTarget::/g;
+
 export async function scrapeFirmwareBindings(projectRoot: string): Promise<FirmwareBindingScrape> {
-  const sourcePath = path.join(
-    projectRoot, "Water-Flow-Meter-PlatformIO", "src", "ui", "core", "ui_bindings.cpp"
-  );
+  const dir = path.join(projectRoot, "Water-Flow-Meter-PlatformIO", "src", "ui", "core");
+  const resolverPath = path.join(dir, "ui_bindings.cpp");
+  const settingsPath = path.join(dir, "ui_settings.cpp");
+
   let source: string;
+  let settingsSource = "";
   try {
-    source = await fs.readFile(sourcePath, "utf-8");
+    source = await fs.readFile(resolverPath, "utf-8");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, exact: [], sensorMetrics: [], error: `Cannot read ${sourcePath}: ${message}` };
+    return { ok: false, exact: [], sensorMetrics: [], error: `Cannot read ${resolverPath}: ${message}` };
   }
-  const exact = [...new Set([...source.matchAll(kExactBindingPattern)].map((m) => m[1]))];
+  try {
+    settingsSource = await fs.readFile(settingsPath, "utf-8");
+  } catch {
+    // The catalogue is optional; its absence just means no settings are resolvable.
+  }
+
+  const fromSettings = [...settingsSource.matchAll(kSettingIdPattern)].map((m) => m[1]);
+  const exact = [...new Set([
+    ...[...source.matchAll(kExactBindingPattern)].map((m) => m[1]),
+    ...fromSettings
+  ])];
   const sensorMetrics = [...new Set([...source.matchAll(kMetricPattern)].map((m) => m[1]))];
   if (exact.length === 0 && sensorMetrics.length === 0) {
     return {

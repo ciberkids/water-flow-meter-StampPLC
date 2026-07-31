@@ -160,7 +160,11 @@ function editorScreen({ page, screenId, title, binding, parentId }) {
       text("hdr-title", L.headerY, `Edit > ${title}`),
       ...(range ? [text("range-hint", L.bodyY - 14, range, { emphasis: "muted" })] : []),
       text("pending-label", L.bodyY, "New value", { emphasis: "muted" }),
-      value("pending-value", L.valueY, binding, { emphasis: "strong" }),
+      // The pending value binds config.editor.pending, not the setting id: both the
+      // pending and the saved element would otherwise bind the same id and the
+      // resolver could not tell them apart. saved-value keeps the setting id, which is
+      // also how descending discovers which setting an editor edits.
+      value("pending-value", L.valueY, "config.editor.pending", { emphasis: "strong" }),
       text("saved-label", L.savedLabelY, "Saved", { emphasis: "muted" }),
       value("saved-value", L.savedValueY, binding, { emphasis: "muted" }),
       text("footer-hint", L.footerY, "UP/DN adjust  ENTER save  hold ENTER discard", { emphasis: "muted" })

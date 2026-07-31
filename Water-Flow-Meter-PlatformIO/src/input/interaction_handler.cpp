@@ -224,6 +224,7 @@ bool InteractionHandler::handleFlowEvent(uint32_t nowMs,
       .preferences = *deps_.preferences,
       .nowMs = nowMs,
       .factoryReset = factoryResetFn_,
+      .settings = deps_.settings,
       .resolvedTarget = flow->targetScreenId
                             ? deps_.screenRouter->screenById(flow->targetScreenId)
                             : nullptr};
@@ -250,6 +251,7 @@ void InteractionHandler::dispatchFlowAction(uint32_t nowMs,
       .preferences = *deps_.preferences,
       .nowMs = nowMs,
       .factoryReset = factoryResetFn_,
+      .settings = deps_.settings,
       .resolvedTarget = flow.targetScreenId && deps_.screenRouter
                             ? deps_.screenRouter->screenById(flow.targetScreenId)
                             : nullptr};

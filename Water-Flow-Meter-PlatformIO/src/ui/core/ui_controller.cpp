@@ -34,6 +34,33 @@ void UiController::syncPageFromScreen(const ui_exporter::Screen* screen, uint32_
   notifyInteraction(nowMs);
 }
 
+void UiController::beginEdit(const ui::SettingDescriptor* setting,
+                            uint8_t sensorIndex,
+                            int32_t current) {
+  editor_ = UiEditorState{};
+  if (!setting) {
+    return;
+  }
+  editor_.active = true;
+  editor_.setting = setting;
+  editor_.sensorIndex = sensorIndex;
+  editor_.pending = current;
+  editor_.saved = current;
+}
+
+void UiController::endEdit() { editor_ = UiEditorState{}; }
+
+void UiController::adjustEdit(int32_t delta, uint32_t nowMs) {
+  if (!editor_.active || !editor_.setting) {
+    return;
+  }
+  editor_.pending = ui::adjustSetting(*editor_.setting, editor_.pending, delta);
+  editor_.lastStepMs = nowMs;
+  // Changing the value invalidates any prompt about the previous one.
+  editor_.nyquistPrompt = false;
+  notifyInteraction(nowMs);
+}
+
 void UiController::notifyInteraction(uint32_t nowMs) {
   lastInteractionMs_ = nowMs;
   if (mode_ == UiMode::Idle) {

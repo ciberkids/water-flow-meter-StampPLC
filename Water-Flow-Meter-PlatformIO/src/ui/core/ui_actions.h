@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "ui/core/ui_controller.h"
+#include "ui/core/ui_settings.h"
 #include "ui/generated/GeneratedUi.h"
 
 class ModbusManager;
@@ -30,6 +31,8 @@ struct UiActionContext {
    * InteractionHandler resolves it before dispatch so the action handlers stay dumb
    * and need no router pointer of their own.
    */
+  /** Live read/write access to the settings catalogue. May be null. */
+  const SettingsAccess* settings = nullptr;
   const ui_exporter::Screen* resolvedTarget = nullptr;
 };
 

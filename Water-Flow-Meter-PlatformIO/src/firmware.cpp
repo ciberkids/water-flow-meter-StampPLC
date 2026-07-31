@@ -10,6 +10,8 @@
 #include "input/interaction_handler.h"
 #include "led/led_controller.h"
 #include "modbus/modbus_manager.h"
+#include "modbus/link_settings.h"
+#include "modbus/link_settings_arduino.h"
 #include "modbus/register_bank.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
@@ -55,6 +57,7 @@ volatile float pollingRate_kHz = 0.0f;
 TaskHandle_t PollingTask;
 TaskHandle_t LogicTask;
 RegisterBank registerBank;
+LinkSettingsManager linkSettings;
 LedController ledController;
 ButtonInputManager buttonInput;
 uint16_t connectedSensorsBitmap = 0;
@@ -74,6 +77,7 @@ ModbusDependencies modbusDeps{.sensors = sensors,
                               .aggregateFlowLpsCache = &aggregateFlowLpsCache,
                               .allSensorsReadyCache = &allSensorsReadyCache,
                               .pollingRateKhz = &pollingRate_kHz,
+                              .link = &linkSettings,
                               .sensorCount = kNumSensors};
 
 ModbusManager modbusManager(modbusDeps);
@@ -83,6 +87,7 @@ ui::UiBindingResolver uiBindingResolver;
 const ui::UiActionRegistry& kUiActionRegistry = ui::defaultActionRegistry();
 UiRenderer uiRenderer;
 UiController uiController;
+ui::SettingsAccess uiSettingsAccess;
 
 SensorStateEngine::Dependencies sensorEngineDeps{
     .sensors = sensors,
@@ -118,11 +123,83 @@ void loadCumulativeData(uint8_t index) {
   sensors[index].cumulativeLiters = preferences.getDouble(key, 0.0);
 }
 
+constexpr const char* kPrefLinkSlaveId = "lnk_id";
+constexpr const char* kPrefLinkBaud = "lnk_baud";
+constexpr const char* kPrefLinkParity = "lnk_par";
+constexpr const char* kPrefLinkStop = "lnk_stop";
+
+/**
+ * Sensor calibration and the enable bitmap were RAM-only, so a power cycle silently
+ * discarded every sensor's Q/F/Adjust and disabled all eight channels — while the
+ * cumulative totals survived, leaving totals for sensors that were no longer "in use".
+ * Display_UI_Requirements §5.5 requires configuration to persist across reboots.
+ */
+void saveSensorConfig(std::size_t index) {
+  if (index >= kNumSensors) {
+    return;
+  }
+  char key[10];
+  std::snprintf(key, sizeof(key), "cfg_q%u", static_cast<unsigned>(index));
+  preferences.putUShort(key, configs[index].q_max);
+  std::snprintf(key, sizeof(key), "cfg_f%u", static_cast<unsigned>(index));
+  preferences.putShort(key, configs[index].f_multiplier);
+  std::snprintf(key, sizeof(key), "cfg_a%u", static_cast<unsigned>(index));
+  preferences.putShort(key, configs[index].adjust);
+}
+
+void loadSensorConfig(std::size_t index) {
+  if (index >= kNumSensors) {
+    return;
+  }
+  char key[10];
+  std::snprintf(key, sizeof(key), "cfg_q%u", static_cast<unsigned>(index));
+  configs[index].q_max = preferences.getUShort(key, 0);
+  std::snprintf(key, sizeof(key), "cfg_f%u", static_cast<unsigned>(index));
+  configs[index].f_multiplier = preferences.getShort(key, 0);
+  std::snprintf(key, sizeof(key), "cfg_a%u", static_cast<unsigned>(index));
+  configs[index].adjust = preferences.getShort(key, 0);
+}
+
+constexpr const char* kPrefConnectedBitmap = "conn_map";
+
+LinkSettings loadLinkSettings() {
+  LinkSettings s;
+  s.slaveId = preferences.getUChar(kPrefLinkSlaveId, s.slaveId);
+  s.baudIndex = preferences.getUChar(kPrefLinkBaud, s.baudIndex);
+  s.parity = preferences.getUChar(kPrefLinkParity, s.parity);
+  s.stopBits = preferences.getUChar(kPrefLinkStop, s.stopBits);
+  return s.valid() ? s : LinkSettings{};
+}
+
+void saveLinkSettings(const LinkSettings& s) {
+  preferences.putUChar(kPrefLinkSlaveId, s.slaveId);
+  preferences.putUChar(kPrefLinkBaud, s.baudIndex);
+  preferences.putUChar(kPrefLinkParity, s.parity);
+  preferences.putUChar(kPrefLinkStop, s.stopBits);
+}
+
+/** Reopens the RS485 port with the live link settings. */
+void restartRs485() {
+  const LinkSettings& s = linkSettings.live();
+  RS485_SERIAL_PORT.end();
+  RS485_SERIAL_PORT.begin(static_cast<unsigned long>(s.baudRate()),
+                          arduinoSerialConfig(s),
+                          RS485_RX_PIN,
+                          RS485_TX_PIN);
+}
+
 void performFactoryReset() {
   modbusManager.applyHoldingWrite(REG_MASTER_RESET_ALL_SENSORS, 1);
   modbusManager.applyHoldingWrite(REG_CONNECTED_SENSORS_BITMAP, 0);
 
   preferences.clear();
+  linkSettings.begin(LinkSettings{});
+  saveLinkSettings(linkSettings.live());
+  preferences.putUShort(kPrefConnectedBitmap, 0);
+  for (std::size_t i = 0; i < kNumSensors; ++i) {
+    configs[i] = SensorCharacteristics{};
+    saveSensorConfig(i);
+  }
   ledController.resetToDefaults();
   ledController.markSessionsCleared();
   ledController.saveToPreferences(preferences);
@@ -219,12 +296,26 @@ void pollingTaskCode(void * pvParameters) {
 void logicTaskCode(void * pvParameters) {
   unsigned long lastCalcTime = millis();
   unsigned long lastSaveTime = millis();
+  // Shadow copies so only genuine changes reach NVS.
+  double persistedCumulative[kNumSensors] = {};
+  SensorCharacteristics persistedConfigs[kNumSensors] = {};
+  uint16_t persistedBitmap = 0;
 
-  // Initialize Modbus RTU server
-  RTUutils::prepareHardwareSerial(RS485_SERIAL_PORT);
-  RS485_SERIAL_PORT.begin(9600, SERIAL_8N1, RS485_RX_PIN, RS485_TX_PIN);
-  // Load persistent data at startup before serving Modbus requests
+  // Project_document.md §4.1.1: link settings must load from NVS BEFORE the RS485
+  // port is opened. This used to call preferences.begin() *after* Serial.begin()
+  // with 9600/8N1 hardcoded, so a configured baud rate could never take effect on
+  // the first open.
   preferences.begin("flow-data", false);
+  linkSettings.begin(loadLinkSettings());
+
+  RTUutils::prepareHardwareSerial(RS485_SERIAL_PORT);
+  {
+    const LinkSettings& link = linkSettings.live();
+    RS485_SERIAL_PORT.begin(static_cast<unsigned long>(link.baudRate()),
+                            arduinoSerialConfig(link),
+                            RS485_RX_PIN,
+                            RS485_TX_PIN);
+  }
   ledController.loadFromPreferences(preferences);
   ledController.begin();
   uiController.begin(millis());
@@ -239,19 +330,30 @@ void logicTaskCode(void * pvParameters) {
   interactionDeps.modbus = &modbusManager;
   interactionDeps.ledController = &ledController;
   interactionDeps.preferences = &preferences;
+  interactionDeps.settings = &uiSettingsAccess;
   interactionHandler.begin(millis(), performFactoryReset, interactionDeps);
+  // Restore calibration and which channels were enabled, then let the state engine
+  // decide readiness from the restored config rather than forcing everything off.
+  connectedSensorsBitmap = preferences.getUShort(kPrefConnectedBitmap, 0);
   for (std::size_t i = 0; i < kNumSensors; ++i) {
     loadCumulativeData(static_cast<uint8_t>(i));
-    sensors[i].inUse = false;
+    loadSensorConfig(i);
+    sensors[i].inUse = (connectedSensorsBitmap >> i) & 0x01;
     sensors[i].isReady = false;
     modbusManager.syncSensorToHolding(i);
   }
   sensorStateEngine.refreshDiagnostics();
   modbusManager.syncGlobalRegisters();
+  for (std::size_t i = 0; i < kNumSensors; ++i) {
+    persistedCumulative[i] = sensors[i].cumulativeLiters;
+    persistedConfigs[i] = configs[i];
+  }
+  persistedBitmap = connectedSensorsBitmap;
 
-  modbus.registerWorker(kDefaultModbusSlaveId, Modbus::READ_HOLD_REGISTER, handleReadHolding);
-  modbus.registerWorker(kDefaultModbusSlaveId, Modbus::WRITE_HOLD_REGISTER, handleWriteSingle);
-  modbus.registerWorker(kDefaultModbusSlaveId, Modbus::WRITE_MULT_REGISTERS, handleWriteMultiple);
+  const uint8_t slaveId = linkSettings.live().slaveId;
+  modbus.registerWorker(slaveId, Modbus::READ_HOLD_REGISTER, handleReadHolding);
+  modbus.registerWorker(slaveId, Modbus::WRITE_HOLD_REGISTER, handleWriteSingle);
+  modbus.registerWorker(slaveId, Modbus::WRITE_MULT_REGISTERS, handleWriteMultiple);
   // Pin the eModbus server task to core 1, alongside this logic task.
   //
   // Without the explicit coreID, ModbusServerRTU::doBegin() creates its task with
@@ -278,10 +380,27 @@ void logicTaskCode(void * pvParameters) {
       sensorStateEngine.update(elapsedTime_s);
     }
 
-    // Save cumulative data periodically to prevent excessive NVS writes
+    // Persist periodically rather than on every change, to spare NVS. Only values
+    // that actually moved are written: Preferences::put* does not guarantee it skips
+    // an identical write, and at one pass per minute an unconditional write would be
+    // roughly 525k writes per key per year.
     if (now - lastSaveTime > 60000) { // Every minute
       for (std::size_t i = 0; i < kNumSensors; ++i) {
-        if (sensors[i].inUse) saveCumulativeData(static_cast<uint8_t>(i));
+        if (!sensors[i].inUse) {
+          continue;
+        }
+        if (sensors[i].cumulativeLiters != persistedCumulative[i]) {
+          saveCumulativeData(static_cast<uint8_t>(i));
+          persistedCumulative[i] = sensors[i].cumulativeLiters;
+        }
+        if (configs[i] != persistedConfigs[i]) {
+          saveSensorConfig(i);
+          persistedConfigs[i] = configs[i];
+        }
+      }
+      if (connectedSensorsBitmap != persistedBitmap) {
+        preferences.putUShort(kPrefConnectedBitmap, connectedSensorsBitmap);
+        persistedBitmap = connectedSensorsBitmap;
       }
       lastSaveTime = now;
     }
@@ -305,6 +424,24 @@ void logicTaskCode(void * pvParameters) {
 
     uiRenderer.update(now, uiController.context());
 
+    // A committed link change reopens the port. A slave-ID change additionally needs
+    // a reboot, because eModbus binds workers to the ID at registration time.
+    if (modbusManager.consumeLinkRestartRequest()) {
+      saveLinkSettings(linkSettings.live());
+      restartRs485();
+      modbusManager.syncGlobalRegisters();
+    }
+
+    // §4.1.1 rollback: an apply that is never confirmed by a valid frame is assumed
+    // to have broken the link, and the previous settings are restored.
+    if (linkSettings.rollbackDue(now)) {
+      if (linkSettings.rollback()) {
+        saveLinkSettings(linkSettings.live());
+        restartRs485();
+        modbusManager.syncGlobalRegisters();
+      }
+    }
+
     if (interactions.restartScheduled && now >= interactions.restartAtMs) {
       esp_restart();
     }
@@ -327,6 +464,14 @@ void setup() {
         "[ui] ERROR: generated UI assets are missing screens the router requires. "
         "Re-run the UI exporter (npm run export:firmware).");
   }
+  uiSettingsAccess.link = &linkSettings;
+  uiSettingsAccess.leds = &ledController;
+  uiSettingsAccess.modbus = &modbusManager;
+  uiSettingsAccess.configs = configs;
+  uiSettingsAccess.connectedBitmap = &connectedSensorsBitmap;
+  uiSettingsAccess.sensorCount = kNumSensors;
+  uiBindingResolver.bindSettings(&uiSettingsAccess, &uiController);
+
   uiRenderer.bindScreenRouter(&uiScreenRouter);
   uiRenderer.bindBindingResolver(&uiBindingResolver);
   uiRenderer.applyTheme(kUiAssets.palette);

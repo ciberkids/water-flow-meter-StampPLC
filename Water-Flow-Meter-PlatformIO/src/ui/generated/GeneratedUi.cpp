@@ -586,7 +586,7 @@ static constexpr ui_exporter::Element kConfigC1ModbusIdEditElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditHdrTitle_Text, nullptr, nullptr },
     { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditRangeHint_Text, nullptr, nullptr },
     { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditPendingValue_Text, nullptr, "config.modbusSlaveId" },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditPendingValue_Text, nullptr, "config.editor.pending" },
     { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditSavedLabel_Text, nullptr, nullptr },
     { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditSavedValue_Text, nullptr, "config.modbusSlaveId" },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditFooterHint_Text, nullptr, nullptr }
@@ -612,7 +612,7 @@ static constexpr ui_exporter::Element kConfigC2BaudRateEditElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditHdrTitle_Text, nullptr, nullptr },
     { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditRangeHint_Text, nullptr, nullptr },
     { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditPendingValue_Text, nullptr, "config.baudRate" },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditPendingValue_Text, nullptr, "config.editor.pending" },
     { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditSavedLabel_Text, nullptr, nullptr },
     { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditSavedValue_Text, nullptr, "config.baudRate" },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditFooterHint_Text, nullptr, nullptr }
@@ -638,7 +638,7 @@ static constexpr ui_exporter::Element kConfigC3ParityEditElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditHdrTitle_Text, nullptr, nullptr },
     { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditRangeHint_Text, nullptr, nullptr },
     { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditPendingValue_Text, nullptr, "config.parity" },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditPendingValue_Text, nullptr, "config.editor.pending" },
     { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditSavedLabel_Text, nullptr, nullptr },
     { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditSavedValue_Text, nullptr, "config.parity" },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditFooterHint_Text, nullptr, nullptr }
@@ -664,7 +664,7 @@ static constexpr ui_exporter::Element kConfigC4StopBitsEditElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditHdrTitle_Text, nullptr, nullptr },
     { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditRangeHint_Text, nullptr, nullptr },
     { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditPendingValue_Text, nullptr, "config.stopBits" },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditPendingValue_Text, nullptr, "config.editor.pending" },
     { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditSavedLabel_Text, nullptr, nullptr },
     { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditSavedValue_Text, nullptr, "config.stopBits" },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditFooterHint_Text, nullptr, nullptr }
@@ -690,7 +690,7 @@ static constexpr ui_exporter::Element kConfigC5LedPulseVolEditElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditHdrTitle_Text, nullptr, nullptr },
     { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditRangeHint_Text, nullptr, nullptr },
     { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditPendingValue_Text, nullptr, "config.ledPulseVolume" },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditPendingValue_Text, nullptr, "config.editor.pending" },
     { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditSavedLabel_Text, nullptr, nullptr },
     { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditSavedValue_Text, nullptr, "config.ledPulseVolume" },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditFooterHint_Text, nullptr, nullptr }
@@ -716,7 +716,7 @@ static constexpr ui_exporter::Element kConfigC6LedPulsePeriodEditElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditHdrTitle_Text, nullptr, nullptr },
     { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditRangeHint_Text, nullptr, nullptr },
     { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditPendingValue_Text, nullptr, "config.ledPulsePeriod" },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditPendingValue_Text, nullptr, "config.editor.pending" },
     { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditSavedLabel_Text, nullptr, nullptr },
     { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditSavedValue_Text, nullptr, "config.ledPulsePeriod" },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditFooterHint_Text, nullptr, nullptr }
@@ -968,7 +968,7 @@ static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1Connect
 static constexpr ui_exporter::Element kConfigS1ConnectedEditElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditHdrTitle_Text, nullptr, nullptr },
     { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditPendingValue_Text, nullptr, "config.sensor.connected" },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditPendingValue_Text, nullptr, "config.editor.pending" },
     { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditSavedLabel_Text, nullptr, nullptr },
     { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditSavedValue_Text, nullptr, "config.sensor.connected" },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditFooterHint_Text, nullptr, nullptr }
@@ -1019,7 +1019,7 @@ static constexpr ui_exporter::Element kConfigS2MultiplierEditElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditHdrTitle_Text, nullptr, nullptr },
     { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditRangeHint_Text, nullptr, nullptr },
     { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditPendingValue_Text, nullptr, "config.sensor.multiplier" },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditPendingValue_Text, nullptr, "config.editor.pending" },
     { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditSavedLabel_Text, nullptr, nullptr },
     { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditSavedValue_Text, nullptr, "config.sensor.multiplier" },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditFooterHint_Text, nullptr, nullptr }
@@ -1070,7 +1070,7 @@ static constexpr ui_exporter::Element kConfigS3AdjustEditElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditHdrTitle_Text, nullptr, nullptr },
     { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditRangeHint_Text, nullptr, nullptr },
     { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditPendingValue_Text, nullptr, "config.sensor.adjust" },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditPendingValue_Text, nullptr, "config.editor.pending" },
     { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditSavedLabel_Text, nullptr, nullptr },
     { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditSavedValue_Text, nullptr, "config.sensor.adjust" },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditFooterHint_Text, nullptr, nullptr }
@@ -1121,7 +1121,7 @@ static constexpr ui_exporter::Element kConfigS4MaxFlowEditElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditHdrTitle_Text, nullptr, nullptr },
     { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditRangeHint_Text, nullptr, nullptr },
     { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditPendingValue_Text, nullptr, "config.sensor.maxFlow" },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditPendingValue_Text, nullptr, "config.editor.pending" },
     { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditSavedLabel_Text, nullptr, nullptr },
     { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditSavedValue_Text, nullptr, "config.sensor.maxFlow" },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditFooterHint_Text, nullptr, nullptr }
@@ -1340,7 +1340,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-07-31T12:47:18.527Z", 48, 375
+    "2026-07-31T13:04:23.344Z", 48, 375
 };
 
 }  // namespace ui_exporter

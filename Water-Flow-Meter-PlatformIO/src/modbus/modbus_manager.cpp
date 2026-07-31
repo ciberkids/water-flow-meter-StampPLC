@@ -30,7 +30,12 @@ bool ModbusManager::isWritableAddress(uint16_t address) const {
       address == REG_MASTER_RESET_ALL_MEASURED ||
       address == REG_MASTER_RESET_ALL_SESSION ||
       address == REG_LED_RED_VOLUME_STEP ||
-      address == REG_LED_RED_PULSE_PERIOD) {
+      address == REG_LED_RED_PULSE_PERIOD ||
+      address == REG_LINK_SLAVE_ID ||
+      address == REG_LINK_BAUD_INDEX ||
+      address == REG_LINK_PARITY ||
+      address == REG_LINK_STOP_BITS ||
+      address == REG_LINK_APPLY) {
     return true;
   }
   if (address < SENSOR_1_BASE_ADDR) {
@@ -90,6 +95,28 @@ bool ModbusManager::applyHoldingWrite(uint16_t address, uint16_t value) {
     }
     evaluateSensorDiagnostics();
     syncGlobalRegisters();
+    return true;
+  }
+
+  // 40-43 stage; 44 commits. See Project_document.md §4.1.1 for why the transport's
+  // own parameters cannot be applied by the request that carries them.
+  if (address == REG_LINK_SLAVE_ID || address == REG_LINK_BAUD_INDEX ||
+      address == REG_LINK_PARITY || address == REG_LINK_STOP_BITS) {
+    if (!deps_.link || !deps_.link->stage(address, value)) {
+      return false;
+    }
+    deps_.link->publish(*deps_.registers);
+    return true;
+  }
+
+  if (address == REG_LINK_APPLY) {
+    if (!deps_.link || value != LinkSettingsManager::kApplyMagic) {
+      return false;
+    }
+    if (deps_.link->apply(millis())) {
+      linkRestartPending_ = true;
+    }
+    deps_.link->publish(*deps_.registers);
     return true;
   }
 
@@ -303,6 +330,9 @@ void ModbusManager::syncSensorToHolding(std::size_t sensorIndex) {
 }
 
 void ModbusManager::syncGlobalRegisters() {
+  if (deps_.link) {
+    deps_.link->publish(*deps_.registers);
+  }
   deps_.registers->setFloat(REG_POLLING_RATE_KHZ, *deps_.pollingRateKhz);
   deps_.registers->setUint16(REG_CONNECTED_SENSORS_BITMAP, *deps_.connectedBitmap);
   deps_.registers->setUint16(REG_MASTER_RESET_ALL_SENSORS, 0);
@@ -330,7 +360,18 @@ void ModbusManager::evaluateSensorDiagnostics() {
   deps_.registers->setUint16(REG_UNDERSAMPLING_FLAGS, flags);
 }
 
+bool ModbusManager::consumeLinkRestartRequest() {
+  const bool pending = linkRestartPending_;
+  linkRestartPending_ = false;
+  return pending;
+}
+
 ModbusMessage ModbusManager::handleReadHolding(ModbusMessage request) {
+  // Any well-formed request proves the master can still reach us, which is what
+  // closes the rollback window after an apply.
+  if (deps_.link) {
+    deps_.link->noteValidFrame(millis());
+  }
   uint16_t address = 0;
   uint16_t words = 0;
   ModbusMessage response;
@@ -350,6 +391,9 @@ ModbusMessage ModbusManager::handleReadHolding(ModbusMessage request) {
 }
 
 ModbusMessage ModbusManager::handleWriteSingle(ModbusMessage request) {
+  if (deps_.link) {
+    deps_.link->noteValidFrame(millis());
+  }
   uint16_t address = 0;
   uint16_t value = 0;
   ModbusMessage response;
@@ -366,6 +410,9 @@ ModbusMessage ModbusManager::handleWriteSingle(ModbusMessage request) {
 }
 
 ModbusMessage ModbusManager::handleWriteMultiple(ModbusMessage request) {
+  if (deps_.link) {
+    deps_.link->noteValidFrame(millis());
+  }
   uint16_t address = 0;
   uint16_t words = 0;
   uint8_t byteCount = 0;

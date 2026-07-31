@@ -10,6 +10,7 @@
 #include <ModbusServerRTU.h>
 
 #include "led/led_controller.h"
+#include "modbus/link_settings.h"
 #include "modbus/register_bank.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
@@ -26,6 +27,7 @@ struct ModbusDependencies {
   double* aggregateFlowLpsCache = nullptr;
   bool* allSensorsReadyCache = nullptr;
   volatile float* pollingRateKhz = nullptr;
+  plc::LinkSettingsManager* link = nullptr;
   std::size_t sensorCount = 0;
 };
 
@@ -40,6 +42,9 @@ class ModbusManager {
   void syncGlobalRegisters();
   void evaluateSensorDiagnostics();
 
+  /** True when an apply changed the live settings and the UART must restart. */
+  bool consumeLinkRestartRequest();
+
   ModbusMessage handleReadHolding(ModbusMessage request);
   ModbusMessage handleWriteSingle(ModbusMessage request);
   ModbusMessage handleWriteMultiple(ModbusMessage request);
@@ -51,6 +56,7 @@ class ModbusManager {
   bool prepareConfigUpdate(std::size_t index, const SensorCharacteristics& candidate, bool* acceptedOverride);
 
   ModbusDependencies deps_;
+  bool linkRestartPending_ = false;
   std::array<bool, plc::kNumSensors> overridePending_{};
   std::array<bool, plc::kNumSensors> overrideActive_{};
   std::array<SensorCharacteristics, plc::kNumSensors> pendingOverrides_{};

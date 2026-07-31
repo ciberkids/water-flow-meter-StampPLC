@@ -2403,7 +2403,7 @@
           "kind": "value",
           "x": 8,
           "y": 50,
-          "binding": "config.modbusSlaveId",
+          "binding": "config.editor.pending",
           "emphasis": "strong"
         },
         {
@@ -2509,7 +2509,7 @@
           "kind": "value",
           "x": 8,
           "y": 50,
-          "binding": "config.baudRate",
+          "binding": "config.editor.pending",
           "emphasis": "strong"
         },
         {
@@ -2615,7 +2615,7 @@
           "kind": "value",
           "x": 8,
           "y": 50,
-          "binding": "config.parity",
+          "binding": "config.editor.pending",
           "emphasis": "strong"
         },
         {
@@ -2721,7 +2721,7 @@
           "kind": "value",
           "x": 8,
           "y": 50,
-          "binding": "config.stopBits",
+          "binding": "config.editor.pending",
           "emphasis": "strong"
         },
         {
@@ -2827,7 +2827,7 @@
           "kind": "value",
           "x": 8,
           "y": 50,
-          "binding": "config.ledPulseVolume",
+          "binding": "config.editor.pending",
           "emphasis": "strong"
         },
         {
@@ -2933,7 +2933,7 @@
           "kind": "value",
           "x": 8,
           "y": 50,
-          "binding": "config.ledPulsePeriod",
+          "binding": "config.editor.pending",
           "emphasis": "strong"
         },
         {
@@ -4022,7 +4022,7 @@
           "kind": "value",
           "x": 8,
           "y": 50,
-          "binding": "config.sensor.connected",
+          "binding": "config.editor.pending",
           "emphasis": "strong"
         },
         {
@@ -4236,7 +4236,7 @@
           "kind": "value",
           "x": 8,
           "y": 50,
-          "binding": "config.sensor.multiplier",
+          "binding": "config.editor.pending",
           "emphasis": "strong"
         },
         {
@@ -4450,7 +4450,7 @@
           "kind": "value",
           "x": 8,
           "y": 50,
-          "binding": "config.sensor.adjust",
+          "binding": "config.editor.pending",
           "emphasis": "strong"
         },
         {
@@ -4664,7 +4664,7 @@
           "kind": "value",
           "x": 8,
           "y": 50,
-          "binding": "config.sensor.maxFlow",
+          "binding": "config.editor.pending",
           "emphasis": "strong"
         },
         {

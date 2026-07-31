@@ -6,6 +6,7 @@
 
 #include "led/led_controller.h"
 #include "ui/core/ui_navigator.h"
+#include "ui/core/ui_settings.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
 
@@ -64,6 +65,24 @@ struct UiRenderContext {
   std::array<SensorSnapshot, plc::kNumSensors> sensors{};
 };
 
+/**
+ * The value being edited (Display_UI_Requirements §5.4).
+ *
+ * `pending` is what the operator has dialled up; `saved` is what is in force. Both are
+ * shown at once so the operator can see what they are about to commit against what is
+ * already there.
+ */
+struct UiEditorState {
+  bool active = false;
+  const ui::SettingDescriptor* setting = nullptr;
+  uint8_t sensorIndex = 0;
+  int32_t pending = 0;
+  int32_t saved = 0;
+  /** Set when a commit failed its Nyquist check and DOWN can force it (§5.5). */
+  bool nyquistPrompt = false;
+  uint32_t lastStepMs = 0;
+};
+
 struct UiCountdownState {
   bool active = false;
   uint32_t secondsRemaining = 0;
@@ -110,6 +129,12 @@ class UiController {
    */
   void syncPageFromScreen(const ui_exporter::Screen* screen, uint32_t nowMs);
 
+  const UiEditorState& editor() const { return editor_; }
+  void beginEdit(const ui::SettingDescriptor* setting, uint8_t sensorIndex, int32_t current);
+  void endEdit();
+  void adjustEdit(int32_t delta, uint32_t nowMs);
+  void setNyquistPrompt(bool on) { editor_.nyquistPrompt = on; }
+
  private:
   static constexpr uint32_t kIdleTimeoutMs = 120000;  // 2 minutes
 
@@ -120,5 +145,6 @@ class UiController {
   uint32_t lastInteractionMs_ = 0;
 
   ui::UiNavigator navigator_;
+  UiEditorState editor_{};
   UiRenderContext context_;
 };

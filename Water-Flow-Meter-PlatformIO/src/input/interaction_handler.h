@@ -3,6 +3,7 @@
 #include <cstdint>
 #include "input/button_input.h"
 #include "ui/core/ui_controller.h"
+#include "ui/core/ui_settings.h"
 // Needed for the ui_exporter::Flow/Screen/FlowButton/FlowGesture types used in
 // the private member declarations below.
 #include "ui/generated/GeneratedUi.h"
@@ -37,6 +38,7 @@ class InteractionHandler {
     ModbusManager* modbus = nullptr;
     LedController* ledController = nullptr;
     Preferences* preferences = nullptr;
+    const ui::SettingsAccess* settings = nullptr;
   };
 
   void begin(uint32_t nowMs, FactoryResetFn resetFn, const Dependencies& deps);
