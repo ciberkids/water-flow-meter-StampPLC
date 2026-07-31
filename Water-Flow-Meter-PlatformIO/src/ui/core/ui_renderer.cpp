@@ -216,7 +216,21 @@ void UiRenderer::drawTextElement(const ui_exporter::Element& element,
   }
 
   if (isBadge) {
-    drawBoxElement(element, badgeBackgroundColor_, badgeBorderColor_);
+    // Size the badge box to its rendered text plus padding. drawBoxElement's
+    // fallback is an opaque 40x12 fillRect, and no badge in the dataset carries an
+    // explicit width — so a status badge at x=60 painted over the next column's
+    // label at x=69. The web mockup sizes badges to content, so the 40px default
+    // also meant the mockup could not show the collision.
+    constexpr int16_t kBadgePadX = 3;
+    constexpr int16_t kBadgePadY = 2;
+    ui_exporter::Element sized = element;
+    if (sized.width <= 0) {
+      sized.width = static_cast<int16_t>(measureTextWidth(element, text) + kBadgePadX * 2);
+    }
+    if (sized.height <= 0) {
+      sized.height = static_cast<int16_t>(8 + kBadgePadY * 2);
+    }
+    drawBoxElement(sized, badgeBackgroundColor_, badgeBorderColor_);
   }
 
   const uint16_t color = colorForText(element, context, element.bindingId);

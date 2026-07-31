@@ -20,6 +20,22 @@ import type { FirmwareManifest, ValidationCheck } from "./types.js";
 const kBindingsTablePattern = /const\s+UiActionBinding\s+kDefaultBindings\s*\[\s*\]\s*=\s*\{([\s\S]*?)\};/;
 const kActionIdPattern = /\{\s*"([^"]+)"\s*,/g;
 
+/**
+ * Binding IDs the resolver actually handles, scraped from ui_bindings.cpp.
+ *
+ * `manifest-value-coverage` only proves a binding is *declared*. It does not prove
+ * the firmware can *resolve* it — and an unresolved binding on an element with no
+ * fallback text means UiRenderer::drawTextElement returns before drawing, so the
+ * element is simply invisible on the device while the mockup shows a value. That is
+ * how 39 elements across 21 screens ended up never rendering.
+ */
+export interface FirmwareBindingScrape {
+  ok: boolean;
+  exact: string[];
+  sensorMetrics: string[];
+  error?: string;
+}
+
 export interface FirmwareActionScrape {
   ok: boolean;
   actionIds: string[];
@@ -125,5 +141,76 @@ export function checkFirmwareActionCoverage(
     message: `All ${declaredAndUsed.length} action(s) used by the dataset have a firmware handler.`,
     recommendation:
       orphaned.length > 0 ? `Implemented but undeclared: ${orphaned.join(", ")}.` : undefined
+  };
+}
+
+/** `binding == "x"` / `metric == "y"` comparisons in the resolver. */
+const kExactBindingPattern = /binding\s*==\s*"([^"]+)"/g;
+const kMetricPattern = /metric\s*==\s*"([^"]+)"/g;
+
+export async function scrapeFirmwareBindings(projectRoot: string): Promise<FirmwareBindingScrape> {
+  const sourcePath = path.join(
+    projectRoot, "Water-Flow-Meter-PlatformIO", "src", "ui", "core", "ui_bindings.cpp"
+  );
+  let source: string;
+  try {
+    source = await fs.readFile(sourcePath, "utf-8");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, exact: [], sensorMetrics: [], error: `Cannot read ${sourcePath}: ${message}` };
+  }
+  const exact = [...new Set([...source.matchAll(kExactBindingPattern)].map((m) => m[1]))];
+  const sensorMetrics = [...new Set([...source.matchAll(kMetricPattern)].map((m) => m[1]))];
+  if (exact.length === 0 && sensorMetrics.length === 0) {
+    return {
+      ok: false, exact: [], sensorMetrics: [],
+      error: "Found no binding comparisons in ui_bindings.cpp; the resolver's shape may have changed."
+    };
+  }
+  return { ok: true, exact, sensorMetrics };
+}
+
+/** True when the firmware resolver can produce a value for this binding id. */
+function isResolvable(binding: string, scrape: FirmwareBindingScrape): boolean {
+  if (scrape.exact.includes(binding)) return true;
+  const sensor = /^sensor\.(\d+)\.(.+)$/.exec(binding);
+  if (sensor) return scrape.sensorMetrics.includes(sensor[2]);
+  return false;
+}
+
+/**
+ * Reports element bindings the firmware cannot resolve.
+ *
+ * A warning, not a failure: the dataset is legitimately authored ahead of the
+ * resolver. But the count is always stated, because the failure mode is silent —
+ * an element with an unresolvable binding and no fallback text draws nothing at all.
+ */
+export function checkFirmwareBindingCoverage(
+  usedBindings: Map<string, string[]>,
+  scrape: FirmwareBindingScrape
+): ValidationCheck {
+  const id = "firmware-binding-coverage";
+  const title = "Firmware resolves the bound values";
+
+  if (!scrape.ok) {
+    return { id, title, status: "fail", message: "Could not determine which bindings the firmware resolves.", recommendation: scrape.error };
+  }
+
+  const unresolved = [...usedBindings.keys()].filter((b) => !isResolvable(b, scrape)).sort();
+  if (unresolved.length > 0) {
+    const elementCount = unresolved.reduce((n, b) => n + (usedBindings.get(b)?.length ?? 0), 0);
+    return {
+      id,
+      title,
+      status: "warning",
+      message:
+        `${unresolved.length} binding(s) used by ${elementCount} element(s) have no case in ` +
+        `UiBindingResolver — elements with no fallback text will not render at all on the device.`,
+      recommendation: `Unresolved: ${unresolved.join(", ")}.`
+    };
+  }
+  return {
+    id, title, status: "pass",
+    message: `All ${usedBindings.size} bound value(s) are resolvable by the firmware.`
   };
 }

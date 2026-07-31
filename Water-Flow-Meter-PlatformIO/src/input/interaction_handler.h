@@ -56,6 +56,8 @@ class InteractionHandler {
    * the ordinary discrete-event path.
    */
   static constexpr uint32_t kHoldCountdownArmMs = 1500;
+  /** UP+DOWN released within this window is a display-off request, not a hold. */
+  static constexpr uint32_t kDisplayOffComboMaxMs = 1000;
 
   struct FactoryResetState {
     bool holdActive = false;
@@ -82,6 +84,14 @@ class InteractionHandler {
     const ui_exporter::Flow* timeoutFlow = nullptr;
   };
 
+  struct ComboState {
+    bool active = false;
+    uint32_t startMs = 0;
+  };
+
+  void handleDisplayOffCombo(uint32_t nowMs,
+                             ButtonInputManager& buttonInput,
+                             UiController& uiController);
   void handleFactoryReset(uint32_t nowMs,
                           ButtonInputManager& buttonInput,
                           UiCountdownState* countdown);
@@ -104,6 +114,7 @@ class InteractionHandler {
 
   FactoryResetState factoryResetState_{};
   HoldCountdownState holdCountdown_{};
+  ComboState comboState_{};
   FactoryResetFn factoryResetFn_ = nullptr;
   Dependencies deps_{};
 };

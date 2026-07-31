@@ -6,6 +6,7 @@ static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatus
 static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowLabel_Text = { "Total Flow (L/s):", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusFooterHint_Text = { "UP/DN pages   UP+DN display off", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusLegendLed_Text = { "LED: Red=Pulse Grn=Ready Blu=Flow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP0GlobalStatusElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusHdrTitle_Text, nullptr, nullptr },
@@ -13,7 +14,8 @@ static constexpr ui_exporter::Element kInfoP0GlobalStatusElements[] = {
     { "total-flow-value", ui_exporter::ElementType::Text, 2, 32, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowValue_Text, nullptr, "telemetry.total" },
     { "flow-dots", ui_exporter::ElementType::Icon, 40, 70, 55, 55, nullptr, "flow-dots", nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr },
+    { "legend-led", ui_exporter::ElementType::Text, 8, 112, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusLegendLed_Text, nullptr, "legend.led" }
 };
 
 
@@ -48,7 +50,6 @@ static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS7
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS8Label_Text = { "S8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS8Status_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowLegendLed_Text = { "Red=Pulse • Grn=Ready • Blu=Flow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowFooterHint_Text = { "UP/DN pages   UP+DN display off", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP1InstantFlowElements[] = {
@@ -77,9 +78,8 @@ static constexpr ui_exporter::Element kInfoP1InstantFlowElements[] = {
     { "s8-label", ui_exporter::ElementType::Text, 69, 54, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS8Label_Text, nullptr, nullptr },
     { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS8Value_Text, nullptr, "sensor.8.instantFlow" },
     { "s8-status", ui_exporter::ElementType::Badge, 120, 54, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS8Status_Text, nullptr, "sensor.8.status" },
-    { "divider-1", ui_exporter::ElementType::Box, 0, 65, 135, 1, nullptr, nullptr, nullptr },
-    { "divider-2", ui_exporter::ElementType::Box, 0, 124, 135, 1, nullptr, nullptr, nullptr },
-    { "legend-led", ui_exporter::ElementType::Text, 2, 112, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowLegendLed_Text, nullptr, "legend.led" },
+    { "divider-1", ui_exporter::ElementType::Box, 0, 65, 240, 1, nullptr, nullptr, nullptr },
+    { "divider-2", ui_exporter::ElementType::Box, 0, 124, 240, 1, nullptr, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowFooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
 };
@@ -108,9 +108,8 @@ static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2Cumulati
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS8Label_Text = { "S8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersLegendLed_Text = { "Red=Pulse • Grn=Ready • Blu=Flow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersFooterHint_Text = { "ENTER reset totals (hold 3s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersUndersamplingBadge_Text = { "⚠ Undersampling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersUndersamplingBadge_Text = { "! Undersampling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP2CumulativeLitersElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersHdrTitle_Text, nullptr, nullptr },
@@ -130,8 +129,7 @@ static constexpr ui_exporter::Element kInfoP2CumulativeLitersElements[] = {
     { "s7-value", ui_exporter::ElementType::Value, 81, 42, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS7Value_Text, nullptr, "sensor.7.cumulativeLiters" },
     { "s8-label", ui_exporter::ElementType::Text, 69, 54, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS8Label_Text, nullptr, nullptr },
     { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS8Value_Text, nullptr, "sensor.8.cumulativeLiters" },
-    { "divider-1", ui_exporter::ElementType::Box, 0, 65, 135, 1, nullptr, nullptr, nullptr },
-    { "legend-led", ui_exporter::ElementType::Text, 2, 70, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersLegendLed_Text, nullptr, "legend.led" },
+    { "divider-1", ui_exporter::ElementType::Box, 0, 65, 240, 1, nullptr, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersFooterHint_Text, nullptr, nullptr },
     { "undersampling-badge", ui_exporter::ElementType::Badge, 176, 4, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersUndersamplingBadge_Text, nullptr, "diagnostics.undersampling" },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
@@ -145,7 +143,7 @@ static constexpr ui_exporter::Flow kInfoP2CumulativeLitersFlows[] = {
     { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3HdrTitle_Text = { "Cumulative (m³)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3HdrTitle_Text = { "Cumulative (m3)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S1Label_Text = { "S1", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S2Label_Text = { "S2", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -162,9 +160,8 @@ static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3
 static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S8Label_Text = { "S8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3LegendLed_Text = { "Red=Pulse • Grn=Ready • Blu=Flow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3FooterHint_Text = { "ENTER reset totals (hold 3s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3UndersamplingBadge_Text = { "⚠ Undersampling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3UndersamplingBadge_Text = { "! Undersampling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP3CumulativeM3Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3HdrTitle_Text, nullptr, nullptr },
@@ -184,8 +181,7 @@ static constexpr ui_exporter::Element kInfoP3CumulativeM3Elements[] = {
     { "s7-value", ui_exporter::ElementType::Value, 81, 42, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S7Value_Text, nullptr, "sensor.7.cumulativeM3" },
     { "s8-label", ui_exporter::ElementType::Text, 69, 54, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S8Label_Text, nullptr, nullptr },
     { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S8Value_Text, nullptr, "sensor.8.cumulativeM3" },
-    { "divider-1", ui_exporter::ElementType::Box, 0, 65, 135, 1, nullptr, nullptr, nullptr },
-    { "legend-led", ui_exporter::ElementType::Text, 2, 70, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3LegendLed_Text, nullptr, "legend.led" },
+    { "divider-1", ui_exporter::ElementType::Box, 0, 65, 240, 1, nullptr, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3FooterHint_Text, nullptr, nullptr },
     { "undersampling-badge", ui_exporter::ElementType::Badge, 176, 4, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3UndersamplingBadge_Text, nullptr, "diagnostics.undersampling" },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
@@ -217,7 +213,6 @@ static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLite
 static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS8Label_Text = { "S8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersUndersamplingDiag_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersLegendLed_Text = { "Red=Pulse • Grn=Ready • Blu=Flow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersFooterHint_Text = { "ENTER reset session", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP4SessionLitersElements[] = {
@@ -239,7 +234,6 @@ static constexpr ui_exporter::Element kInfoP4SessionLitersElements[] = {
     { "s8-label", ui_exporter::ElementType::Text, 69, 54, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS8Label_Text, nullptr, nullptr },
     { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS8Value_Text, nullptr, "sensor.8.sessionLiters" },
     { "undersampling-diag", ui_exporter::ElementType::Badge, 2, 66, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersUndersamplingDiag_Text, nullptr, "diagnostics.undersampling" },
-    { "legend-led", ui_exporter::ElementType::Text, 2, 78, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersLegendLed_Text, nullptr, "legend.led" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersFooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
 };
@@ -252,7 +246,7 @@ static constexpr ui_exporter::Flow kInfoP4SessionLitersFlows[] = {
     { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3HdrTitle_Text = { "Session (m³)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3HdrTitle_Text = { "Session (m3)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S1Label_Text = { "S1", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S2Label_Text = { "S2", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -269,9 +263,8 @@ static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S7Labe
 static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S8Label_Text = { "S8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3LegendLed_Text = { "Red=Pulse • Grn=Ready • Blu=Flow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3FooterHint_Text = { "ENTER reset session", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3UndersamplingBadge_Text = { "⚠ Undersampling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3UndersamplingBadge_Text = { "! Undersampling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP5SessionM3Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3HdrTitle_Text, nullptr, nullptr },
@@ -291,7 +284,6 @@ static constexpr ui_exporter::Element kInfoP5SessionM3Elements[] = {
     { "s7-value", ui_exporter::ElementType::Value, 81, 42, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S7Value_Text, nullptr, "sensor.7.sessionM3" },
     { "s8-label", ui_exporter::ElementType::Text, 69, 54, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S8Label_Text, nullptr, nullptr },
     { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S8Value_Text, nullptr, "sensor.8.sessionM3" },
-    { "legend-led", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3LegendLed_Text, nullptr, "legend.led" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3FooterHint_Text, nullptr, nullptr },
     { "undersampling-badge", ui_exporter::ElementType::Badge, 176, 4, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3UndersamplingBadge_Text, nullptr, "diagnostics.undersampling" },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
@@ -322,9 +314,8 @@ static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS7Label_Te
 static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS8Label_Text = { "S8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowLegendLed_Text = { "Red=Pulse • Grn=Ready • Blu=Flow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowFooterHint_Text = { "ENTER reset session", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowUndersamplingBadge_Text = { "⚠ Undersampling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowUndersamplingBadge_Text = { "! Undersampling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP6MaxFlowElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowHdrTitle_Text, nullptr, nullptr },
@@ -344,7 +335,6 @@ static constexpr ui_exporter::Element kInfoP6MaxFlowElements[] = {
     { "s7-value", ui_exporter::ElementType::Value, 81, 42, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS7Value_Text, nullptr, "sensor.7.maxFlowSinceReset" },
     { "s8-label", ui_exporter::ElementType::Text, 69, 54, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS8Label_Text, nullptr, nullptr },
     { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS8Value_Text, nullptr, "sensor.8.maxFlowSinceReset" },
-    { "legend-led", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowLegendLed_Text, nullptr, "legend.led" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowFooterHint_Text, nullptr, nullptr },
     { "undersampling-badge", ui_exporter::ElementType::Badge, 176, 4, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowUndersamplingBadge_Text, nullptr, "diagnostics.undersampling" },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
@@ -359,17 +349,15 @@ static constexpr ui_exporter::Flow kInfoP6MaxFlowFlows[] = {
 };
 
 static constexpr ui_exporter::TextPayload kInfoP7EnterConfig_InfoP7EnterConfigHdrTitle_Text = { "Configuration", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kInfoP7EnterConfig_InfoP7EnterConfigPromptLine1_Text = { "Press & hold ENTER", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP7EnterConfig_InfoP7EnterConfigPromptLine2_Text = { "to enter Config mode.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP7EnterConfig_InfoP7EnterConfigLegendLed_Text = { "Red=Pulse • Grn=Ready • Blu=Flow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP7EnterConfig_InfoP7EnterConfigPromptLine1_Text = { "Press ENTER to open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP7EnterConfig_InfoP7EnterConfigPromptLine2_Text = { "Configuration.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP7EnterConfig_InfoP7EnterConfigFooterHint_Text = { "ENTER opens Configuration", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP7EnterConfigElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigHdrTitle_Text, nullptr, nullptr },
-    { "prompt-line1", ui_exporter::ElementType::Text, 10, 88, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigPromptLine1_Text, nullptr, nullptr },
-    { "prompt-line2", ui_exporter::ElementType::Text, 10, 100, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigPromptLine2_Text, nullptr, nullptr },
+    { "prompt-line1", ui_exporter::ElementType::Text, 10, 100, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigPromptLine1_Text, nullptr, nullptr },
+    { "prompt-line2", ui_exporter::ElementType::Text, 10, 112, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigPromptLine2_Text, nullptr, nullptr },
     { "divider-1", ui_exporter::ElementType::Box, 20, 120, 95, 1, nullptr, nullptr, nullptr },
-    { "legend-led", ui_exporter::ElementType::Text, 2, 112, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigLegendLed_Text, nullptr, "legend.led" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigFooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
 };
@@ -382,10 +370,10 @@ static constexpr ui_exporter::Flow kInfoP7EnterConfigFlows[] = {
     { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningTitle_Text = { "⚠ Sampling too slow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningTitle_Text = { "! Sampling too slow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningDetail1_Text = { "f_theoretical exceeds", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningDetail2_Text = { "Nyquist limit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningNyquistValue_Text = { "—", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningNyquistValue_Text = { "-", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningOptionUp_Text = { "UP = Edit values", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningOptionDown_Text = { "DOWN = Save anyway", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningFooterHint_Text = { "Choose UP or DOWN", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -407,7 +395,7 @@ static constexpr ui_exporter::Flow kNyquistWarningFlows[] = {
     { "f-force-save", "Force save (ignore warning)", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit-override", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kStateIdle_StateIdleIdlePlaceholder_Text = { "— Display off —", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kStateIdle_StateIdleIdlePlaceholder_Text = { "- Display off -", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kStateIdleElements[] = {
     { "idle-placeholder", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kStateIdle_StateIdleIdlePlaceholder_Text, nullptr, nullptr }
@@ -1352,7 +1340,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-07-31T08:49:10.654Z", 48, 381
+    "2026-07-31T09:15:13.418Z", 48, 375
 };
 
 }  // namespace ui_exporter

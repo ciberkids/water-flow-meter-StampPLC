@@ -51,6 +51,7 @@ InteractionResult InteractionHandler::update(uint32_t nowMs,
                                              ButtonInputManager& buttonInput,
                                              UiController& uiController) {
   InteractionResult result{};
+  handleDisplayOffCombo(nowMs, buttonInput, uiController);
   handleFactoryReset(nowMs, buttonInput, &result.countdown);
 
   const bool factoryResetBusy =
@@ -81,6 +82,44 @@ InteractionResult InteractionHandler::update(uint32_t nowMs,
   result.restartScheduled = factoryResetState_.restartScheduled;
   result.restartAtMs = factoryResetState_.restartAtMs;
   return result;
+}
+
+/**
+ * UP+DOWN short press: display off, and reset navigation to P0
+ * (Display_UI_Requirements.md §3.1).
+ *
+ * This replaces the retired UP+DOWN 30 s factory-reset combo. The dataset's footer
+ * hints already advertised the gesture, but nothing implemented it — factory reset
+ * moved to page P8 and this gesture was specified and then never built.
+ *
+ * It fires on *release* before the long-press threshold, so it cannot be confused
+ * with a deliberate hold, and it clears the navigation stack so the display always
+ * wakes on P0 rather than wherever the operator happened to be.
+ */
+void InteractionHandler::handleDisplayOffCombo(uint32_t nowMs,
+                                               ButtonInputManager& buttonInput,
+                                               UiController& uiController) {
+  const bool up = buttonInput.isPressed(ButtonInputManager::Button::Up);
+  const bool down = buttonInput.isPressed(ButtonInputManager::Button::Down);
+  const bool enter = buttonInput.isPressed(ButtonInputManager::Button::Enter);
+
+  if (up && down && !enter) {
+    if (!comboState_.active) {
+      comboState_.active = true;
+      comboState_.startMs = nowMs;
+    }
+    return;
+  }
+
+  if (comboState_.active) {
+    const bool wasShort = (nowMs - comboState_.startMs) < kDisplayOffComboMaxMs;
+    comboState_ = ComboState{};
+    if (wasShort && !enter) {
+      uiController.setPage(UiPage::GlobalStatus, nowMs);
+      uiController.enterIdle(nowMs);
+      buttonInput.clearEvents();
+    }
+  }
 }
 
 void InteractionHandler::handleFactoryReset(uint32_t nowMs,

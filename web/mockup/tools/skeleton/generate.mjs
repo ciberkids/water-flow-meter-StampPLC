@@ -389,7 +389,7 @@ const FOOTER_ROWS = [L.footerY, L.footerY - 12, L.footerY - 24, L.footerY - 36];
 const TEXT_H = { text: 8, value: 10, badge: 12, icon: 10, box: 0, scrollbar: 0 };
 const implicitH = (e) => e.height ?? TEXT_H[e.kind] ?? 8;
 
-let moved = 0, resized = 0, barsAdded = 0, badgesMoved = 0;
+let moved = 0, resized = 0, barsAdded = 0, badgesMoved = 0, asciiFolded = 0, dividersWidened = 0, legendMoved = 0, textCorrected = 0, descriptionsFixed = 0;
 for (const s of kept) {
   for (const e of s.elements) {
     if (e.kind === "box" && e.width === 135 && e.height === 240) { e.width = W; e.height = H; resized += 1; }
@@ -444,6 +444,38 @@ for (const s of kept) {
     s.flows.push(btn("f-escape", "Back to main screen", "enter", "long", A.escape, "info-p0-global-status"));
   }
 
+  // Font0 (M5GFX GLCDfont) covers codepoints 0-255 only, and for c >= 176 with
+  // cp437 disabled it increments before lookup — so a codepoint above 255 draws a
+  // blank 6px cell and U+00B3 prints the *wrong* glyph. Every rendered string must
+  // therefore be ASCII. The warning triangle and the legend bullets were invisible
+  // on the device; "m³" printed a wrong character.
+  const ASCII_FOLD = [
+    [/\u2022/g, "-"],   // bullet
+    [/\u26A0/g, "!"],   // warning sign
+    [/\u2014/g, "-"],   // em dash
+    [/\u2013/g, "-"],   // en dash
+    [/\u00B3/g, "3"],   // superscript three
+    [/\u00B2/g, "2"],
+    [/\u2191/g, "UP"],
+    [/\u2193/g, "DN"],
+    [/\u25C0/g, "<"],
+    [/\u25B6/g, ">"],
+    [/\u2192/g, "->"]
+  ];
+  for (const e of s.elements) {
+    if (typeof e.content !== "string") continue;
+    let next = e.content;
+    for (const [re, rep] of ASCII_FOLD) next = next.replace(re, rep);
+    // Anything still non-ASCII would render blank; drop it rather than ship a gap.
+    next = next.replace(/[^\x20-\x7E]/g, "");
+    if (next !== e.content) { e.content = next.replace(/\s{2,}/g, "  ").trim(); asciiFolded += 1; }
+  }
+
+  // Dividers were authored at the portrait DISPLAY_WIDTH of 135 on a 240px panel.
+  for (const e of s.elements) {
+    if (e.kind === "box" && e.height === 1 && e.width === 135) { e.width = W; dividersWidened += 1; }
+  }
+
   // Footer text that still advertises retired durations.
   const footerText = {
     "info-p0-global-status": "UP/DN pages   UP+DN display off",
@@ -459,6 +491,47 @@ for (const s of kept) {
     const fh = s.elements.find((e) => e.id === "footer-hint");
     if (fh) fh.content = footerText;
   }
+
+  // §4.3 note 5 and §6 note 8: the LED legend belongs on P0, the landing page. It
+  // was on P1-P7 and absent from P0 — the exact inverse.
+  if (s.id.startsWith("info-p")) {
+    const legend = s.elements.find((e) => e.id === "legend-led");
+    if (s.id === "info-p0-global-status") {
+      if (!legend) {
+        s.elements.push(text("legend-led", L.footerY - 12, "LED: Red=Pulse Grn=Ready Blu=Flow",
+                             { emphasis: "muted", binding: "legend.led" }));
+        legendMoved += 1;
+      }
+    } else if (legend) {
+      s.elements.splice(s.elements.indexOf(legend), 1);
+      legendMoved += 1;
+    }
+  }
+
+  // P7's on-screen text told the operator to *hold* ENTER for Config, but holding
+  // now escapes to P0 and a short press descends.
+  // The prompt is split across two elements, so match them by id rather than by
+  // looking for both words in one string.
+  if (s.id === "info-p7-enter-config") {
+    const prompt = { "prompt-line1": "Press ENTER to open", "prompt-line2": "Configuration." };
+    for (const e of s.elements) {
+      if (prompt[e.id] && e.content !== prompt[e.id]) { e.content = prompt[e.id]; textCorrected += 1; }
+    }
+  }
+
+  // Screen descriptions still advertised retired countdowns and a dropped
+  // propeller animation. They are metadata, but they are what the next person reads.
+  const desc = {
+    "info-p0-global-status": "P0 landing page: aggregate flow and volume, plus the flow indicator and LED legend.",
+    "info-p1-instant-flow": "P1: instantaneous flow for all eight sensors in two columns.",
+    "info-p2-cumulative-liters": "P2: cumulative litres. ENTER opens the reset-totals confirm screen (3 s hold).",
+    "info-p3-cumulative-m3": "P3: cumulative cubic metres. ENTER opens the reset-totals confirm screen (3 s hold).",
+    "info-p4-session-liters": "P4: session litres. ENTER opens the reset-session confirm screen.",
+    "info-p5-session-m3": "P5: session cubic metres. ENTER opens the reset-session confirm screen.",
+    "info-p6-max-flow": "P6: peak flow since the last session reset. ENTER opens the reset-session confirm screen.",
+    "info-p7-enter-config": "P7: entry point to Configuration. ENTER descends to the config root."
+  }[s.id];
+  if (desc) { s.description = desc; descriptionsFixed += 1; }
 
   // §5.5: UP returns to the editor and DOWN force-saves, both ascending via the
   // navigation stack. Static targets cannot express "the editor we came from",
@@ -495,6 +568,11 @@ const report = {
   overlaysResized: resized,
   scrollbarsAdded: barsAdded,
   badgesMoved,
+  asciiFolded,
+  dividersWidened,
+  legendMoved,
+  textCorrected,
+  descriptionsFixed,
   newActions: [...new Set(screens.flatMap((s) => (s.flows ?? []).map((f) => f.actionId)).filter(Boolean))].sort()
 };
 

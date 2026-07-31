@@ -9,7 +9,12 @@ import { ensureValidDataset, ensureValidTheme, ExportValidationError } from "./s
 import { buildIntermediateRepresentation } from "./ir.js";
 import { emitCpp } from "./cppEmitter.js";
 import { checkRenderableElementKinds, runExportValidations } from "./validation.js";
-import { checkFirmwareActionCoverage, scrapeFirmwareActions } from "./firmwareActions.js";
+import {
+  checkFirmwareActionCoverage,
+  checkFirmwareBindingCoverage,
+  scrapeFirmwareActions,
+  scrapeFirmwareBindings
+} from "./firmwareActions.js";
 import { loadManifest } from "./manifestLoader.js";
 import type {
   AutomationCheck,
@@ -401,12 +406,28 @@ async function run() {
       await scrapeFirmwareActions(projectRoot),
       usedActionIds
     );
-    validationReport.checks.push(firmwareCheck);
-    if (firmwareCheck.status === "fail") {
-      validationReport.status = "fail";
-      validationReport.issues.push(firmwareCheck.message);
+    const usedBindings = new Map<string, string[]>();
+    for (const screen of dataset.screens) {
+      for (const element of screen.elements) {
+        if (!element.binding) continue;
+        const where = usedBindings.get(element.binding) ?? [];
+        where.push(`${screen.id}/${element.id}`);
+        usedBindings.set(element.binding, where);
+      }
     }
-    validationReport.log += `\n[${firmwareCheck.status.toUpperCase()}] ${firmwareCheck.title} — ${firmwareCheck.message}`;
+    const bindingCheck = checkFirmwareBindingCoverage(
+      usedBindings,
+      await scrapeFirmwareBindings(projectRoot)
+    );
+
+    for (const check of [firmwareCheck, bindingCheck]) {
+      validationReport.checks.push(check);
+      if (check.status === "fail") {
+        validationReport.status = "fail";
+        validationReport.issues.push(check.message);
+      }
+      validationReport.log += `\n[${check.status.toUpperCase()}] ${check.title} — ${check.message}`;
+    }
 
     if (validationReport.status === "fail") {
       throw new ExportValidationError(

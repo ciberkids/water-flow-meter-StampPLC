@@ -136,35 +136,37 @@ export function computeLayout(screen: ScreenDefinition, orientation: DisplayOrie
     const alignOffset =
       element.align === "center" ? boxWidth / 2 : element.align === "right" ? boxWidth : 0;
 
-    // In LTR/Cartesian: Left is just X - Alignment
     const unclampedLeft = normalizedX - alignOffset;
-    const maxLeft = Math.max(bounds.width - boxWidth, 0);
-    const left = clampValue(unclampedLeft, 0, maxLeft);
 
-    // Invert Y axis: 0 is bottom, bounds.height is top.
-    // CSS Top = Bounds Height - Y - Element Height
-    const unclampedTop = bounds.height - normalizedY - boxHeight;
-    const maxTop = Math.max(bounds.height - boxHeight, 0);
-    const top = clampValue(unclampedTop, 0, maxTop);
+    // Top-left origin, matching the device. This previously inverted the Y axis
+    // ("CSS Top = Bounds Height - Y - Element Height"), while the firmware draws
+    // with display.setCursor(x, element.y) against LovyanGFX's top-left origin —
+    // so the mockup rendered every screen vertically MIRRORED. An element authored
+    // at y=2 (hdr-title) appeared at the bottom of the preview and at the top of
+    // the panel. That made the tool unusable as a fidelity check for exactly the
+    // vertical-stacking defects it is meant to catch.
+    const unclampedTop = normalizedY;
 
-    const roundedLeft = Math.round(left);
-    const roundedTop = Math.round(top);
-    const roundedWidth = Math.max(0, Math.round(boxWidth));
-    const roundedHeight = Math.max(0, Math.round(boxHeight));
-
-    const originalBox = {
-      left: roundedLeft,
-      top: roundedTop,
-      width: roundedWidth,
-      height: roundedHeight
+    // outOfBounds must be judged on the AUTHORED box, before clamping. It used to
+    // be computed from the already-clamped left/top, which made positional overflow
+    // undetectable: with left clamped to [0, width - boxWidth], the sum
+    // left + width could only exceed the display when a single element was wider
+    // than the whole panel. Elements pushed off the right edge by their x were
+    // silently shifted back instead of being flagged.
+    const authoredBox = {
+      left: Math.round(unclampedLeft),
+      top: Math.round(unclampedTop),
+      width: Math.max(0, Math.round(boxWidth)),
+      height: Math.max(0, Math.round(boxHeight))
     };
 
     const outOfBounds =
-      originalBox.left < 0 ||
-      originalBox.top < 0 ||
-      originalBox.left + originalBox.width > bounds.width ||
-      originalBox.top + originalBox.height > bounds.height;
+      authoredBox.left < 0 ||
+      authoredBox.top < 0 ||
+      authoredBox.left + authoredBox.width > bounds.width ||
+      authoredBox.top + authoredBox.height > bounds.height;
 
+    const originalBox = authoredBox;
     const clampedBox = clampBoxToBounds(bounds, originalBox);
 
     const layoutElement: LayoutElement = {

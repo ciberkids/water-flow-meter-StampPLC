@@ -3,7 +3,7 @@
     {
       "id": "info-p0-global-status",
       "name": "P0 — Global Status",
-      "description": "Live aggregate metrics for all active sensors and global flow animation.",
+      "description": "P0 landing page: aggregate flow and volume, plus the flow indicator and LED legend.",
       "elements": [
         {
           "id": "hdr-title",
@@ -55,6 +55,15 @@
           "y": 14,
           "width": 5,
           "height": 104
+        },
+        {
+          "id": "legend-led",
+          "kind": "text",
+          "x": 8,
+          "y": 112,
+          "content": "LED: Red=Pulse Grn=Ready Blu=Flow",
+          "emphasis": "muted",
+          "binding": "legend.led"
         }
       ],
       "flows": [
@@ -96,7 +105,7 @@
     {
       "id": "info-p1-instant-flow",
       "name": "P1 — Instant Flow",
-      "description": "Live instantaneous flow rate (L/s) for all 8 sensors. Shows propeller animation when any sensor is active.",
+      "description": "P1: instantaneous flow for all eight sensors in two columns.",
       "elements": [
         {
           "id": "hdr-title",
@@ -287,7 +296,7 @@
           "kind": "box",
           "x": 0,
           "y": 65,
-          "width": 135,
+          "width": 240,
           "height": 1
         },
         {
@@ -295,17 +304,8 @@
           "kind": "box",
           "x": 0,
           "y": 124,
-          "width": 135,
+          "width": 240,
           "height": 1
-        },
-        {
-          "id": "legend-led",
-          "kind": "text",
-          "x": 2,
-          "y": 112,
-          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
-          "binding": "legend.led",
-          "emphasis": "muted"
         },
         {
           "id": "footer-hint",
@@ -363,7 +363,7 @@
     {
       "id": "info-p2-cumulative-liters",
       "name": "P2 — Cumulative Liters",
-      "description": "Cumulative flow totals in litres for all 8 sensors. Long ENTER starts 30 s reset countdown.",
+      "description": "P2: cumulative litres. ENTER opens the reset-totals confirm screen (3 s hold).",
       "elements": [
         {
           "id": "hdr-title",
@@ -498,17 +498,8 @@
           "kind": "box",
           "x": 0,
           "y": 65,
-          "width": 135,
+          "width": 240,
           "height": 1
-        },
-        {
-          "id": "legend-led",
-          "kind": "text",
-          "x": 2,
-          "y": 70,
-          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
-          "binding": "legend.led",
-          "emphasis": "muted"
         },
         {
           "id": "footer-hint",
@@ -523,7 +514,7 @@
           "kind": "badge",
           "x": 176,
           "y": 4,
-          "content": "⚠ Undersampling",
+          "content": "! Undersampling",
           "binding": "diagnostics.undersampling",
           "emphasis": "muted"
         },
@@ -586,14 +577,14 @@
     {
       "id": "info-p3-cumulative-m3",
       "name": "P3 — Cumulative m³",
-      "description": "Cumulative totals in cubic metres (derived from P2 registers).",
+      "description": "P3: cumulative cubic metres. ENTER opens the reset-totals confirm screen (3 s hold).",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
           "x": 2,
           "y": 2,
-          "content": "Cumulative (m³)",
+          "content": "Cumulative (m3)",
           "emphasis": "strong"
         },
         {
@@ -721,17 +712,8 @@
           "kind": "box",
           "x": 0,
           "y": 65,
-          "width": 135,
+          "width": 240,
           "height": 1
-        },
-        {
-          "id": "legend-led",
-          "kind": "text",
-          "x": 2,
-          "y": 70,
-          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
-          "binding": "legend.led",
-          "emphasis": "muted"
         },
         {
           "id": "footer-hint",
@@ -746,7 +728,7 @@
           "kind": "badge",
           "x": 176,
           "y": 4,
-          "content": "⚠ Undersampling",
+          "content": "! Undersampling",
           "binding": "diagnostics.undersampling",
           "emphasis": "muted"
         },
@@ -809,7 +791,7 @@
     {
       "id": "info-p4-session-liters",
       "name": "P4 — Session Liters",
-      "description": "Session flow totals in litres. Long ENTER starts 3 s countdown to reset session.",
+      "description": "P4: session litres. ENTER opens the reset-session confirm screen.",
       "elements": [
         {
           "id": "hdr-title",
@@ -948,15 +930,6 @@
           "emphasis": "strong"
         },
         {
-          "id": "legend-led",
-          "kind": "text",
-          "x": 2,
-          "y": 78,
-          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
-          "binding": "legend.led",
-          "emphasis": "muted"
-        },
-        {
           "id": "footer-hint",
           "kind": "text",
           "x": 2,
@@ -1023,14 +996,14 @@
     {
       "id": "info-p5-session-m3",
       "name": "P5 — Session m³",
-      "description": "Session totals in cubic metres (derived from P4 registers).",
+      "description": "P5: session cubic metres. ENTER opens the reset-session confirm screen.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
           "x": 2,
           "y": 2,
-          "content": "Session (m³)",
+          "content": "Session (m3)",
           "emphasis": "strong"
         },
         {
@@ -1154,15 +1127,6 @@
           "binding": "sensor.8.sessionM3"
         },
         {
-          "id": "legend-led",
-          "kind": "text",
-          "x": 2,
-          "y": 66,
-          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
-          "binding": "legend.led",
-          "emphasis": "muted"
-        },
-        {
           "id": "footer-hint",
           "kind": "text",
           "x": 2,
@@ -1175,7 +1139,7 @@
           "kind": "badge",
           "x": 176,
           "y": 4,
-          "content": "⚠ Undersampling",
+          "content": "! Undersampling",
           "binding": "diagnostics.undersampling",
           "emphasis": "muted"
         },
@@ -1238,7 +1202,7 @@
     {
       "id": "info-p6-max-flow",
       "name": "P6 — Max Flow Since Reset",
-      "description": "Maximum flow rate since last reset for each sensor.",
+      "description": "P6: peak flow since the last session reset. ENTER opens the reset-session confirm screen.",
       "elements": [
         {
           "id": "hdr-title",
@@ -1369,15 +1333,6 @@
           "binding": "sensor.8.maxFlowSinceReset"
         },
         {
-          "id": "legend-led",
-          "kind": "text",
-          "x": 2,
-          "y": 66,
-          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
-          "binding": "legend.led",
-          "emphasis": "muted"
-        },
-        {
           "id": "footer-hint",
           "kind": "text",
           "x": 2,
@@ -1390,7 +1345,7 @@
           "kind": "badge",
           "x": 176,
           "y": 4,
-          "content": "⚠ Undersampling",
+          "content": "! Undersampling",
           "binding": "diagnostics.undersampling",
           "emphasis": "muted"
         },
@@ -1453,7 +1408,7 @@
     {
       "id": "info-p7-enter-config",
       "name": "P7 — Enter Configuration",
-      "description": "Text-only prompt to enter configuration mode. Short ENTER starts 3 s countdown.",
+      "description": "P7: entry point to Configuration. ENTER descends to the config root.",
       "elements": [
         {
           "id": "hdr-title",
@@ -1467,15 +1422,15 @@
           "id": "prompt-line1",
           "kind": "text",
           "x": 10,
-          "y": 88,
-          "content": "Press & hold ENTER"
+          "y": 100,
+          "content": "Press ENTER to open"
         },
         {
           "id": "prompt-line2",
           "kind": "text",
           "x": 10,
-          "y": 100,
-          "content": "to enter Config mode."
+          "y": 112,
+          "content": "Configuration."
         },
         {
           "id": "divider-1",
@@ -1484,15 +1439,6 @@
           "y": 120,
           "width": 95,
           "height": 1
-        },
-        {
-          "id": "legend-led",
-          "kind": "text",
-          "x": 2,
-          "y": 112,
-          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
-          "binding": "legend.led",
-          "emphasis": "muted"
         },
         {
           "id": "footer-hint",
@@ -1576,7 +1522,7 @@
           "kind": "text",
           "x": 5,
           "y": 40,
-          "content": "⚠ Sampling too slow",
+          "content": "! Sampling too slow",
           "emphasis": "strong"
         },
         {
@@ -1599,7 +1545,7 @@
           "kind": "value",
           "x": 5,
           "y": 88,
-          "content": "—",
+          "content": "-",
           "binding": "config.sensor.nyquistWarning"
         },
         {
@@ -1660,7 +1606,7 @@
           "kind": "text",
           "x": 2,
           "y": 124,
-          "content": "— Display off —",
+          "content": "- Display off -",
           "emphasis": "muted"
         }
       ],
