@@ -2,7 +2,10 @@
 
 #include <cstdint>
 
-#include <Preferences.h>
+// Forward-declared rather than included: this header only takes Preferences by reference,
+// and pulling the Arduino header in makes the whole UI layer impossible to compile on a
+// host. Same idiom as ui/core/ui_actions.h.
+class Preferences;
 
 #include "led/led_patterns.h"
 

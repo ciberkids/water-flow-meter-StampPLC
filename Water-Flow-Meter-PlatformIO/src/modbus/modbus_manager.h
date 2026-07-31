@@ -4,10 +4,10 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <Preferences.h>
+class Preferences;
 // eModbus has no umbrella "eModbus.h"; the RTU server header pulls in
 // ModbusMessage, ModbusTypeDefs and RTUutils.
-#include <ModbusServerRTU.h>
+#include <ModbusMessage.h>
 
 #include "led/led_controller.h"
 #include "modbus/link_settings.h"

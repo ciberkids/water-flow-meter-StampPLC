@@ -78,6 +78,19 @@ void UiController::setMode(UiMode mode, uint32_t nowMs) {
 }
 
 void UiController::enterIdle(uint32_t nowMs) {
+  // Going idle must leave the device in the state it will WAKE in, because the rendered
+  // screen comes from the navigator (see update(), which publishes
+  // context_.currentScreen = navigator_.current()) and not from page_.
+  //
+  // Previously this set only mode_ and the timestamp. Display_UI_Requirements §3 says the
+  // UP+DOWN gesture resets navigation to P0 "from any screen at any depth", and the comment
+  // above handleDisplayOffCombo says it "clears the navigation stack" — neither was true.
+  // The display woke on whichever screen the operator had left it on, with any open editor
+  // still live, so the first UP/DOWN hold resumed the acceleration ramp on an invisible
+  // setting and the first ENTER could commit a config write nobody confirmed.
+  endEdit();
+  navigator_.escape();
+  page_ = UiPage::GlobalStatus;
   mode_ = UiMode::Idle;
   lastInteractionMs_ = nowMs;
 }
@@ -172,7 +185,10 @@ void UiController::update(uint32_t nowMs,
 void UiController::updateIdleState(uint32_t nowMs) {
   if (mode_ != UiMode::Idle) {
     if (nowMs - lastInteractionMs_ >= kIdleTimeoutMs) {
-      mode_ = UiMode::Idle;
+      // Route through enterIdle rather than setting mode_ directly: there is one way to
+      // become idle, so the inactivity timeout and the deliberate gesture cannot drift
+      // apart. They already had — the timeout skipped every reset the gesture performed.
+      enterIdle(nowMs);
     }
   }
 }

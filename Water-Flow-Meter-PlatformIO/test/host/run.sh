@@ -31,6 +31,27 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/text_editor_test" \
   test/host/text_editor_test.cpp \
   src/ui/core/ui_text_editor.cpp
 
+# The device harness: the REAL interaction stack, driven by a fake button source.
+# -I test/host/stubs applies only here, so the leaf tests above stay dependency-free.
+g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/interaction_test" \
+  test/host/interaction_test.cpp \
+  src/ui/core/ui_controller.cpp \
+  src/ui/core/ui_navigator.cpp \
+  src/ui/core/ui_screen_router.cpp \
+  src/ui/core/ui_settings_types.cpp \
+  src/ui/core/ui_value_catalogue.cpp \
+  src/ui/core/ui_text_editor.cpp \
+  src/ui/core/ui_actions.cpp \
+  src/ui/core/ui_bindings.cpp \
+  src/ui/core/ui_settings.cpp \
+  src/ui/core/ui_module.cpp \
+  src/ui/theme/theme_palette.cpp \
+  src/led/led_controller.cpp \
+  src/input/button_input.cpp \
+  src/input/interaction_handler.cpp \
+  src/modbus/link_settings.cpp \
+  src/ui/generated/GeneratedUi.cpp
+
 "$OUT/nav_test"
 echo
 "$OUT/accel_test"
@@ -38,6 +59,8 @@ echo
 "$OUT/led_test"
 echo
 "$OUT/text_editor_test"
+echo
+"$OUT/interaction_test"
 echo
 
 # The manifest the design tool validates against is generated from the firmware's own

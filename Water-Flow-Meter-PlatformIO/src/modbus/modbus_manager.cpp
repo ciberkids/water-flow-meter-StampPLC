@@ -1,5 +1,7 @@
 #include "modbus/modbus_manager.h"
 
+#include <Preferences.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
