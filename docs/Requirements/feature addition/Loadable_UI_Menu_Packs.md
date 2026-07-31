@@ -1,7 +1,14 @@
 # Requirement: Loadable UI Menu Packs
 
-**Version:** 0.1 (proposal — open questions in §7 need answers before implementation)
+**Version:** 0.2 (proposal — open questions in §7 need answers before implementation)
 **Date:** 2026-07-30
+
+> **0.2** — adds §3.0 defining what a menu *is*, with the completeness rule that every menu
+> must expose every settable value. Replaces the proposed symlink selection with a pointer
+> file, because FAT has no symlinks (verified against `fatfs/src/ff.h`: the API offers
+> `f_rename`/`f_unlink`/`f_readdir` and nothing resembling `link`). Splits the "hidden menu"
+> into a discoverable root-level page plus a UP+DOWN+ENTER recovery gesture.
+
 **Depends on:** the navigation model in `Display_UI_Requirements.md` §5, and decision **D2**
 (generate the manifest from firmware) in `docs/active_work/open_decisions.md`
 
@@ -37,11 +44,58 @@ exactly what a loadable pack needs to bind against.
 | microSD slot | Built-in (see `../../hardware docs/StampPLC specifications.md`); `M5StamPLC::sd_card_init()` | Card is **optional**. Absent, unreadable or removed-while-running must never fault. |
 | Flash (app partition) | 3.3 MB, currently 17.8 % used | Holds the embedded default pack. There is presently **no data partition** — see §7 Q1. |
 | RAM | 327 KB, currently 25 KB used | A loaded pack lives in one heap buffer. Estimated pack size for today's 48 screens is ~13 KB; the cap is 64 KB. |
-| NVS (`Preferences`, namespace `flow-data`) | — | Stores the selected pack name and the load-attempt counter (§3.6). |
+| NVS (`Preferences`, namespace `flow-data`) | — | Stores **only** the load-attempt counter (§3.6). The selection lives on the card as `/ui/active` (§3.1.1), so there is one source of truth. |
 
 ---
 
 ## 3. Behaviour Specification
+
+### 3.0. What a menu is
+
+> **A menu is the complete set of screens, their content, the connections between them,
+> and the settings pages. Every menu must allow every available value to be set.**
+
+Formally, a menu comprises:
+
+| Part | Meaning |
+| --- | --- |
+| **Screens** | Every page, at every level, including `BACK` entries, confirm screens and toasts. |
+| **Content** | Each screen's elements: their kind, placement, wording, and which catalogue value they bind. |
+| **Connections** | The navigation graph — which screen each flow leads to, and how levels nest. |
+| **Settings pages** | A value editor for **every** settable value in the catalogue, reachable by navigation. |
+
+#### 3.0.1. The completeness rule
+
+**A menu is invalid unless every `category: "setting"` value in the catalogue has a
+reachable editor, and every action those editors require is referenced.** With today's
+catalogue that means 10 editors: `config.modbusSlaveId`, `.baudRate`, `.parity`,
+`.stopBits`, `.ledPulseVolume`, `.ledPulsePeriod`, and the four `config.sensor.*` entries.
+
+This is stronger than "the pack is well-formed", and it is the point. It turns the ABI check
+from *"does everything this pack references exist?"* into *"does this pack expose everything
+the firmware offers?"* — which makes an entire failure class impossible: **you can never
+load a menu that leaves a setting unreachable.** Without it, a pack that simply forgot the
+parity editor would load cleanly and silently strand that setting until someone reflashed or
+swapped cards.
+
+It also hardens the action check in a way the pack cannot dodge. An editor is only
+operable if the pack references `config.action.value.increment`, `.decrement`, `.commit` and
+`.discard`, plus `ui.action.nav.descend` and `.back` to reach and leave it. So the required
+action set is **derivable from the catalogue** rather than trusted from the pack's own
+declaration.
+
+**Checked in both places, with different consequences:**
+
+- **At export** (§5) — a failure. The exporter will not write a pack that is incomplete.
+- **At load** (§3.3) — a *soft* failure: the pack loads, and the firmware appends its own
+  built-in editor for each missing setting so reachability is preserved regardless. Refusing
+  to load would punish the operator for an authoring mistake by giving them no UI at all;
+  filling the gap keeps the device usable and logs what was patched.
+
+> **Open — does this forbid a deliberately reduced menu?** A read-only "operator" or kiosk
+> menu that intentionally hides configuration is a legitimate thing to want, and strict
+> completeness forbids it. See §7 Q10; the load-time fallback above is what makes a
+> `restricted` variant safe if you want one.
 
 ### 3.1. The container format — one file per menu
 
@@ -55,16 +109,51 @@ A single file is chosen deliberately over a directory tree:
 - **User-manageable.** Copying one file onto a card is a thing a person can do correctly.
 - **Versionable and checksummable** as a unit.
 
-The directory then only *organises* packs:
+The directory organises the packs and records which one is active:
 
 ```
 /ui/
+  active                    <- pointer file: one line, the selected pack's filename
   production.uipack
   commissioning.uipack
   service.uipack
 ```
 
 Discovery lists `/ui/*.uipack`, sorted by filename, capped at **8** entries.
+
+#### 3.1.1. Selection is a pointer file, because FAT has no symlinks
+
+The natural way to express "this one is in use" would be a symlink, and that was the
+original proposal. **It cannot be built.** The card is FAT-formatted and reached through
+FatFs, whose entire API is `f_open`, `f_read`, `f_write`, `f_rename`, `f_unlink`, `f_mkdir`,
+`f_readdir`, … — verified against `fatfs/src/ff.h` in the installed toolchain. There is no
+`link` and no `symlink`; `f_unlink` is *delete*. Arduino's `SD.h` exposes no link API either.
+FAT has no such concept at any level.
+
+The **pointer file** preserves the intent exactly and is the direct FAT analogue:
+
+| Symlink behaviour wanted | Pointer file equivalent |
+| --- | --- |
+| A name that refers to another file | `/ui/active` contains that file's name |
+| Selecting rewrites the link | Selecting rewrites one short line |
+| Dangling link → fall back | Named file absent → fall back |
+| Missing link → fall back | `/ui/active` absent → fall back |
+| Editable from a PC | Editable from a PC, and *more* legible than a symlink |
+
+Format: a single line holding a bare filename, e.g. `production.uipack`. Leading and
+trailing whitespace is ignored; anything containing a path separator is rejected, so the
+pointer can only ever name a file inside `/ui/`.
+
+**Why the selection lives on the card rather than in NVS.** It means a card can be prepared
+on a PC and will boot with the intended menu on any unit, and the choice is visible and
+changeable without the device. That is worth the one small write. NVS is still used, but
+only for the anti-boot-loop counter (§3.6) — never for the selection, so there is one
+source of truth and no chance of the two disagreeing.
+
+**Any of these falls back to the embedded default:** no card, no `/ui/`, no `active` file,
+an `active` file that is empty or unparseable or contains a path separator, a named pack
+that does not exist, or a pack that fails validation (§3.3). All are logged with the
+specific reason, and all are recoverable by fixing the card.
 
 ### 3.2. Layout — offset-based and read in place
 
@@ -136,6 +225,12 @@ mandatory before a single element is drawn.
 10. Every `*Str` offset is `< stringsBytes`.
 11. Every `targetScreenIndex < screenCount`; every `firstScreenIndex + pageCount <= screenCount`.
 
+**Completeness check — the pack loads, and the firmware fills the gaps (§3.0.1):**
+
+11a. Every `category: "setting"` value in the catalogue has a reachable editor in the pack.
+     For each that does not, the firmware appends its own built-in editor so the setting
+     stays reachable, and logs which ones it patched.
+
 **Soft checks — the pack loads, the specific item degrades, and it is logged:**
 
 12. An `actionStr` that the `UiActionRegistry` does not implement: the flow becomes inert.
@@ -163,13 +258,44 @@ The page lists, using the ordinary navigation gestures:
 
 ```
   Menu:  0  Built-in            (always present, always first)
-         1  production
+         1  production          <- active, from /ui/active
          2  commissioning
          3  service
 ```
 
 UP/DOWN choose; ENTER-short selects. Entry 0 is the embedded default and is always offered,
-so returning to a known-good UI never depends on the card.
+so returning to a known-good UI never depends on the card. The active entry is marked, read
+from the pointer file.
+
+Selecting entry *n* writes that pack's filename to `/ui/active` (entry 0 deletes the pointer
+file) and reboots (§3.5).
+
+#### 3.4.1. "Hidden" versus discoverable — and the recovery gesture
+
+The original proposal called this a *hidden* menu. I would argue against hiding it, and
+instead split the requirement in two, because "hidden" is bundling together two different
+needs:
+
+**It should be discoverable.** A hidden gesture is precisely the anti-pattern we retired with
+the blind UP+DOWN factory-reset combo: nothing on screen says it exists, nothing confirms
+you are partway through it, and it cannot be documented on the device itself. Hiding also
+buys no protection — anyone who can select a menu can already pull the card out. So the
+selector is an ordinary page in the firmware-owned root level.
+
+**But there must be a way in when the UI is unusable.** This is the real need behind
+"hidden": if a pack validates yet renders nothing legible, paging to a selector page is no
+help. That calls for a gesture that does not depend on anything the pack drew:
+
+> **UP + DOWN + ENTER held for 3 s** opens the selector, from any screen, at any level.
+
+All three buttons at once is the only combination still free — UP/DOWN page, UP+DOWN is
+display-off, ENTER-short descends, ENTER-long escapes — and it is effectively impossible to
+hit by accident. Because the firmware draws the selector itself, it works even if the active
+pack draws nothing at all. The anti-boot-loop counter (§3.6) covers the worse case where a
+pack crashes before any input is processed.
+
+So: **a normal page for everyday use, and a recovery gesture for when the UI is broken.**
+See §7 Q11 if you would still prefer it hidden outright.
 
 ### 3.5. Selecting a menu reboots
 
@@ -184,26 +310,33 @@ Hot swap is noted as a possible later refinement in §7 Q3.
 ### 3.6. Boot sequence and anti-boot-loop
 
 ```
-1. Read selectedPack + loadAttempts from NVS.
-2. If loadAttempts >= 2  -> force Built-in, clear selectedPack, log. (see below)
-3. If selectedPack empty -> Built-in.
-4. Increment loadAttempts, commit to NVS.
-5. Mount SD.            failure -> Built-in (keep selection; the card may return)
-6. Open the file.       failure -> Built-in (keep selection)
-7. Read into buffer.    too large -> Built-in + clear selection
-8. Run §3.3 checks 1-11. failure -> Built-in + clear selection
-9. Activate the pack.
-10. After the first successful render, clear loadAttempts.
+ 1. Read loadAttempts from NVS.
+ 2. If loadAttempts >= 2 -> force Built-in, delete /ui/active if reachable, log.
+ 3. Mount SD.                     failure -> Built-in
+ 4. Read /ui/active.              missing/empty/unparseable/has a separator -> Built-in
+ 5. Open /ui/<name>.              missing -> Built-in (the "dangling symlink" case)
+ 6. Increment loadAttempts, commit to NVS.
+ 7. Read into buffer.             larger than 64 KB -> Built-in
+ 8. Run the §3.3 hard checks.     failure -> Built-in
+ 9. Run the §3.0.1 completeness check; patch in built-in editors for any gaps.
+10. Activate the pack.
+11. After the first successful render, clear loadAttempts.
 ```
 
-Step 2 with step 10 is the **anti-boot-loop guard**, and it is not optional. A pack can pass
-every structural check and still crash the renderer through some combination the checks do
-not model. Without the counter, that pack is selected in NVS and the device reboot-loops
-forever with no way in. Clearing the counter only after a *successful render* is what makes
-the guard meaningful — clearing it right after validation would prove nothing.
+Step 2 together with step 11 is the **anti-boot-loop guard**, and it is not optional. A pack
+can pass every structural check and still crash the renderer through some combination the
+checks do not model. Without the counter that pack stays selected and the device
+reboot-loops forever with no way in. Clearing the counter only after a *successful render*
+is what makes the guard meaningful — clearing it straight after validation would prove
+nothing.
 
-Note the asymmetry in steps 5–8: a missing card keeps the selection (the card may be
-reinserted), while a corrupt pack clears it (it will never become valid on its own).
+Note that the counter is incremented at step 6, *after* the cheap "is there anything to
+load" checks. A missing card or absent pointer file is a normal state, not a failed attempt,
+so it must not burn an attempt and eventually delete a perfectly good selection.
+
+The counter is the only thing kept in NVS. The selection itself lives on the card (§3.1.1),
+so there is one source of truth: a card moved to another unit carries its menu choice with
+it, and a unit with no card simply runs the embedded default.
 
 ### 3.7. The embedded default
 
@@ -230,7 +363,18 @@ drift — see §4.3.
 5. SD access happens **only** at boot. Nothing reads the card during rendering or button
    handling, so removing the card mid-operation cannot fault.
 6. The "Select Menu" page (§3.4) is firmware-native and appended to the root level.
-7. NVS keys in the existing namespace: `ui_pack` (string) and `ui_pack_try` (u8).
+7. NVS holds only `ui_pack_try` (u8), the load-attempt counter. The selection is
+   `/ui/active` on the card (§3.1.1) — never duplicated into NVS, so the two can never
+   disagree.
+7a. Writing `/ui/active` is the only write the firmware makes to the card. A partial write
+    leaves unparseable content, which falls back to the embedded default rather than
+    misbehaving.
+7b. The required-editor set for the §3.0.1 completeness check is derived from the firmware's
+    own catalogue, not read from the pack, so a pack cannot declare itself complete.
+7c. A built-in editor screen per settable value, used both by the embedded default menu and
+    as the patch for an incomplete pack. One implementation, two callers.
+7d. The UP+DOWN+ENTER 3 s recovery gesture (§3.4.1) opens the firmware-drawn selector from
+    any state, without consulting the active pack.
 8. Load outcome is reported over Modbus so a supervisory system can see which UI is running —
    see §7 Q7 for whether this warrants registers.
 9. Failures are logged with the specific reason, and the reason is shown briefly on screen at
@@ -253,6 +397,13 @@ drift — see §4.3.
 6. CLI: `--emit-pack <path>` and a UI affordance producing a downloadable `.uipack`, since the
    browser cannot write to the card itself. The user copies the downloaded file to `/ui/`.
 7. String deduplication when building the string table.
+8. **The exporter refuses to write an incomplete pack** (§3.0.1): every settable value in the
+   manifest must have a reachable editor, and every action those editors need must be
+   referenced. Reported as a named validation check so the failure says which editors are
+   missing, not merely that the pack is invalid.
+9. The required-action set is derived from the manifest's settable values, so adding a new
+   setting to the catalogue automatically makes every existing pack incomplete — which is the
+   correct and intended consequence.
 
 ---
 
@@ -317,6 +468,27 @@ These need answers before implementation. My recommendation is given for each.
 
 ---
 
+10. **Does the completeness rule forbid a deliberately reduced menu?** A read-only operator
+    or kiosk menu that intentionally hides configuration is a reasonable thing to want, and
+    §3.0.1 as written forbids it. *Recommendation: keep strict completeness as the default,
+    and if you want the kiosk case, add a `restricted` flag to the header. A restricted pack
+    may omit editors, and the firmware then appends its own built-in config level rather than
+    individual editors — so settings stay reachable without the pack having to carry them.
+    The invariant to protect is "no setting is ever unreachable", not "every pack must
+    contain every screen".*
+11. **Selector discoverable, or genuinely hidden?** §3.4.1 argues for a normal page plus a
+    UP+DOWN+ENTER recovery gesture, on the grounds that hiding repeats the blind-combo
+    anti-pattern and protects nothing when the card is physically accessible anyway.
+    *Recommendation: as written. If you want it hidden, drop the root-level page and keep
+    only the gesture — but then it must be documented outside the device, because nothing on
+    screen will ever mention it.*
+12. **Should the pointer file be human-written too?** As specified, a person can create
+    `/ui/active` in a text editor to preselect a menu. *Recommendation: yes, explicitly
+    support it — it is the main advantage of keeping the selection on the card, and it costs
+    nothing beyond tolerating trailing whitespace and a trailing newline.*
+
+---
+
 ## 8. Risks
 
 | Risk | Mitigation |
@@ -326,3 +498,5 @@ These need answers before implementation. My recommendation is given for each.
 | The embedded default and SD packs drift apart. | Both from one IR, with a check asserting they agree (§5.2–5.3). |
 | Format churn invalidates packs users have already made. | `formatVersion` is checked and refused rather than misread; append-only catalogue rule (§7 Q4). |
 | Scope creep into assets, compression, hot swap. | Explicitly out of scope for v1: bitmap/SVG assets inside packs, compression, hot swap, and any pack-defined values, actions or gestures. |
+| A pack omits an editor, stranding a setting. | The completeness rule (§3.0.1): a hard failure at export, and at load the firmware patches in its own editor for each gap. |
+| The firmware writes to the card and a power loss corrupts the pointer. | Unparseable content falls back to the embedded default. The pointer is one short line and is the only write the firmware makes. |
