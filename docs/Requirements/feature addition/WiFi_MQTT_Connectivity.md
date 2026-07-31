@@ -183,13 +183,16 @@ implementation, not a display path and a Modbus path that drift.
 A WPA2 passphrase is 8–63 printable ASCII characters. The device has three buttons.
 
 The honest arithmetic for the on-display character-wheel editor, using the existing
-acceleration tiers in `ui_accel.h` (1 step <700 ms, then 5, then 25):
+acceleration tiers in `ui_accel.h` (1 step <700 ms, then 5, then 25). These figures are
+**measured by a host test, not estimated** — the test counts the presses for a real
+passphrase and asserts the cost is high, so this table cannot quietly become optimistic:
 
 | | |
 | --- | --- |
 | Charset | 95 printable ASCII, plus a `DEL` and an `END` pseudo-character |
-| Mean presses to reach a character by short press | ~24 (half of 48, the average distance either way around a 97-item ring) |
-| A realistic 16-character passphrase | **~380 short presses**, or roughly 30–60 s of held-button scrubbing plus 16 commits |
+| Mean presses to reach a character by short press | **~27**, measured — not the ~24 a uniform-distribution estimate gives, because real passphrases favour letters and digits over the punctuation that sits near the ring's origin |
+| A realistic 14-character passphrase | **381 short presses**, measured by `test/host/text_editor_test.cpp` over `Tr0ub4dor&3-xK` |
+| Extrapolated to 16 characters | **~435 short presses**, or roughly 30–60 s of held-button scrubbing plus 16 commits |
 
 That is not a good experience, and this document is not going to pretend otherwise. It is
 still **required**, because the user asked for display configuration and because it is the
@@ -585,7 +588,7 @@ resolved before the expensive work.
 | --- | --- | --- |
 | **N0** | **Spike:** WiFi associated, task pinned off core 0, measure `pollingRate_kHz` against baseline. No MQTT, no UI. | A1. If this fails, §2.1 forces a redesign — which is exactly why it is first. |
 | **N1** | Text settings: `SettingKind::Text`, the accessor pair, `maxLength`, `writeOnly`, manifest and schema changes, host tests | A6, A7 |
-| **N2** | The text editor screen kind, charset, cursor, masking, new actions | A8 |
+| **N2** | The text editor screen kind, charset, cursor, masking, new actions — **engine landed early**, see `ui/core/ui_text_editor.h` and its 47 host checks | A8 ✅ |
 | **N3** | Network register block, staged apply, revision, error reporting | A5, A6, A7 |
 | **N4** | WiFi state machine, backoff, NVS persistence, status bindings | A13 |
 | **N5** | MQTT client, topic layout, cadence, LWT, queue policy | A11 |

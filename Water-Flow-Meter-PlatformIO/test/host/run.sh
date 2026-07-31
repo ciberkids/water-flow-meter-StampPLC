@@ -27,11 +27,17 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/accel_test" \
 g++ "${CXXFLAGS[@]}" -o "$OUT/led_test" \
   test/host/led_test.cpp
 
+g++ "${CXXFLAGS[@]}" -o "$OUT/text_editor_test" \
+  test/host/text_editor_test.cpp \
+  src/ui/core/ui_text_editor.cpp
+
 "$OUT/nav_test"
 echo
 "$OUT/accel_test"
 echo
 "$OUT/led_test"
+echo
+"$OUT/text_editor_test"
 echo
 
 # The manifest the design tool validates against is generated from the firmware's own
