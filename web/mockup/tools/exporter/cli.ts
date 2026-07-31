@@ -209,11 +209,33 @@ async function runCommand(command: string, args: string[], cwd: string): Promise
 /** Firmware build image produced by `podman build -t stampplc-fw .`. */
 const kFirmwareImage = "stampplc-fw";
 
-/** True when a container runtime failed because the firmware image is absent. */
-function isMissingImageError(log: string): boolean {
-  return /image not known|manifest unknown|Unable to find image|no such image|repository .* not found/i.test(
-    log
-  );
+/**
+ * Probes whether a container runtime has the firmware image locally.
+ *
+ * This replaces matching the runtime's error prose. That approach failed on a GitHub
+ * runner: podman had no local image, so it tried to PULL one and returned "requested
+ * access to the resource is denied" / "StatusCode: 404" — wording the regex did not
+ * anticipate. The export therefore reported a compile FAILURE for a runner that simply
+ * was not available, and restored the previous assets from backup.
+ *
+ * An explicit existence check is deterministic and needs no knowledge of how each
+ * runtime phrases a miss.
+ */
+async function hasLocalImage(runtime: string, image: string, cwd: string): Promise<boolean> {
+  const probes: Record<string, string[]> = {
+    podman: ["image", "exists", image],
+    docker: ["image", "inspect", image]
+  };
+  const args = probes[runtime];
+  if (!args) {
+    return true;  // Not a container runtime; nothing to probe.
+  }
+  try {
+    const result = await runCommand(runtime, args, cwd);
+    return result.code === 0;
+  } catch {
+    return false;  // The runtime itself is not installed.
+  }
 }
 
 /**
@@ -249,18 +271,18 @@ async function runPlatformioCheck(
 
   for (const runner of candidates) {
     try {
+      // A container runtime with no local image is an unavailable runner, not a compile
+      // failure. Established before running anything, so the distinction never depends
+      // on how the runtime words its error.
+      if (!(await hasLocalImage(runner.command, kFirmwareImage, firmwareDir))) {
+        missingExecutables += 1;
+        continue;
+      }
+
       const start = process.hrtime.bigint();
       const result = await runCommand(runner.command, runner.args, firmwareDir);
       const durationMs = Number(process.hrtime.bigint() - start) / 1_000_000;
       const log = collectOutput(result.stdout, result.stderr);
-
-      // A container runtime that exists but has no firmware image is an
-      // unavailable runner, not a compile failure. Fall through to the next one
-      // rather than blaming the generated code.
-      if (result.code !== 0 && isMissingImageError(log)) {
-        missingExecutables += 1;
-        continue;
-      }
 
       if (result.code === 0) {
         return {
