@@ -23,9 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pinned to match the development environment. CI previously ran Node 20 while
+      # local was 22, which hid a real bug: `node --test "glob"` only expands globs from
+      # Node 21, so the exporter suite passed locally and could not find its tests on CI.
+      # The script now relies on shell expansion instead, but matching versions is what
+      # stops the next such divergence.
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       # Deliberately not `npm ci`: node_modules is still tracked in git (decision F1),
       # and the tracked copy is incomplete — it has no vitest. Once F1 untracks it this

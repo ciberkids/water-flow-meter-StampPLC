@@ -12,7 +12,7 @@
     "test:unit": "vitest run",
     "test:visual": "tsc && vite build && playwright test",
     "test:visual:update": "tsc && vite build && playwright test --update-snapshots",
-    "test:exporter": "npm run build:exporter && node --test \"dist-exporter/tools/exporter/__tests__/*.js\"",
+    "test:exporter": "npm run build:exporter && node --test dist-exporter/tools/exporter/__tests__/*.js",
     "test:cypress": "tsc && vite build && start-server-and-test \"node ./node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4173\" http://127.0.0.1:4173 \"cypress run --e2e\"",
     "clean:exporter": "node -e \"require('fs').rmSync('dist-exporter',{recursive:true,force:true})\""
   },
@@ -33,5 +33,8 @@
     "typescript": "^5.4.5",
     "vite": "^5.2.0",
     "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
