@@ -24,6 +24,11 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/nav_test" \
 g++ "${CXXFLAGS[@]}" -o "$OUT/accel_test" \
   test/host/accel_test.cpp
 
+g++ "${CXXFLAGS[@]}" -o "$OUT/led_test" \
+  test/host/led_test.cpp
+
 "$OUT/nav_test"
 echo
 "$OUT/accel_test"
+echo
+"$OUT/led_test"

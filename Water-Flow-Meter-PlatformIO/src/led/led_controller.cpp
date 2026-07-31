@@ -61,6 +61,39 @@ void LedController::markSessionsCleared() {
   resetPulseState();
 }
 
+void LedController::beginBoot(uint32_t nowMs) {
+  override_ = plc::LedOverride::Boot;
+  bootStartMs_ = nowMs;
+}
+
+void LedController::noteReady() {
+  if (override_ == plc::LedOverride::Boot || override_ == plc::LedOverride::BootStalled) {
+    override_ = plc::LedOverride::None;
+  }
+}
+
+void LedController::setResetRamp(uint32_t remainingMs, uint32_t totalMs) {
+  // An accepted reset outranks the ramp: once solid white is showing, a late countdown
+  // update must not drop it back to flashing.
+  if (override_ == plc::LedOverride::ResetAccepted) {
+    return;
+  }
+  override_ = plc::LedOverride::ResetRamp;
+  rampRemainingMs_ = remainingMs;
+  rampTotalMs_ = totalMs;
+}
+
+void LedController::noteResetAccepted(uint32_t nowMs, uint32_t holdMs) {
+  override_ = plc::LedOverride::ResetAccepted;
+  acceptedUntilMs_ = nowMs + holdMs;
+}
+
+void LedController::clearResetRamp() {
+  if (override_ == plc::LedOverride::ResetRamp) {
+    override_ = plc::LedOverride::None;
+  }
+}
+
 void LedController::update(uint32_t nowMs,
                            double totalSessionLiters,
                            double aggregateFlowLps,
@@ -105,6 +138,42 @@ void LedController::update(uint32_t nowMs,
   bool blueOn = false;
   if ((nowMs - lastFlowTimestampMs_) <= kBlueHoldMs) {
     blueOn = ((nowMs / kBlueBlinkIntervalMs) % 2) == 0;
+  }
+
+  // Overrides displace the channel semantics above for their duration (§3.5).
+  switch (override_) {
+    case plc::LedOverride::Boot: {
+      const uint32_t elapsed = nowMs - bootStartMs_;
+      if (elapsed >= plc::kBootStallMs) {
+        override_ = plc::LedOverride::BootStalled;
+      }
+      const plc::LedState state = (override_ == plc::LedOverride::BootStalled)
+                                      ? plc::bootStalledState(elapsed)
+                                      : plc::bootSnakeState(elapsed);
+      applyOutputs(state.red, state.green, state.blue);
+      return;
+    }
+    case plc::LedOverride::BootStalled: {
+      const plc::LedState state = plc::bootStalledState(nowMs - bootStartMs_);
+      applyOutputs(state.red, state.green, state.blue);
+      return;
+    }
+    case plc::LedOverride::ResetRamp: {
+      const plc::LedState state = plc::resetRampState(nowMs, rampRemainingMs_, rampTotalMs_);
+      applyOutputs(state.red, state.green, state.blue);
+      return;
+    }
+    case plc::LedOverride::ResetAccepted: {
+      if (static_cast<int32_t>(nowMs - acceptedUntilMs_) >= 0) {
+        override_ = plc::LedOverride::None;
+        break;
+      }
+      const plc::LedState state = plc::resetAcceptedState();
+      applyOutputs(state.red, state.green, state.blue);
+      return;
+    }
+    case plc::LedOverride::None:
+      break;
   }
 
   if (suspended_) {

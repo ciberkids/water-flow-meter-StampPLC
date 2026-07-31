@@ -86,6 +86,12 @@ struct UiEditorState {
 struct UiCountdownState {
   bool active = false;
   uint32_t secondsRemaining = 0;
+  /**
+   * Millisecond precision alongside the whole seconds shown on screen. The §3.5 LED
+   * ramp reaches a 60 ms period, which a value rounded to seconds cannot express.
+   */
+  uint32_t remainingMs = 0;
+  uint32_t totalMs = 0;
   std::string label;
   /** Exporter screen ID of the overlay for this countdown; may be nullptr. */
   const char* screenId = nullptr;

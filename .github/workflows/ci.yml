@@ -1,0 +1,107 @@
+name: CI
+
+# Every gate this project relies on, run on every push. None of it is new — it is the
+# same set that has been run by hand all along, which is exactly the problem: the
+# firmware once went months without compiling because nothing checked.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web + exporter
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web/mockup
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Deliberately not `npm ci`: node_modules is still tracked in git (decision F1),
+      # and the tracked copy is incomplete — it has no vitest. Once F1 untracks it this
+      # becomes `npm ci` with a cache.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Exporter tests
+        run: npm run test:exporter
+
+      - name: Build
+        run: npm run build
+
+      # --allow-missing-toolchain because the firmware compile is the other job's
+      # responsibility. Without the flag this correctly refuses to export unverified
+      # output, which is the behaviour we want locally and on a release runner.
+      - name: Export gates
+        run: npm run export:firmware -- --allow-missing-toolchain
+
+      # Catches a dataset edited without re-exporting, which would otherwise ship a UI
+      # that does not match its source. The ISO timestamp is ignored because the export
+      # embeds a wall-clock time: two exports of identical input differ only by that, so
+      # an unfiltered diff would fail on every run. Verified that the filter still
+      # catches a genuine content change.
+      - name: Fail if the committed assets do not match a fresh export
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          TS='[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}'
+          if ! git diff --quiet -I"$TS" -- Water-Flow-Meter-PlatformIO/src/ui/generated; then
+            echo "::error::The committed generated assets do not match a fresh export."
+            echo "Run 'npm run export:firmware' in web/mockup and commit the result."
+            git --no-pager diff -I"$TS" --stat -- Water-Flow-Meter-PlatformIO/src/ui/generated
+            exit 1
+          fi
+
+  firmware-host:
+    name: Firmware host tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # No toolchain needed: the navigator, the acceleration tiers and the LED patterns
+      # are deliberately Arduino-free so they can be checked in a second.
+      - name: Host tests
+        run: Water-Flow-Meter-PlatformIO/test/host/run.sh
+
+  firmware-build:
+    name: Firmware compile
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Water-Flow-Meter-PlatformIO
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            .pio
+          key: pio-${{ runner.os }}-${{ hashFiles('Water-Flow-Meter-PlatformIO/platformio.ini') }}
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      # The gate that matters most. The generated UI header once could not compile at
+      # all, and the export reported success anyway.
+      - name: Compile
+        run: pio run -e m5stack-stamplc

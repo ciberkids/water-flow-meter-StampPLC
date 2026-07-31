@@ -213,6 +213,8 @@ void InteractionHandler::handleFactoryReset(uint32_t nowMs,
               (elapsedMs >= kFactoryResetHoldMs) ? 0 : (kFactoryResetHoldMs - elapsedMs);
           countdown->active = true;
           countdown->secondsRemaining = (remainingMs + 999) / 1000;
+          countdown->remainingMs = remainingMs;
+          countdown->totalMs = kFactoryResetHoldMs;
           countdown->label = "Hold UP+DOWN to factory reset (30->0)";
         }
         if (elapsedMs >= kFactoryResetHoldMs) {
@@ -388,6 +390,9 @@ void InteractionHandler::handleHoldCountdown(uint32_t nowMs,
   const uint32_t elapsedMs = nowMs - holdCountdown_.startMs;
   countdown->active = true;
   countdown->secondsRemaining = secondsRemaining(elapsedMs, holdCountdown_.durationMs);
+  countdown->remainingMs =
+      (elapsedMs >= holdCountdown_.durationMs) ? 0 : (holdCountdown_.durationMs - elapsedMs);
+  countdown->totalMs = holdCountdown_.durationMs;
   countdown->screenId = holdCountdown_.overlayScreenId;
   countdown->label.clear();
 

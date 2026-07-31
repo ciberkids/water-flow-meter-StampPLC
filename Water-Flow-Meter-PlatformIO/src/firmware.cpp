@@ -161,6 +161,8 @@ void loadSensorConfig(std::size_t index) {
 }
 
 constexpr const char* kPrefConnectedBitmap = "conn_map";
+/** §3.5: solid white is held for the acknowledgement toast duration (§4.3.1). */
+constexpr uint32_t kResetAcceptedHoldMs = 2000;
 
 LinkSettings loadLinkSettings() {
   LinkSettings s;
@@ -318,6 +320,7 @@ void logicTaskCode(void * pvParameters) {
   }
   ledController.loadFromPreferences(preferences);
   ledController.begin();
+  ledController.beginBoot(millis());
   uiController.begin(millis());
   // Seed the navigator with the root screen (P0). Everything else follows the
   // dataset's own flows from here.
@@ -375,6 +378,11 @@ void logicTaskCode(void * pvParameters) {
         interactionHandler.update(now, buttonInput, uiController);
 
     if (now - lastCalcTime >= 1000) {
+      // §3.4: the boot pattern ends the moment core 0 reports a polling rate, which is
+      // the first instant the device can actually count pulses.
+      if (pollingRate_kHz > 0.0f) {
+        ledController.noteReady();
+      }
       const float elapsedTime_s = static_cast<float>(now - lastCalcTime) / 1000.0f;
       lastCalcTime = now;
       sensorStateEngine.update(elapsedTime_s);
@@ -404,6 +412,18 @@ void logicTaskCode(void * pvParameters) {
       }
       lastSaveTime = now;
     }
+    // §3.5: the countdown drives the LED ramp; acceptance latches solid white for the
+    // acknowledgement toast. Releasing early clears the ramp with no white flash, so an
+    // aborted reset can never look like a completed one.
+    if (interactions.countdown.active && interactions.countdown.totalMs > 0) {
+      ledController.setResetRamp(interactions.countdown.remainingMs,
+                                 interactions.countdown.totalMs);
+    } else if (interactions.restartScheduled) {
+      ledController.noteResetAccepted(now, kResetAcceptedHoldMs);
+    } else {
+      ledController.clearResetRamp();
+    }
+
     const bool suspendLeds = interactions.ledsSuspended;
     ledController.setSuspended(suspendLeds);
     ledController.update(now,
