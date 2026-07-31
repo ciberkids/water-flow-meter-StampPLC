@@ -194,11 +194,16 @@ bool InteractionHandler::handleFlowEvent(uint32_t nowMs,
     return false;
   }
 
+  // The navigator is authoritative for where we are. It only falls back to the
+  // router when it has not been seeded yet, which cannot happen after begin().
   const ui_exporter::Screen* screen = nullptr;
   if (factoryResetState_.overlayActive) {
     screen = deps_.screenRouter->overlayForCountdown();
   } else {
-    screen = deps_.screenRouter->screenForMode(uiController.mode(), uiController.page());
+    screen = uiController.navigator().current();
+    if (!screen) {
+      screen = deps_.screenRouter->screenForMode(uiController.mode(), uiController.page());
+    }
   }
 
   if (!screen || !screen->flows || screen->flowCount == 0) {
@@ -218,7 +223,10 @@ bool InteractionHandler::handleFlowEvent(uint32_t nowMs,
       .leds = *deps_.ledController,
       .preferences = *deps_.preferences,
       .nowMs = nowMs,
-      .factoryReset = factoryResetFn_};
+      .factoryReset = factoryResetFn_,
+      .resolvedTarget = flow->targetScreenId
+                            ? deps_.screenRouter->screenById(flow->targetScreenId)
+                            : nullptr};
 
   if (deps_.actions->dispatch(flow->actionId, actionContext, *flow)) {
     return true;
@@ -241,7 +249,10 @@ void InteractionHandler::dispatchFlowAction(uint32_t nowMs,
       .leds = *deps_.ledController,
       .preferences = *deps_.preferences,
       .nowMs = nowMs,
-      .factoryReset = factoryResetFn_};
+      .factoryReset = factoryResetFn_,
+      .resolvedTarget = flow.targetScreenId && deps_.screenRouter
+                            ? deps_.screenRouter->screenById(flow.targetScreenId)
+                            : nullptr};
   deps_.actions->dispatch(flow.actionId, actionContext, flow);
 }
 
@@ -293,8 +304,10 @@ void InteractionHandler::handleHoldCountdown(uint32_t nowMs,
       const uint32_t heldMs =
           buttonInput.pressedDuration(ButtonInputManager::Button::Enter, nowMs);
       if (heldMs >= kHoldCountdownArmMs) {
-        const auto* screen =
-            deps_.screenRouter->screenForMode(uiController.mode(), uiController.page());
+        const auto* screen = uiController.navigator().current();
+        if (!screen) {
+          screen = deps_.screenRouter->screenForMode(uiController.mode(), uiController.page());
+        }
         if (armHoldCountdown(nowMs, screen)) {
           buttonInput.clearEvents();
         }

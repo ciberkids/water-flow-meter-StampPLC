@@ -91,7 +91,11 @@ void UiRenderer::update(uint32_t nowMs, const UiRenderContext& context) {
   lastRenderMs_ = nowMs;
   M5StamPLC.setBacklight(true);
 
-  const ui_exporter::Screen* screen = screenRouter_->screenForMode(context.mode, context.page);
+  // The navigator owns the current position; the router is only the by-ID lookup and
+  // the seed for the root. Asking the router for mode+page would ignore any descent.
+  const ui_exporter::Screen* screen = context.currentScreen
+                                          ? context.currentScreen
+                                          : screenRouter_->screenForMode(context.mode, context.page);
   if (!screen) {
     // Previously a silent `return`, which rendered an empty screen and gave no
     // hint that the exported dataset was missing the ID the router asked for.
@@ -152,12 +156,10 @@ void UiRenderer::drawScrollbarElement(const ui_exporter::Element& element,
                                       const UiRenderContext& context) {
   // Carries no binding: the step count and current step come from the active
   // navigation level, so one authored element works on every page of that level.
-  const int steps = (context.mode == UiMode::Info)
-                        ? static_cast<int>(UiPage::Count)
-                        : 1;
-  const int index = (context.mode == UiMode::Info)
-                        ? static_cast<int>(context.page)
-                        : 0;
+  // Ring position comes from the navigator, so the bar works at every level rather
+  // than only on the info ring.
+  const int steps = context.ringCount > 0 ? context.ringCount : 1;
+  const int index = context.ringCount > 0 ? context.ringIndex : 0;
   if (steps <= 0) {
     return;
   }

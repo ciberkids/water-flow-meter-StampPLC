@@ -24,6 +24,13 @@ struct UiActionContext {
    * callback rather than through one of the references above. May be null.
    */
   void (*factoryReset)() = nullptr;
+  /**
+   * The screen this flow's `targetScreenId` resolves to, or null.
+   *
+   * InteractionHandler resolves it before dispatch so the action handlers stay dumb
+   * and need no router pointer of their own.
+   */
+  const ui_exporter::Screen* resolvedTarget = nullptr;
 };
 
 using UiActionFn = void (*)(const UiActionContext& ctx, const ui_exporter::Flow& flow);

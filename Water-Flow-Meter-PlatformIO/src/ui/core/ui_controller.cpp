@@ -1,6 +1,7 @@
 #include "ui/core/ui_controller.h"
 
 #include <algorithm>
+#include <cstring>
 
 void UiController::begin(uint32_t nowMs) {
   mode_ = UiMode::Info;
@@ -9,6 +10,28 @@ void UiController::begin(uint32_t nowMs) {
   context_ = UiRenderContext{};
   context_.mode = mode_;
   context_.page = page_;
+}
+
+void UiController::syncPageFromScreen(const ui_exporter::Screen* screen, uint32_t nowMs) {
+  if (!screen || !screen->id) {
+    return;
+  }
+  // Only info-level screens map onto a UiPage; deeper levels leave it untouched so
+  // page.title keeps naming the info page the operator came from.
+  static constexpr const char* kInfoIds[] = {
+      "info-p0-global-status", "info-p1-instant-flow", "info-p2-cumulative-liters",
+      "info-p3-cumulative-m3", "info-p4-session-liters", "info-p5-session-m3",
+      "info-p6-max-flow", "info-p7-enter-config", "info-p8-factory-reset"};
+  static_assert(sizeof(kInfoIds) / sizeof(kInfoIds[0]) ==
+                    static_cast<std::size_t>(UiPage::Count),
+                "kInfoIds must have one entry per UiPage");
+  for (std::size_t i = 0; i < static_cast<std::size_t>(UiPage::Count); ++i) {
+    if (std::strcmp(screen->id, kInfoIds[i]) == 0) {
+      setPage(static_cast<UiPage>(i), nowMs);
+      return;
+    }
+  }
+  notifyInteraction(nowMs);
 }
 
 void UiController::notifyInteraction(uint32_t nowMs) {
@@ -74,6 +97,16 @@ void UiController::update(uint32_t nowMs,
   context_.countdownSeconds = countdown.secondsRemaining;
   context_.countdownLabel = countdown.label;
   context_.countdownScreenId = countdown.screenId;
+  context_.currentScreen = navigator_.current();
+  uint8_t ringIndex = 0;
+  uint8_t ringCount = 0;
+  if (navigator_.ringPosition(&ringIndex, &ringCount)) {
+    context_.ringIndex = ringIndex;
+    context_.ringCount = ringCount;
+  } else {
+    context_.ringIndex = 0;
+    context_.ringCount = 0;
+  }
   context_.hasWarnings = warningFlags != 0;
   context_.warningCount = 0;
   context_.warningSummary.clear();

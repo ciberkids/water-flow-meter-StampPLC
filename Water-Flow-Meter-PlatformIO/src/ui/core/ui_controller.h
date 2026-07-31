@@ -5,6 +5,7 @@
 #include <string>
 
 #include "led/led_controller.h"
+#include "ui/core/ui_navigator.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
 
@@ -52,6 +53,11 @@ struct UiRenderContext {
    * single fixed screen.
    */
   const char* countdownScreenId = nullptr;
+  /** Screen the navigator is on. Null only before begin() has run. */
+  const ui_exporter::Screen* currentScreen = nullptr;
+  /** Position within the current level's ring, for the scrollbar. 0 = unknown. */
+  uint8_t ringIndex = 0;
+  uint8_t ringCount = 0;
   bool hasWarnings = false;
   uint8_t warningCount = 0;
   std::string warningSummary;
@@ -91,6 +97,19 @@ class UiController {
   UiMode mode() const { return mode_; }
   UiPage page() const { return page_; }
 
+  ui::UiNavigator& navigator() { return navigator_; }
+  const ui::UiNavigator& navigator() const { return navigator_; }
+
+  /**
+   * Keeps UiPage in step with the navigator, one direction only: screen -> page.
+   *
+   * UiPage remains the source for the `page.title` binding, but the navigator is
+   * authoritative for what is drawn. Deriving the page from the screen means the two
+   * cannot drift; maintaining both independently is exactly the kind of duplicate
+   * bookkeeping that produced the stale router defaults.
+   */
+  void syncPageFromScreen(const ui_exporter::Screen* screen, uint32_t nowMs);
+
  private:
   static constexpr uint32_t kIdleTimeoutMs = 120000;  // 2 minutes
 
@@ -100,5 +119,6 @@ class UiController {
   UiPage page_ = UiPage::GlobalStatus;
   uint32_t lastInteractionMs_ = 0;
 
+  ui::UiNavigator navigator_;
   UiRenderContext context_;
 };

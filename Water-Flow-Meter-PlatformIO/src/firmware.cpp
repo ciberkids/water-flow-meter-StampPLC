@@ -228,6 +228,10 @@ void logicTaskCode(void * pvParameters) {
   ledController.loadFromPreferences(preferences);
   ledController.begin();
   uiController.begin(millis());
+  // Seed the navigator with the root screen (P0). Everything else follows the
+  // dataset's own flows from here.
+  uiController.navigator().reset(
+      uiScreenRouter.screenForMode(UiMode::Info, UiPage::GlobalStatus));
   buttonInput.begin(millis());
   InteractionHandler::Dependencies interactionDeps{};
   interactionDeps.screenRouter = &uiScreenRouter;

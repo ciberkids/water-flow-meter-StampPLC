@@ -11,11 +11,24 @@ namespace ui {
 
 namespace {
 
+// A sibling move: follow the flow's target without touching depth. Falls back to
+// the UiPage ring when the dataset names no target, so an under-specified screen
+// still pages.
 void handlePageNext(const UiActionContext& ctx, const ui_exporter::Flow&) {
+  if (ctx.resolvedTarget) {
+    ctx.controller.navigator().goToSibling(ctx.resolvedTarget);
+    ctx.controller.syncPageFromScreen(ctx.resolvedTarget, ctx.nowMs);
+    return;
+  }
   ctx.controller.nextPage(ctx.nowMs);
 }
 
 void handlePagePrevious(const UiActionContext& ctx, const ui_exporter::Flow&) {
+  if (ctx.resolvedTarget) {
+    ctx.controller.navigator().goToSibling(ctx.resolvedTarget);
+    ctx.controller.syncPageFromScreen(ctx.resolvedTarget, ctx.nowMs);
+    return;
+  }
   ctx.controller.previousPage(ctx.nowMs);
 }
 
@@ -56,6 +69,32 @@ void handleFactoryReset(const UiActionContext& ctx, const ui_exporter::Flow&) {
   }
 }
 
+// Display_UI_Requirements §3.2: ENTER-short descends, ENTER-long escapes to P0,
+// BACK ascends one level. UP/DOWN move within a level, which is a sibling move and
+// must not change depth.
+void handleNavDescend(const UiActionContext& ctx, const ui_exporter::Flow&) {
+  ctx.controller.notifyInteraction(ctx.nowMs);
+  if (!ctx.resolvedTarget) {
+    return;
+  }
+  if (ctx.controller.navigator().descend(ctx.resolvedTarget)) {
+    ctx.controller.syncPageFromScreen(ctx.controller.navigator().current(), ctx.nowMs);
+  }
+}
+
+void handleNavBack(const UiActionContext& ctx, const ui_exporter::Flow&) {
+  ctx.controller.notifyInteraction(ctx.nowMs);
+  if (ctx.controller.navigator().ascend()) {
+    ctx.controller.syncPageFromScreen(ctx.controller.navigator().current(), ctx.nowMs);
+  }
+}
+
+void handleNavEscape(const UiActionContext& ctx, const ui_exporter::Flow&) {
+  ctx.controller.navigator().escape();
+  ctx.controller.setMode(UiMode::Info, ctx.nowMs);
+  ctx.controller.syncPageFromScreen(ctx.controller.navigator().current(), ctx.nowMs);
+}
+
 const UiActionBinding kDefaultBindings[] = {
     {"ui.action.page.next", handlePageNext},
     {"ui.action.page.previous", handlePagePrevious},
@@ -66,6 +105,9 @@ const UiActionBinding kDefaultBindings[] = {
     {"core.action.reset-session", handleResetSession},
     {"core.action.reset-all-measured", handleResetAllMeasured},
     {"core.action.factory-reset", handleFactoryReset},
+    {"ui.action.nav.descend", handleNavDescend},
+    {"ui.action.nav.back", handleNavBack},
+    {"ui.action.nav.escape", handleNavEscape},
 };
 
 UiActionRegistry initDefaultRegistry() {
