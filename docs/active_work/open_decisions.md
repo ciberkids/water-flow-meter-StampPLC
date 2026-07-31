@@ -360,7 +360,7 @@ rediscovered later.
 
 ---
 
-### D2 🟡 Should the manifest be generated from firmware?
+### D2 🟢 DONE — the manifest is generated from firmware
 
 **Question.** `actionManifest.json` is hand-maintained and must mirror three firmware
 facts: `kDefaultBindings` (actions), the binding resolver's vocabulary (values), and
@@ -370,8 +370,38 @@ handler and the export still passes.
 
 **Why it matters.** `spike-report-SI-20251111-05.md` already evaluated this and
 recommended **Approach A** (a parallel `constexpr kActionDescriptors[]` next to
-`kDefaultBindings`, guarded by `static_assert`, plus a `manifest_gen` host binary). The
-implementation steps were never carried out.
+`kDefaultBindings`, guarded by `static_assert`, plus a `manifest_gen` host binary).
+
+**Decision: implemented as Approach A** (commit `5308f72`).
+
+`tools/manifest_gen` emits `actionManifest.json` from the firmware's own tables, and
+`test/host/run.sh --check` fails when the committed copy is stale. To make the tables
+linkable by a host program, everything the manifest describes moved into Arduino-free
+translation units: `ui_settings_types`, `ui_value_catalogue`, `ui_action_catalogue`,
+`ui_pages`. That split is also the groundwork a device emulator needs.
+
+What generating found, immediately:
+
+| Error in the hand-written manifest | Direction |
+| --- | --- |
+| 8 actions advertised with no handler | over-claimed |
+| `sensor.N.cumulativeM3`, `sensor.N.sessionM3` marked as having no register, while `modbus_manager.cpp` publishes them at offsets 7 and 13 | under-claimed |
+| 3 calibration settings missing their offsets (20/21/22) | under-claimed |
+| `min`/`max`/`step` absent on 5 enum and boolean settings | under-claimed |
+| `stopBits` enum given as bare labels `"1"`, `"2"` while the register stores 1 and 2 — position was not the value | ambiguous |
+
+Actions are additionally cross-checked at compile time: `ui_actions.cpp` static_asserts
+the catalogue against the handler table. Verified by renaming an id and watching the build
+fail. `firmware-action-coverage` was retired as a result — it scraped `kDefaultBindings`,
+broke three times on innocuous refactors, and on the third occasion reported a hard
+failure when nothing was wrong. A compile-time assertion cannot be evaded.
+
+A new gate, `firmware-manifest-resolvable`, asks what no generated artefact can: does the
+resolver have a case for every value the manifest advertises? The dataset binds only 73 of
+81, so the remainder had never been checked. It found three that would have rendered blank
+(`telemetry.totalFlowLps`, `telemetry.totalVolumeLiters`, `diagnostics.pollingRateKhz`),
+now implemented — the last required plumbing the measured core-0 rate into the render
+context, which is the value **G1** needs read off hardware.
 
 **Recommendation.** Yes, implement Approach A, extended to cover values and screens.
 Until then, treat the manifest as an *intent* document and accept that it can over-claim.
@@ -452,7 +482,7 @@ so the firmware manifest only claims things firmware can do. Keep
 
 ## F. Hygiene and process
 
-### F1 🟢 `web/mockup/node_modules` is committed
+### F1 🟢 DONE — `node_modules` untracked
 
 10,615 files — was 10,615 of the repo's 10,917 tracked files before this branch. The
 `.gitignore` already lists `node_modules/`, but they were tracked before the rule
@@ -460,8 +490,10 @@ existed. The tracked copy is also **stale**: it lacks `vitest`, so a fresh clone
 run the tests. `dist-exporter/`, `dist/`, `.pio/`, logs and `test-results/` were
 untracked on this branch already.
 
-**Recommendation.** `git rm -r --cached web/mockup/node_modules`. One noisy commit, then
-clones get smaller and `npm ci` becomes the real install path.
+**Decision: done** (commit `547dd2b`). Verified first by exporting `HEAD` to a clean
+directory, deleting `node_modules`, and running the suite from the lockfile alone —
+`npm ci` succeeds, tsc clean, 20/20 unit, 27/27 exporter. CI now uses `npm ci` with a
+lockfile-keyed cache. Nothing was deleted from any working tree.
 
 **Decision:** ✅ follow recommendation — `git rm -r --cached web/mockup/node_modules`. Extra justification found: the tracked copy is **stale** (no `vitest`), so a fresh clone cannot run the tests. (2026-07-30)
 
