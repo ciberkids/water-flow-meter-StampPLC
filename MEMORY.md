@@ -1,8 +1,9 @@
 # Session Handoff
 
 **Updated:** 2026-07-30
-**Branch:** `fix/pipeline-verification-gates` (9 commits, **local only — not pushed**)
-**Base:** `main` @ `03ed89c`
+**Branch:** `fix/pipeline-verification-gates` — 13 commits, **pushed** to `origin`, in sync
+**Base:** `main` @ `03ed89c` · **HEAD:** `e5d8732`
+**PR:** not opened. `https://github.com/ciberkids/water-flow-meter-StampPLC/pull/new/fix/pipeline-verification-gates`
 
 Every claim below is backed by a command that was run. Where something is unverified it
 says so. The previous version of this file claimed "fully realigned" and "tests passing"
