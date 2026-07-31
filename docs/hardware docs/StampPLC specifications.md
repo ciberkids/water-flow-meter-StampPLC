@@ -1,7 +1,12 @@
 # StampPLC Display & Interaction Specifications
 
-**Source:** [M5Stack StamPLC documentation](https://docs.m5stack.com/en/core/StamPLC#specifications)  
-**Date retrieved:** 2025-02-15
+**Source:** [M5Stack StamPLC documentation](https://docs.m5stack.com/en/core/StamPLC#specifications)
+**Date retrieved:** 2025-02-15 · **Re-verified:** 2026-07-30
+
+> §1.1 was added on re-verification, cross-checked against the vendor page,
+> `StampPLC pin map.md`, and `M5StamPLC/src/pin_config.h` in the installed library
+> (v1.2.0). All three agree. It exists because the firmware had the RS485 pins wrong
+> and nothing in this folder recorded them explicitly.
 
 ---
 
@@ -34,7 +39,67 @@
 | Package Size | 102.0 × 94.0 × 37.0mm |
 | Gross Weight | 163.7g |
 
+### 1.1. Bus and Pin Assignments
 
+Verified against the vendor page, `StampPLC pin map.md` and `M5StamPLC/src/pin_config.h`.
+
+**I²C — internal bus, SCL = GPIO15, SDA = GPIO13, INT = GPIO14, RST = GPIO3**
+
+| Address | Device | Role |
+| --- | --- | --- |
+| `0x43` | PI4IOE5V6408 | RGB LED (`P6/P5/P4`), user buttons `KEYA/B/C` |
+| `0x59` | AW9523B | Digital inputs and relay outputs |
+| `0x40` | INA226 | Bus voltage / current |
+| `0x48` | LM75B | Temperature |
+| `0x32` | RX8130CE | RTC |
+
+> The **8 digital inputs are behind the AW9523B**, not the PI4IOE5V6408. `readPlcInput(ch)`
+> performs one I²C read per channel, which is the polling-rate constraint recorded as
+> decision **G1**.
+
+**RS485 (PWR-485)**
+
+| Signal | GPIO | Note |
+| --- | --- | --- |
+| `RS485_TX` | **G0** | Shared with the BOOT pin; this is the vendor's own wiring. |
+| `RS485_RX` | **G39** | |
+| `RS485_DIR` | **G46** | Direction / driver-enable. |
+
+The library drives these on `UART_NUM_1` in `UART_MODE_RS485_HALF_DUPLEX`. Our firmware
+uses Serial2 with the same pins — the GPIO matrix allows any UART on any pin, and staying
+off UART1 keeps us clear of the library's optional built-in Modbus slave, which calls
+`Serial1.end()`.
+
+**SPI — the SD card and the LCD share one bus**
+
+| Signal | GPIO | Used by |
+| --- | --- | --- |
+| MOSI | 8 | LCD **and** SD |
+| MISO | 9 | LCD **and** SD |
+| SCLK | 7 | LCD **and** SD |
+| LCD CS | 12 | display |
+| SD CS | 10 | card (`SD.begin(10, SPI, 4000000)`) |
+
+> ⚠️ **Card reads contend with the display.** Any feature that touches the SD card must not
+> do so during rendering — see `Requirements/feature addition/Loadable_UI_Menu_Packs.md` §4.5.
+
+**Other**
+
+| Signal | GPIO |
+| --- | --- |
+| CAN_TX / CAN_RX | G42 / G43 |
+| Buzzer | G44 |
+| Grove (red) SDA | 2 |
+| Grove (blue) SDA | 5 |
+
+**`M5StamPLC::Config_t` defaults** — all three optional subsystems are **off** unless
+`M5StamPLC.config()` is called before `begin()`:
+
+| Field | Default | Consequence |
+| --- | --- | --- |
+| `enableModbusSlave` | `false` | Keep it false: it serves the library's own register map, not ours. |
+| `enableCan` | `false` | Unused by this project. |
+| `enableSdCard` | `false` | **Must be enabled** for loadable menu packs. |
 
 ---
 

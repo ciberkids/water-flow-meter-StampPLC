@@ -147,8 +147,10 @@ function editorScreen({ page, screenId, title, binding, parentId }) {
   const v = byId.get(binding);
   if (!v) throw new Error(`catalogue has no value "${binding}"`);
   const unit = v.unit ? ` ${v.unit}` : "";
+  // The unit belongs on enum settings too: "1 / 10 / 100 L" is meaningful,
+  // "1 / 10 / 100" is not (config.ledPulseVolume is litres).
   const range = v.enum
-    ? v.enum.join(" / ")
+    ? `${v.enum.join(" / ")}${unit}`
     : (v.min !== undefined && v.max !== undefined ? `${v.min} to ${v.max}${unit}` : "");
   return {
     id: screenId,
@@ -379,12 +381,45 @@ const kept = dataset.screens.filter((s) => !generatedIds.has(s.id) && !RETIRED.h
 
 // Bring the retained hand-tuned screens into landscape bounds and give the info
 // pages a level indicator. Layouts are otherwise untouched.
-let moved = 0, resized = 0, barsAdded = 0;
+// Footer rows, bottom-up. Clamping each stray element independently piled several
+// onto one row (legend-led at y=133 and footer-hint at y=226 both landed on 124),
+// which the geometry audit caught as fully-superimposed text. Elements below the
+// fold are instead assigned successive rows in their original y order.
+const FOOTER_ROWS = [L.footerY, L.footerY - 12, L.footerY - 24, L.footerY - 36];
+const TEXT_H = { text: 8, value: 10, badge: 12, icon: 10, box: 0, scrollbar: 0 };
+const implicitH = (e) => e.height ?? TEXT_H[e.kind] ?? 8;
+
+let moved = 0, resized = 0, barsAdded = 0, badgesMoved = 0;
 for (const s of kept) {
   for (const e of s.elements) {
-    if (e.id === "footer-hint" && e.y > L.footerY) { e.y = L.footerY; moved += 1; }
     if (e.kind === "box" && e.width === 135 && e.height === 240) { e.width = W; e.height = H; resized += 1; }
-    if (e.y > H - 8) { e.y = Math.max(0, H - 11); moved += 1; }
+  }
+
+  // Everything in the footer zone is re-stacked deterministically, not just what
+  // currently overflows. Detecting only overflow is not idempotent: a previous run
+  // had already pulled two elements up onto the same row, so on the next run
+  // neither overflowed and the collision was invisible.
+  const FOOTER_ZONE_TOP = FOOTER_ROWS[FOOTER_ROWS.length - 1];
+  const strays = s.elements
+    .filter((e) => e.kind !== "box" && e.kind !== "scrollbar"
+                   && (e.y >= FOOTER_ZONE_TOP || e.y + implicitH(e) > H - 2))
+    .sort((a2, b2) => a2.y - b2.y);
+  if (strays.length > FOOTER_ROWS.length) {
+    throw new Error(`${s.id}: ${strays.length} footer-zone elements, only ${FOOTER_ROWS.length} rows`);
+  }
+  // Bottom-most original y takes the bottom row, so relative order is preserved.
+  strays.reverse().forEach((e, i) => { e.y = FOOTER_ROWS[i]; moved += 1; });
+
+  // A badge is 12px tall against a text header's 8px, so a badge sharing the
+  // header's x and y buries the title under its opaque background. Move badges
+  // that collide with the header to the right-hand end of the same row.
+  const hdr = s.elements.find((e) => e.id === "hdr-title");
+  if (hdr) {
+    for (const e of s.elements) {
+      if (e === hdr || e.kind !== "badge") continue;
+      const overlapsY = e.y < hdr.y + implicitH(hdr) && hdr.y < e.y + implicitH(e);
+      if (overlapsY && Math.abs(e.x - hdr.x) < 60) { e.x = 176; badgesMoved += 1; }
+    }
   }
   if (s.id.startsWith("info-p") && !s.elements.some((e) => e.kind === "scrollbar")) {
     s.elements.push(scrollbar()); barsAdded += 1;
@@ -398,10 +433,43 @@ for (const s of kept) {
     "info-p6-max-flow": "confirm-reset-session",
     "info-p7-enter-config": "config-c1-modbus-id"
   }[s.id];
-  if (descend) {
+  // Every info page gets its ENTER flows rebuilt, not just those with a descent
+  // target. P0 and P1 previously kept 0.1-era `ui.action.mode.idle -> state-idle`
+  // flows: display-off moved to UP+DOWN (firmware-native, §3.1) and ENTER-long is
+  // now unambiguously escape (§3.2), so those were the only two screens
+  // contradicting the gesture contract.
+  if (s.id.startsWith("info-p")) {
     s.flows = (s.flows ?? []).filter((f) => f.trigger.type !== "button" || f.trigger.button !== "enter");
-    s.flows.push(btn("f-enter", "Open", "enter", "short", A.descend, descend));
+    if (descend) s.flows.push(btn("f-enter", "Open", "enter", "short", A.descend, descend));
     s.flows.push(btn("f-escape", "Back to main screen", "enter", "long", A.escape, "info-p0-global-status"));
+  }
+
+  // Footer text that still advertises retired durations.
+  const footerText = {
+    "info-p0-global-status": "UP/DN pages   UP+DN display off",
+    "info-p1-instant-flow": "UP/DN pages   UP+DN display off",
+    "info-p2-cumulative-liters": "ENTER reset totals (hold 3s)",
+    "info-p3-cumulative-m3": "ENTER reset totals (hold 3s)",
+    "info-p4-session-liters": "ENTER reset session",
+    "info-p5-session-m3": "ENTER reset session",
+    "info-p6-max-flow": "ENTER reset session",
+    "info-p7-enter-config": "ENTER opens Configuration"
+  }[s.id];
+  if (footerText) {
+    const fh = s.elements.find((e) => e.id === "footer-hint");
+    if (fh) fh.content = footerText;
+  }
+
+  // §5.5: UP returns to the editor and DOWN force-saves, both ascending via the
+  // navigation stack. Static targets cannot express "the editor we came from",
+  // because which sensor setting failed is runtime state.
+  if (s.id === "nyquist-warning") {
+    for (const f of s.flows ?? []) {
+      if (f.trigger.type === "button" && (f.trigger.button === "up" || f.trigger.button === "down")) {
+        delete f.targetScreenId;
+        if (f.trigger.button === "up") f.actionId = A.back;
+      }
+    }
   }
   // P7 now wraps to P8 rather than back to P0.
   if (s.id === "info-p7-enter-config") {
@@ -426,6 +494,7 @@ const report = {
   footersMoved: moved,
   overlaysResized: resized,
   scrollbarsAdded: barsAdded,
+  badgesMoved,
   newActions: [...new Set(screens.flatMap((s) => (s.flows ?? []).map((f) => f.actionId)).filter(Boolean))].sort()
 };
 

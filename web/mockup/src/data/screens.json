@@ -2,7 +2,7 @@
   "screens": [
     {
       "id": "info-p0-global-status",
-      "name": "P0 \u2014 Global Status",
+      "name": "P0 — Global Status",
       "description": "Live aggregate metrics for all active sensors and global flow animation.",
       "elements": [
         {
@@ -45,7 +45,7 @@
           "kind": "text",
           "x": 2,
           "y": 124,
-          "content": "\u2191\u2193 pages  ENTER 3s\u2192idle",
+          "content": "UP/DN pages   UP+DN display off",
           "emphasis": "muted"
         },
         {
@@ -81,21 +81,21 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-idle",
-          "label": "Enter idle",
+          "id": "f-escape",
+          "label": "Back to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "state-idle",
-          "actionId": "ui.action.mode.idle"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ]
     },
     {
       "id": "info-p1-instant-flow",
-      "name": "P1 \u2014 Instant Flow",
+      "name": "P1 — Instant Flow",
       "description": "Live instantaneous flow rate (L/s) for all 8 sensors. Shows propeller animation when any sensor is active.",
       "elements": [
         {
@@ -302,8 +302,8 @@
           "id": "legend-led",
           "kind": "text",
           "x": 2,
-          "y": 124,
-          "content": "Red=Pulse \u2022 Grn=Ready \u2022 Blu=Flow",
+          "y": 112,
+          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
           "binding": "legend.led",
           "emphasis": "muted"
         },
@@ -312,7 +312,7 @@
           "kind": "text",
           "x": 2,
           "y": 124,
-          "content": "\u2191\u2193 pages  ENTER 3s\u2192idle",
+          "content": "UP/DN pages   UP+DN display off",
           "emphasis": "muted"
         },
         {
@@ -348,21 +348,21 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-idle",
-          "label": "Enter idle",
+          "id": "f-escape",
+          "label": "Back to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "state-idle",
-          "actionId": "ui.action.mode.idle"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ]
     },
     {
       "id": "info-p2-cumulative-liters",
-      "name": "P2 \u2014 Cumulative Liters",
+      "name": "P2 — Cumulative Liters",
       "description": "Cumulative flow totals in litres for all 8 sensors. Long ENTER starts 30 s reset countdown.",
       "elements": [
         {
@@ -506,7 +506,7 @@
           "kind": "text",
           "x": 2,
           "y": 70,
-          "content": "Red=Pulse \u2022 Grn=Ready \u2022 Blu=Flow",
+          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
           "binding": "legend.led",
           "emphasis": "muted"
         },
@@ -515,15 +515,15 @@
           "kind": "text",
           "x": 2,
           "y": 124,
-          "content": "ENTER\u219230s reset  \u2191\u2193 pages",
+          "content": "ENTER reset totals (hold 3s)",
           "emphasis": "muted"
         },
         {
           "id": "undersampling-badge",
           "kind": "badge",
-          "x": 2,
+          "x": 176,
           "y": 4,
-          "content": "\u26a0 Undersampling",
+          "content": "⚠ Undersampling",
           "binding": "diagnostics.undersampling",
           "emphasis": "muted"
         },
@@ -585,7 +585,7 @@
     },
     {
       "id": "info-p3-cumulative-m3",
-      "name": "P3 \u2014 Cumulative m\u00b3",
+      "name": "P3 — Cumulative m³",
       "description": "Cumulative totals in cubic metres (derived from P2 registers).",
       "elements": [
         {
@@ -593,7 +593,7 @@
           "kind": "text",
           "x": 2,
           "y": 2,
-          "content": "Cumulative (m\u00b3)",
+          "content": "Cumulative (m³)",
           "emphasis": "strong"
         },
         {
@@ -729,7 +729,7 @@
           "kind": "text",
           "x": 2,
           "y": 70,
-          "content": "Red=Pulse \u2022 Grn=Ready \u2022 Blu=Flow",
+          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
           "binding": "legend.led",
           "emphasis": "muted"
         },
@@ -738,15 +738,15 @@
           "kind": "text",
           "x": 2,
           "y": 124,
-          "content": "ENTER\u219230s reset  \u2191\u2193 pages",
+          "content": "ENTER reset totals (hold 3s)",
           "emphasis": "muted"
         },
         {
           "id": "undersampling-badge",
           "kind": "badge",
-          "x": 2,
+          "x": 176,
           "y": 4,
-          "content": "\u26a0 Undersampling",
+          "content": "⚠ Undersampling",
           "binding": "diagnostics.undersampling",
           "emphasis": "muted"
         },
@@ -808,7 +808,7 @@
     },
     {
       "id": "info-p4-session-liters",
-      "name": "P4 \u2014 Session Liters",
+      "name": "P4 — Session Liters",
       "description": "Session flow totals in litres. Long ENTER starts 3 s countdown to reset session.",
       "elements": [
         {
@@ -952,7 +952,7 @@
           "kind": "text",
           "x": 2,
           "y": 78,
-          "content": "Red=Pulse \u2022 Grn=Ready \u2022 Blu=Flow",
+          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
           "binding": "legend.led",
           "emphasis": "muted"
         },
@@ -961,7 +961,7 @@
           "kind": "text",
           "x": 2,
           "y": 124,
-          "content": "ENTER\u21923s reset  \u2191\u2193 pages",
+          "content": "ENTER reset session",
           "emphasis": "muted"
         },
         {
@@ -1022,7 +1022,7 @@
     },
     {
       "id": "info-p5-session-m3",
-      "name": "P5 \u2014 Session m\u00b3",
+      "name": "P5 — Session m³",
       "description": "Session totals in cubic metres (derived from P4 registers).",
       "elements": [
         {
@@ -1030,7 +1030,7 @@
           "kind": "text",
           "x": 2,
           "y": 2,
-          "content": "Session (m\u00b3)",
+          "content": "Session (m³)",
           "emphasis": "strong"
         },
         {
@@ -1158,7 +1158,7 @@
           "kind": "text",
           "x": 2,
           "y": 66,
-          "content": "Red=Pulse \u2022 Grn=Ready \u2022 Blu=Flow",
+          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
           "binding": "legend.led",
           "emphasis": "muted"
         },
@@ -1167,15 +1167,15 @@
           "kind": "text",
           "x": 2,
           "y": 124,
-          "content": "ENTER\u21923s reset  \u2191\u2193 pages",
+          "content": "ENTER reset session",
           "emphasis": "muted"
         },
         {
           "id": "undersampling-badge",
           "kind": "badge",
-          "x": 2,
+          "x": 176,
           "y": 4,
-          "content": "\u26a0 Undersampling",
+          "content": "⚠ Undersampling",
           "binding": "diagnostics.undersampling",
           "emphasis": "muted"
         },
@@ -1237,7 +1237,7 @@
     },
     {
       "id": "info-p6-max-flow",
-      "name": "P6 \u2014 Max Flow Since Reset",
+      "name": "P6 — Max Flow Since Reset",
       "description": "Maximum flow rate since last reset for each sensor.",
       "elements": [
         {
@@ -1373,7 +1373,7 @@
           "kind": "text",
           "x": 2,
           "y": 66,
-          "content": "Red=Pulse \u2022 Grn=Ready \u2022 Blu=Flow",
+          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
           "binding": "legend.led",
           "emphasis": "muted"
         },
@@ -1382,15 +1382,15 @@
           "kind": "text",
           "x": 2,
           "y": 124,
-          "content": "ENTER\u21923s reset  \u2191\u2193 pages",
+          "content": "ENTER reset session",
           "emphasis": "muted"
         },
         {
           "id": "undersampling-badge",
           "kind": "badge",
-          "x": 2,
+          "x": 176,
           "y": 4,
-          "content": "\u26a0 Undersampling",
+          "content": "⚠ Undersampling",
           "binding": "diagnostics.undersampling",
           "emphasis": "muted"
         },
@@ -1452,7 +1452,7 @@
     },
     {
       "id": "info-p7-enter-config",
-      "name": "P7 \u2014 Enter Configuration",
+      "name": "P7 — Enter Configuration",
       "description": "Text-only prompt to enter configuration mode. Short ENTER starts 3 s countdown.",
       "elements": [
         {
@@ -1467,14 +1467,14 @@
           "id": "prompt-line1",
           "kind": "text",
           "x": 10,
-          "y": 90,
+          "y": 88,
           "content": "Press & hold ENTER"
         },
         {
           "id": "prompt-line2",
           "kind": "text",
           "x": 10,
-          "y": 104,
+          "y": 100,
           "content": "to enter Config mode."
         },
         {
@@ -1489,8 +1489,8 @@
           "id": "legend-led",
           "kind": "text",
           "x": 2,
-          "y": 124,
-          "content": "Red=Pulse \u2022 Grn=Ready \u2022 Blu=Flow",
+          "y": 112,
+          "content": "Red=Pulse • Grn=Ready • Blu=Flow",
           "binding": "legend.led",
           "emphasis": "muted"
         },
@@ -1499,7 +1499,7 @@
           "kind": "text",
           "x": 2,
           "y": 124,
-          "content": "Short ENTER\u21923s config countdown",
+          "content": "ENTER opens Configuration",
           "emphasis": "muted"
         },
         {
@@ -1576,7 +1576,7 @@
           "kind": "text",
           "x": 5,
           "y": 40,
-          "content": "\u26a0 Sampling too slow",
+          "content": "⚠ Sampling too slow",
           "emphasis": "strong"
         },
         {
@@ -1598,15 +1598,15 @@
           "id": "nyquist-value",
           "kind": "value",
           "x": 5,
-          "y": 92,
-          "content": "\u2014",
+          "y": 88,
+          "content": "—",
           "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "option-up",
           "kind": "text",
           "x": 5,
-          "y": 124,
+          "y": 100,
           "content": "UP = Edit values",
           "emphasis": "strong"
         },
@@ -1614,7 +1614,7 @@
           "id": "option-down",
           "kind": "text",
           "x": 5,
-          "y": 124,
+          "y": 112,
           "content": "DOWN = Save anyway",
           "emphasis": "muted"
         },
@@ -1636,7 +1636,6 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-s4-max-flow",
           "actionId": "ui.action.nav.back"
         },
         {
@@ -1647,7 +1646,6 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "config-s1-connected",
           "actionId": "config.action.value.commit-override"
         }
       ]
@@ -1661,8 +1659,8 @@
           "id": "idle-placeholder",
           "kind": "text",
           "x": 2,
-          "y": 110,
-          "content": "\u2014 Display off \u2014",
+          "y": 124,
+          "content": "— Display off —",
           "emphasis": "muted"
         }
       ],
@@ -1701,7 +1699,7 @@
     },
     {
       "id": "config-c1-modbus-id",
-      "name": "C1 \u2014 Modbus ID",
+      "name": "C1 — Modbus ID",
       "description": "Config root entry C1. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
@@ -1793,7 +1791,7 @@
     },
     {
       "id": "config-c2-baud-rate",
-      "name": "C2 \u2014 Baud Rate",
+      "name": "C2 — Baud Rate",
       "description": "Config root entry C2. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
@@ -1885,7 +1883,7 @@
     },
     {
       "id": "config-c3-parity",
-      "name": "C3 \u2014 Parity",
+      "name": "C3 — Parity",
       "description": "Config root entry C3. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
@@ -1977,7 +1975,7 @@
     },
     {
       "id": "config-c4-stop-bits",
-      "name": "C4 \u2014 Stop Bits",
+      "name": "C4 — Stop Bits",
       "description": "Config root entry C4. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
@@ -2069,7 +2067,7 @@
     },
     {
       "id": "config-c5-led-pulse-vol",
-      "name": "C5 \u2014 LED Pulse Volume",
+      "name": "C5 — LED Pulse Volume",
       "description": "Config root entry C5. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
@@ -2161,7 +2159,7 @@
     },
     {
       "id": "config-c6-led-pulse-period",
-      "name": "C6 \u2014 LED Pulse Period",
+      "name": "C6 — LED Pulse Period",
       "description": "Config root entry C6. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
@@ -2253,7 +2251,7 @@
     },
     {
       "id": "config-c7-sensor-select",
-      "name": "C7 \u2014 Sensors",
+      "name": "C7 — Sensors",
       "description": "Config root entry C7. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
@@ -2345,7 +2343,7 @@
     },
     {
       "id": "config-root-back",
-      "name": "C.BACK \u2014 Back",
+      "name": "C.BACK — Back",
       "description": "Ascends one level, out of Configuration.",
       "elements": [
         {
@@ -2428,7 +2426,7 @@
     },
     {
       "id": "config-c1-modbus-id-edit",
-      "name": "C1.V \u2014 Edit Modbus ID",
+      "name": "C1.V — Edit Modbus ID",
       "description": "Value editor for C1. ENTER commits and ascends; hold ENTER discards.",
       "elements": [
         {
@@ -2534,7 +2532,7 @@
     },
     {
       "id": "config-c2-baud-rate-edit",
-      "name": "C2.V \u2014 Edit Baud Rate",
+      "name": "C2.V — Edit Baud Rate",
       "description": "Value editor for C2. ENTER commits and ascends; hold ENTER discards.",
       "elements": [
         {
@@ -2640,7 +2638,7 @@
     },
     {
       "id": "config-c3-parity-edit",
-      "name": "C3.V \u2014 Edit Parity",
+      "name": "C3.V — Edit Parity",
       "description": "Value editor for C3. ENTER commits and ascends; hold ENTER discards.",
       "elements": [
         {
@@ -2746,7 +2744,7 @@
     },
     {
       "id": "config-c4-stop-bits-edit",
-      "name": "C4.V \u2014 Edit Stop Bits",
+      "name": "C4.V — Edit Stop Bits",
       "description": "Value editor for C4. ENTER commits and ascends; hold ENTER discards.",
       "elements": [
         {
@@ -2852,7 +2850,7 @@
     },
     {
       "id": "config-c5-led-pulse-vol-edit",
-      "name": "C5.V \u2014 Edit LED Pulse Volume",
+      "name": "C5.V — Edit LED Pulse Volume",
       "description": "Value editor for C5. ENTER commits and ascends; hold ENTER discards.",
       "elements": [
         {
@@ -2867,7 +2865,7 @@
           "kind": "text",
           "x": 8,
           "y": 16,
-          "content": "1 / 10 / 100",
+          "content": "1 / 10 / 100 L",
           "emphasis": "muted"
         },
         {
@@ -2958,7 +2956,7 @@
     },
     {
       "id": "config-c6-led-pulse-period-edit",
-      "name": "C6.V \u2014 Edit LED Pulse Period",
+      "name": "C6.V — Edit LED Pulse Period",
       "description": "Value editor for C6. ENTER commits and ascends; hold ENTER discards.",
       "elements": [
         {
@@ -3064,7 +3062,7 @@
     },
     {
       "id": "config-sensor-1",
-      "name": "SEN1 \u2014 Sensor 1",
+      "name": "SEN1 — Sensor 1",
       "description": "Sensor list entry. ENTER descends into sensor 1's settings; the level carries the sensor index, so no selectedSensor state exists.",
       "elements": [
         {
@@ -3164,7 +3162,7 @@
     },
     {
       "id": "config-sensor-2",
-      "name": "SEN2 \u2014 Sensor 2",
+      "name": "SEN2 — Sensor 2",
       "description": "Sensor list entry. ENTER descends into sensor 2's settings; the level carries the sensor index, so no selectedSensor state exists.",
       "elements": [
         {
@@ -3264,7 +3262,7 @@
     },
     {
       "id": "config-sensor-3",
-      "name": "SEN3 \u2014 Sensor 3",
+      "name": "SEN3 — Sensor 3",
       "description": "Sensor list entry. ENTER descends into sensor 3's settings; the level carries the sensor index, so no selectedSensor state exists.",
       "elements": [
         {
@@ -3364,7 +3362,7 @@
     },
     {
       "id": "config-sensor-4",
-      "name": "SEN4 \u2014 Sensor 4",
+      "name": "SEN4 — Sensor 4",
       "description": "Sensor list entry. ENTER descends into sensor 4's settings; the level carries the sensor index, so no selectedSensor state exists.",
       "elements": [
         {
@@ -3464,7 +3462,7 @@
     },
     {
       "id": "config-sensor-5",
-      "name": "SEN5 \u2014 Sensor 5",
+      "name": "SEN5 — Sensor 5",
       "description": "Sensor list entry. ENTER descends into sensor 5's settings; the level carries the sensor index, so no selectedSensor state exists.",
       "elements": [
         {
@@ -3564,7 +3562,7 @@
     },
     {
       "id": "config-sensor-6",
-      "name": "SEN6 \u2014 Sensor 6",
+      "name": "SEN6 — Sensor 6",
       "description": "Sensor list entry. ENTER descends into sensor 6's settings; the level carries the sensor index, so no selectedSensor state exists.",
       "elements": [
         {
@@ -3664,7 +3662,7 @@
     },
     {
       "id": "config-sensor-7",
-      "name": "SEN7 \u2014 Sensor 7",
+      "name": "SEN7 — Sensor 7",
       "description": "Sensor list entry. ENTER descends into sensor 7's settings; the level carries the sensor index, so no selectedSensor state exists.",
       "elements": [
         {
@@ -3764,7 +3762,7 @@
     },
     {
       "id": "config-sensor-8",
-      "name": "SEN8 \u2014 Sensor 8",
+      "name": "SEN8 — Sensor 8",
       "description": "Sensor list entry. ENTER descends into sensor 8's settings; the level carries the sensor index, so no selectedSensor state exists.",
       "elements": [
         {
@@ -3864,7 +3862,7 @@
     },
     {
       "id": "config-sensor-back",
-      "name": "SEN.BACK \u2014 Back",
+      "name": "SEN.BACK — Back",
       "description": "Ascends from the sensor list to the config root.",
       "elements": [
         {
@@ -3947,7 +3945,7 @@
     },
     {
       "id": "config-s1-connected",
-      "name": "S1 \u2014 Connected",
+      "name": "S1 — Connected",
       "description": "Sensor settings entry S1, scoped to the sensor of the current level.",
       "elements": [
         {
@@ -4055,7 +4053,7 @@
     },
     {
       "id": "config-s1-connected-edit",
-      "name": "S1.V \u2014 Edit Connected",
+      "name": "S1.V — Edit Connected",
       "description": "Value editor for S1. ENTER commits and ascends; hold ENTER discards.",
       "elements": [
         {
@@ -4153,7 +4151,7 @@
     },
     {
       "id": "config-s2-multiplier",
-      "name": "S2 \u2014 Multiplier (F)",
+      "name": "S2 — Multiplier (F)",
       "description": "Sensor settings entry S2, scoped to the sensor of the current level.",
       "elements": [
         {
@@ -4261,7 +4259,7 @@
     },
     {
       "id": "config-s2-multiplier-edit",
-      "name": "S2.V \u2014 Edit Multiplier (F)",
+      "name": "S2.V — Edit Multiplier (F)",
       "description": "Value editor for S2. ENTER commits and ascends; hold ENTER discards.",
       "elements": [
         {
@@ -4367,7 +4365,7 @@
     },
     {
       "id": "config-s3-adjust",
-      "name": "S3 \u2014 Adjust",
+      "name": "S3 — Adjust",
       "description": "Sensor settings entry S3, scoped to the sensor of the current level.",
       "elements": [
         {
@@ -4475,7 +4473,7 @@
     },
     {
       "id": "config-s3-adjust-edit",
-      "name": "S3.V \u2014 Edit Adjust",
+      "name": "S3.V — Edit Adjust",
       "description": "Value editor for S3. ENTER commits and ascends; hold ENTER discards.",
       "elements": [
         {
@@ -4581,7 +4579,7 @@
     },
     {
       "id": "config-s4-max-flow",
-      "name": "S4 \u2014 Max Flow (Q)",
+      "name": "S4 — Max Flow (Q)",
       "description": "Sensor settings entry S4, scoped to the sensor of the current level.",
       "elements": [
         {
@@ -4689,7 +4687,7 @@
     },
     {
       "id": "config-s4-max-flow-edit",
-      "name": "S4.V \u2014 Edit Max Flow (Q)",
+      "name": "S4.V — Edit Max Flow (Q)",
       "description": "Value editor for S4. ENTER commits and ascends; hold ENTER discards.",
       "elements": [
         {
@@ -4795,7 +4793,7 @@
     },
     {
       "id": "config-sensor-settings-back",
-      "name": "S.BACK \u2014 Back",
+      "name": "S.BACK — Back",
       "description": "Ascends from sensor settings to the sensor list.",
       "elements": [
         {
@@ -4878,7 +4876,7 @@
     },
     {
       "id": "info-p8-factory-reset",
-      "name": "P8 \u2014 Factory Reset",
+      "name": "P8 — Factory Reset",
       "description": "Info-level entry point for a full factory reset. ENTER opens the confirm screen.",
       "elements": [
         {
@@ -4979,7 +4977,7 @@
     {
       "id": "confirm-reset-totals",
       "name": "Reset totals?",
-      "description": "Confirm screen. Inverted gestures per \u00a73.2: ENTER-short exits, ENTER held 3000 ms confirms.",
+      "description": "Confirm screen. Inverted gestures per §3.2: ENTER-short exits, ENTER held 3000 ms confirms.",
       "elements": [
         {
           "id": "overlay-bg",
@@ -5057,7 +5055,7 @@
     {
       "id": "confirm-reset-session",
       "name": "Reset session?",
-      "description": "Confirm screen. Inverted gestures per \u00a73.2: ENTER-short exits, ENTER held 1500 ms confirms.",
+      "description": "Confirm screen. Inverted gestures per §3.2: ENTER-short exits, ENTER held 1500 ms confirms.",
       "elements": [
         {
           "id": "overlay-bg",
@@ -5135,7 +5133,7 @@
     {
       "id": "confirm-factory-reset",
       "name": "Factory reset?",
-      "description": "Confirm screen. Inverted gestures per \u00a73.2: ENTER-short exits, ENTER held 30000 ms confirms.",
+      "description": "Confirm screen. Inverted gestures per §3.2: ENTER-short exits, ENTER held 30000 ms confirms.",
       "elements": [
         {
           "id": "overlay-bg",
@@ -5212,7 +5210,7 @@
     {
       "id": "toast-totals-reset",
       "name": "Totals reset",
-      "description": "Acknowledgement toast. Auto-dismisses after 2 s with no button held (\u00a73.8 auto timeout).",
+      "description": "Acknowledgement toast. Auto-dismisses after 2 s with no button held (§3.8 auto timeout).",
       "elements": [
         {
           "id": "overlay-bg",
@@ -5254,7 +5252,7 @@
     {
       "id": "toast-session-reset",
       "name": "Session reset",
-      "description": "Acknowledgement toast. Auto-dismisses after 2 s with no button held (\u00a73.8 auto timeout).",
+      "description": "Acknowledgement toast. Auto-dismisses after 2 s with no button held (§3.8 auto timeout).",
       "elements": [
         {
           "id": "overlay-bg",

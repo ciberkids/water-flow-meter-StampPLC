@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-30T14:13:13.571Z",
+  "generatedAt": "2026-07-31T08:49:10.654Z",
   "screenCount": 48,
   "elementCount": 381,
   "dataset": [
@@ -80,7 +80,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "↑↓ pages  ENTER 3s→idle",
+              "text": "UP/DN pages   UP+DN display off",
               "emphasis": "muted",
               "align": "left"
             }
@@ -130,15 +130,15 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-idle",
-          "label": "Enter idle",
+          "id": "f-escape",
+          "label": "Back to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "state-idle",
-          "actionId": "ui.action.mode.idle"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -581,7 +581,7 @@
           "id": "legend-led",
           "position": {
             "x": 2,
-            "y": 124
+            "y": 112
           },
           "kind": {
             "type": "text",
@@ -602,7 +602,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "↑↓ pages  ENTER 3s→idle",
+              "text": "UP/DN pages   UP+DN display off",
               "emphasis": "muted",
               "align": "left"
             }
@@ -652,15 +652,15 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-idle",
-          "label": "Enter idle",
+          "id": "f-escape",
+          "label": "Back to main screen",
           "trigger": {
             "type": "button",
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "state-idle",
-          "actionId": "ui.action.mode.idle"
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
         }
       ],
       "assets": [],
@@ -978,7 +978,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "ENTER→30s reset  ↑↓ pages",
+              "text": "ENTER reset totals (hold 3s)",
               "emphasis": "muted",
               "align": "left"
             }
@@ -987,7 +987,7 @@
         {
           "id": "undersampling-badge",
           "position": {
-            "x": 2,
+            "x": 176,
             "y": 4
           },
           "kind": {
@@ -1381,7 +1381,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "ENTER→30s reset  ↑↓ pages",
+              "text": "ENTER reset totals (hold 3s)",
               "emphasis": "muted",
               "align": "left"
             }
@@ -1390,7 +1390,7 @@
         {
           "id": "undersampling-badge",
           "position": {
-            "x": 2,
+            "x": 176,
             "y": 4
           },
           "kind": {
@@ -1782,7 +1782,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "ENTER→3s reset  ↑↓ pages",
+              "text": "ENTER reset session",
               "emphasis": "muted",
               "align": "left"
             }
@@ -2151,7 +2151,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "ENTER→3s reset  ↑↓ pages",
+              "text": "ENTER reset session",
               "emphasis": "muted",
               "align": "left"
             }
@@ -2160,7 +2160,7 @@
         {
           "id": "undersampling-badge",
           "position": {
-            "x": 2,
+            "x": 176,
             "y": 4
           },
           "kind": {
@@ -2536,7 +2536,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "ENTER→3s reset  ↑↓ pages",
+              "text": "ENTER reset session",
               "emphasis": "muted",
               "align": "left"
             }
@@ -2545,7 +2545,7 @@
         {
           "id": "undersampling-badge",
           "position": {
-            "x": 2,
+            "x": 176,
             "y": 4
           },
           "kind": {
@@ -2652,7 +2652,7 @@
           "id": "prompt-line1",
           "position": {
             "x": 10,
-            "y": 90
+            "y": 88
           },
           "kind": {
             "type": "text",
@@ -2667,7 +2667,7 @@
           "id": "prompt-line2",
           "position": {
             "x": 10,
-            "y": 104
+            "y": 100
           },
           "kind": {
             "type": "text",
@@ -2700,7 +2700,7 @@
           "id": "legend-led",
           "position": {
             "x": 2,
-            "y": 124
+            "y": 112
           },
           "kind": {
             "type": "text",
@@ -2721,7 +2721,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "Short ENTER→3s config countdown",
+              "text": "ENTER opens Configuration",
               "emphasis": "muted",
               "align": "left"
             }
@@ -2869,7 +2869,7 @@
           "id": "nyquist-value",
           "position": {
             "x": 5,
-            "y": 92
+            "y": 88
           },
           "kind": {
             "type": "value",
@@ -2885,7 +2885,7 @@
           "id": "option-up",
           "position": {
             "x": 5,
-            "y": 124
+            "y": 100
           },
           "kind": {
             "type": "text",
@@ -2900,7 +2900,7 @@
           "id": "option-down",
           "position": {
             "x": 5,
-            "y": 124
+            "y": 112
           },
           "kind": {
             "type": "text",
@@ -2937,7 +2937,6 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-s4-max-flow",
           "actionId": "ui.action.nav.back"
         },
         {
@@ -2948,7 +2947,6 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "config-s1-connected",
           "actionId": "config.action.value.commit-override"
         }
       ],
@@ -2965,7 +2963,7 @@
           "id": "idle-placeholder",
           "position": {
             "x": 2,
-            "y": 110
+            "y": 124
           },
           "kind": {
             "type": "text",
@@ -4761,7 +4759,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "1 / 10 / 100",
+              "text": "1 / 10 / 100 L",
               "emphasis": "muted",
               "align": "left"
             }

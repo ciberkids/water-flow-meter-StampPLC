@@ -22,10 +22,29 @@
 using namespace plc;
 
 // --- Hardware configuration ---
+//
+// RS485 pin assignment, verified against three independent sources that all agree:
+//   - the vendor spec  https://docs.m5stack.com/en/core/StamPLC
+//   - docs/hardware docs/StampPLC pin map.md  (PWR-485 row: G0 / G39 / G46)
+//   - M5StamPLC's own pin_config.h: STAMPLC_PIN_485_TX/RX/DIR = 0 / 39 / 46
+//
+// These were previously 17 / 16 / 2, which are not connected to the RS485
+// transceiver at all — GPIO2 is STAMPLC_PIN_GROVE_RED_SDA, a Grove I2C data line.
+// Modbus RTU could not have worked on real hardware.
+//
+// GPIO0 doubles as the BOOT pin; that is how the vendor wires it, so it is
+// expected rather than a mistake.
+//
+// UART choice: the ESP32-S3 GPIO matrix lets any UART drive any pin, so Serial2 is
+// kept deliberately. M5StamPLC's optional built-in Modbus slave claims UART1 and
+// calls Serial1.end(); staying off UART1 means enabling that feature could never
+// tear our port down. That built-in slave must also stay disabled (it defaults to
+// false) because it serves its own register map, not the one in
+// docs/Requirements/Project_document.md §4.
 constexpr HardwareSerial& RS485_SERIAL_PORT = Serial2;
-constexpr int RS485_TX_PIN = 17;
-constexpr int RS485_RX_PIN = 16;
-constexpr int RS485_DE_PIN = 2;  // Direction Enable pin for RS485 transceiver
+constexpr int RS485_TX_PIN = 0;
+constexpr int RS485_RX_PIN = 39;
+constexpr int RS485_DE_PIN = 46;  // Direction Enable pin for RS485 transceiver
 
 // --- Global State ---
 SensorData sensors[kNumSensors];
