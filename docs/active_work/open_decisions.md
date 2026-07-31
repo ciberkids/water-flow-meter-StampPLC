@@ -545,6 +545,38 @@ should push unprompted).
 
 ---
 
+## I. Loadable menu packs
+
+### I1 ✅ Menu-pack design accepted
+
+**Decided 2026-07-30.** Full specification in
+[`Loadable_UI_Menu_Packs.md`](../Requirements/feature%20addition/Loadable_UI_Menu_Packs.md)
+0.2, with all twelve §7 recommendations adopted.
+
+The two shaping decisions:
+
+- **A menu must be complete** — every settable value in the catalogue needs a reachable
+  editor. This makes the required action set derivable from the catalogue rather than
+  declared by the pack, so a pack cannot claim completeness it does not have.
+- **Selection is a pointer file, not a symlink.** FAT has no symlinks; verified against
+  `fatfs/src/ff.h`, whose API offers `f_rename`/`f_unlink`/`f_readdir` and nothing resembling
+  `link`. `/ui/active` holds one line naming the selected pack, which keeps the choice on the
+  card so a card prepared on a PC boots the intended menu on any unit.
+
+### I2 🔴 The catalogue is append-only — standing rule
+
+**Consequence of I1/Q4.** Once menu packs exist, **no value or action may be renamed or
+removed from the catalogue** — only added. A pack authored against an older catalogue is
+accepted when `packAbi <= firmwareAbi`, which is only sound if the vocabulary strictly grows.
+
+This is easy to violate accidentally and expensive to detect: the breakage appears on a
+device with a card in it, not at compile time. Worth a check in the exporter comparing the
+catalogue against its previous committed state.
+
+**Decision:** ✅ append-only (2026-07-30)
+
+---
+
 ## H. Menu behaviour refinement
 
 Found while implementing D0(a). These are all requirement-level: the spec is either

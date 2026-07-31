@@ -428,7 +428,29 @@ drift — see §4.3.
 
 ## 7. Open Questions
 
-These need answers before implementation. My recommendation is given for each.
+**Accepted 2026-07-30: all recommendations below are adopted.** They are retained with their
+reasoning rather than collapsed into bare statements, because the reasoning is what a future
+reader needs. Summary of what that settles:
+
+| Q | Decision |
+| --- | --- |
+| 1 | SD for v1, loader source abstracted (`MenuPackSource`) so flash can be added later |
+| 2 | Uncompressed; the version field allows compression later |
+| 3 | Selection reboots rather than hot-swapping |
+| 4 | Accept `packAbi <= firmwareAbi`, and **the catalogue is append-only** — a project rule |
+| 5 | Packs can never add values or actions |
+| 6 | Gesture semantics stay firmware-owned and absent from packs |
+| 7 | One Modbus register for load status and pack ABI |
+| 8 | Header `label`, falling back to the filename |
+| 9 | Implement after the navigation stack and after D2 |
+| 10 | Strict completeness by default; a `restricted` flag if the kiosk case is wanted |
+| 11 | Discoverable page **plus** the UP+DOWN+ENTER recovery gesture |
+| 12 | The pointer file is explicitly human-writable |
+
+> **Q4 creates a standing project rule worth repeating outside this document: the value and
+> action catalogue is append-only.** Renaming or removing a catalogue entry silently breaks
+> every menu pack authored against it, and unlike a compile error that breakage only appears
+> on a device with a card in it.
 
 1. **SD only, or also a flash partition?** SD matches the stated intent and is
    user-swappable. But there is currently **no data partition** in the flash layout, so a
