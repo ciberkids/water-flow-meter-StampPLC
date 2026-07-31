@@ -3,6 +3,7 @@
 #include <cstdint>
 #include "input/button_input.h"
 #include "ui/core/ui_controller.h"
+#include "ui/core/ui_accel.h"
 #include "ui/core/ui_settings.h"
 // Needed for the ui_exporter::Flow/Screen/FlowButton/FlowGesture types used in
 // the private member declarations below.
@@ -91,6 +92,17 @@ class InteractionHandler {
     uint32_t startMs = 0;
   };
 
+  /** Tracks a held UP/DOWN while an editor is open, for the §5.4 acceleration ramp. */
+  struct EditorRepeatState {
+    bool active = false;
+    ButtonInputManager::Button button = ButtonInputManager::Button::Up;
+    uint32_t lastStepMs = 0;
+    bool stepped = false;
+  };
+
+  void handleEditorRepeat(uint32_t nowMs,
+                          ButtonInputManager& buttonInput,
+                          UiController& uiController);
   void handleDisplayOffCombo(uint32_t nowMs,
                              ButtonInputManager& buttonInput,
                              UiController& uiController);
@@ -117,6 +129,7 @@ class InteractionHandler {
   FactoryResetState factoryResetState_{};
   HoldCountdownState holdCountdown_{};
   ComboState comboState_{};
+  EditorRepeatState editorRepeat_{};
   FactoryResetFn factoryResetFn_ = nullptr;
   Dependencies deps_{};
 };

@@ -25,6 +25,14 @@ class ButtonInputManager {
 
   bool popEvent(ButtonEvent* event);
   void clearEvents();
+  /**
+   * Drops queued events for one button, leaving the others intact.
+   *
+   * Needed because an editor's held-repeat path takes ownership of UP/DOWN: without
+   * this, releasing after a hold would deliver the release short-press as well and
+   * apply one extra step. clearEvents() would also discard a queued ENTER press.
+   */
+  void discardEvents(Button button);
 
   bool isPressed(Button button) const;
   uint32_t pressedDuration(Button button, uint32_t nowMs) const;

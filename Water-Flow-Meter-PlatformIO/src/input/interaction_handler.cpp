@@ -52,6 +52,7 @@ InteractionResult InteractionHandler::update(uint32_t nowMs,
                                              UiController& uiController) {
   InteractionResult result{};
   handleDisplayOffCombo(nowMs, buttonInput, uiController);
+  handleEditorRepeat(nowMs, buttonInput, uiController);
   handleFactoryReset(nowMs, buttonInput, &result.countdown);
 
   const bool factoryResetBusy =
@@ -96,6 +97,62 @@ InteractionResult InteractionHandler::update(uint32_t nowMs,
  * with a deliberate hold, and it clears the navigation stack so the display always
  * wakes on P0 rather than wherever the operator happened to be.
  */
+/**
+ * Drives the §5.4 acceleration ramp while UP or DOWN is held in an editor.
+ *
+ * This cannot come from ButtonInputManager's repeat events: those only begin after the
+ * 1.5 s long-press threshold, whereas the ramp's first tier steps every 250 ms from the
+ * moment the button goes down. So the held path owns UP/DOWN whenever an editor is
+ * open, and discards that button's queued events once it has stepped — otherwise the
+ * release short-press would add an extra step on top of the ramp.
+ *
+ * A genuine tap never reaches the first interval, so it produces no ramp step and its
+ * release short-press is left alone: "a short press is always exactly +/-1".
+ */
+void InteractionHandler::handleEditorRepeat(uint32_t nowMs,
+                                            ButtonInputManager& buttonInput,
+                                            UiController& uiController) {
+  const auto& editor = uiController.editor();
+  if (!editor.active || !editor.setting) {
+    editorRepeat_ = EditorRepeatState{};
+    return;
+  }
+
+  const bool up = buttonInput.isPressed(ButtonInputManager::Button::Up);
+  const bool down = buttonInput.isPressed(ButtonInputManager::Button::Down);
+  if (up == down) {
+    // Neither, or both: neither is an adjustment.
+    if (editorRepeat_.active && editorRepeat_.stepped) {
+      buttonInput.discardEvents(editorRepeat_.button);
+    }
+    editorRepeat_ = EditorRepeatState{};
+    return;
+  }
+
+  const auto button = up ? ButtonInputManager::Button::Up : ButtonInputManager::Button::Down;
+  if (!editorRepeat_.active || editorRepeat_.button != button) {
+    editorRepeat_ = EditorRepeatState{};
+    editorRepeat_.active = true;
+    editorRepeat_.button = button;
+    editorRepeat_.lastStepMs = nowMs;
+    return;
+  }
+
+  const uint32_t heldMs = buttonInput.pressedDuration(button, nowMs);
+  const ui::AccelTier tier = ui::accelerationTier(heldMs);
+  if (nowMs - editorRepeat_.lastStepMs < tier.intervalMs) {
+    return;
+  }
+  editorRepeat_.lastStepMs = nowMs;
+  editorRepeat_.stepped = true;
+
+  const int32_t base = editor.setting->step;
+  const int32_t magnitude = base * tier.multiplier;
+  uiController.adjustEdit(up ? magnitude : -magnitude, nowMs);
+  // Swallow anything this button has queued, including the release short-press.
+  buttonInput.discardEvents(button);
+}
+
 void InteractionHandler::handleDisplayOffCombo(uint32_t nowMs,
                                                ButtonInputManager& buttonInput,
                                                UiController& uiController) {

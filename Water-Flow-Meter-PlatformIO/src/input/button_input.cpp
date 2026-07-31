@@ -89,6 +89,22 @@ uint32_t ButtonInputManager::pressedDuration(Button button, uint32_t nowMs) cons
   return nowMs >= state.pressStartMs ? (nowMs - state.pressStartMs) : 0;
 }
 
+void ButtonInputManager::discardEvents(Button button) {
+  // Rebuild the ring in place, keeping only the other buttons' events.
+  const std::size_t original = size_;
+  std::size_t kept = 0;
+  for (std::size_t i = 0; i < original; ++i) {
+    const ButtonEvent event = events_[(head_ + i) % kEventCapacity];
+    if (event.button == button) {
+      continue;
+    }
+    events_[(head_ + kept) % kEventCapacity] = event;
+    ++kept;
+  }
+  size_ = kept;
+  tail_ = (head_ + kept) % kEventCapacity;
+}
+
 void ButtonInputManager::pushEvent(Button button, bool isLongPress, bool isRepeat) {
   if (size_ == kEventCapacity) {
     return;
