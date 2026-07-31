@@ -6,9 +6,23 @@ export type DisplayBounds = {
   height: number;
 };
 
+/**
+ * Landscape, because landscape is the only orientation the device supports (decision D3).
+ *
+ * DISPLAY_WIDTH and DISPLAY_HEIGHT are the ST7789V2 panel's NATIVE portrait dimensions —
+ * 135 x 240 — and `boundsForOrientation` in layout.ts swaps them for the landscape the
+ * firmware actually drives. This module used the unswapped pair, so its default bounds were
+ * a portrait 135 x 240 canvas.
+ *
+ * Measured against the real dataset, that clamped **49 of 375 elements**: every scrollbar
+ * from x=232 to 130, and every full-width divider from 240 to 135. It was survivable only
+ * because the exporter re-reads the on-disk file rather than the clamped in-memory one — so
+ * fixing the stale-export trap (D4) without fixing this first would have turned it into a
+ * corrupt-export trap that ships portrait-squashed geometry to the firmware.
+ */
 const DEFAULT_BOUNDS: DisplayBounds = {
-  width: DISPLAY_WIDTH,
-  height: DISPLAY_HEIGHT
+  width: DISPLAY_HEIGHT,
+  height: DISPLAY_WIDTH
 };
 
 export type ClampAdjustmentField = "x" | "y" | "width" | "height";

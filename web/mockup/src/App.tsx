@@ -151,9 +151,15 @@ const findParentScreenId = (screens: ScreenDefinition[], childId: string): strin
   return null;
 };
 
+/** The device is landscape-only (decision D3); see the note in datasetClamp.ts. */
+const LANDSCAPE_BOUNDS = { width: DISPLAY_HEIGHT, height: DISPLAY_WIDTH };
+
 const prepareDataset = (source: ScreenDataset) => {
   const themed = ensureDatasetTheme(source);
-  return clampDatasetToDisplay(themed);
+  // Bounds passed explicitly: this runs on all four ingest paths (boot, JSON apply, import,
+  // and the manual Validate immediately before Export), so an implicit default being wrong
+  // silently rewrote geometry on every one of them.
+  return clampDatasetToDisplay(themed, LANDSCAPE_BOUNDS);
 };
 
 const normalizeElementUpdate = (

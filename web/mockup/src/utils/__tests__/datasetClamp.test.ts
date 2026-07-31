@@ -8,7 +8,10 @@ import { DISPLAY_HEIGHT, DISPLAY_WIDTH } from "../layout";
 import type { ScreenDataset, ScreenElement } from "../../types";
 
 describe("dataset clamp helpers", () => {
-  it("clamps individual geometry fields and reports adjustments", () => {
+  // The device is landscape-only (decision D3): 240 wide by 135 tall. These assertions
+  // previously read 135 x 240 — the panel's native portrait dimensions — which made the
+  // suite green while the clamp silently squashed 49 of the 375 real elements.
+  it("clamps individual geometry fields to the landscape display and reports adjustments", () => {
     const element: ScreenElement = {
       id: "overflow-box",
       kind: "box",
@@ -21,8 +24,8 @@ describe("dataset clamp helpers", () => {
 
     const result = clampElementGeometry(element);
 
-    expect(result.element.width).toBe(135);
-    expect(result.element.height).toBe(240);
+    expect(result.element.width).toBe(240);
+    expect(result.element.height).toBe(135);
     expect(result.element.x).toBe(0);
     expect(result.element.y).toBe(0);
 
@@ -72,9 +75,11 @@ describe("dataset clamp helpers", () => {
       elementId: "x-bad"
     });
 
+    // Landscape: DISPLAY_HEIGHT is the long edge and so is the canvas WIDTH. Reading these
+    // the other way round is what let the portrait default pass unnoticed.
     const offendingElement = clamped.screens[0].elements.find((el) => el.id === "x-bad");
-    expect(offendingElement?.x).toBeLessThanOrEqual(DISPLAY_WIDTH - (offendingElement?.width ?? 0));
-    expect(offendingElement?.y).toBeLessThanOrEqual(DISPLAY_HEIGHT - (offendingElement?.height ?? 0));
+    expect(offendingElement?.x).toBeLessThanOrEqual(DISPLAY_HEIGHT - (offendingElement?.width ?? 0));
+    expect(offendingElement?.y).toBeLessThanOrEqual(DISPLAY_WIDTH - (offendingElement?.height ?? 0));
   });
 
   it("accepts alternate bounds to match landscape editing", () => {
@@ -131,3 +136,25 @@ describe("dataset clamp helpers", () => {
     expect(clampedDataset.screens[0].elements[0].y).toBe(135);
   });
 });
+
+describe("the shipped dataset survives ingest untouched", () => {
+  // The bug this guards against did not look like a bug: the two synthetic tests above were
+  // green while the clamp rewrote 49 of the 375 real elements — every scrollbar from x=232
+  // to 130 and every full-width divider from 240 to 135 — because DEFAULT_BOUNDS used the
+  // panel's native portrait dimensions.
+  //
+  // Synthetic fixtures cannot catch that: they were written against the same wrong constants.
+  // Only the real dataset can, so it is the fixture.
+  it("clamps nothing in src/data/screens.json", async () => {
+    const dataset = (await import("../../data/screens.json")) as unknown as {
+      default: ScreenDataset;
+    };
+    const { corrections } = clampDatasetToDisplay(dataset.default ?? (dataset as unknown as ScreenDataset));
+    expect(
+      corrections.map((c) => `${c.screenId}/${c.elementId}`),
+      "the shipped dataset must fit the display exactly; a correction here means either the " +
+        "clamp bounds are wrong or a screen was authored off-canvas"
+    ).toEqual([]);
+  });
+});
+
