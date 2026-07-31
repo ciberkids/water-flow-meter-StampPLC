@@ -816,3 +816,41 @@ whether (b) is needed at all. Do not invest in (b) before the measurement.
 6. **D2 + E1** — make the manifest generated rather than asserted.
 7. **D4** — remove the stale-export trap.
 8. **F1–F7** — hygiene, any time; **F6 (CI)** pays for itself immediately.
+
+---
+
+## N. WiFi and MQTT connectivity
+
+Specified in `docs/Requirements/feature addition/WiFi_MQTT_Connectivity.md` (v0.1), which
+carries its own **Q1–Q10** rather than duplicating them here — the same convention
+`Loadable_UI_Menu_Packs.md` uses.
+
+Two findings from that draft belong in this register because they affect work outside the
+feature:
+
+### N-a 🔴 The settings catalogue cannot represent a string
+
+`ui/core/ui_settings_types.h` is integral throughout: `min`/`max`/`step` are `int32_t`,
+`readSetting` returns `int32_t`, `writeSetting` takes one, and `adjustSetting` works by
+delta. WiFi and MQTT need **seven** text settings, and text has no step — so the numeric
+editor model does not extend, it has to be joined by a second one.
+
+**Blocks.** Any future setting that is not a number. It is worth noting this is not only a
+WiFi problem: a device name, a site label or a units preference would all have hit it.
+
+**Recommendation.** A parallel `readSettingText`/`writeSettingText` pair plus
+`SettingKind::Text`, leaving the numeric API untouched. Specified in that document's §6.2.
+
+### N-b 🔴 Growing the catalogue invalidates existing menu packs
+
+`Loadable_UI_Menu_Packs.md` §3.0.1 requires every menu to expose an editor for every
+`category: "setting"` value. That rule is right, and it has never been tested by growth: this
+feature takes the required editor count from **10 to 24**, so every pack authored today
+becomes incomplete.
+
+The load path already degrades gracefully (it appends built-in editors). The **export** path
+fails hard, which would retroactively break a pack a user authored last month.
+
+**Recommendation.** Q7 of that document — the manifest carries a catalogue version, and the
+exporter warns rather than fails for values added after the pack's version. Preserves the
+guarantee for new work without punishing old work.
