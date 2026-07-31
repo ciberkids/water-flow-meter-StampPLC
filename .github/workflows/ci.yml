@@ -58,6 +58,23 @@ jobs:
       - name: Export gates
         run: npm run export:firmware -- --allow-missing-toolchain
 
+      # The skeleton generator produces the checked-in dataset, and it is idempotent against
+      # it. Running it and diffing catches the generator rotting silently — which it just
+      # did: manifest format 3 renamed `enum` to `options`, and the generator went on reading
+      # the old field, so the baud-rate editor would have shown "0 to 7" instead of the baud
+      # list. Nothing noticed, because nothing ran the generator.
+      - name: Fail if the skeleton generator no longer reproduces the dataset
+        run: |
+          node tools/skeleton/generate.mjs
+          cd "$GITHUB_WORKSPACE"
+          if ! git diff --quiet -- web/mockup/src/data/screens.json; then
+            echo "::error::tools/skeleton/generate.mjs no longer reproduces src/data/screens.json."
+            echo "Either the generator has rotted, or the dataset was hand-edited without"
+            echo "updating it. Both need a human decision."
+            git --no-pager diff --stat -- web/mockup/src/data/screens.json
+            exit 1
+          fi
+
       # Catches a dataset edited without re-exporting, which would otherwise ship a UI
       # that does not match its source. The ISO timestamp is ignored because the export
       # embeds a wall-clock time: two exports of identical input differ only by that, so

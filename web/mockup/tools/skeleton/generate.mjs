@@ -96,6 +96,32 @@ const CONFIG_RING = [...DEVICE.map((d) => d.id), "config-root-back"];
 
 const editorId = (settingScreenId) => `${settingScreenId}-edit`;
 
+/**
+ * The completeness rule (Loadable_UI_Menu_Packs §3.0.1) says a menu is invalid unless every
+ * settable value has a reachable editor. Enforcing it HERE is the cheapest place: the
+ * skeleton is where the default menu comes from, so a setting added to the firmware
+ * catalogue without a screen becomes a loud generator failure rather than an export failure
+ * discovered later, or worse, a setting the operator simply cannot reach.
+ *
+ * Deliberately not automatic. Deriving a title from a binding id gives labels like
+ * "Modbusslaveid", and this text is what a human reads on a 240x135 panel. So the lists
+ * stay hand-written and the generator checks they are exhaustive.
+ */
+function assertCoversEverySetting(deviceList, sensorList) {
+  const declared = new Set([...deviceList, ...sensorList].map((d) => d.binding).filter(Boolean));
+  const missing = manifest.values
+    .filter((v) => v.category === "setting")
+    .map((v) => v.id)
+    .filter((id) => !declared.has(id));
+  if (missing.length > 0) {
+    throw new Error(
+      `the skeleton would violate the completeness rule: no editor screen for ` +
+      `${missing.join(", ")}. Add each to DEVICE (device-wide) or SENSOR_SETTINGS ` +
+      `(per-sensor) in tools/skeleton/generate.mjs, with a title a human can read.`
+    );
+  }
+}
+
 DEVICE.forEach((d, i) => {
   const isDescent = d.binding === null;
   const target = isDescent ? "config-sensor-1" : editorId(d.id);
@@ -149,8 +175,11 @@ function editorScreen({ page, screenId, title, binding, parentId }) {
   const unit = v.unit ? ` ${v.unit}` : "";
   // The unit belongs on enum settings too: "1 / 10 / 100 L" is meaningful,
   // "1 / 10 / 100" is not (config.ledPulseVolume is litres).
-  const range = v.enum
-    ? `${v.enum.join(" / ")}${unit}`
+  // Manifest format 3 replaced the bare `enum` label list with `options`, which carry the
+  // value actually written to the register. Reading the old field silently produced a
+  // min/max hint instead — "0 to 7" where the user needed to see the baud rates.
+  const range = v.options
+    ? `${v.options.map((o) => o.label).join(" / ")}${unit}`
     : (v.min !== undefined && v.max !== undefined ? `${v.min} to ${v.max}${unit}` : "");
   return {
     id: screenId,
@@ -233,6 +262,8 @@ const SENSOR_SETTINGS = [
   { page: "S4", id: "config-s4-max-flow", title: "Max Flow (Q)", binding: "config.sensor.maxFlow" }
 ];
 const S_RING = [...SENSOR_SETTINGS.map((s) => s.id), "config-sensor-settings-back"];
+
+assertCoversEverySetting(DEVICE, SENSOR_SETTINGS);
 
 SENSOR_SETTINGS.forEach((s, i) => {
   const v = byId.get(s.binding);
