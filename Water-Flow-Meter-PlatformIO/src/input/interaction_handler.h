@@ -114,9 +114,7 @@ class InteractionHandler {
   void handleDisplayOffCombo(uint32_t nowMs,
                              ButtonInputManager& buttonInput,
                              UiController& uiController);
-  void handleFactoryReset(uint32_t nowMs,
-                          ButtonInputManager& buttonInput,
-                          UiCountdownState* countdown);
+  void handleFactoryReset(uint32_t nowMs, UiCountdownState* countdown);
   void scheduleFactoryReset(uint32_t nowMs);
   void handleHoldCountdown(uint32_t nowMs,
                            ButtonInputManager& buttonInput,

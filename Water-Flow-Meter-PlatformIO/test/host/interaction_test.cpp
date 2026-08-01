@@ -928,6 +928,40 @@ void factoryResetHoldTests() {
   check(harness::factoryResets == 1, "releasing after the wipe does not wipe again");
 }
 
+
+void retiredComboTests() {
+  std::printf("\n[the retired blind UP+DOWN combo must be gone — safety]\n");
+
+  // Display_UI_Requirements §3.1 instructs the operator to press UP+DOWN to blank the
+  // display. That same pair used to arm a factory reset, showing a countdown at 3 s and
+  // erasing NVS at 30 s. An operator holding a moment longer to check the screen really went
+  // dark — the natural thing to do — started a wipe. §3.3 retired the combo; it was still live.
+  Device dev;
+  dev.boot();
+
+  dev.press(ButtonInputManager::Button::Up, true);
+  dev.press(ButtonInputManager::Button::Down, true);
+
+  // Past the 3 s point where the old overlay appeared.
+  for (int i = 0; i < 40; ++i) dev.tick(100);
+  check(harness::factoryResets == 0, "four seconds of UP+DOWN does not arm anything");
+
+  // Past the 30 s point where the old combo wiped NVS.
+  for (int i = 0; i < 320; ++i) dev.tick(100);
+  check(harness::factoryResets == 0,
+        "thirty-six seconds of UP+DOWN does not wipe NVS — the combo is genuinely removed");
+
+  dev.press(ButtonInputManager::Button::Up, false);
+  dev.press(ButtonInputManager::Button::Down, false);
+  dev.tick(30);
+  check(harness::factoryResets == 0, "and nothing fires on release either");
+
+  // The replacement path must still work, or removing the combo would leave no factory reset
+  // at all — which is why this could not be deleted before the countdown arming was fixed.
+  check(dev.controller.navigator().current() != nullptr,
+        "the device is still navigable afterwards");
+}
+
 }  // namespace
 
 int main() {
@@ -935,6 +969,7 @@ int main() {
   idleContractTests();
   idleTimeoutTests();
   navigationRingTests();
+  retiredComboTests();
   configListPagingTests();
   configEditorDescentTests();
   sensorEditorDescentTests();

@@ -79,7 +79,7 @@ InteractionResult InteractionHandler::update(uint32_t nowMs,
   InteractionResult result{};
   handleDisplayOffCombo(nowMs, buttonInput, uiController);
   handleEditorRepeat(nowMs, buttonInput, uiController);
-  handleFactoryReset(nowMs, buttonInput, &result.countdown);
+  handleFactoryReset(nowMs, &result.countdown);
 
   const bool factoryResetBusy =
       factoryResetState_.holdActive || factoryResetState_.restartScheduled;
@@ -205,54 +205,29 @@ void InteractionHandler::handleDisplayOffCombo(uint32_t nowMs,
   }
 }
 
-void InteractionHandler::handleFactoryReset(uint32_t nowMs,
-                                            ButtonInputManager& buttonInput,
-                                            UiCountdownState* countdown) {
+void InteractionHandler::handleFactoryReset(uint32_t nowMs, UiCountdownState* countdown) {
+  (void)nowMs;
   if (!countdown) {
     return;
   }
 
-  const bool upPressed = buttonInput.isPressed(ButtonInputManager::Button::Up);
-  const bool downPressed = buttonInput.isPressed(ButtonInputManager::Button::Down);
-  const bool enterPressed = buttonInput.isPressed(ButtonInputManager::Button::Enter);
-
-  if (!factoryResetState_.restartScheduled) {
-    if (!factoryResetState_.holdActive) {
-      if (upPressed && downPressed && !enterPressed) {
-        factoryResetState_.holdActive = true;
-        factoryResetState_.overlayActive = false;
-        factoryResetState_.holdStartMs = nowMs;
-        buttonInput.clearEvents();
-      }
-    } else {
-      if (!(upPressed && downPressed) || enterPressed) {
-        factoryResetState_.holdActive = false;
-        factoryResetState_.overlayActive = false;
-        buttonInput.clearEvents();
-      } else {
-        const uint32_t elapsedMs = nowMs - factoryResetState_.holdStartMs;
-        if (!factoryResetState_.overlayActive && elapsedMs >= kFactoryResetOverlayDelayMs) {
-          factoryResetState_.overlayActive = true;
-        }
-        if (factoryResetState_.overlayActive) {
-          const uint32_t remainingMs =
-              (elapsedMs >= kFactoryResetHoldMs) ? 0 : (kFactoryResetHoldMs - elapsedMs);
-          countdown->active = true;
-          countdown->secondsRemaining = (remainingMs + 999) / 1000;
-          countdown->remainingMs = remainingMs;
-          countdown->totalMs = kFactoryResetHoldMs;
-          countdown->label = "Hold UP+DOWN to factory reset (30->0)";
-        }
-        if (elapsedMs >= kFactoryResetHoldMs) {
-          scheduleFactoryReset(nowMs);
-          buttonInput.clearEvents();
-        } else {
-          buttonInput.clearEvents();
-        }
-      }
-    }
-  }
-
+  // The blind UP+DOWN 30 s arming combo is GONE. Display_UI_Requirements §3.3 retired it
+  // ("a destructive action must be visible"), Project_document §5.3.4 and RGB_LED_Behavior §5
+  // both record it as removed, and it moved to page P8 with a confirm screen.
+  //
+  // It was still live, and it was a hazard rather than merely dead code. §3.1 instructs the
+  // operator to press UP+DOWN to blank the display; kDisplayOffComboMaxMs is 1000 ms, while
+  // this combo armed on the same two buttons and raised a factory-reset countdown at
+  // kFactoryResetOverlayDelayMs = 3000 ms. Holding a moment longer to check whether the
+  // screen really went dark — the natural thing to do — started a wipe. Thirty seconds of
+  // that and NVS was erased.
+  //
+  // It could only be removed once the replacement path actually worked. Until the
+  // hold-countdown arming was fixed, this combo was the ONLY route that reboots the device,
+  // so deleting it earlier would have left no factory reset at all.
+  //
+  // What remains here is the post-schedule display: the confirm path calls
+  // scheduleFactoryReset(), and this paints the acknowledgement until firmware.cpp restarts.
   if (factoryResetState_.restartScheduled) {
     countdown->active = true;
     countdown->secondsRemaining = 0;
