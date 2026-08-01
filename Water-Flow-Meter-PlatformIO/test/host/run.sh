@@ -31,6 +31,10 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/text_editor_test" \
   test/host/text_editor_test.cpp \
   src/ui/core/ui_text_editor.cpp
 
+g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/sensor_state_test" \
+  test/host/sensor_state_test.cpp \
+  src/sensors/sensor_state_engine.cpp
+
 # The device harness: the REAL interaction stack, driven by a fake button source.
 # -I test/host/stubs applies only here, so the leaf tests above stay dependency-free.
 g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/interaction_test" \
@@ -61,6 +65,8 @@ echo
 "$OUT/text_editor_test"
 echo
 "$OUT/interaction_test"
+echo
+"$OUT/sensor_state_test"
 echo
 
 # The manifest the design tool validates against is generated from the firmware's own

@@ -52,7 +52,11 @@ void SensorStateEngine::update(float elapsedSeconds) {
       }
     } else {
       sensor.instantFlow_L_s = 0.0f;
-      allReady = false;
+      // A DISABLED channel must not clear allReady. RGB_LED_Behavior.md §3.2 defines green
+      // as "solid ON when every ACTIVE sensor has isReady == true" — active, not all eight.
+      // Clearing it here meant a two-sensor installation could never show green, because the
+      // six unused channels each falsified it. The "nothing enabled at all" case is already
+      // handled by the activeSensors == 0 guard below, which is where it belongs.
     }
 
     if (deps_.modbusManager) {
