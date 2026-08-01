@@ -74,15 +74,21 @@ bool writeSetting(const SettingDescriptor& setting,
                            : (setting.target == SettingTarget::LinkBaudIndex) ? plc::REG_LINK_BAUD_INDEX
                            : (setting.target == SettingTarget::LinkParity) ? plc::REG_LINK_PARITY
                                                                           : plc::REG_LINK_STOP_BITS;
-      if (!access.modbus->applyHoldingWrite(reg, word)) {
+      if (!access.modbus->applyHoldingWrite(reg, word, plc::WriteOrigin::Display)) {
         return false;
       }
       // The operator is standing at the device and is not depending on the link they
       // are about to change, so the UI stages and commits in one step (§4.1.1). It
-      // still goes through the apply register, so the restart and rollback machinery
-      // is the same one a Modbus master drives.
-      return access.modbus->applyHoldingWrite(plc::REG_LINK_APPLY,
-                                              plc::LinkSettingsManager::kApplyMagic);
+      // still goes through the apply register, so the persist-and-restart machinery is
+      // the same one a Modbus master drives.
+      //
+      // WriteOrigin::Display is what stops the 60 s rollback from arming. Rollback's
+      // confirmation signal is an incoming frame; on a unit with no master attached there
+      // is no such signal, so an armed window would revert every link change made at the
+      // display exactly 60 s later — a silent, unexplained reversion of a setting the
+      // operator watched take effect.
+      return access.modbus->applyHoldingWrite(
+          plc::REG_LINK_APPLY, plc::LinkSettingsManager::kApplyMagic, plc::WriteOrigin::Display);
     }
     case SettingTarget::LedVolumeStep:
       return access.modbus->applyHoldingWrite(plc::REG_LED_RED_VOLUME_STEP, word);

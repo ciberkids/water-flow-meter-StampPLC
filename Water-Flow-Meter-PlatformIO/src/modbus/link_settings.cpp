@@ -21,8 +21,11 @@ void LinkSettingsManager::begin(const LinkSettings& stored) {
   appliedAtMs_ = 0;
 }
 
-bool LinkSettingsManager::stage(uint16_t address, uint16_t value) {
-  LinkSettings candidate = staged_;
+bool LinkSettingsManager::stage(uint16_t address, uint16_t value, WriteOrigin origin) {
+  // The display commits on the spot with no rollback window, so it must commit only the
+  // field the operator actually edited. Basing its candidate on `staged_` would let a
+  // value a master staged and chose not to commit ride along on that unprotected apply.
+  LinkSettings candidate = (origin == WriteOrigin::Display) ? live_ : staged_;
   switch (address) {
     case REG_LINK_SLAVE_ID:
       if (value < LinkSettings::kMinSlaveId || value > LinkSettings::kMaxSlaveId) {
@@ -58,7 +61,7 @@ bool LinkSettingsManager::stage(uint16_t address, uint16_t value) {
   return true;
 }
 
-bool LinkSettingsManager::apply(uint32_t nowMs) {
+bool LinkSettingsManager::apply(uint32_t nowMs, WriteOrigin origin) {
   if (!staged_.valid() || staged_ == live_) {
     // Nothing to do. Notably this does NOT arm the rollback window: arming it for a
     // no-op apply would revert settings that were never changed.
@@ -68,15 +71,28 @@ bool LinkSettingsManager::apply(uint32_t nowMs) {
   previous_ = live_;
   live_ = staged_;
   revision_ = static_cast<uint16_t>(revision_ + 1);
-  awaitingConfirm_ = true;
+  // §4.1.1: only a change that arrived over the bus is at risk of orphaning the device,
+  // because only then is the bus the operator's sole means of control. A change made at
+  // the display has no confirming frame to wait for, so waiting for one would revert
+  // every local link change after 60 s.
+  //
+  // Assigning rather than only setting matters: a display change following an unconfirmed
+  // bus apply must CLEAR the armed window, not leave it armed against a previous_ that has
+  // since been overwritten.
+  awaitingConfirm_ = (origin == WriteOrigin::Bus);
   appliedAtMs_ = nowMs;
   return true;
 }
 
-void LinkSettingsManager::noteValidFrame(uint32_t nowMs) {
+void LinkSettingsManager::noteValidFrame(uint32_t nowMs, uint8_t servedSlaveId) {
   (void)nowMs;
-  // A single valid frame after an apply proves the master can still reach us, which
-  // is the whole question rollback exists to answer.
+  // A valid frame ON THE NEW ID proves the master followed the change, which is the whole
+  // question rollback exists to answer. A frame on any other ID proves nothing: if the
+  // device is still answering on the pre-apply ID, that is the failure rollback is for,
+  // not evidence against it.
+  if (servedSlaveId != live_.slaveId) {
+    return;
+  }
   awaitingConfirm_ = false;
 }
 

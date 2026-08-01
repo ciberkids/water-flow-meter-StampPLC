@@ -64,7 +64,9 @@ bool ModbusManager::isWritableAddress(uint16_t address) const {
   }
 }
 
-bool ModbusManager::applyHoldingWrite(uint16_t address, uint16_t value) {
+bool ModbusManager::applyHoldingWrite(uint16_t address,
+                                      uint16_t value,
+                                      plc::WriteOrigin origin) {
   if (!isWritableAddress(address)) {
     return false;
   }
@@ -104,7 +106,7 @@ bool ModbusManager::applyHoldingWrite(uint16_t address, uint16_t value) {
   // own parameters cannot be applied by the request that carries them.
   if (address == REG_LINK_SLAVE_ID || address == REG_LINK_BAUD_INDEX ||
       address == REG_LINK_PARITY || address == REG_LINK_STOP_BITS) {
-    if (!deps_.link || !deps_.link->stage(address, value)) {
+    if (!deps_.link || !deps_.link->stage(address, value, origin)) {
       return false;
     }
     deps_.link->publish(*deps_.registers);
@@ -115,7 +117,9 @@ bool ModbusManager::applyHoldingWrite(uint16_t address, uint16_t value) {
     if (!deps_.link || value != LinkSettingsManager::kApplyMagic) {
       return false;
     }
-    if (deps_.link->apply(millis())) {
+    if (deps_.link->apply(millis(), origin)) {
+      // True for both origins: a display apply still persists, still bumps the revision
+      // and still reopens the UART. Only the rollback arming differs (§4.1.1).
       linkRestartPending_ = true;
     }
     deps_.link->publish(*deps_.registers);
@@ -369,10 +373,11 @@ bool ModbusManager::consumeLinkRestartRequest() {
 }
 
 ModbusMessage ModbusManager::handleReadHolding(ModbusMessage request) {
-  // Any well-formed request proves the master can still reach us, which is what
-  // closes the rollback window after an apply.
+  // A request addressed to the LIVE slave ID proves the master followed the change,
+  // which is what closes the rollback window after an apply. See noteValidFrame: a
+  // frame on a stale ID must not confirm, or a slave-ID change can never roll back.
   if (deps_.link) {
-    deps_.link->noteValidFrame(millis());
+    deps_.link->noteValidFrame(millis(), request.getServerID());
   }
   uint16_t address = 0;
   uint16_t words = 0;
@@ -394,7 +399,7 @@ ModbusMessage ModbusManager::handleReadHolding(ModbusMessage request) {
 
 ModbusMessage ModbusManager::handleWriteSingle(ModbusMessage request) {
   if (deps_.link) {
-    deps_.link->noteValidFrame(millis());
+    deps_.link->noteValidFrame(millis(), request.getServerID());
   }
   uint16_t address = 0;
   uint16_t value = 0;
@@ -413,7 +418,7 @@ ModbusMessage ModbusManager::handleWriteSingle(ModbusMessage request) {
 
 ModbusMessage ModbusManager::handleWriteMultiple(ModbusMessage request) {
   if (deps_.link) {
-    deps_.link->noteValidFrame(millis());
+    deps_.link->noteValidFrame(millis(), request.getServerID());
   }
   uint16_t address = 0;
   uint16_t words = 0;

@@ -9,6 +9,23 @@
 namespace plc {
 
 /**
+ * Where a holding-register write came from.
+ *
+ * This exists for exactly one decision: whether an apply of the link settings arms the
+ * 60 s rollback. Rollback's confirmation signal *is* an incoming Modbus frame, so a
+ * change made from the display on a unit with no master attached can never be confirmed
+ * and would revert unconditionally after a minute — which would make the C1-C4 link
+ * screens (Display_UI_Requirements §5.2) functionally nonexistent. Project_document.md
+ * §4.1.1 settles it: "Writes originating from the on-device UI skip staging and apply on
+ * commit: the operator is physically present and is not depending on the link that is
+ * about to change."
+ *
+ * `Bus` is the default on every entry point so a call site that forgets to say fails
+ * SAFE — it arms rollback rather than silently disarming it.
+ */
+enum class WriteOrigin : uint8_t { Bus, Display };
+
+/**
  * RS485 link parameters — Project_document.md §4.1.1, registers 40-47.
  *
  * Deliberately free of any Arduino dependency so the validation, staging and
@@ -72,17 +89,39 @@ class LinkSettingsManager {
   const LinkSettings& staged() const { return staged_; }
   uint16_t revision() const { return revision_; }
 
-  /** Stages a write to 40-43. False if the address or value is not acceptable. */
-  bool stage(uint16_t address, uint16_t value);
+  /**
+   * Stages a write to 40-43. False if the address or value is not acceptable.
+   *
+   * A Display-originated stage starts from the LIVE settings rather than from whatever is
+   * currently staged, which is what §4.1.1's "writes originating from the on-device UI skip
+   * staging" actually requires. Otherwise a value a master staged and deliberately did not
+   * commit would ride along on the operator's local commit — and, because a local commit
+   * arms no rollback, that bus-originated change would escape the safety net that exists
+   * for it. A master following step 1 of the protocol reads 40-43 back before committing,
+   * so it sees its pending edit was dropped.
+   */
+  bool stage(uint16_t address, uint16_t value, WriteOrigin origin = WriteOrigin::Bus);
 
   /**
    * Commits the staged values. Returns true when the live settings changed, which
    * is the caller's cue to persist and restart the UART.
+   *
+   * The return value is deliberately independent of `origin`: a display-originated apply
+   * must still persist to NVS, still bump the revision and still restart the UART. Only
+   * the arming of the rollback window differs — see WriteOrigin.
    */
-  bool apply(uint32_t nowMs);
+  bool apply(uint32_t nowMs, WriteOrigin origin = WriteOrigin::Bus);
 
-  /** Called on every valid Modbus frame; confirms an apply did not break the link. */
-  void noteValidFrame(uint32_t nowMs);
+  /**
+   * Called on every valid Modbus frame; confirms an apply did not break the link.
+   *
+   * `servedSlaveId` is the server ID the frame was addressed to, and only a frame on the
+   * NEW live ID confirms. Without that test a slave-ID change can never be rolled back:
+   * whatever still answers on the old ID keeps confirming a link the master has not in
+   * fact followed. It also bounds the worst case of a partial worker rebind on the
+   * firmware side to one extra revert, never a false confirmation.
+   */
+  void noteValidFrame(uint32_t nowMs, uint8_t servedSlaveId);
 
   /** True when an apply has gone unconfirmed for longer than the window. */
   bool rollbackDue(uint32_t nowMs) const;

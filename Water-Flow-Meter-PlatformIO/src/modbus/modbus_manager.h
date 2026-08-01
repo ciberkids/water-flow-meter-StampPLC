@@ -36,7 +36,17 @@ class ModbusManager {
   explicit ModbusManager(const ModbusDependencies& deps);
 
   bool isWritableAddress(uint16_t address) const;
-  bool applyHoldingWrite(uint16_t address, uint16_t value);
+  /**
+   * The single entry point for every holding-register write, from the bus or the UI.
+   *
+   * `origin` is passed rather than held as state on purpose: the eModbus server task
+   * (priority 8) preempts the logic task that drives the UI on the same core, so a
+   * mutable "current origin" member could be read by a bus frame that interrupted a
+   * display write and disarm a rollback that must stay armed.
+   */
+  bool applyHoldingWrite(uint16_t address,
+                         uint16_t value,
+                         plc::WriteOrigin origin = plc::WriteOrigin::Bus);
 
   void syncSensorToHolding(std::size_t sensorIndex);
   void syncGlobalRegisters();

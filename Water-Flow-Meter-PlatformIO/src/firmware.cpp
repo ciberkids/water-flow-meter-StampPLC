@@ -180,10 +180,57 @@ void saveLinkSettings(const LinkSettings& s) {
   preferences.putUChar(kPrefLinkStop, s.stopBits);
 }
 
-/** Reopens the RS485 port with the live link settings. */
+/**
+ * The slave ID the eModbus workers are currently registered under.
+ *
+ * eModbus keys its worker map by server ID, so the registration made at boot is the only
+ * ID the device answers on until something re-registers. This shadow is what lets
+ * restartRs485() tell whether a rebind is needed at all.
+ */
+uint8_t registeredSlaveId = 0;
+
+// Defined below; declared here so bindModbusWorkers can name them.
+ModbusMessage handleReadHolding(ModbusMessage request);
+ModbusMessage handleWriteSingle(ModbusMessage request);
+ModbusMessage handleWriteMultiple(ModbusMessage request);
+
+/** (Re)binds the three function-code workers to `slaveId`, if it has changed. */
+void bindModbusWorkers(uint8_t slaveId) {
+  if (slaveId == registeredSlaveId) {
+    // Never touch eModbus' workerMap for a baud/parity-only change. The map is a plain
+    // std::map with no mutex, read concurrently by the priority-8 server task, so the
+    // cheapest mitigation for that race is not to mutate it unless we must.
+    return;
+  }
+  // New ID first, old ID second: there is never an instant where neither is served.
+  modbus.registerWorker(slaveId, Modbus::READ_HOLD_REGISTER, handleReadHolding);
+  modbus.registerWorker(slaveId, Modbus::WRITE_HOLD_REGISTER, handleWriteSingle);
+  modbus.registerWorker(slaveId, Modbus::WRITE_MULT_REGISTERS, handleWriteMultiple);
+  if (registeredSlaveId != 0) {
+    // functionCode 0 removes every worker for the ID (ModbusServer.h:43). Leaving the old
+    // ID registered is the bug: frames on it would keep answering, and — before the
+    // servedSlaveId test in LinkSettingsManager::noteValidFrame — would keep confirming an
+    // apply the master never followed, so the 60 s rollback could never fire.
+    modbus.unregisterWorker(registeredSlaveId);
+  }
+  registeredSlaveId = slaveId;
+}
+
+/**
+ * Reopens the RS485 port with the live link settings, rebinding the workers if the slave
+ * ID moved.
+ *
+ * The rebind lives here rather than at the call sites because both callers — the apply
+ * path and the rollback path — already mean "make the hardware match linkSettings.live()",
+ * and after rollback() that is the reverted value. One place, both directions.
+ */
 void restartRs485() {
   const LinkSettings& s = linkSettings.live();
   RS485_SERIAL_PORT.end();
+  // Rebind while the port is closed. It does not make the unsynchronised workerMap access
+  // safe, but it is the narrowest window available without forking eModbus: with the UART
+  // down the server task has nothing to dispatch.
+  bindModbusWorkers(s.slaveId);
   RS485_SERIAL_PORT.begin(static_cast<unsigned long>(s.baudRate()),
                           arduinoSerialConfig(s),
                           RS485_RX_PIN,
@@ -353,10 +400,8 @@ void logicTaskCode(void * pvParameters) {
   }
   persistedBitmap = connectedSensorsBitmap;
 
-  const uint8_t slaveId = linkSettings.live().slaveId;
-  modbus.registerWorker(slaveId, Modbus::READ_HOLD_REGISTER, handleReadHolding);
-  modbus.registerWorker(slaveId, Modbus::WRITE_HOLD_REGISTER, handleWriteSingle);
-  modbus.registerWorker(slaveId, Modbus::WRITE_MULT_REGISTERS, handleWriteMultiple);
+  // Same helper the apply/rollback paths use, so boot and reconfiguration cannot drift.
+  bindModbusWorkers(linkSettings.live().slaveId);
   // Pin the eModbus server task to core 1, alongside this logic task.
   //
   // Without the explicit coreID, ModbusServerRTU::doBegin() creates its task with
@@ -445,8 +490,9 @@ void logicTaskCode(void * pvParameters) {
 
     uiRenderer.update(now, uiController.context());
 
-    // A committed link change reopens the port. A slave-ID change additionally needs
-    // a reboot, because eModbus binds workers to the ID at registration time.
+    // A committed link change reopens the port AND rebinds the eModbus workers, so a
+    // slave-ID change takes effect without a reboot. It used to need one, which meant the
+    // device kept answering on the old ID while the new one was already persisted.
     if (modbusManager.consumeLinkRestartRequest()) {
       saveLinkSettings(linkSettings.live());
       restartRs485();
