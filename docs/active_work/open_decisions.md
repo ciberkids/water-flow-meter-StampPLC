@@ -848,9 +848,25 @@ WiFi problem: a device name, a site label or a units preference would all have h
 feature takes the required editor count from **10 to 24**, so every pack authored today
 becomes incomplete.
 
-The load path already degrades gracefully (it appends built-in editors). The **export** path
-fails hard, which would retroactively break a pack a user authored last month.
+**Correction (2026-08-01).** The first draft of this entry said "the load path already
+degrades gracefully (it appends built-in editors)". **There is no load path.** There is no
+loader, no SD-card code, and no patcher — a repo-wide search for `MenuPack`, `uipack` or
+`ui_pack_try` outside `docs/` returns nothing. That sentence described §3.3 check 11a of
+`Loadable_UI_Menu_Packs.md`, which is written in the present tense but specifies machinery
+that exists in no form.
 
-**Recommendation.** Q7 of that document — the manifest carries a catalogue version, and the
-exporter warns rather than fails for values added after the pack's version. Preserves the
-guarantee for new work without punishing old work.
+This matters more than a wording slip: the entry used that non-existent safety net as the
+justification for letting the required-editor count grow from 10 to 24. A decision register is
+the file a later reader treats as settled, so a false premise here propagates further than the
+same error in a requirement.
+
+What is actually true today: the **only** enforcement of the completeness rule anywhere is
+`assertCoversEverySetting()` in `web/mockup/tools/skeleton/generate.mjs`, which fires when the
+default dataset is regenerated. Neither the export gate of §5.8 nor the load-time patcher of
+§3.3.11a exists. So a catalogue addition today breaks the skeleton generator loudly — which is
+the cheapest place to find out — and nothing else.
+
+**Recommendation.** **Q4** of that document (not Q7, which is the Modbus load-status register —
+the original entry pointed at the wrong question): the manifest carries a catalogue version and
+the exporter warns rather than fails for values added after a pack's version. That still needs
+building; until it exists, growing the catalogue means regenerating the default menu.

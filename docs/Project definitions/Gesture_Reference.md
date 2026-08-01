@@ -1,6 +1,6 @@
 # Gesture Reference
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** 2026-08-01
 **Status:** reference — describes both what is *specified* and what is *built*, and these are
 not yet the same thing.
@@ -9,6 +9,14 @@ not yet the same thing.
 > requirement and the code disagree, the disagreement is recorded rather than smoothed over,
 > because a reference that hides a gap is worse than no reference: it tells the next reader a
 > gesture works when the device will not respond to it.
+>
+> **1.1** — v1.0 named five broken gestures. All five were repaired within hours of it being
+> written, so the table it was proud of was wrong by the end of the same day, and one entry in
+> this note was itself wrong on the first attempt. That is the honest lesson of this file:
+> **a hand-maintained status column has a half-life measured in hours.** Every ✅ below now
+> names the test that earns it, so the column is checkable by running `test/host/run.sh`
+> instead of by trusting this paragraph. The one remaining ❌ (§8.1) is the acknowledgement
+> toast, which v1.0 mentioned but did not tabulate.
 
 **Normative sources.** `Display_UI_Requirements.md` §3 (gesture contract), §5 (navigation
 tree); `NF-20260730-01-menu-navigation-model.md`.
@@ -70,12 +78,12 @@ Status is measured, not assumed: ✅ means a host test in `test/host/` exercises
 
 | Gesture | Effect | Status |
 | --- | --- | --- |
-| UP short | Previous sibling at this level, wrapping | ✅ |
-| DOWN short | Next sibling at this level, wrapping | ✅ |
-| **UP/DOWN held** | **Specified: repeat every 250 ms. Actual: steps nothing.** | ❌ §8.2 |
-| ENTER short | Descend into the current entry; on a `BACK` entry, ascend one level | ✅ |
+| UP short | Previous sibling at this level, wrapping | ✅ `interaction_test` |
+| DOWN short | Next sibling at this level, wrapping | ✅ `interaction_test` |
+| UP/DOWN held | Repeats the sibling step every 250 ms | ✅ `interaction_test` |
+| ENTER short | Descend into the current entry; on a `BACK` entry, ascend one level | ✅ `interaction_test` |
 | ENTER long (≥1.5 s) | Escape to the main screen (P0), clearing the whole stack | ⚠️ |
-| UP+DOWN short | Display off **and** reset navigation to P0, from any screen at any depth | ✅ |
+| UP+DOWN short | Display off **and** reset navigation to P0, from any screen at any depth | ✅ `interaction_test` |
 
 ### 3.2. In a value editor
 
@@ -86,8 +94,9 @@ Status is measured, not assumed: ✅ means a host test in `test/host/` exercises
 | ENTER short | **Commit** and ascend one level | ⚠️ |
 | ENTER long | **Discard** and ascend one level | ⚠️ |
 
-> An editor also opens on the config **list** pages today, which hijacks UP/DOWN paging
-> through C1–C6 and S1–S4. See §8.3.
+An editor now opens **only** on the ten `-edit` screens, identified by their
+`config.editor.pending` element. It used to open on the config *list* pages too, which
+swallowed UP/DOWN paging through C1–C6 and S1–S4.
 
 ### 3.3. In a text editor (WiFi SSID, passphrase, MQTT fields)
 
@@ -115,9 +124,9 @@ The logic **inverts** here, deliberately: a slip must not destroy data.
 
 | Gesture | Effect | Status |
 | --- | --- | --- |
-| ENTER short | **Exit** without acting | ⚠️ |
-| ENTER held for the screen's declared duration | **Confirm** the action | ❌ §8.1 |
-| Release before the duration elapses | Abort; the exit flow runs instead | ❌ §8.1 |
+| ENTER short | **Exit** without acting | ✅ `interaction_test` |
+| ENTER held for the screen's declared duration | **Confirm** the action | ✅ `interaction_test` |
+| Release before the duration elapses | Abort; the exit flow runs instead | ✅ `interaction_test` |
 
 Declared durations, from the generated table: reset totals **3000 ms**, reset session
 **1500 ms**, factory reset **30 000 ms**.
@@ -189,52 +198,51 @@ Two notes a menu author needs:
 
 | Gesture | Was | Status |
 | --- | --- | --- |
-| UP+DOWN held 30 s | Blind factory reset | **Retired** by `Display_UI_Requirements` §3.3 — a destructive action must be visible, so it moved to page P8 with a confirm screen. **Still live in the firmware**, and currently the only working route (§8.1). |
-| `UiMode::Configuration` | A separate mode for the config UI | Retired in favour of the navigation tree. Still referenced by the renderer's fast-repaint gate, which is why §8.4 exists. |
+| UP+DOWN held 30 s | Blind factory reset | **Retired and removed** (2026-08-01). Three documents had claimed this for weeks while the code still had it — and it was a hazard, not merely dead: §3.1 tells the operator to press UP+DOWN to blank the display, and holding it 3 s raised a factory-reset countdown on the same two buttons. `interaction_test` now holds UP+DOWN for 36 s and asserts nothing is wiped. |
+| `UiMode::Configuration` | A separate mode for the config UI | Retired in favour of the navigation tree. The renderer's fast-repaint gate no longer depends on it — it is driven from actual interactivity instead. |
 
 ---
 
-## 8. Known gaps
+## 8. Gaps, and what closed
 
-Each is a verified defect, not a suspicion. They are listed here because this document would
-otherwise describe a device that does not exist.
+### 8.1. Still broken: acknowledgement toasts never appear ❌
 
-### 8.1. Confirm screens cannot be confirmed ❌
+Two screens (`toast-totals-reset`, `toast-session-reset`) declare a `Timeout` flow with **no**
+button — an automatic dismissal after 2 s. Nothing drives it. There is no screen-entry timer,
+so the flow never fires.
 
-`armHoldCountdown` looks for a `Button + Enter + Long` flow that has a target screen and no
-action, and reads the duration off the *target*. That is a two-screen page→overlay model. The
-navigation-tree rewrite replaced it with a one-screen model where the confirm screen carries
-its own duration and action on a `Timeout` flow. **Zero of 48 screens match the predicate**,
-so no countdown ever arms and "Reset totals?" and "Reset session?" cannot be completed.
+`Display_UI_Requirements` §4.3.1 and §6.6 describe the toast as delivering "proof the action
+happened rather than an unexplained screen change", and §6.6 certifies that requirement
+satisfied. It is not. Completing a reset currently ascends straight to the parent, so the
+operator gets the screen change without the proof.
 
-Consequence: the only working factory reset is the blind UP+DOWN 30 s combo §3.3 retired.
+Needs two things that do not exist: a screen-entry timer, and a navigator replace-at-depth
+primitive — without the latter the toast's own `nav.back` would return to the confirm screen
+rather than to the page the operator started from.
 
-### 8.2. Holding UP/DOWN on a navigation level steps nothing ❌
+### 8.2. Unverified, not broken ⚠️
 
-`mapGesture` maps a repeat event to `FlowGesture::Hold`, and the table contains **zero** Hold
-flows. The browser preview disagrees — `flowMatching.ts` re-fires the Short flow — so a hold
-pages in the mockup and does nothing on the device.
+ENTER-long escape-to-P0, and the numeric editor's adjust/commit/discard. All implemented and
+all plausible; none has a host test yet, so they carry ⚠️ rather than ✅. The harness exists,
+so this is a gap in coverage rather than in capability.
 
-### 8.3. The editor opens on config list pages ⚠️
+### 8.3. Closed on 2026-08-01 ✅
 
-`settingOnScreen` matches any element bound to a catalogue setting, and the list pages display
-their setting's saved value. So descending onto the *list* opens an editor, and UP/DOWN paging
-through C1–C6 / S1–S4 is swallowed by the acceleration handler.
+Five defects, all listed as ❌ in v1.0 of this document and all repaired the same day:
 
-### 8.4. Everything repaints at 1 Hz ⚠️
+| Was | Now |
+| --- | --- |
+| Confirm screens could not be confirmed — zero of 48 screens matched the arming predicate, which still looked for a two-screen page→overlay model | Arms on ENTER down against the confirm screen's own `Timeout` flow |
+| The blind UP+DOWN 30 s factory reset was live, and armed on the same buttons §3.1 uses for display-off | Removed, with a test that holds UP+DOWN for 36 s and asserts nothing is wiped |
+| Holding UP/DOWN on a navigation level stepped nothing, while the browser preview paged | Both resolve a repeat as a repetition of the Short flow |
+| The value editor opened on config **list** pages, swallowing UP/DOWN paging | Requires a `config.editor.pending` element |
+| Everything repainted at 1 Hz, because the fast cadence was gated on a retired mode | Driven from actual interactivity |
 
-The renderer's ~80 ms interactive cadence is gated on `UiMode::Configuration`, which is never
-entered. Editors, countdowns and the acceleration ramp therefore update once a second.
-
-### 8.5. Fixed on 2026-08-01 ✅
-
-Going idle — by gesture **or** by the 120 s timeout — did not clear the navigation stack or
-the pending edit. The rendered screen comes from the navigator, not from the page, so the
-display woke on whatever screen it was left on with a **live editor**: the first UP/DOWN hold
-resumed the acceleration ramp on an invisible setting, and the first ENTER could commit a
-Modbus config write nobody confirmed. §3 and the code's own comment both claimed otherwise.
-
-Now covered by `test/host/interaction_test.cpp`, which is also why §3.1 and §3.5 carry ✅.
+Also closed the day before: going idle — by gesture **or** by the 120 s timeout — did not clear
+the navigation stack or the pending edit. The rendered screen comes from the navigator, not
+from the page, so the display woke on whatever screen it was left on with a **live editor**:
+the first ENTER could commit a Modbus write nobody confirmed. §3 and the code's own comment
+both claimed otherwise.
 
 ---
 
