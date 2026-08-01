@@ -35,10 +35,12 @@ npm run export:firmware
 Last run, 2026-08-01: firmware SUCCESS (RAM 7.8 %, Flash 18.1 %); **180 host checks** across
 six suites; 21 unit; 27 exporter; export `ok` with **9/9 gates and no warnings**.
 
-Do **not** run `npm run test:cypress`. It runs the exporter with
-`--screens tests/fixtures/legacy-screens.json` and no `--out` override, so it overwrites the
-committed firmware UI assets with a build from an obsolete fixture — and it cannot pass. It is
-not in CI. A fix or a deletion is in flight.
+The Cypress suite is **gone** (2026-08-01). It ran the exporter with
+`--screens tests/fixtures/legacy-screens.json` and no `--out` override, so every run
+overwrote the committed firmware UI assets with a build from an obsolete fixture; it could not
+pass, and it was not in CI. The one property it checked — dataset/IR parity — is now
+`tools/exporter/__tests__/dataset_ir_parity.test.ts`, which runs the translation in memory and
+writes nothing.
 
 `npm run test:visual` is **unverified**: it gets past `tsc && vite build` but Playwright
 browsers are not installed, and the snapshots need regenerating.
