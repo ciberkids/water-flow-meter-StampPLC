@@ -13,10 +13,49 @@ namespace ui {
 
 namespace {
 
-/** The settable binding declared on a screen, if any — this is how descending into
- *  an editor discovers which setting it edits, without a screen-id-to-setting table. */
-const SettingDescriptor* settingOnScreen(const ui_exporter::Screen* screen) {
+/**
+ * The binding an editor screen uses to render the value being edited.
+ *
+ * Display_UI_Requirements §5.4: a value editor shows "the pending value (highlighted) ...
+ * and the currently saved value". Only an editor has a pending value, so this element is
+ * what distinguishes an editor from the list page above it — see isValueEditorScreen.
+ */
+constexpr const char* kEditorPendingBinding = "config.editor.pending";
+
+/**
+ * Whether this screen IS a value editor (§5.4), as opposed to a list page that merely
+ * displays the setting currently in force.
+ *
+ * The list pages C1..C6 and S1..S4 each show their own saved value, so "declares a settable
+ * binding" does not distinguish the two — every list page declares one. What only an editor
+ * declares is the pending value, and it is declared on exactly the ten `-edit` screens. That
+ * is asserted over the whole generated table by editorDatasetInvariantTests in
+ * test/host/interaction_test.cpp, so a dataset that stopped satisfying it fails the suite
+ * instead of silently disabling editing.
+ */
+bool isValueEditorScreen(const ui_exporter::Screen* screen) {
   if (!screen) {
+    return false;
+  }
+  for (std::size_t i = 0; i < screen->elementCount; ++i) {
+    const char* binding = screen->elements[i].bindingId;
+    if (binding && std::strcmp(binding, kEditorPendingBinding) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** The settable binding an editor screen edits — this is how descending into an editor
+ *  discovers which setting it edits, without a screen-id-to-setting table.
+ *
+ *  Returns null for anything that is not a value editor. Without that guard a config list
+ *  page matched on its own saved-value element, so ENTER-short onto the LIST opened an
+ *  editor; because goToSibling never touches editor state, the editor then leaked along the
+ *  whole sibling ring and handleEditorRepeat swallowed every UP/DOWN held past 250 ms,
+ *  breaking the §5.1 paging through C1..C6 and S1..S4. */
+const SettingDescriptor* settingEditedByScreen(const ui_exporter::Screen* screen) {
+  if (!isValueEditorScreen(screen)) {
     return nullptr;
   }
   for (std::size_t i = 0; i < screen->elementCount; ++i) {
@@ -90,10 +129,11 @@ void handleNavDescend(const UiActionContext& ctx, const ui_exporter::Flow&) {
   }
   ctx.controller.syncPageFromScreen(ctx.controller.navigator().current(), ctx.nowMs);
 
-  // Entering a screen that declares a settable binding opens the editor on it. The
-  // setting is discovered from the screen's own bindings, so no screen-id-to-setting
-  // table has to be kept in step with the dataset.
-  if (const auto* setting = settingOnScreen(ctx.resolvedTarget)) {
+  // Entering a value editor screen opens the editor on it. The setting is discovered from
+  // the screen's own bindings, so no screen-id-to-setting table has to be kept in step with
+  // the dataset. Descending onto anything else — a list page, a sensor list, a confirm
+  // screen — closes any editor instead of opening one.
+  if (const auto* setting = settingEditedByScreen(ctx.resolvedTarget)) {
     const uint8_t sensor = ctx.controller.navigator().sensorIndex();
     const int32_t current =
         ctx.settings ? readSetting(*setting, sensor, *ctx.settings) : 0;

@@ -54,11 +54,14 @@ class InteractionHandler {
   static constexpr uint32_t kFactoryResetRestartDelayMs = 1000;
   static constexpr uint32_t kEnterIdleHoldMs = 3000;
   /**
-   * How long ENTER must be held before a guarded-action countdown arms. Matches
-   * ButtonInputManager::kLongPressThresholdMs so a short press still goes down
-   * the ordinary discrete-event path.
+   * The gesture boundary (Display_UI_Requirements §3): mirrors
+   * ButtonInputManager::kLongPressThresholdMs, which is private.
+   *
+   * A guarded action arms on ENTER *down*, not here — but a guard no longer than this
+   * is a plain long press and draws no countdown, because "durations longer than that
+   * are always countdowns shown on screen, never gesture thresholds".
    */
-  static constexpr uint32_t kHoldCountdownArmMs = 1500;
+  static constexpr uint32_t kGestureLongPressMs = 1500;
   /** UP+DOWN released within this window is a display-off request, not a hold. */
   static constexpr uint32_t kDisplayOffComboMaxMs = 1000;
 
@@ -72,11 +75,16 @@ class InteractionHandler {
 
   /**
    * A guarded action armed by holding ENTER (Display_UI_Requirements §4.3:
-   * "release ENTER before zero aborts").
+   * "releasing ENTER before zero aborts and returns to the confirm screen").
    *
-   * The dataset expresses this as two flows: an ENTER/long flow on the page
-   * whose targetScreenId names a countdown screen, and a Timeout flow on that
-   * countdown screen carrying the duration and the actionId to fire at zero.
+   * The dataset expresses this with ONE flow, on the confirm screen itself: a
+   * Timeout flow whose `button` is Enter (NF-20260730-01 §3.8's discriminator,
+   * emitted from `holdButton`), carrying both the duration and the actionId to
+   * fire at zero. `overlayScreenId` is therefore the confirm screen's own id.
+   *
+   * It is not two flows with the page's ENTER-long pointing at a separate countdown
+   * screen. That is what this code used to look for, and no screen in the dataset has
+   * ever matched it, so the confirm screens could not be confirmed at all.
    */
   struct HoldCountdownState {
     bool active = false;

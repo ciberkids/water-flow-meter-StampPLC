@@ -2,6 +2,8 @@
 
 #include <Preferences.h>
 
+#include <cstring>
+
 #include "led/led_controller.h"
 #include "modbus/modbus_manager.h"
 #include "ui/core/ui_actions.h"
@@ -15,18 +17,42 @@ namespace {
 constexpr const char* kFactoryResetCountdownScreenId = "confirm-factory-reset";
 
 /**
- * Finds the Timeout flow on a countdown screen. That flow carries the duration
- * and the actionId to fire when the countdown reaches zero.
+ * The one action a completed hold must NOT be dispatched as an ordinary flow action.
+ *
+ * `ui_actions.cpp`'s handler only calls `ctx.factoryReset()`, i.e. firmware.cpp's
+ * `performFactoryReset()`: it wipes NVS and resets `linkSettings` to defaults in RAM but
+ * schedules no reboot. The reboot lives in `factoryResetState_.restartScheduled`
+ * (firmware.cpp:512 `esp_restart()`), which only `scheduleFactoryReset()` sets — and the
+ * same flag gates `noteResetAccepted()`'s solid-white acknowledgement (firmware.cpp:466)
+ * and `restartRs485()`. Dispatching the flow would leave the device running on the old
+ * RS485 binding with wiped NVS for ever, against §4.3's "Factory reset? | P8 | 30 s |
+ * core.action.factory-reset | reboot, no toast".
  */
-const ui_exporter::Flow* findTimeoutFlow(const ui_exporter::Screen* screen) {
+constexpr const char* kFactoryResetActionId = "core.action.factory-reset";
+
+/**
+ * Finds the hold-countdown flow a confirm screen declares on itself.
+ *
+ * NF-20260730-01 §3.8 gives the single `timeout` trigger a discriminator, and
+ * cppEmitter.ts carries it in the flow's *button* field: `holdButton: "enter"`
+ * emits `FlowButton::Enter` (hold countdown, aborts on release),
+ * `holdButton: null` emits `FlowButton::None` (auto timeout, drives the toasts).
+ * `gesture` is meaningless on a non-button trigger — the emitter fills in
+ * `FlowGesture::Short` — so it must never be part of the predicate.
+ *
+ * The Enter check is what keeps a toast's `Timeout/None/2000` flow from being
+ * treated as something the operator has to hold ENTER through.
+ */
+const ui_exporter::Flow* findHoldCountdownFlow(const ui_exporter::Screen* screen) {
   if (!screen || !screen->flows) {
     return nullptr;
   }
   for (std::size_t i = 0; i < screen->flowCount; ++i) {
     const auto& flow = screen->flows[i];
-    if (flow.trigger == ui_exporter::FlowTrigger::Timeout && flow.timeoutMs > 0) {
-      return &flow;
-    }
+    if (flow.trigger != ui_exporter::FlowTrigger::Timeout) continue;
+    if (flow.button != ui_exporter::FlowButton::Enter) continue;
+    if (flow.timeoutMs == 0) continue;
+    return &flow;
   }
   return nullptr;
 }
@@ -317,33 +343,28 @@ void InteractionHandler::dispatchFlowAction(uint32_t nowMs,
   deps_.actions->dispatch(flow.actionId, actionContext, flow);
 }
 
+/**
+ * Arms the countdown the screen the operator is standing on declares.
+ *
+ * A confirm screen owns its own guard: the duration and the action both sit on its
+ * Timeout/Enter flow, and the screen the countdown draws is the confirm screen
+ * itself, not a separate overlay.
+ */
 bool InteractionHandler::armHoldCountdown(uint32_t nowMs, const ui_exporter::Screen* screen) {
-  if (!screen || !screen->flows || !deps_.screenRouter) {
+  const auto* holdFlow = findHoldCountdownFlow(screen);
+  if (!holdFlow) {
     return false;
   }
 
-  for (std::size_t i = 0; i < screen->flowCount; ++i) {
-    const auto& flow = screen->flows[i];
-    // An ENTER/long flow with a target screen and no action of its own is a
-    // countdown-arming flow; the target screen owns the duration and action.
-    if (flow.trigger != ui_exporter::FlowTrigger::Button) continue;
-    if (flow.button != ui_exporter::FlowButton::Enter) continue;
-    if (flow.gesture != ui_exporter::FlowGesture::Long) continue;
-    if (flow.actionId || !flow.targetScreenId) continue;
-
-    const auto* overlay = deps_.screenRouter->screenById(flow.targetScreenId);
-    const auto* timeoutFlow = findTimeoutFlow(overlay);
-    if (!timeoutFlow) continue;
-
-    holdCountdown_.active = true;
-    holdCountdown_.startMs = nowMs;
-    holdCountdown_.durationMs = timeoutFlow->timeoutMs;
-    holdCountdown_.overlayScreenId = flow.targetScreenId;
-    holdCountdown_.actionId = timeoutFlow->actionId;
-    holdCountdown_.timeoutFlow = timeoutFlow;
-    return true;
-  }
-  return false;
+  holdCountdown_.active = true;
+  // Anchored to this pass, not to the press instant: a countdown may then be a few
+  // milliseconds longer than the hold, never shorter.
+  holdCountdown_.startMs = nowMs;
+  holdCountdown_.durationMs = holdFlow->timeoutMs;
+  holdCountdown_.overlayScreenId = screen->id;
+  holdCountdown_.actionId = holdFlow->actionId;
+  holdCountdown_.timeoutFlow = holdFlow;
+  return true;
 }
 
 void InteractionHandler::handleHoldCountdown(uint32_t nowMs,
@@ -359,20 +380,20 @@ void InteractionHandler::handleHoldCountdown(uint32_t nowMs,
                          buttonInput.isPressed(ButtonInputManager::Button::Down);
 
   if (!holdCountdown_.active) {
-    // Arm only once ENTER has been held past the long-press threshold, so a
-    // short press still reaches the normal discrete-event path.
+    // Arm as soon as ENTER goes down, not at the 1.5 s long-press threshold: the
+    // duration is a countdown, not a gesture boundary (§3, "durations longer than
+    // 1.5 s are always countdowns, never gesture thresholds"). Arming at the
+    // threshold would make the 1.5 s `Reset session?` guard zero-length and would
+    // show only the second half of the 3 s `Reset totals?` one.
+    //
+    // A short press is still an exit: the countdown disarms on release and the
+    // release short-press then reaches the screen's own ENTER-short flow.
     if (enterHeld && !otherHeld) {
-      const uint32_t heldMs =
-          buttonInput.pressedDuration(ButtonInputManager::Button::Enter, nowMs);
-      if (heldMs >= kHoldCountdownArmMs) {
-        const auto* screen = uiController.navigator().current();
-        if (!screen) {
-          screen = deps_.screenRouter->screenForMode(uiController.mode(), uiController.page());
-        }
-        if (armHoldCountdown(nowMs, screen)) {
-          buttonInput.clearEvents();
-        }
+      const auto* screen = uiController.navigator().current();
+      if (!screen) {
+        screen = deps_.screenRouter->screenForMode(uiController.mode(), uiController.page());
       }
+      armHoldCountdown(nowMs, screen);
     }
     return;
   }
@@ -387,23 +408,66 @@ void InteractionHandler::handleHoldCountdown(uint32_t nowMs,
     return;
   }
 
+  // A hold is interaction. Without this a 30 s factory-reset hold begun late in the
+  // inactivity window lets updateIdleState fire mid-countdown: navigation resets to P0
+  // and the display goes dark while the countdown stays armed underneath.
+  uiController.notifyInteraction(nowMs);
+
   const uint32_t elapsedMs = nowMs - holdCountdown_.startMs;
-  countdown->active = true;
-  countdown->secondsRemaining = secondsRemaining(elapsedMs, holdCountdown_.durationMs);
-  countdown->remainingMs =
-      (elapsedMs >= holdCountdown_.durationMs) ? 0 : (holdCountdown_.durationMs - elapsedMs);
-  countdown->totalMs = holdCountdown_.durationMs;
-  countdown->screenId = holdCountdown_.overlayScreenId;
-  countdown->label.clear();
+  // Only durations *above* the gesture boundary get an on-screen countdown. §4.3's table
+  // specifies `Reset session?` as "ENTER long (1.5 s), no countdown", and §3 makes 1.5 s
+  // the gesture boundary rather than a countdown, so a 1.5 s guard is a plain long press
+  // that happens to be expressed as a duration.
+  if (holdCountdown_.durationMs > kGestureLongPressMs) {
+    countdown->active = true;
+    countdown->secondsRemaining = secondsRemaining(elapsedMs, holdCountdown_.durationMs);
+    countdown->remainingMs =
+        (elapsedMs >= holdCountdown_.durationMs) ? 0 : (holdCountdown_.durationMs - elapsedMs);
+    countdown->totalMs = holdCountdown_.durationMs;
+    countdown->screenId = holdCountdown_.overlayScreenId;
+    countdown->label.clear();
+  }
 
   if (elapsedMs >= holdCountdown_.durationMs) {
-    if (const auto* flow = holdCountdown_.timeoutFlow) {
+    // Factory reset goes down the UP+DOWN combo's own completion path instead of being
+    // dispatched as a flow action, because that path is the only one that arms the reboot
+    // (see kFactoryResetActionId). scheduleFactoryReset() *replaces* the dispatch rather
+    // than following it: it already calls factoryResetFn_(), so doing both would wipe
+    // twice. From here the presentation is byte-identical to the combo's — update()'s
+    // `restartScheduled` branch re-pins countdown.screenId to the confirm screen on this
+    // very pass, and the next pass's handleFactoryReset paints "Factory reset complete".
+    const bool isFactoryReset =
+        holdCountdown_.actionId &&
+        std::strcmp(holdCountdown_.actionId, kFactoryResetActionId) == 0;
+    if (isFactoryReset) {
+      scheduleFactoryReset(nowMs);
+    } else if (const auto* flow = holdCountdown_.timeoutFlow) {
       dispatchFlowAction(nowMs, uiController, *flow);
     }
     holdCountdown_ = HoldCountdownState{};
     buttonInput.clearEvents();
     countdown->active = false;
     countdown->screenId = nullptr;
+
+    // Ascend: the confirm screen is a modal the countdown consumes, so whoever
+    // descended into it must be unwound when it completes. §4.3 has the toast
+    // "return automatically to the page the operator started from" — ascending to the
+    // parent is that endpoint minus the 2 s dwell, so it lands the operator where the
+    // finished feature will.
+    //
+    // The flow's targetScreenId (the toast) is deliberately NOT honoured yet: a toast
+    // needs a screen-entry timer to run its own Timeout/None flow, and without one the
+    // operator would be parked on "TOTALS RESET / Returning..." for good. When the
+    // entry timer and a replace-at-depth navigator primitive exist, completion should
+    // instead move to the resolved target at the confirm screen's depth and let the
+    // toast's `Timeout/None/2000 -> ui.action.nav.back` do this ascend.
+    //
+    // Factory reset is the exception: the device reboots in a second and the combo path's
+    // "Factory reset complete" overlay is the acknowledgement, so unwinding to P8 first
+    // would only flicker. A judgment call, not a correctness constraint.
+    if (!isFactoryReset && uiController.navigator().ascend()) {
+      uiController.syncPageFromScreen(uiController.navigator().current(), nowMs);
+    }
   }
 }
 
