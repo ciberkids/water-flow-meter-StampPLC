@@ -17,12 +17,6 @@ constexpr int kGlyphWidthBase = 6;
 constexpr int kGlyphWidthValue = 7;
 constexpr uint16_t kCountdownOverlayColor = 0x39E7;
 
-bool bindingStartsWith(const ui_exporter::Element& element, const char* prefix) {
-  if (!element.bindingId || !prefix) {
-    return false;
-  }
-  return std::strncmp(element.bindingId, prefix, std::strlen(prefix)) == 0;
-}
 
 int16_t applyAlignment(int16_t origin, int16_t width, ui_exporter::TextAlign align) {
   switch (align) {
@@ -76,26 +70,41 @@ void UiRenderer::update(uint32_t nowMs, const UiRenderContext& context) {
     display.fillScreen(backgroundColor_);
     display.endWrite();
     lastRenderMs_ = nowMs;
+    // Nothing is on the panel any more, so waking must paint rather than assume the frame
+    // it last drew is still there.
+    lastScreen_ = nullptr;
+    lastCountdownActive_ = false;
     return;
   }
-
-  // Throttle every mode, not just Info. Configuration mode was exempt, so it
-  // redrew on every logic-loop iteration (~1 ms) — a full 240x135x16bpp SPI blast
-  // each time. Interactive modes get a faster cadence so edits feel immediate
-  // without saturating the bus.
-  const uint32_t interval =
-      (context.mode == UiMode::Info) ? kRefreshIntervalMs : kInteractiveRefreshIntervalMs;
-  if (nowMs - lastRenderMs_ < interval) {
-    return;
-  }
-  lastRenderMs_ = nowMs;
-  M5StamPLC.setBacklight(true);
 
   // The navigator owns the current position; the router is only the by-ID lookup and
   // the seed for the root. Asking the router for mode+page would ignore any descent.
+  //
+  // Resolved before the throttle, because whether the screen changed is half of the
+  // decision about whether this pass has to paint.
   const ui_exporter::Screen* screen = context.currentScreen
                                           ? context.currentScreen
                                           : screenRouter_->screenForMode(context.mode, context.page);
+
+  // Throttle every mode. The cadence used to be chosen by `mode != UiMode::Info`, i.e. by
+  // UiMode::Configuration — which nothing sets, so every awake screen got the 1 Hz telemetry
+  // interval and editors, countdowns and the §5.4 acceleration ramp all updated once a
+  // second. The condition now comes from the context (see UiRenderContext::interactive),
+  // plus an unconditional repaint when the screen itself changed so a navigation step is
+  // acknowledged within §7's 100 ms instead of at the next interval boundary.
+  const uint32_t interval = context.interactive ? kInteractiveRefreshIntervalMs : kRefreshIntervalMs;
+  // The overlay is not part of `screen`, so its arrival and — the case that bites — its
+  // teardown on an aborted hold have to be noticed separately.
+  const bool contentChanged =
+      screen != lastScreen_ || context.countdownActive != lastCountdownActive_;
+  if (!contentChanged && nowMs - lastRenderMs_ < interval) {
+    return;
+  }
+  lastRenderMs_ = nowMs;
+  lastScreen_ = screen;
+  lastCountdownActive_ = context.countdownActive;
+  M5StamPLC.setBacklight(true);
+
   if (!screen) {
     // Previously a silent `return`, which rendered an empty screen and gave no
     // hint that the exported dataset was missing the ID the router asked for.

@@ -14,7 +14,11 @@ cd "$(dirname "$0")/../.."
 OUT="$(mktemp -d)"
 trap 'rm -rf "$OUT"' EXIT
 
-CXXFLAGS=(-std=gnu++17 -Wall -Wextra -I src)
+# -Werror is deliberate. The manifest generator relies on -Wswitch to make "added a
+# SettingKind without teaching the generator about it" a build failure rather than a silently
+# incomplete manifest. Without -Werror that guarantee degrades to a warning nobody reads,
+# which is the exact failure mode this project keeps rediscovering.
+CXXFLAGS=(-std=gnu++17 -Wall -Wextra -Werror -I src)
 
 g++ "${CXXFLAGS[@]}" -o "$OUT/nav_test" \
   test/host/nav_test.cpp \
@@ -49,6 +53,7 @@ g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/interaction_test" \
   src/ui/core/ui_bindings.cpp \
   src/ui/core/ui_settings.cpp \
   src/ui/core/ui_module.cpp \
+  src/ui/core/ui_renderer.cpp \
   src/ui/theme/theme_palette.cpp \
   src/led/led_controller.cpp \
   src/input/button_input.cpp \

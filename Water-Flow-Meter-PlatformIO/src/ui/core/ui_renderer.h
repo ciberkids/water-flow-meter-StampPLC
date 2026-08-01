@@ -54,8 +54,9 @@ class UiRenderer {
   /** Info mode is telemetry at 1 Hz; nothing changes faster than that. */
   static constexpr uint32_t kRefreshIntervalMs = 1000;
   /**
-   * Configuration and countdown screens must feel responsive to button presses
-   * (§7: acknowledge within 100 ms) without redrawing on every logic-loop tick.
+   * Editors and countdowns must feel responsive (§7: acknowledge within 100 ms) without
+   * redrawing on every logic-loop tick. Selected by UiRenderContext::interactive; it used to
+   * be selected by a UiMode value that no code path sets, which made it dead.
    */
   static constexpr uint32_t kInteractiveRefreshIntervalMs = 80;
   uint16_t backgroundColor_ = 0x0000;
@@ -65,6 +66,22 @@ class UiRenderer {
   uint16_t badgeBackgroundColor_ = 0x0000;
   uint16_t badgeBorderColor_ = 0xFFFF;
   uint16_t legendColor_ = 0xFFFF;
+  /**
+   * The screen currently on the panel, so a navigation step can be painted immediately
+   * instead of waiting out the interval. Without this, tapping DOWN on the info ring could
+   * take a full second to show the next page — the same §7 breach as the dead fast cadence,
+   * on a path no `interactive` flag covers because nothing is animating.
+   */
+  const ui_exporter::Screen* lastScreen_ = nullptr;
+  /**
+   * Whether the last painted frame carried a countdown overlay.
+   *
+   * The overlay is drawn ON TOP of the base screen, so `lastScreen_` cannot see it come or
+   * go. Releasing a hold-to-confirm early clears `interactive` on the same pass, which drops
+   * the interval back to 1 s — without this the abandoned overlay would stay on the panel for
+   * up to a second, which reads as "the countdown is still running".
+   */
+  bool lastCountdownActive_ = false;
   const ui::UiScreenRouter* screenRouter_ = nullptr;
   const ui::UiBindingResolver* bindingResolver_ = nullptr;
 };

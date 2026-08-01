@@ -53,6 +53,22 @@ struct UiRenderContext {
   /** Position within the current level's ring, for the scrollbar. 0 = unknown. */
   uint8_t ringIndex = 0;
   uint8_t ringCount = 0;
+  /**
+   * True while something on screen changes faster than the 1 Hz telemetry cadence: an open
+   * value editor stepping its pending value (§5.4), or a running countdown (§3.3).
+   *
+   * UiRenderer used to infer this from `mode == UiMode::Configuration`, a mode the 0.2 header
+   * note records as "never implemented" and which nothing sets — ui_actions.cpp is the only
+   * setMode() caller and it passes Info. So the fast cadence was unreachable and editors and
+   * countdowns redrew once a second. Publishing the condition as state rather than deriving
+   * it from a retired mode keeps §7's 100 ms acknowledgement out of the mode enum entirely.
+   *
+   * Navigation between screens is deliberately NOT in here: a page change is a one-off event,
+   * and the renderer handles it by repainting the instant the resolved screen differs from the
+   * one on the panel. Holding a static menu page at 12.5 Hz would buy nothing and cost a
+   * full-panel clear per frame.
+   */
+  bool interactive = false;
   bool hasWarnings = false;
   uint8_t warningCount = 0;
   std::string warningSummary;

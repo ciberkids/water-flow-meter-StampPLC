@@ -36,12 +36,6 @@ bool copyLiteral(const char* text, char* buffer, std::size_t bufferSize) {
   return true;
 }
 
-std::string_view bindingView(const ui_exporter::Element& element) {
-  if (!element.bindingId) {
-    return {};
-  }
-  return std::string_view(element.bindingId);
-}
 
 /**
  * Splits `sensor.<n>.<metric>` into a zero-based index and the metric suffix.
