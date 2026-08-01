@@ -69,10 +69,6 @@ export function useSimulatedButtons(onEvent: (event: SimulatedButtonEvent) => vo
       clearInterval(runtime.repeatTimer);
       runtime.repeatTimer = undefined;
     }
-    // Clean up tiered acceleration timers
-    const rt = runtime as any;
-    if (rt._tier2Timer) { clearTimeout(rt._tier2Timer); rt._tier2Timer = undefined; }
-    if (rt._tier3Timer) { clearTimeout(rt._tier3Timer); rt._tier3Timer = undefined; }
   }, []);
 
   const clearComboTimers = useCallback(() => {
@@ -190,47 +186,22 @@ export function useSimulatedButtons(onEvent: (event: SimulatedButtonEvent) => vo
         emitEvent(button, "long");
 
         if (button !== "enter") {
-          // §5.3.5 Tiered acceleration:
-          // Tier 1: 0–700ms after long press: ±1 every 250ms (base cadence)
-          // Tier 2: 700ms–1.5s: ±5 every 150ms
-          // Tier 3: >1.5s: ±25 every 150ms
-          const TIER1_DURATION = 700;
-          const TIER2_DURATION = 800; // 700 + 800 = 1500ms total
-          const TIER1_INTERVAL = 250;
-          const TIER2_INTERVAL = 150;
-          const TIER3_INTERVAL = 150;
-
-          // Start tier 1 repeats
+          // Display_UI_Requirements §3.1: "UP / DOWN held — Repeat every 250 ms when
+          // navigating; accelerating adjust in a numeric editor (§5.4)."
+          //
+          // Flat, not accelerating. This hook used to ramp the interval 250 -> 150 -> 150 ms
+          // and tag each event with a §5.4 tier multiplier, which is the editor's contract,
+          // not navigation's — and the mockup previews navigation only, so every repeat it
+          // emits is a navigation repeat. The multiplier was never read by any consumer, and
+          // the flat REPEAT_INTERVAL_MS above had been left declared and unused, which is the
+          // fingerprint of the tier code displacing it.
+          //
+          // ENTER is excluded because ENTER-held is a countdown, never a repeat — the same
+          // rule ButtonInputManager applies on the device.
           runtime.repeatTimer = setInterval(() => {
             if (comboRef.current.active) return;
-            onEvent({ button, kind: "repeat", timestamp: Date.now(), tier: 1 });
-          }, TIER1_INTERVAL);
-
-          // After 700ms, switch to tier 2
-          const tier2Timer = setTimeout(() => {
-            if (!runtime.pressed || comboRef.current.active) return;
-            if (runtime.repeatTimer) clearInterval(runtime.repeatTimer);
-            runtime.repeatTimer = setInterval(() => {
-              if (comboRef.current.active) return;
-              onEvent({ button, kind: "repeat", timestamp: Date.now(), tier: 5 });
-            }, TIER2_INTERVAL);
-
-            // After another 800ms, switch to tier 3
-            const tier3Timer = setTimeout(() => {
-              if (!runtime.pressed || comboRef.current.active) return;
-              if (runtime.repeatTimer) clearInterval(runtime.repeatTimer);
-              runtime.repeatTimer = setInterval(() => {
-                if (comboRef.current.active) return;
-                onEvent({ button, kind: "repeat", timestamp: Date.now(), tier: 25 });
-              }, TIER3_INTERVAL);
-            }, TIER2_DURATION);
-
-            // Store tier3 timer for cleanup
-            (runtime as any)._tier3Timer = tier3Timer;
-          }, TIER1_DURATION);
-
-          // Store tier2 timer for cleanup
-          (runtime as any)._tier2Timer = tier2Timer;
+            onEvent({ button, kind: "repeat", timestamp: Date.now() });
+          }, REPEAT_INTERVAL_MS);
         }
       }, LONG_PRESS_MS);
     },
