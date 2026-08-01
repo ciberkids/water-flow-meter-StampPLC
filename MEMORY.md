@@ -1,176 +1,163 @@
 # Session Handoff
 
-**Updated:** 2026-07-30
-**Branch:** `fix/pipeline-verification-gates` — 13 commits, **pushed** to `origin`, in sync
-**Base:** `main` @ `03ed89c` · **HEAD:** `e5d8732`
-**PR:** not opened. `https://github.com/ciberkids/water-flow-meter-StampPLC/pull/new/fix/pipeline-verification-gates`
+**Updated:** 2026-08-01
+**Branch:** `fix/pipeline-verification-gates` — 42 commits ahead of `main`, pushed, in sync
+**PR:** not opened
 
-Every claim below is backed by a command that was run. Where something is unverified it
-says so. The previous version of this file claimed "fully realigned" and "tests passing"
-while the firmware did not compile at all — please keep this one honest.
+The previous version of this file was 22 commits stale and worse than useless: it told a
+reader to protect a validation check that had since been deliberately retired, and listed as
+"next" a slice that had shipped fifteen commits earlier. A four-lens documentation audit on
+2026-08-01 rated it *badly-stale* and found 50 false claims across 17 documents.
+
+So the rule for this file: **every claim names the command that proves it, or says it is
+unverified.** If you are reading this more than a few days after the date above, run §1 before
+trusting §3.
 
 ---
 
-## 1. How to verify the current state
+## 1. Verify the state in four commands
 
 ```bash
-# Firmware toolchain (build the image once; ~5 min, downloads the ESP32 toolchain)
-cd Water-Flow-Meter-PlatformIO
-podman build -t stampplc-fw .
+# 1. Firmware compiles (build the image once; ~5 min)
+cd Water-Flow-Meter-PlatformIO && podman build -t stampplc-fw .
 podman run --rm -v "$PWD":/workspace:Z -w /workspace stampplc-fw pio run -e m5stack-stamplc
 
-# Web + exporter
-cd web/mockup
-npx tsc --noEmit          # 0 errors
-npm run test:unit         # 18/18
-npm run test:exporter     # 27/27
-npm run export:firmware   # ok-with-warnings (see §3)
+# 2. Host tests + manifest freshness — no PlatformIO, no container, ~2 s
+Water-Flow-Meter-PlatformIO/test/host/run.sh
+
+# 3. Web suites
+cd web/mockup && npm ci && npx tsc --noEmit && npm run test:unit && npm run test:exporter
+
+# 4. Export gates
+npm run export:firmware
 ```
 
-Last measured: firmware **SUCCESS**, RAM 7.8%, Flash 17.8% with all 48 screens.
+Last run, 2026-08-01: firmware SUCCESS (RAM 7.8 %, Flash 18.1 %); **180 host checks** across
+six suites; 21 unit; 27 exporter; export `ok` with **9/9 gates and no warnings**.
 
-`npm run test:visual` is **UNVERIFIED** — it gets past `tsc && vite build` but Playwright
-browsers are not installed (`npx playwright install chromium`). Snapshots likely need
-refreshing: the design toolbox gained and lost buttons this session.
+Do **not** run `npm run test:cypress`. It runs the exporter with
+`--screens tests/fixtures/legacy-screens.json` and no `--out` override, so it overwrites the
+committed firmware UI assets with a build from an obsolete fixture — and it cannot pass. It is
+not in CI. A fix or a deletion is in flight.
+
+`npm run test:visual` is **unverified**: it gets past `tsc && vite build` but Playwright
+browsers are not installed, and the snapshots need regenerating.
 
 ---
 
-## 2. What this session did
+## 2. What this project is
 
-Started as "read the docs and report deviations". The report became
-`docs/active_work/open_decisions.md` (31 decisions, all now answered).
+A water-flow meter on an M5Stack StampPLC (ESP32-S3). It measures up to 8 flow sensors,
+publishes over Modbus RTU, and has a 240×135 landscape display driven by **three buttons**.
 
-**The pipeline was fundamentally broken and reported success.** Fixed, in order:
+The distinctive part: the on-device UI is **designed in a web app**, exported to JSON, and
+translated into `constexpr` C++ tables the firmware renders. So three vocabularies — screen
+ids, action ids and binding ids — must agree across a browser, a Node exporter and a firmware
+build. Nearly every serious bug on this branch has been a disagreement between them.
 
-1. **The firmware had never compiled.** `platformio.ini` declared `framework = espidf`
-   while every source is Arduino-style, so `setup()`/`loop()` were never called and
-   `M5StamPLC.h` would not resolve. Also: sources use C++17 (`std::string_view`,
-   `inline constexpr`, `std::clamp`) but the Arduino core defaults to gnu++11; `eModbus.h`
-   does not exist (it is `ModbusServerRTU.h`); `eModbus` was absent from `lib_deps`;
-   `M5StamPLC 1.2.0` removed `IO.getDigitalInput()`.
-2. **`GeneratedUi.h` could not compile** — `struct Flow` referenced `KeyValue` before its
-   declaration. The exporter's own compile gate would have caught it, except a missing
-   PlatformIO degraded to "warning" while the export still said `status: "ok"`.
-3. **The display would have been blank and every button dead.** `UiScreenMap` defaulted to
-   screen IDs (`info-overview`, `configuration`, `countdown`) that exist nowhere in the
-   dataset, so `screenForMode()` returned nullptr and `InteractionHandler` dropped every
-   event.
-4. **The design tool and the exporter read different fields.** The tool wrote
-   `element.dataSourceId`; the exporter emits firmware bindings from `element.binding`
-   only. Anything bound *through the UI* rendered in the mockup and was silently dropped
-   from firmware. Unified on `binding`.
-5. **The Modbus task was unpinned.** `modbus.begin()` without a core ID gives
-   `tskNO_AFFINITY` at priority 8 — free to run on core 0 and preempt the priority-2
-   polling task, contradicting `Project_document.md` §3.2. Now pinned to core 1.
-
-Then: requirements rewritten for a hierarchical navigation model, and 38 screens generated
-from the firmware value catalogue (dataset 27 → 48 screens).
-
----
-
-## 3. The one thing that is deliberately NOT finished
-
-**8 actions the dataset uses have no firmware handler**, so those buttons do nothing:
-
-```
-ui.action.nav.descend            config.action.value.increment
-ui.action.nav.back               config.action.value.decrement
-ui.action.nav.escape             config.action.value.commit
-                                 config.action.value.discard
-                                 config.action.value.commit-override
-```
-
-This is **reported on every export** by the `firmware-action-coverage` check, which is why
-the export status is `ok-with-warnings` rather than `ok`. It cannot silently read as
-complete. Do not "fix" the warning by deleting the check.
-
-**Next slice = implement these.** In `Water-Flow-Meter-PlatformIO/src/`:
-
-- A navigation stack in `ui_controller.h` (`UiNavNode { levelId, pageIndex }`, max depth 5)
-  replacing the flat `UiPage`, with descend / back / escape.
-- `UiEditorState { setting, pending, saved, holdStartMs, accelTier }` and the three
-  acceleration tiers from `Display_UI_Requirements.md` §5.4, driven off
-  `ButtonInputManager::pressedDuration()`.
-- `UiRenderContext` gains the config fields the `config.*` bindings need (decision B2).
-- Per-level screen tables in `ui_screen_router.cpp`, each `static_assert`ed against its
-  page-count enum — the same pattern as the existing `kInfoScreenIds`.
-- The commit path of §5.5, including the Nyquist prompt.
-
----
-
-## 4. Also queued (all decided, none started)
-
-| Item | What |
+| Layer | Where |
 | --- | --- |
-| **A1 firmware** | Link registers 40–47 with staged writes + `0x5AA5` apply + 60 s rollback. Needs `preferences.begin()` moved *before* `Serial.begin()` in `logicTaskCode` — it is currently after, with baud and slave ID hardcoded. |
-| **LED §3.4/§3.5** | Boot snake (R→G→B, 150 ms, red-blink after 10 s) and reset ramp (accelerating white → solid white on acceptance, no flash on abort). Needs `UiCountdownState` to carry `totalMs` — whole seconds cannot drive a 60 ms period. |
-| **D2** | Generate the manifest from firmware (spike Approach A: `kActionDescriptors` + `static_assert` + `manifest_gen`). Promoted to a prerequisite by **D5**. |
-| **D4** | `POST` the dataset in the export body + a checked-in baseline, so "Export to Firmware" can never ship stale JSON. |
-| **D5** | Catalogue-driven palette: layout elements placed freely, bound elements chosen from the catalogue only — never a hand-typed ID. |
-| **F1** | `git rm -r --cached web/mockup/node_modules` (10,615 files, and the tracked copy is stale — no `vitest`, so a fresh clone cannot run the tests). |
-| **F2** | Delete `carea/` — stray bare git repo, verified empty of project content. |
-| **F4/F5** | Rewrite `active_work_tracker.md` (all 37 items marked done, every link broken). README references five paths that do not exist. |
-| **F6** | CI: `npm ci`, `test:unit`, `test:exporter`, `build`, and the containerised `pio run`. |
-| **F7** | Remove `.antigravity/ .antigravitycli/ .beads/ .codex/ .kiro/ .shirika/` and `AGENTS.md`; keep Claude Code. `.beads/issues.jsonl` verified **empty**, so no issue data is lost. |
-| **G1** | **Needs you at the hardware.** Flash and read register 0–1 for the real `pollingRate_kHz`. `readPlcInput()` is 8 I²C reads where the old bulk call was 1, so the rate dropped ~8×. Arithmetic says ~2–4 kHz against the ~660 Hz a 50 L/min YF-B10 needs, so there should be 3–6× headroom — but measure it. |
+| Design tool | `web/mockup/` (React/Vite) |
+| Exporter | `web/mockup/tools/exporter/` → `src/ui/generated/GeneratedUi.{h,cpp}` |
+| Firmware | `Water-Flow-Meter-PlatformIO/src/` |
+| Manifest | generated **from** firmware by `tools/manifest_gen/` (decision D2) |
 
 ---
 
-## 5. Unfinished verification
+## 3. Where things stand
 
-An adversarial workflow over the generated dataset was **stopped mid-run** at pause time
-(4 lenses: ring closure, geometry, requirements conformance, binding correctness). Resume,
-reusing cached results for agents that already finished:
+### Working and tested
 
-```
-Workflow({
-  scriptPath: "/home/matteo/.claude/projects/-home-matteo-Documents-projects-personal-water-flow-meter/0e8c4cef-8c97-4929-9d99-eee863e13f91/workflows/scripts/verify-generated-nav-dataset-wf_78bd8161-e4e.js",
-  resumeFromRunId: "wf_78bd8161-e4e"
-})
-```
+- Firmware compiles on two independent toolchains — the container and a clean GitHub runner.
+- **A device harness exists.** `test/host/interaction_test.cpp` links the real `UiController`,
+  `UiNavigator`, `UiScreenRouter`, `InteractionHandler`, `ButtonInputManager`, `ui_actions`,
+  `ui_bindings`, `ui_settings`, `ui_renderer` and `LedController` against the real 48-screen
+  generated table, with only `Preferences`, `M5StamPLC` and `ModbusMessage` stubbed
+  (`test/host/stubs/`). No hardware. This is the emulator, and it is where new UI behaviour
+  belongs.
+- The manifest is **generated** from the firmware's own catalogues, and `run.sh` fails when the
+  committed copy is stale. Action ids are cross-checked against their handler table by
+  `static_assert`.
+- CI runs three jobs on every push, and has already caught two bugs invisible locally.
 
-That path is in session scratch, so it may not survive. The script is short enough to
-re-author from the four lens descriptions inside it. **The generated dataset has not been
-independently audited** — the export gates pass, but ring closure and element overlap were
-never machine-checked.
+### Fixed 2026-07-31 / 08-01 — each with a test that fails against the previous commit
 
----
-
-## 6. Working tree
-
-`git status` is **clean** — and that is my error, flagged here rather than buried.
-
-Your two uncommitted files were swept into commit `af177cf` ("feat: value catalogue with
-descriptors; pin Modbus to core 1") by a `git add -A`, after I had told you they would be
-left alone. Nothing is lost and nothing is broken, but they are sitting in a commit whose
-message does not mention them:
-
-- `web/mockup/src/App.tsx` — `globalValues={firmwareLoopValues}`
-- `web/mockup/src/components/DisplayViewport.tsx` — disabled-sensor `--` rendering
-
-One silver lining: that code originally read `element.dataSourceId`, which never fired
-because nothing in the dataset ever set that field. The later unification (§2 item 4)
-migrated it to `element.binding`, so it should now actually work — verified there are zero
-`dataSourceId` references left in the file.
-
-If you want it as its own commit, on an unpushed branch that is a cheap fix:
-
-```bash
-git rebase -i af177cf~1        # or: reset the two files and recommit them separately
-```
-
-I did not attempt it unsupervised at pause time; rewriting history is not something to do
-while walking out the door.
-
----
-
-## 7. Key documents
-
-| Document | Why |
+| Was | Consequence |
 | --- | --- |
-| `docs/active_work/open_decisions.md` | 31 decisions with rationale. Start here. |
-| `docs/Requirements/feature addition/Display_UI_Requirements.md` (0.2) | The authoritative UI spec — navigation tree, gesture contract, editors. |
-| `docs/new feature proposal/NF-20260730-01-menu-navigation-model.md` (0.2) | Why the model is shaped this way, and what was rejected. |
-| `docs/Requirements/Project_document.md` | §4.1.1 link registers, §5.3 LED items 5–6. |
-| `docs/Requirements/feature addition/RGB_LED_Behavior.md` (0.2) | §3.4 boot snake, §3.5 reset ramp. |
-| `web/mockup/tools/skeleton/generate.mjs` | The one-shot scaffold generator, re-runnable with `--write`. |
+| Confirm screens could not be confirmed — 0 of 48 screens matched the arming predicate | the only working factory reset was the blind combo §3.3 had retired |
+| That blind UP+DOWN 30 s combo was **live**, on the same two buttons §3.1 uses for display-off | a **hazard**: holding the documented display-off gesture for 3 s started a wipe |
+| Going idle cleared neither the nav stack nor the pending edit | the display woke with a live editor; the first ENTER could commit a Modbus write |
+| Green LED required all **eight** channels | no realistic installation ever showed green |
+| The dataset clamp used **portrait** bounds | 49 of 375 elements mutated on every ingest |
+| Holding UP/DOWN on a navigation level stepped nothing | while the browser preview paged happily |
+| The value editor opened on config **list** pages | swallowing UP/DOWN paging |
+| Everything repainted at 1 Hz | the fast cadence was gated on a retired mode |
+| Sensor settings were not persisted at commit | and a disabled channel's calibration never at all |
+| Link apply never re-bound the slave ID | and rollback could therefore never fire |
+
+### Known broken
+
+- **Acknowledgement toasts never appear.** The screens exist; nothing drives their entry timer.
+  `Display_UI_Requirements` §6.6 *certifies* this requirement satisfied. It is not.
+- **The Nyquist override screen is never pushed**, so §5.5's "save anyway" path is unreachable.
+- **D4** — the browser's dataset never reaches the exporter, so Export exports what is on
+  *disk*. Also needs theme writeback: `App.tsx` syncs theme one way only.
+- **Menu packs: 0 % built.** No SD-card code anywhere. The specification is thorough and its
+  factual claims check out; nothing implements it.
+- **WiFi/MQTT**: 2 of 9 slices done — the text-entry engine and the text-setting type system.
+
+### Nothing has run on hardware
+
+Not once. The RS485 pin correction, the LED patterns and every gesture and timing are verified
+only against the datasheet, the specifications and 180 host checks. **G1** — measuring
+`pollingRate_kHz` — is the only item that strictly needs the device, and it is now also a
+prerequisite for the WiFi work, whose acceptance criterion is a 5 % budget against a radio-off
+baseline that does not exist yet.
+
+---
+
+## 4. Documents you can and cannot trust
+
+| Trust | Do not trust |
+| --- | --- |
+| `docs/Project definitions/Gesture_Reference.md` — every ✅ names its test | `README.md` — five referenced paths do not exist; its firmware test command cannot work |
+| `docs/active_work/open_decisions.md` — the de-facto ADR, 42 entries | `web/mockup/README.md` — describes a portrait display and an empty dataset |
+| `Project_document.md` §4.1/§4.2 — the register map, verified line-for-line | `UI_Firmware_Interface.md` — **the most dangerous live document**: lists 4 actions where there are 15 |
+| `Loadable_UI_Menu_Packs.md` — as a *specification* | `Implementation_Alignment_Report.md` — audits a file layout that no longer exists |
+
+`open_decisions.md` caveat: ✅ in a heading means **agreed**, not **landed**. The emoji is
+severity; status lives in the `Decision:` line.
+
+---
+
+## 5. The pattern worth carrying forward
+
+Every significant bug on this branch was **a check that was not checking**, or a claim nothing
+verified:
+
+- Two prior handoffs claimed "aligned, tests passing" while the firmware did not compile.
+- Three requirement documents said the blind factory-reset combo was removed. It was not.
+- A code comment and decision H4 both asserted idle clears the navigation stack. It did not.
+- Three unit tests asserted a **mirrored Y axis**; two asserted **portrait** display bounds.
+  Both suites were green because they encoded the bug they should have caught.
+- `run.sh` had no `-Werror`, so the `-Wswitch` guarantee protecting the manifest generator was
+  one flag away from being an unread warning.
+- The gesture reference's own status column was wrong within **hours** of being written.
+
+So: prefer a check that executes over a sentence that asserts; negative-test every new gate by
+breaking it deliberately and watching it fail; and treat a green suite over untested code as no
+evidence at all. Before this branch, `interaction_handler.cpp`, `ui_controller.cpp` and
+`ui_actions.cpp` were compiled by **no test** while nine gates reported success.
+
+---
+
+## 6. Mistakes to know about
+
+Early on I ran `git add -A` and swept the user's uncommitted work into commit `af177cf` after
+telling them their work was untouched. I corrected the record rather than rewriting history
+unsupervised.
+
+Related, on 2026-08-01: a batch of workflow agents wrote 1,235 lines directly into the working
+tree when they had been asked only to *design* patches. Recoverable — the diff was preserved
+and reviewed before anything was committed — and the reason later runs use
+`isolation: 'worktree'`.
