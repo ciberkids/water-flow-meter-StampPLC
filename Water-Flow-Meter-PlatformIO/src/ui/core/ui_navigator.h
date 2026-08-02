@@ -46,6 +46,25 @@ class UiNavigator {
   void escape();
 
   /**
+   * Swaps the current screen for another AT THE SAME DEPTH, leaving the stack untouched.
+   *
+   * The distinction from `descend` matters, and the acknowledgement toast is why. A toast
+   * dismisses itself with `ui.action.nav.back` (see the Timeout flows on `toast-*` in the
+   * generated table), so pushing it onto the confirm screen would ascend straight back into
+   * "RESET TOTALS?" — the operator would be asked again whether to do the thing they had just
+   * done. Replacing the confirm screen means that same ascend lands on the page they started
+   * from, which is what Display_UI_Requirements §4.3.1 asks for.
+   *
+   * Deliberately a general operation rather than a toast special case: any screen that stands
+   * in for another at the same level needs it, and the menu-pack work will want it to swap a
+   * loaded pack's screen for a built-in one without adding a level.
+   *
+   * False when `screen` is null. Safe at the root, where it simply changes which screen the
+   * root shows without inventing a level to pop.
+   */
+  bool replaceCurrent(const ui_exporter::Screen* screen);
+
+  /**
    * 1-8 while inside a sensor's sub-tree, 0 otherwise.
    *
    * Cached when descending out of a `config-sensor-<n>` page rather than re-parsed

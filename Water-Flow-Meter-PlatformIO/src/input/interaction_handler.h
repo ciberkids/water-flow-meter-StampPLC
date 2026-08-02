@@ -95,6 +95,21 @@ class InteractionHandler {
     const ui_exporter::Flow* timeoutFlow = nullptr;
   };
 
+  /**
+   * The auto-timeout half of NF-20260730-01 §3.8, whose §3 item 8 asks for exactly this:
+   * "a timer started on screen entry that fires its flow without requiring a button".
+   *
+   * Distinct from HoldCountdownState because the two kinds of timeout differ in the one way
+   * that matters — a hold countdown requires ENTER to be held and aborts on release, while an
+   * auto timeout runs unattended. Sharing one state would have meant a flag deciding which
+   * rules applied, on every branch.
+   */
+  struct EntryTimerState {
+    const ui_exporter::Screen* screen = nullptr;
+    const ui_exporter::Flow* flow = nullptr;
+    uint32_t startMs = 0;
+  };
+
   struct ComboState {
     bool active = false;
     uint32_t startMs = 0;
@@ -115,6 +130,9 @@ class InteractionHandler {
                              ButtonInputManager& buttonInput,
                              UiController& uiController);
   void handleFactoryReset(uint32_t nowMs, UiCountdownState* countdown);
+
+  /** Arms on arrival at a screen carrying an unattended Timeout flow; fires when it expires. */
+  void handleEntryTimer(uint32_t nowMs, UiController& uiController);
   void scheduleFactoryReset(uint32_t nowMs);
   void handleHoldCountdown(uint32_t nowMs,
                            ButtonInputManager& buttonInput,
@@ -134,6 +152,7 @@ class InteractionHandler {
 
   FactoryResetState factoryResetState_{};
   HoldCountdownState holdCountdown_{};
+  EntryTimerState entryTimer_{};
   ComboState comboState_{};
   EditorRepeatState editorRepeat_{};
   FactoryResetFn factoryResetFn_ = nullptr;

@@ -850,10 +850,15 @@ void confirmCountdownTests() {
   for (int i = 0; i < 40; ++i) dev.tick(50);  // past 3000 ms
   check(wroteOnce(plc::REG_MASTER_RESET_ALL_MEASURED),
         "holding ENTER for 3 s issues the reset-all-measured command exactly once (§4.3 note 3)");
-  // (d) ascend-after-dispatch: the reset is worthless if the operator is left staring at
-  // "RESET TOTALS?" with no way to tell it happened.
+  // (d) the reset is worthless if the operator is left staring at "RESET TOTALS?" with no way
+  // to tell it happened. This originally ascended straight to the originating page, which was
+  // a documented interim shortcut taken because the toast had no driver. It does now, so the
+  // journey is confirm -> toast -> originating page, and the toast is the acknowledgement
+  // §4.3.1 asks for. Asserted end to end rather than only at the destination.
+  check(onScreen(dev, "toast-totals-reset"), "and the acknowledgement toast is shown");
+  for (int i = 0; i < 24; ++i) dev.tick(100);  // past the toast's declared 2000 ms
   check(dev.controller.navigator().depth() == 0 && onScreen(dev, "info-p2-cumulative-liters"),
-        "and the confirm screen is unwound back to the page it was opened from");
+        "which then dismisses itself back to the page it was opened from");
   check(!dev.controller.context().countdownActive, "the overlay is gone once the action fired");
 
   // Still holding ENTER after the action fired: releasing must not re-open the confirm
@@ -863,8 +868,7 @@ void confirmCountdownTests() {
   dev.tick(30);
   check(wroteOnce(plc::REG_MASTER_RESET_ALL_MEASURED),
         "releasing after the action does not write again");
-  check(onScreen(dev, "info-p2-cumulative-liters"),
-        "nor does it re-descend into the confirm screen");
+  check(!onScreen(dev, "confirm-reset-totals"), "nor does it re-descend into the confirm screen");
 }
 
 void confirmSessionCountdownTests() {
@@ -889,6 +893,8 @@ void confirmSessionCountdownTests() {
   // one direction and 3 s long in the other; 1.7 s of hold must be exactly enough.
   check(wroteOnce(plc::REG_MASTER_RESET_ALL_SESSION),
         "holding ENTER for 1.5 s issues the reset-session command");
+  check(onScreen(dev, "toast-session-reset"), "and its acknowledgement toast is shown");
+  for (int i = 0; i < 24; ++i) dev.tick(100);
   check(dev.controller.navigator().depth() == 0 && onScreen(dev, "info-p4-session-liters"),
         "and returns to the page the operator started from");
   dev.press(ButtonInputManager::Button::Enter, false);
@@ -1098,6 +1104,82 @@ void nyquistPromptTests() {
   harness::writeMode = harness::WriteMode::Accept;
 }
 
+
+/** Walks to P2 and holds ENTER long enough to complete its reset-totals confirm screen. */
+bool completeResetTotals(Device& dev) {
+  for (int i = 0; i < 16; ++i) {
+    if (dev.controller.page() == UiPage::CumulativeLiters) break;
+    dev.tap(ButtonInputManager::Button::Down);
+  }
+  dev.tap(ButtonInputManager::Button::Enter);  // descend to the confirm screen
+  const auto* screen = dev.controller.navigator().current();
+  if (!screen || std::strcmp(screen->id, "confirm-reset-totals") != 0) {
+    return false;
+  }
+  // Hold past the screen's declared 3000 ms.
+  dev.press(ButtonInputManager::Button::Enter, true);
+  for (int i = 0; i < 40; ++i) dev.tick(100);
+  dev.press(ButtonInputManager::Button::Enter, false);
+  dev.tick(30);
+  return true;
+}
+
+void toastTests() {
+  std::printf("\n[acknowledgement toast — §4.3.1, NF-20260730-01 §3.8]\n");
+
+  Device dev;
+  dev.boot();
+  check(completeResetTotals(dev), "reached and completed confirm-reset-totals");
+
+  const auto* afterCommit = dev.controller.navigator().current();
+  check(afterCommit && std::strcmp(afterCommit->id, "toast-totals-reset") == 0,
+        "completing the reset shows the acknowledgement toast, not a bare screen change");
+  check(harness::writes.size() > 0, "and the reset itself was dispatched");
+
+  // The toast must not need a button. NF-20260730-01 §3.8: an auto timeout runs unattended.
+  const uint8_t depthOnToast = dev.controller.navigator().depth();
+  dev.tick(500);
+  check(dev.controller.navigator().current() == afterCommit,
+        "half a second in, the toast is still showing");
+
+  // Past its declared 2000 ms.
+  for (int i = 0; i < 20; ++i) dev.tick(100);
+  const auto* afterToast = dev.controller.navigator().current();
+  check(afterToast != afterCommit, "the toast dismisses itself after its declared 2 s");
+
+  // The point of replaceCurrent: dismissing must land on the ORIGINATING page, not back on
+  // the confirm screen. If the toast had been pushed, nav.back would return to it and the
+  // operator would be asked again whether to do what they just did.
+  check(afterToast && std::strcmp(afterToast->id, "confirm-reset-totals") != 0,
+        "and does NOT return to the confirm screen");
+  check(afterToast && std::strcmp(afterToast->id, "info-p2-cumulative-liters") == 0,
+        "it returns to the page the operator started from");
+  check(dev.controller.navigator().depth() < depthOnToast,
+        "one level shallower than the toast, so the modal is fully unwound");
+}
+
+void toastCancellationTests() {
+  std::printf("\n[an abandoned toast must not fire behind the operator]\n");
+
+  Device dev;
+  dev.boot();
+  check(completeResetTotals(dev), "on the toast");
+
+  // Leave early, the way an impatient operator would: the display-off combo works from any
+  // screen at any depth (§3.1).
+  dev.tapUpDown();
+  const auto* afterEscape = dev.controller.navigator().current();
+  check(dev.controller.navigator().depth() == 0, "UP+DOWN unwound to the root");
+
+  // Now let the toast's timer expire. Its action must NOT fire: it would ascend from wherever
+  // the operator now is, which is not where the timer was armed. Comparing the screen POINTER
+  // rather than a boolean is what makes this work.
+  for (int i = 0; i < 30; ++i) dev.tick(100);
+  check(dev.controller.navigator().current() == afterEscape,
+        "the abandoned toast's timer does not navigate behind the operator");
+  check(dev.controller.navigator().depth() == 0, "and does not pop below the root");
+}
+
 }  // namespace
 
 int main() {
@@ -1107,6 +1189,8 @@ int main() {
   navigationRingTests();
   retiredComboTests();
   nyquistPromptTests();
+  toastTests();
+  toastCancellationTests();
   configListPagingTests();
   configEditorDescentTests();
   sensorEditorDescentTests();

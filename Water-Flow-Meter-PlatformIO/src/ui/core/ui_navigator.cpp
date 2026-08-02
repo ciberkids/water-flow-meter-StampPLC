@@ -158,4 +158,15 @@ bool UiNavigator::ringPosition(uint8_t* indexOut, uint8_t* countOut) const {
   return true;
 }
 
+bool UiNavigator::replaceCurrent(const ui_exporter::Screen* screen) {
+  if (!screen) {
+    return false;
+  }
+  // depth_ and stack_ are untouched on purpose: this is a substitution at the current level,
+  // not a move between levels. sensorIndex_ is preserved for the same reason — the operator
+  // has not left the sensor's sub-tree.
+  current_ = screen;
+  return true;
+}
+
 }  // namespace ui

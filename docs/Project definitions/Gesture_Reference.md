@@ -1,6 +1,6 @@
 # Gesture Reference
 
-**Version:** 1.1
+**Version:** 1.2
 **Date:** 2026-08-01
 **Status:** reference — describes both what is *specified* and what is *built*, and these are
 not yet the same thing.
@@ -205,20 +205,27 @@ Two notes a menu author needs:
 
 ## 8. Gaps, and what closed
 
-### 8.1. Still broken: acknowledgement toasts never appear ❌
+### 8.1. Closed: acknowledgement toasts ✅
 
-Two screens (`toast-totals-reset`, `toast-session-reset`) declare a `Timeout` flow with **no**
-button — an automatic dismissal after 2 s. Nothing drives it. There is no screen-entry timer,
-so the flow never fires.
+Completing a reset now shows its toast for the declared 2 s and then returns to the page the
+operator started from, which is the "proof the action happened rather than an unexplained
+screen change" of `Display_UI_Requirements` §4.3.1.
 
-`Display_UI_Requirements` §4.3.1 and §6.6 describe the toast as delivering "proof the action
-happened rather than an unexplained screen change", and §6.6 certifies that requirement
-satisfied. It is not. Completing a reset currently ascends straight to the parent, so the
-operator gets the screen change without the proof.
+It needed the two pieces NF-20260730-01 §3.8 and its §3 item 8 called for:
 
-Needs two things that do not exist: a screen-entry timer, and a navigator replace-at-depth
-primitive — without the latter the toast's own `nav.back` would return to the confirm screen
-rather than to the page the operator started from.
+- **A screen-entry timer** for the unattended kind of timeout — a `Timeout` flow carrying
+  `FlowButton::None`, as against the confirm screens' `Timeout` + `ENTER`. It re-arms by
+  comparing the screen *pointer*, so leaving a toast early cancels it rather than letting its
+  action fire behind the operator a second later.
+- **`UiNavigator::replaceCurrent`**, which swaps a screen at the same depth. A toast dismisses
+  itself with `ui.action.nav.back`, so pushing it onto the confirm screen would have ascended
+  straight back into "RESET TOTALS?" — asking the operator again whether to do what they had
+  just done. Replacing the confirm screen makes that same ascend land on the originating page.
+
+One thing this does **not** close: `RGB_LED_Behavior` §3.5's solid-white acceptance latch still
+only fires for factory reset, because `firmware.cpp` gates `noteResetAccepted` on
+`restartScheduled`. Reset-totals and reset-session get the toast on the display and no latch on
+the panel.
 
 ### 8.2. Unverified, not broken ⚠️
 

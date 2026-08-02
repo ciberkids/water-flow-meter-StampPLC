@@ -80,6 +80,7 @@ InteractionResult InteractionHandler::update(uint32_t nowMs,
   handleDisplayOffCombo(nowMs, buttonInput, uiController);
   handleEditorRepeat(nowMs, buttonInput, uiController);
   handleFactoryReset(nowMs, &result.countdown);
+  handleEntryTimer(nowMs, uiController);
 
   const bool factoryResetBusy =
       factoryResetState_.holdActive || factoryResetState_.restartScheduled;
@@ -233,6 +234,51 @@ void InteractionHandler::handleFactoryReset(uint32_t nowMs, UiCountdownState* co
     countdown->secondsRemaining = 0;
     countdown->label = "Factory reset complete";
   }
+}
+
+/** The unattended Timeout flow on a screen, or nullptr. FlowButton::None is the marker. */
+const ui_exporter::Flow* findEntryTimeoutFlow(const ui_exporter::Screen* screen) {
+  if (!screen || !screen->flows) {
+    return nullptr;
+  }
+  for (std::size_t i = 0; i < screen->flowCount; ++i) {
+    const auto& flow = screen->flows[i];
+    if (flow.trigger != ui_exporter::FlowTrigger::Timeout) continue;
+    // The discriminator of NF-20260730-01 §3.8: a Timeout flow carrying ENTER is a hold
+    // countdown and belongs to armHoldCountdown; one carrying None runs unattended.
+    if (flow.button != ui_exporter::FlowButton::None) continue;
+    if (flow.timeoutMs == 0) continue;
+    return &flow;
+  }
+  return nullptr;
+}
+
+void InteractionHandler::handleEntryTimer(uint32_t nowMs, UiController& uiController) {
+  const auto* screen = uiController.navigator().current();
+
+  // Re-arm whenever the screen changes. Comparing the SCREEN POINTER rather than a bool is
+  // what makes navigating away cancel the timer: the operator leaving a toast early must not
+  // have its action fire behind them a second later.
+  if (screen != entryTimer_.screen) {
+    entryTimer_ = EntryTimerState{};
+    entryTimer_.screen = screen;
+    entryTimer_.flow = findEntryTimeoutFlow(screen);
+    entryTimer_.startMs = nowMs;
+    return;
+  }
+
+  if (!entryTimer_.flow) {
+    return;
+  }
+  if (nowMs - entryTimer_.startMs < entryTimer_.flow->timeoutMs) {
+    return;
+  }
+
+  // Fire once. Clearing the flow first means a handler that does not navigate cannot re-fire
+  // on the next pass.
+  const auto* flow = entryTimer_.flow;
+  entryTimer_.flow = nullptr;
+  dispatchFlowAction(nowMs, uiController, *flow);
 }
 
 void InteractionHandler::scheduleFactoryReset(uint32_t nowMs) {
@@ -419,6 +465,11 @@ void InteractionHandler::handleHoldCountdown(uint32_t nowMs,
     } else if (const auto* flow = holdCountdown_.timeoutFlow) {
       dispatchFlowAction(nowMs, uiController, *flow);
     }
+    // Captured BEFORE the state is cleared. Reading it afterwards silently yielded nullptr and
+    // fell through to the plain ascend, so the toast never appeared — found by the test below,
+    // not by reading the code.
+    const ui_exporter::Flow* completedFlow = holdCountdown_.timeoutFlow;
+
     holdCountdown_ = HoldCountdownState{};
     buttonInput.clearEvents();
     countdown->active = false;
@@ -440,8 +491,21 @@ void InteractionHandler::handleHoldCountdown(uint32_t nowMs,
     // Factory reset is the exception: the device reboots in a second and the combo path's
     // "Factory reset complete" overlay is the acknowledgement, so unwinding to P8 first
     // would only flicker. A judgment call, not a correctness constraint.
-    if (!isFactoryReset && uiController.navigator().ascend()) {
-      uiController.syncPageFromScreen(uiController.navigator().current(), nowMs);
+    if (!isFactoryReset) {
+      // Prefer the flow's declared target — the acknowledgement toast — REPLACING the confirm
+      // screen rather than descending onto it. The toast dismisses itself with
+      // ui.action.nav.back, so pushing it would ascend right back into "RESET TOTALS?"; a
+      // replacement at the same depth makes that ascend land on the originating page, which is
+      // what §4.3.1 asks for.
+      const auto* toast = completedFlow && completedFlow->targetScreenId
+                              ? deps_.screenRouter->screenById(completedFlow->targetScreenId)
+                              : nullptr;
+      if (toast) {
+        uiController.navigator().replaceCurrent(toast);
+        uiController.syncPageFromScreen(uiController.navigator().current(), nowMs);
+      } else if (uiController.navigator().ascend()) {
+        uiController.syncPageFromScreen(uiController.navigator().current(), nowMs);
+      }
     }
   }
 }
