@@ -25,6 +25,16 @@ struct InteractionResult {
   bool ledsSuspended = false;
   bool restartScheduled = false;
   uint32_t restartAtMs = 0;
+  /**
+   * A guarded reset was just accepted, on the pass it completed.
+   *
+   * RGB_LED_Behavior §3.5 wants solid white on acceptance for EVERY reset confirm screen —
+   * factory reset, reset totals and reset session — held for the duration of the
+   * acknowledgement toast. firmware.cpp previously drove that latch off `restartScheduled`,
+   * which only the factory path ever sets, so the two resets that do not reboot produced the
+   * toast on the display and nothing on the panel.
+   */
+  bool resetAccepted = false;
 };
 
 class InteractionHandler {
@@ -137,7 +147,7 @@ class InteractionHandler {
   void handleHoldCountdown(uint32_t nowMs,
                            ButtonInputManager& buttonInput,
                            UiController& uiController,
-                           UiCountdownState* countdown);
+                           InteractionResult* result);
   bool armHoldCountdown(uint32_t nowMs, const ui_exporter::Screen* screen);
   void dispatchFlowAction(uint32_t nowMs,
                           UiController& uiController,

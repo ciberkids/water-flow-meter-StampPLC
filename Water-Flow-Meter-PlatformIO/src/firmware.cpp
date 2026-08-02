@@ -463,7 +463,11 @@ void logicTaskCode(void * pvParameters) {
     if (interactions.countdown.active && interactions.countdown.totalMs > 0) {
       ledController.setResetRamp(interactions.countdown.remainingMs,
                                  interactions.countdown.totalMs);
-    } else if (interactions.restartScheduled) {
+    } else if (interactions.resetAccepted || interactions.restartScheduled) {
+      // resetAccepted covers reset-totals and reset-session, which do not reboot. Gating this
+      // on restartScheduled alone meant only the factory reset produced §3.5's solid-white
+      // acceptance latch, so the two resets an operator actually uses gave no panel signal at
+      // all. kResetAcceptedHoldMs is 2000 ms, matching the acknowledgement toast §3.5 ties it to.
       ledController.noteResetAccepted(now, kResetAcceptedHoldMs);
     } else {
       ledController.clearResetRamp();

@@ -1,131 +1,164 @@
-# Water Flow Meter Platform
+# Water Flow Meter — StampPLC
 
-Multi-workspace project that delivers the complete StampPLC water-flow meter experience: embedded firmware, a React/Vite mockup that simulates the display, exporter tooling that bridges the two, and the documentation/rules that keep every contribution aligned.
+A water-flow meter on an **M5Stack StampPLC** (ESP32-S3). It measures up to eight pulse-output
+flow sensors, publishes readings over **Modbus RTU**, and has a 240×135 landscape display driven
+by **three buttons**.
 
-## Overview
+The distinctive part, and the thing to understand before changing anything: **the on-device UI
+is designed in a web app, exported to JSON, and translated into `constexpr` C++ tables that the
+firmware renders.** Nothing about the screens is hand-written in the firmware.
 
-- **Firmware** (`Water-Flow-Meter-PlatformIO/`) hosts the PlatformIO workspace that drives hardware inputs, LEDs, Modbus, and the runtime UI renderer. It consumes generated assets emitted by the mockup exporter.
-- **UI Mockup + Exporter** (`web/mockup/`) renders a pixel-accurate StampPLC simulator, captures visual tests, and translates datasets into firmware-ready C++ (`src/ui/generated/` in the firmware repo).
-- **Process & Requirements** (`docs/`) contain the operating rules, backlog, requirements, and hardware references that govern development.
-- **Support assets** (`graphics/`, `web/backups/`, `water-flow-meter-StampPLC_Legacy/`, etc.) provide design artifacts, exporter backups, and historical firmware snapshots.
+---
 
-See `docs/Project definitions/Folder structure description.md` for the canonical folder-by-folder breakdown.
+## Verify the checkout in four commands
 
-## Repository Layout
+Run these before trusting any document in this repository, including this one.
 
-- `Water-Flow-Meter-PlatformIO/` – Main PlatformIO project (see its README for detailed layout, build/test commands, and Docker recipe).
-  - `src/input`, `src/led`, `src/modbus`, `src/ui` mirror the runtime subsystems documented in `docs/Requirements`.
-  - `platformio.ini` defines environments used by both local CLI builds (`pio run`) and Podman/Docker builds.
-- `web/mockup/` – React workspace, Playwright/Cypress suites, and the `npm run export:firmware` translator.
-  - `web/backups/` stores timestamped exporter backups, matching the strategy described in the mockup README.
-  - `web/Water Flow Meter PlatformIO/` keeps a minimal firmware mirror for UI-side experiments.
-- `docs/` – Project rules (`Project definitions`), functional requirements, mermaid diagrams, feature proposals, templates, backlog (“missing implementation” + “stories to implement”), hardware references, and archived stories.
-- `graphics/` – SVG assets and rendered mockup images used across documentation and tests.
-- `water-flow-meter-StampPLC_Legacy/` – Read-only legacy firmware kept for reference (single-file firmware plus license).
-- `docker-compose.yml` – Spins up the mockup dev server container pointing at `web/mockup` (hosted on `5173`).
-- `.codex/`, `.vscode/`, and other dotfiles – Editor/agent configuration shared by the team.
+```bash
+# 1. Host tests — no PlatformIO, no container, ~2 seconds
+Water-Flow-Meter-PlatformIO/test/host/run.sh
 
-## Key Workflows
+# 2. Web suites
+cd web/mockup && npm ci && npx tsc --noEmit && npm run test:unit && npm run test:exporter
 
-### Firmware development (`Water-Flow-Meter-PlatformIO/`)
+# 3. The export gates
+npm run export:firmware
 
-- Build locally with PlatformIO:
+# 4. Firmware compiles (build the image once, ~5 min)
+cd ../../Water-Flow-Meter-PlatformIO && podman build -t stampplc-fw .
+podman run --rm -v "$PWD":/workspace:Z -w /workspace stampplc-fw pio run -e m5stack-stamplc
+```
 
-  ```bash
-  cd Water-Flow-Meter-PlatformIO
-  pio run                 # default environment build
-  pio test -d tests/build # compile-only smoke tests
-  ```
+Expected, as of 2026-08-02: **199 host checks** across six suites, 21 unit, 33 exporter, export
+`ok` with **9/9 gates and no warnings**, firmware SUCCESS at RAM 7.8 % / Flash 18.1 %.
 
-- Containerized build (mirrors CI):
+The `:Z` on the volume mount is required on SELinux hosts (Fedora, RHEL). Without it the
+container sees an empty workspace.
 
-  ```bash
-  cd Water-Flow-Meter-PlatformIO
-  podman build -t stampplc-fw .
-  podman run --rm -v $(pwd):/workspace stampplc-fw
-  ```
+**Start with command 1.** It runs the device harness — the real navigator, controller,
+interaction handler and action registry against the real 48-screen table, with only three
+Arduino headers stubbed. It is the fastest way to find out whether the tree is sound, and it
+needs no toolchain at all.
 
-- The UI runtime pulls assets from `src/ui/generated/` (overwritten by the exporter). Keep commits synchronized with the dataset used to produce them.
+---
 
-### UI mockup, testing, and exporter (`web/mockup/`)
+## The pipeline
 
-- Local dev server:
+```
+web/mockup (React)  ──►  src/data/screens.json  ──►  tools/exporter  ──►  GeneratedUi.{h,cpp}
+      designer               the dataset              the translator        constexpr tables
+                                                            │
+                          tools/manifest_gen  ──►  actionManifest.json
+                        (reads the FIRMWARE catalogues)   what the firmware can do
+```
 
-  ```bash
-  cd web/mockup
-  npm install
-  npm run dev -- --host 0.0.0.0 --port 5173
-  ```
+Three vocabularies have to agree across a browser, a Node exporter and a firmware build:
+**screen ids**, **action ids** and **binding ids**. Nearly every serious bug in this project has
+been a disagreement between them — a screen the router looked for and the dataset didn't have, an
+action the designer could wire to nothing, a binding that rendered blank.
 
-  Keyboard shortcuts emulate hardware buttons, and the design/help panels expose schema documentation alongside the live JSON snapshot.
+That is what the gates exist for. `npm run export:firmware` runs nine of them and refuses to
+write assets that would not work:
 
-- Visual regression & schema tests:
+| Gate | Stops |
+| --- | --- |
+| `manifest-screen-coverage` | A screen the firmware resolves by name being absent or renamed |
+| `manifest-action-coverage` | A flow wired to an action no handler implements |
+| `manifest-value-coverage` | An element bound to a value that does not exist |
+| `firmware-binding-coverage` | A bound value `UiBindingResolver` has no case for — it renders blank |
+| `firmware-manifest-resolvable` | The same, for every value the manifest *advertises*, not just those in use |
+| `renderable-element-kinds` | An element kind the firmware cannot draw |
+| `led-legend`, `countdown-overlay`, `diagnostics-banner` | Required affordances going missing |
+| `platformio-compile` | Generated assets that do not compile |
 
-  ```bash
-  npm run test:visual          # Playwright snapshots
-  npm run test:visual:update   # Update baselines
-  npm run test:exporter        # AJV + translator unit tests
-  ```
+The manifest is **generated from the firmware's own catalogues**, not maintained by hand, and
+`test/host/run.sh` fails if the committed copy is stale. Action ids are cross-checked against
+their handler table by `static_assert`, so advertising an action with no handler is a build error.
 
-- Exporter pipeline:
+---
 
-  ```bash
-  npm run export:firmware
-  ```
+## Layout
 
-  This validates `screens.json`, backs up the previous firmware assets into `web/backups/ui/<timestamp>/`, and writes new headers/implementation files to `Water-Flow-Meter-PlatformIO/src/ui/generated/`. Use `--dry-run` or custom paths via the CLI in `tools/exporter/cli.ts` when needed.
+| Path | What |
+| --- | --- |
+| `Water-Flow-Meter-PlatformIO/` | Firmware. `src/{input,led,modbus,sensors,ui}`, `tools/manifest_gen/`, `test/host/` |
+| `web/mockup/` | Design tool, exporter (`tools/exporter/`), skeleton generator (`tools/skeleton/`) |
+| `docs/` | Requirements, decisions, hardware references — see the trust table below |
+| `graphics/` | SVG assets and captured previews |
+| `water-flow-meter-StampPLC_Legacy/` | Read-only single-file predecessor, kept for comparison |
+| `.github/workflows/ci.yml` | Three jobs on every push: web + exporter, host tests, firmware compile |
 
-- `docker-compose up web` (from repository root) launches the same dev server in a container with hot reload enabled.
+---
 
-### Documentation & governance (`docs/`)
+## Working on it
 
-- **Project definitions** – Coding conventions, tooling mandates, MCP rules, and VS Code workspace settings.
-- **Requirements** – Functional specs (with `feature addition/` for incremental work and `UI_Firmware_Interface.md` for the renderer contract).
-- **Missing implementation / stories to implement** – Active backlog items that feed sprint planning.
-- **New feature proposal / templates** – Drafts plus reusable templates for future specs.
-- **Hardware docs & diagrams** – Reference schematics and mermaid diagrams to keep firmware and UI in sync.
+### Firmware
 
-Keep these folders authoritative—link to them in issues/PRs instead of duplicating content elsewhere.
+```bash
+cd Water-Flow-Meter-PlatformIO
+test/host/run.sh                     # host tests + manifest freshness
+podman run --rm -v "$PWD":/workspace:Z -w /workspace stampplc-fw pio run -e m5stack-stamplc
+```
 
-### Assets & legacy
+A local `pio run` works if you have PlatformIO installed; the container is what CI mirrors.
+There is **no** `pio test` target — the unit tests are the host suite in `test/host/`, built
+straight with `g++` and `-Werror`. That `-Werror` is deliberate: the manifest generator relies on
+`-Wswitch` to make "added a setting kind without teaching the generator" a build failure rather
+than a warning nobody reads.
 
-- `graphics/svg` and `graphics/mockupimages` provide UI art and captured previews for documentation and automated tests.
-- `water-flow-meter-StampPLC_Legacy/src/firmware.cpp` is preserved for comparison when porting or auditing behaviour.
+Adding UI behaviour? Put the test in `test/host/interaction_test.cpp`. It drives the real
+firmware with a fake button source, so gestures, navigation, editors and countdowns are all
+testable without hardware.
 
-## Getting Started (new contributors)
+### Design tool and exporter
 
-1. **Review the rules** – Read `docs/Project definitions/Folder structure description.md` plus any relevant requirements/stories before touching code.
-2. **Install prerequisites**
-   - PlatformIO CLI (or VS Code extension) and a working `pio` in your PATH.
-   - Node.js 18+ with npm (needed for the mockup/exporter).
-   - Docker/Podman (optional, but required for container builds or `docker-compose` workflows).
-3. **Clone & inspect**
-   ```bash
-   git clone <repo-url> water-flow-meter
-   cd water-flow-meter
-   ```
-   Use `ls` and the repository layout above to get oriented.
-4. **Bring up the mockup workspace**
-   ```bash
-   cd web/mockup
-   npm install
-   npm run dev
-   ```
-   Visit `http://localhost:5173/` (or the port mapped by `docker-compose`) to exercise UI flows and tweak layouts/design tokens.
-5. **Export UI assets into firmware**
-   - Update `src/data/screens.json` or use the in-app editors.
-   - Run `npm run export:firmware` to sync `Water-Flow-Meter-PlatformIO/src/ui/generated/`.
-   - Commit both the dataset and regenerated assets together.
-6. **Build/test the firmware**
-   ```bash
-   cd ../../Water-Flow-Meter-PlatformIO
-   pio run
-   pio test -d tests/build
-   ```
-   Alternatively, run the provided Podman/Docker workflow for a clean environment.
-7. **Consult documentation while coding**
-   - Requirements/specs live under `docs/Requirements`.
-   - Active work items are tracked in `docs/missing implementation` and `docs/stories to implement`.
-   - Hardware notes, diagrams, and templates live nearby.
+```bash
+cd web/mockup
+npm ci                               # not npm install — the lockfile is authoritative
+npm run dev
+```
 
-Following these steps ensures new developers understand the governance docs, keep firmware/UI assets in sync, and can iterate with confidence across the entire platform.
+Then edit screens in the browser and press Export. The dataset you see is what gets exported —
+it is POSTed with the request rather than re-read from disk.
+
+Commit the dataset and the regenerated assets **together**. CI fails if they disagree.
+
+`tools/skeleton/generate.mjs` regenerates the default menu from the catalogue and refuses to emit
+one that leaves any setting unreachable. Run it after adding a firmware setting.
+
+### Requirements
+
+Node **22** (CI pins it; `engines` allows ≥20). PlatformIO or Podman/Docker for firmware.
+
+---
+
+## Which documents to trust
+
+Documentation in this repository has been wrong in both directions — requirements describing
+machinery that does not exist, and status files reporting finished work as pending. An audit on
+2026-08-01 found 50 false claims across 17 documents. Current state:
+
+| Trust | Treat with care |
+| --- | --- |
+| `docs/Project definitions/Gesture_Reference.md` — every ✅ names the test that earns it | `web/mockup/README.md` — describes a portrait display and an empty dataset |
+| `docs/active_work/open_decisions.md` — the de-facto decision record | `docs/Requirements/feature addition/UI_Firmware_Interface.md` — lists 4 actions where there are 15 |
+| `docs/Requirements/Project_document.md` §4.1–§4.2 — the register map, verified against the headers | `docs/Requirements/Implementation_Alignment_Report.md` — audits a file layout that no longer exists |
+| `MEMORY.md` — session handoff, rewritten 2026-08-01 | Any undated status claim |
+
+In `open_decisions.md`, ✅ means **agreed**, not **landed**; the emoji is severity and the status
+is in the `Decision:` line.
+
+`Loadable_UI_Menu_Packs.md` is a good specification of something **not yet built** — no SD-card
+code exists. Read it as a plan, not a description.
+
+---
+
+## Nothing has run on hardware
+
+Not once. The firmware compiles on two independent toolchains and passes 199 host checks, but the
+RS485 pin assignment, the LED behaviour and every gesture and timing are verified only against
+the datasheet, the specifications and those tests.
+
+The first bring-up should measure `pollingRate_kHz` (published on holding register 0 and shown on
+the diagnostics screen) — it is open decision **G1**, and it is also a prerequisite for the WiFi
+work, whose acceptance criterion budgets against a radio-off baseline that does not exist yet.

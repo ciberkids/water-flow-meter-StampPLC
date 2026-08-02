@@ -182,6 +182,9 @@ struct Device {
     tick(0);
   }
 
+  /** Passes on which a reset was reported accepted — the §3.5 white-latch signal. */
+  std::size_t resetAcceptedPasses = 0;
+
   SensorData sensors[plc::kNumSensors] = {};
   SensorCharacteristics configs[plc::kNumSensors] = {};
 
@@ -203,6 +206,12 @@ struct Device {
     // acknowledgement on it, so a test of a destructive action has to see it. Discarding
     // the whole result is what let the un-rebooted factory reset look like a success.
     lastResult = result;
+    // §3.5's white acceptance latch fires on this, for every reset — not only the one that
+    // reboots. Counted rather than latched so a stuck flag is distinguishable from a
+    // correctly re-triggered one.
+    if (result.resetAccepted) {
+      resetAcceptedPasses += 1;
+    }
     controller.update(now, sensors, configs, 0, 0xFF, 0.0, 0.0, 0.0f, leds, result.countdown);
     // firmware.cpp:446 — the renderer runs on every pass of the logic loop and decides for
     // itself whether to paint. That decision is what the cadence tests below measure.
@@ -1180,6 +1189,30 @@ void toastCancellationTests() {
   check(dev.controller.navigator().depth() == 0, "and does not pop below the root");
 }
 
+
+void resetAcceptanceLedTests() {
+  std::printf("\n[white acceptance latch — RGB_LED_Behavior §3.5]\n");
+
+  // §3.5: "Applies to every reset confirm screen: factory reset, reset totals and reset
+  // session." firmware.cpp used to drive the latch off restartScheduled, which only the
+  // factory path sets — so the two resets an operator actually uses gave no panel signal.
+  Device dev;
+  dev.boot();
+  check(dev.resetAcceptedPasses == 0, "no acceptance reported before anything is confirmed");
+
+  check(completeResetTotals(dev), "completed confirm-reset-totals");
+  check(dev.resetAcceptedPasses >= 1,
+        "reset-totals reports acceptance, so the panel latches solid white");
+  check(!dev.lastResult.restartScheduled,
+        "and does so WITHOUT scheduling a reboot — which is why the old gate missed it");
+
+  // Exactly one pass, so the latch is re-triggered rather than held on by a stuck flag.
+  const std::size_t after = dev.resetAcceptedPasses;
+  for (int i = 0; i < 10; ++i) dev.tick(100);
+  check(dev.resetAcceptedPasses == after,
+        "acceptance is reported once, on the completing pass only");
+}
+
 }  // namespace
 
 int main() {
@@ -1191,6 +1224,7 @@ int main() {
   nyquistPromptTests();
   toastTests();
   toastCancellationTests();
+  resetAcceptanceLedTests();
   configListPagingTests();
   configEditorDescentTests();
   sensorEditorDescentTests();

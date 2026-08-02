@@ -88,7 +88,7 @@ InteractionResult InteractionHandler::update(uint32_t nowMs,
   if (!factoryResetBusy) {
     // The UP+DOWN factory-reset combo outranks a single-button hold, so only run
     // the guarded-action countdown when the combo is idle.
-    handleHoldCountdown(nowMs, buttonInput, uiController, &result.countdown);
+    handleHoldCountdown(nowMs, buttonInput, uiController, &result);
   }
 
   if (!factoryResetBusy && !holdCountdown_.active) {
@@ -391,7 +391,8 @@ bool InteractionHandler::armHoldCountdown(uint32_t nowMs, const ui_exporter::Scr
 void InteractionHandler::handleHoldCountdown(uint32_t nowMs,
                                              ButtonInputManager& buttonInput,
                                              UiController& uiController,
-                                             UiCountdownState* countdown) {
+                                             InteractionResult* result) {
+  UiCountdownState* countdown = &result->countdown;
   if (!countdown || !deps_.screenRouter) {
     return;
   }
@@ -469,6 +470,11 @@ void InteractionHandler::handleHoldCountdown(uint32_t nowMs,
     // fell through to the plain ascend, so the toast never appeared — found by the test below,
     // not by reading the code.
     const ui_exporter::Flow* completedFlow = holdCountdown_.timeoutFlow;
+
+    // §3.5: solid white on acceptance, for every reset confirm screen. Set here rather than in
+    // firmware.cpp so it covers whichever action the confirm screen carries, including any
+    // guarded action added later.
+    result->resetAccepted = true;
 
     holdCountdown_ = HoldCountdownState{};
     buttonInput.clearEvents();
