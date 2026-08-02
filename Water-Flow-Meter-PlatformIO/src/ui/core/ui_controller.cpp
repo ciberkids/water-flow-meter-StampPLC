@@ -58,6 +58,7 @@ void UiController::adjustEdit(int32_t delta, uint32_t nowMs) {
   editor_.lastStepMs = nowMs;
   // Changing the value invalidates any prompt about the previous one.
   editor_.nyquistPrompt = false;
+  editor_.commitFailed = false;
   notifyInteraction(nowMs);
 }
 

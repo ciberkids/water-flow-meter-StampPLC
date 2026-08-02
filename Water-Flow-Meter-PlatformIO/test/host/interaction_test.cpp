@@ -57,6 +57,18 @@ uint32_t nowMs = 0;
 // which is the whole of §4.3's "reboot, no toast".
 std::size_t factoryResets = 0;
 void countFactoryReset() { ++factoryResets; }
+
+/**
+ * How the next sensor-config write should be refused, so §5.5's two outcomes can be told
+ * apart.
+ *
+ * Accept        — the normal path.
+ * NyquistRefuse — refused AND parked awaiting an override, which is the only failure an
+ *                 override can resolve and so the only one that may offer "Save anyway".
+ * PlainRefuse   — refused for any of the five other reasons writeSetting can fail.
+ */
+enum class WriteMode { Accept, NyquistRefuse, PlainRefuse };
+WriteMode writeMode = WriteMode::Accept;
 }  // namespace harness
 
 ModbusManager::ModbusManager(const ModbusDependencies& deps) : deps_(deps) {}
@@ -65,6 +77,19 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
                                       uint16_t value,
                                       plc::WriteOrigin origin) {
   harness::writes.push_back({address, value, origin});
+
+  // A sensor-block write can be refused two ways. Setting overridePending_ here is legitimate
+  // and not a back door: this function IS ModbusManager::applyHoldingWrite, so it has the same
+  // access the production definition does, and it is what the real one does when the Nyquist
+  // check parks a write.
+  if (address >= plc::SENSOR_1_BASE_ADDR && harness::writeMode != harness::WriteMode::Accept) {
+    const std::size_t index =
+        static_cast<std::size_t>((address - plc::SENSOR_1_BASE_ADDR) / plc::SENSOR_BLOCK_SIZE);
+    if (index < plc::kNumSensors) {
+      overridePending_[index] = harness::writeMode == harness::WriteMode::NyquistRefuse;
+    }
+    return false;
+  }
   if (!harness::link) {
     return true;
   }
@@ -250,6 +275,53 @@ bool descendToAnEditor(Device& dev) {
     dev.tap(ButtonInputManager::Button::Enter);
   }
   return dev.controller.editor().active;
+}
+
+/**
+ * Walks to a PER-SENSOR value editor — one whose editor.sensorIndex is non-zero.
+ *
+ * The Nyquist path only exists for sensor calibration, so a device-wide editor
+ * (config.modbusSlaveId and friends, sensorIndex 0) cannot exercise it. Route:
+ * P7 -> config root -> C7 Sensors -> Sensor 1 -> its settings ring -> an editor.
+ */
+bool descendToASensorEditor(Device& dev) {
+  for (int i = 0; i < 16; ++i) {
+    if (dev.controller.page() == UiPage::EnterConfiguration) break;
+    dev.tap(ButtonInputManager::Button::Down);
+  }
+  dev.tap(ButtonInputManager::Button::Enter);  // into the config root ring
+
+  // Cycle the config ring to the Sensors entry, which descends rather than editing.
+  for (int i = 0; i < 12; ++i) {
+    const auto* screen = dev.controller.navigator().current();
+    if (screen && std::strcmp(screen->id, "config-c7-sensor-select") == 0) break;
+    dev.tap(ButtonInputManager::Button::Down);
+  }
+  dev.tap(ButtonInputManager::Button::Enter);  // sensor list
+  dev.tap(ButtonInputManager::Button::Enter);  // sensor 1's settings ring
+
+  // Must be a CALIBRATION setting, not config.sensor.connected. Connected writes to the
+  // bitmap at register 10, outside any sensor block, so the Nyquist check never sees it —
+  // the first version of this helper stopped there and the tests failed for that reason
+  // rather than for the behaviour they were checking.
+  const auto isCalibration = [](const UiEditorState& e) {
+    return e.active && e.sensorIndex > 0 && e.setting != nullptr &&
+           e.setting->registerOffset != ui::kNoRegister;
+  };
+
+  for (int guard = 0; guard < 10; ++guard) {
+    if (isCalibration(dev.controller.editor())) return true;
+    if (dev.controller.editor().active) {
+      // Sitting in the wrong editor: discard out of it and move to the next sibling.
+      dev.press(ButtonInputManager::Button::Enter, true);
+      dev.tick(1600);
+      dev.press(ButtonInputManager::Button::Enter, false);
+      dev.tick(30);
+      dev.tap(ButtonInputManager::Button::Down);
+    }
+    dev.tap(ButtonInputManager::Button::Enter);
+  }
+  return isCalibration(dev.controller.editor());
 }
 
 void idleContractTests() {
@@ -962,6 +1034,70 @@ void retiredComboTests() {
         "the device is still navigable afterwards");
 }
 
+
+void nyquistPromptTests() {
+  std::printf("\n[Nyquist override — Display_UI_Requirements §5.5]\n");
+
+  // A refusal the operator CAN override.
+  {
+    Device dev;
+    dev.boot();
+    harness::writeMode = harness::WriteMode::NyquistRefuse;
+    const bool editing = descendToASensorEditor(dev);
+    check(editing, "reached a per-sensor value editor");
+
+    dev.tap(ButtonInputManager::Button::Enter);  // commit -> refused
+    check(dev.controller.editor().nyquistPrompt,
+          "a Nyquist refusal raises the override prompt");
+    check(!dev.controller.editor().commitFailed,
+          "and is not reported as a generic failure");
+    check(dev.controller.editor().active, "the editor stays open so the value is not lost");
+
+    // §5.5: DOWN = save anyway. This used to adjust the value by -1 while the prompt on
+    // screen said "DOWN=Save anyway".
+    const std::size_t before = harness::writes.size();
+    harness::writeMode = harness::WriteMode::Accept;
+    dev.tap(ButtonInputManager::Button::Down);
+    check(harness::writes.size() > before, "DOWN with the prompt showing commits the override");
+    check(!dev.controller.editor().nyquistPrompt, "and clears the prompt");
+  }
+
+  // A refusal the operator CANNOT override must not offer to.
+  {
+    Device dev;
+    dev.boot();
+    harness::writeMode = harness::WriteMode::PlainRefuse;
+    descendToASensorEditor(dev);
+    dev.tap(ButtonInputManager::Button::Enter);
+
+    check(!dev.controller.editor().nyquistPrompt,
+          "a non-Nyquist refusal does NOT claim the sampling rate is the problem");
+    check(dev.controller.editor().commitFailed, "it reports a generic write failure instead");
+
+    // Offering "Save anyway" for a failure an override cannot fix would be worse than useless.
+    const std::size_t before = harness::writes.size();
+    dev.tap(ButtonInputManager::Button::Down);
+    check(harness::writes.size() == before,
+          "DOWN does not attempt an override that cannot succeed");
+    check(!dev.controller.editor().commitFailed, "it dismisses the message instead");
+  }
+
+  // UP always means "edit again", for either outcome.
+  {
+    Device dev;
+    dev.boot();
+    harness::writeMode = harness::WriteMode::NyquistRefuse;
+    descendToASensorEditor(dev);
+    dev.tap(ButtonInputManager::Button::Enter);
+    check(dev.controller.editor().nyquistPrompt, "prompt is up");
+    dev.tap(ButtonInputManager::Button::Up);
+    check(!dev.controller.editor().nyquistPrompt, "UP dismisses the prompt");
+    check(dev.controller.editor().active, "and returns to editing rather than ascending");
+  }
+
+  harness::writeMode = harness::WriteMode::Accept;
+}
+
 }  // namespace
 
 int main() {
@@ -970,6 +1106,7 @@ int main() {
   idleTimeoutTests();
   navigationRingTests();
   retiredComboTests();
+  nyquistPromptTests();
   configListPagingTests();
   configEditorDescentTests();
   sensorEditorDescentTests();

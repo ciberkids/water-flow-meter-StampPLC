@@ -158,12 +158,48 @@ void handleNavEscape(const UiActionContext& ctx, const ui_exporter::Flow&) {
   ctx.controller.syncPageFromScreen(ctx.controller.navigator().current(), ctx.nowMs);
 }
 
+void handleValueCommitOverride(const UiActionContext& ctx, const ui_exporter::Flow& flow);
+
+/**
+ * While a prompt is showing, UP and DOWN are reinterpreted.
+ *
+ * §5.5's prompt reads "UP = Edit again / DOWN = Save anyway", and it renders on the editor
+ * screen itself via the config.sensor.nyquistWarning binding. But UP/DOWN on that screen were
+ * still wired to +/-1, so the prompt instructed the operator to do something the buttons did
+ * not do. Reinterpreting them here keeps it to one screen — no new screen id, so the menu-pack
+ * completeness rule stays satisfied and no dataset change is needed.
+ *
+ * Returns true when the press was consumed by the prompt.
+ */
+bool consumedByPrompt(const UiActionContext& ctx, bool isUp) {
+  const auto& editor = ctx.controller.editor();
+  if (!editor.nyquistPrompt && !editor.commitFailed) {
+    return false;
+  }
+  if (isUp || editor.commitFailed) {
+    // UP = edit again. A non-Nyquist failure has no override, so DOWN dismisses too rather
+    // than silently doing nothing.
+    ctx.controller.setNyquistPrompt(false);
+    ctx.controller.setCommitFailed(false);
+    return true;
+  }
+  // DOWN with a Nyquist prompt showing = save anyway.
+  handleValueCommitOverride(ctx, ui_exporter::Flow{});
+  return true;
+}
+
 void handleValueIncrement(const UiActionContext& ctx, const ui_exporter::Flow&) {
+  if (consumedByPrompt(ctx, true)) {
+    return;
+  }
   const auto& editor = ctx.controller.editor();
   ctx.controller.adjustEdit(editor.setting ? editor.setting->step : 1, ctx.nowMs);
 }
 
 void handleValueDecrement(const UiActionContext& ctx, const ui_exporter::Flow&) {
+  if (consumedByPrompt(ctx, false)) {
+    return;
+  }
   const auto& editor = ctx.controller.editor();
   ctx.controller.adjustEdit(-(editor.setting ? editor.setting->step : 1), ctx.nowMs);
 }
@@ -182,7 +218,16 @@ void handleValueCommit(const UiActionContext& ctx, const ui_exporter::Flow&) {
     return;
   }
   if (!writeSetting(*editor.setting, editor.sensorIndex, editor.pending, *ctx.settings)) {
-    ctx.controller.setNyquistPrompt(true);
+    // Which failure? A Nyquist refusal parks the write awaiting an override confirmation, and
+    // is the ONLY one an override can resolve — so it is the only one that may offer
+    // "DOWN = Save anyway" (§5.5). Everything else (no Modbus, a rejected link write, a bad
+    // sensor index, a missing bitmap, an unhandled target) needs a different message, and used
+    // to get this one.
+    const bool nyquist =
+        editor.sensorIndex > 0 &&
+        ctx.modbus.nyquistOverridePending(static_cast<std::size_t>(editor.sensorIndex - 1));
+    ctx.controller.setNyquistPrompt(nyquist);
+    ctx.controller.setCommitFailed(!nyquist);
     return;
   }
   ctx.controller.endEdit();

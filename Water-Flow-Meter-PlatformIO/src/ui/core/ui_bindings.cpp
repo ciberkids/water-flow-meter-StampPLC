@@ -324,6 +324,10 @@ bool UiBindingResolver::resolveConfigBinding(const UiRenderContext& context,
   }
 
   if (binding == "config.sensor.nyquistWarning") {
+    if (controller_ && controller_->editor().commitFailed) {
+      // A refusal an override cannot fix. Offering "Save anyway" here would be a lie.
+      return copyLiteral("Write refused. UP=Back", buffer, bufferSize);
+    }
     if (!controller_ || !controller_->editor().nyquistPrompt) {
       // Not a failure: with no prompt pending there is simply nothing to say, and the
       // element keeps whatever static text it was authored with.

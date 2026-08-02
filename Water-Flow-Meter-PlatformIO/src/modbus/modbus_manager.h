@@ -52,6 +52,19 @@ class ModbusManager {
   void syncGlobalRegisters();
   void evaluateSensorDiagnostics();
 
+  /**
+   * True when this sensor's last config write was refused because it fails the Nyquist limit
+   * and is awaiting an override confirmation.
+   *
+   * The UI needs this to tell a Nyquist refusal apart from the five other reasons
+   * writeSetting can fail — no Modbus, a rejected link write, an out-of-range sensor index,
+   * a missing bitmap, an unhandled target. Without it the editor showed "Sampling too slow"
+   * for all six, which is a wrong diagnosis five times out of six.
+   */
+  bool nyquistOverridePending(std::size_t sensorIndex) const {
+    return sensorIndex < plc::kNumSensors && overridePending_[sensorIndex];
+  }
+
   /** True when an apply changed the live settings and the UART must restart. */
   bool consumeLinkRestartRequest();
 

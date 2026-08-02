@@ -90,6 +90,13 @@ struct UiEditorState {
   int32_t saved = 0;
   /** Set when a commit failed its Nyquist check and DOWN can force it (§5.5). */
   bool nyquistPrompt = false;
+  /**
+   * The commit was refused for a reason that is NOT the Nyquist limit.
+   *
+   * Kept separate so the operator is told which problem they have. Offering
+   * "DOWN = Save anyway" for a failure an override cannot fix would be worse than useless.
+   */
+  bool commitFailed = false;
   uint32_t lastStepMs = 0;
 };
 
@@ -151,6 +158,7 @@ class UiController {
   void endEdit();
   void adjustEdit(int32_t delta, uint32_t nowMs);
   void setNyquistPrompt(bool on) { editor_.nyquistPrompt = on; }
+  void setCommitFailed(bool on) { editor_.commitFailed = on; }
 
  private:
   static constexpr uint32_t kIdleTimeoutMs = 120000;  // 2 minutes
