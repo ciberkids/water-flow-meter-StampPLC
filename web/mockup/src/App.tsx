@@ -1905,6 +1905,7 @@ export function App() {
                 <ExporterPanel
                   disabled={validationFeedback.status === "error"}
                   onNavigateToScreen={handleNavigateFromValidation}
+                  dataset={dataset}
                 />
               </div>
             </div>

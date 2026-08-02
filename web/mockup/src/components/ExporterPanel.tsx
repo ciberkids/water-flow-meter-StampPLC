@@ -1,3 +1,4 @@
+import type { ScreenDataset } from "../types";
 import { useCallback, useState } from "react";
 
 interface ExportSummary {
@@ -77,6 +78,14 @@ type ExportState = "idle" | "running" | "success" | "error";
 interface ExporterPanelProps {
   disabled?: boolean;
   onNavigateToScreen?: (screenId: string) => void;
+  /**
+   * The dataset as it stands on screen, POSTed with the export request.
+   *
+   * Decision D4. Without it the endpoint let the exporter re-read src/data/screens.json from
+   * disk, so Export exported the last SAVED dataset rather than the edited one — and the nine
+   * validation gates, which run during export, all validated that stale copy.
+   */
+  dataset?: ScreenDataset;
 }
 
 const statusLabels: Record<ValidationStatus, string> = {
@@ -101,7 +110,7 @@ function downloadTextFile(filename: string, contents: string) {
   URL.revokeObjectURL(url);
 }
 
-export function ExporterPanel({ disabled = false, onNavigateToScreen }: ExporterPanelProps) {
+export function ExporterPanel({ disabled = false, onNavigateToScreen, dataset }: ExporterPanelProps) {
   const [state, setState] = useState<ExportState>("idle");
   const [summary, setSummary] = useState<ExportSummary | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -125,7 +134,10 @@ export function ExporterPanel({ disabled = false, onNavigateToScreen }: Exporter
     try {
       const response = await fetch("/api/export", {
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
+        // Omitted when no dataset is supplied, which keeps the endpoint's on-disk behaviour
+        // available for a caller that genuinely wants it (a CLI export, a test).
+        body: dataset ? JSON.stringify(dataset) : undefined
       });
       const payload = (await response.json()) as ExportResponse;
       setValidationReport(payload.validation ?? null);

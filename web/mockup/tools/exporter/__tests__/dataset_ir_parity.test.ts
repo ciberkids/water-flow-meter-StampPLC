@@ -22,7 +22,12 @@ import type { ScreenDataset } from "../../../src/types.js";
 import type { ThemeTokens } from "../../../src/theme/types.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const projectRoot = path.resolve(here, "..", "..", "..");
+// NOTE ON PATHS: these tests run COMPILED, from dist-exporter/tools/exporter/__tests__, so
+// the project root is four levels up — the same convention manifest_validation.test.ts uses.
+// Three levels resolves to dist-exporter/, which contains a build-artifact COPY of
+// src/data/screens.json. Reading that copy works by accident and is wrong in principle: a
+// test that claims to check the shipped dataset must open the shipped dataset.
+const projectRoot = path.resolve(here, "..", "..", "..", "..");
 
 function loadShippedDataset(): ScreenDataset {
   const raw = fs.readFileSync(path.join(projectRoot, "src", "data", "screens.json"), "utf-8");
