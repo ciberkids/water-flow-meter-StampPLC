@@ -35,6 +35,14 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/text_editor_test" \
   test/host/text_editor_test.cpp \
   src/ui/core/ui_text_editor.cpp
 
+# The loadable-menu format. Reads the pack the TS emitter produced from the real dataset and
+# compares it against the generated table, so the two implementations of one binary layout are
+# reconciled by execution rather than by review.
+g++ "${CXXFLAGS[@]}" -o "$OUT/pack_test" \
+  test/host/pack_test.cpp \
+  src/ui/pack/ui_pack.cpp \
+  src/ui/generated/GeneratedUi.cpp
+
 g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/sensor_state_test" \
   test/host/sensor_state_test.cpp \
   src/sensors/sensor_state_engine.cpp
@@ -72,6 +80,8 @@ echo
 "$OUT/interaction_test"
 echo
 "$OUT/sensor_state_test"
+echo
+"$OUT/pack_test"
 echo
 
 # The manifest the design tool validates against is generated from the firmware's own
