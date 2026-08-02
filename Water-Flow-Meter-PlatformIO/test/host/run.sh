@@ -43,6 +43,14 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/pack_test" \
   src/ui/pack/ui_pack.cpp \
   src/ui/generated/GeneratedUi.cpp
 
+# The boot selection ladder. Storage and the NVS counter are interfaces, so every failure rung —
+# no card, a dangling pointer, "../.." in the pointer file, a pack that validates and then crashes
+# the renderer — is reachable here and on no bench.
+g++ "${CXXFLAGS[@]}" -o "$OUT/pack_loader_test" \
+  test/host/pack_loader_test.cpp \
+  src/ui/pack/ui_pack_loader.cpp \
+  src/ui/pack/ui_pack.cpp
+
 g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/sensor_state_test" \
   test/host/sensor_state_test.cpp \
   src/sensors/sensor_state_engine.cpp
@@ -82,6 +90,8 @@ echo
 "$OUT/sensor_state_test"
 echo
 "$OUT/pack_test"
+echo
+"$OUT/pack_loader_test"
 echo
 
 # The manifest the design tool validates against is generated from the firmware's own
