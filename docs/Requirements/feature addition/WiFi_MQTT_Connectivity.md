@@ -938,19 +938,41 @@ UP/DOWN like everything else:
 ```
 L0  P0 Global status … P8 Factory reset ─► WIFI ─► MQTT ─► (wraps to P0)
                                             │        │
-L1  ┌───────────────────────────────────────┘        └──────────────────┐
-    Enabled            true/false  (boolean editor)                     Enabled        true/false
-    AP info            ⟨only when enabled and NOT configured⟩           MQTT info      ⟨only when configured⟩
-    WiFi info          ⟨only when configured⟩                           Setup          ⟨only when enabled⟩
-    BACK                                                                BACK
-                                                                         │
-L2                                                                       └─► Broker host   (text)
-                                                                             Port          (numeric)
-                                                                             Username      (text)
-                                                                             Password      (text, masked)
-                                                                             Base topic    (text)
-                                                                             BACK
+L1  ┌───────────────────────────────────────┘        └──────────────────────────┐
+    W1 Enabled              true/false   editor       M1 Enabled       true/false   editor
+    W2 Network (SSID)       read-only ✎                M2 Broker  ──────────────────┐
+    W3 Passphrase           read-only ✎ masked         M.BACK                       │
+    W4 Reset portal login   3 s hold ─► confirm                                     │
+    W.BACK                                                                          │
+                                                                                    │
+L2  ┌───────────────────────────────────────────────────────────────────────────────┘
+    B1  Broker host      read-only ✎        B7   Publish period   editor  1-3600 s
+    B2  Port             editor  1-65535    B8   HA discovery     editor  on/off
+    B3  Username         read-only ✎        B9   TLS              editor  on/off
+    B4  Password         read-only ✎ masked B10  QoS              editor  0/1
+    B5  Base topic       read-only ✎        B.BACK
+    B6  HA prefix        read-only ✎
 ```
+
+`✎` marks a value that is **displayed but not editable here** — §6.3 removed on-device text entry, so
+every text field is a read-only row whose footer reads "Set via web portal or RS485". Secrets show a
+fixed run of asterisks. Five of the ten broker rows are read-only, which is why the entry is called
+**Broker** rather than "Broker setup": a name promising setup would be half a lie, and the row the
+descent lands on is one of the read-only ones.
+
+**Not built yet, and deliberately so.** The three information pages of the original shape — `AP
+info`, `WiFi info`, `MQTT info` — are absent. They display association state, the DHCP address and
+the AP password, none of which exist as catalogue values until **N4** builds the state machine that
+produces them. Emitting them earlier would mean binding ids the resolver cannot serve (which the
+`firmware-manifest-resolvable` gate rejects) or placeholder text impersonating status. They arrive
+with the state they describe.
+
+**No entry is guarded.** The original shape marked the information pages `⟨only when configured⟩`
+and the broker descent `⟨only when enabled⟩`. Guards are specified in R7.2 and still unimplemented;
+since this slice emits only editors and read-only rows, leaving everything unconditional keeps the
+completeness rule statically decidable and costs nothing but showing a broker row before MQTT is
+switched on — which is the friendlier order anyway, since it lets an operator configure before
+enabling.
 
 These are **ordinary dataset screens**, not firmware-drawn like the Select Menu page. So a menu
 pack can restyle or relocate them, which is what the owner asked for. The Select Menu page is
@@ -1326,7 +1348,7 @@ Nothing here is satisfied by "it compiles".
 | A2 | Home Assistant shows one device with all entities, no YAML written | **No** — needs a broker and an HA instance |
 | A3 | Cumulative volume drives HA's Water dashboard | **No** |
 | A4 | Entities go *unavailable* within the keep-alive window of unplugging the device | **No** |
-| A5 | Credentials set on the display and over Modbus produce identical stored state | Partly — the staging logic is host-testable |
+| A5 | Credentials set over Modbus, from the portal and from the SD file produce identical stored state. (**Was** "on the display and over Modbus" — the display no longer sets credentials at all, §6.3, so that comparison no longer exists) | Partly — the staging logic is host-testable |
 | A6 | A text setting round-trips through the register block, including exact-length and empty cases | **Yes** — host test |
 | A7 | Reading a write-only register returns zeros and does not except | **Yes** — host test |
 | A8 | **No text setting is editable at the panel**: none has an editor screen, each still renders (masked when secret), and the descend handler refuses to open one (§6.3) | **Yes** — host test |
