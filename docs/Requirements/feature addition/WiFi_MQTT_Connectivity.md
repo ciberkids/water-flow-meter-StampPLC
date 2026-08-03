@@ -42,7 +42,6 @@ like an omission:
 
 | Deferred | Why |
 | --- | --- |
-| MQTT **command** topics (reset session from Home Assistant) | Accepting control from the network is a materially different security posture than publishing telemetry. Worth doing, separately, once the read path is proven. |
 | Static IP / manual DNS | DHCP covers the realistic deployment. Adds four more text settings, each of which the completeness rule would then force into every menu pack (§2.3). |
 | WiFi as a Modbus **TCP** transport | Different requirement. This feature is MQTT only; RTU over RS485 remains the industrial path. |
 | OTA firmware update over WiFi | Deserves its own requirement, including rollback and signing. Attractive once the radio works, and the partition table should leave room for it (§9.4). |
@@ -200,7 +199,7 @@ Verified in `ui/core/ui_settings_types.h` and `.cpp`. The entire settings model 
 
 | Element | Current type |
 | --- | --- |
-| `SettingKind` | `{ Numeric, Enum, Boolean }` — no text kind |
+| `SettingKind` | ~~`{ Numeric, Enum, Boolean }` — no text kind~~ → **`Text` added 2026-08-01**, with `maxLength` and `writeOnly` |
 | `SettingDescriptor::min` / `max` / `step` | `int32_t` |
 | `readSetting(...)` | returns `int32_t` |
 | `writeSetting(..., int32_t value, ...)` | takes `int32_t` |
@@ -218,6 +217,13 @@ which means the completeness rule's derived action set changes too (§2.3).
 **This is the single largest piece of work in the feature**, and it is a change to the core
 settings abstraction rather than an addition beside it. It is specified in §6.
 
+**Progress, 2026-08-03.** The *type system* half has landed: `SettingKind::Text`, `maxLength`,
+`writeOnly`, `formatSettingText` with masking, and the manifest and schema plumbing — commit
+`2e37452`, with the character-wheel editor engine and its 47 host checks in `0392013`. What remains
+is the storage half: `readSettingText` / `writeSettingText` and the register-block packing of §5. The
+rows above are struck through where they are no longer true rather than deleted, so the size of what
+was involved stays visible.
+
 ### 2.3. The completeness rule turns new settings into a migration
 
 `Loadable_UI_Menu_Packs.md` §3.0.1 states:
@@ -234,9 +240,21 @@ existing pack, and the built-in default menu, becomes *incomplete* the moment th
 grows. At export that is a hard failure (§5 of that document); at load it is a soft failure
 that appends built-in editors.
 
-So the load path already degrades gracefully. The export path does not, and it should not
-silently — but neither should a catalogue addition retroactively break packs a user authored
-last month. §7 specifies how this is handled, and **Q7** asks for a decision on it.
+**Decided 2026-08-03 (Q7): break it.** The owner's reasoning is that there is no live product yet,
+so backwards compatibility is not worth paying for — the export gate keeps its full force and any
+existing pack is simply re-authored. That is the right trade while the only packs in existence are
+ones we generate ourselves.
+
+Two consequences worth writing down so this decision is revisited deliberately rather than
+inherited by accident:
+
+- **The skeleton generator is the migration.** `tools/skeleton/generate.mjs` regenerates the default
+  menu from the catalogue and already refuses to emit an incomplete one, so "re-author the pack"
+  means "re-run the generator" for anything we ship.
+- **This stops being free the day a customer has authored a pack.** At that point Q7's
+  version-and-warn option becomes necessary, and the manifest will need the catalogue version it
+  does not carry today. Recorded here rather than in a backlog because the trigger is a product
+  event, not a development one.
 
 ---
 
@@ -337,9 +355,10 @@ many cards at a desk beats visiting many devices with a phone. It is not needed 
 > **R3.4.3** — The passphrase is **never** displayed in full anywhere, including on its own
 > editor screen, where only the character under the cursor is shown in clear (§6.3).
 
-Space on P0 is already contended: the footer is a deterministic four-row stack and the
-240×135 display is full. The combined indicator must therefore be terse — `W:OK M:OK` is
-9 characters. **Q4** asks whether it earns its place on P0 or belongs in the footer.
+**Decided 2026-08-03 (Q4): the footer.** `W:OK M:OK` is nine characters and goes in the footer's
+deterministic four-row stack, not in P0's body — P0 already carries the totals, the flow, the LED
+legend and a scrollbar on 240×135. The footer also puts it on **every** info page rather than only
+P0, which is more useful for the same cost.
 
 ---
 
@@ -420,6 +439,68 @@ The intent is fixed even where the spelling is not:
 > **R4.4.6** — Discovery is republished on every reconnect, and whenever the connected-sensor
 > bitmap changes, so enabling a sensor makes its entity appear.
 
+### 4.4.1. Command topics — Home Assistant can act, not only observe
+
+**Decided 2026-08-03 (Q8): commands are in scope**, against my own recommendation to defer them.
+The owner wants HA to trigger resets, and buttons in a dashboard are the obvious reason to have
+integrated at all. So this specifies them properly, including the parts that make accepting control
+over a network safe on a metering device.
+
+```
+<base>/cmd/reset-session      payload: "RESET"
+<base>/cmd/reset-totals       payload: "RESET"
+<base>/cmd/republish          payload: anything
+```
+
+Discovered as HA `button` entities, so they appear as buttons rather than as switches that imply
+state.
+
+> **R4.4.1 — A DESTRUCTIVE COMMAND REQUIRES AN EXPLICIT PAYLOAD.** `reset-session` and
+> `reset-totals` act only on the exact payload `RESET`. Any other payload, including an empty one,
+> is logged and ignored.
+>
+> This mirrors the `0x5AA5` magic the register block already uses for `NET_APPLY` and
+> `REG_LINK_APPLY` — the project's established idiom for "this is destructive, prove you meant it".
+> Without it, any stray publish to the topic zeroes a customer's totals.
+
+> **R4.4.2 — A RETAINED COMMAND MESSAGE MUST BE IGNORED.** This is the specific hazard that makes
+> command topics dangerous on a metering device, and it is not obvious.
+>
+> If a `reset-totals` command is ever published with the retain flag set — by a mis-scripted
+> automation, or by hand during testing — the broker keeps it. The device then receives it **on
+> every single reconnect, forever**, wiping the totals each time it comes back from a power cut or a
+> WiFi blip. The counters would appear to reset at random and nothing on the device would explain
+> why.
+>
+> So the client inspects the retain flag and discards retained messages on command topics
+> unconditionally. It must also log the discard loudly, because a retained command sitting on the
+> broker is a fault the operator has to clear at the broker.
+
+> **R4.4.3** — Commands go through the SAME path as everything else: `reset-session` issues the
+> Modbus command a master would (`REG_MASTER_RESET_ALL_SESSION`), not a private code path. So a
+> reset from HA, from the display's confirm screen, and from a Modbus master are one implementation.
+
+> **R4.4.4** — A command is acknowledged by the resulting telemetry, not by a reply topic. The
+> totals publish immediately after a reset, so HA shows the effect. A separate ack channel would be
+> a second thing to keep in step with reality.
+
+> **R4.4.6 — `wifi.rssi` is published as a Home Assistant entity** in the **diagnostic** category
+> (Q10, decided 2026-08-03), so it is available without cluttering the main view. RSSI is the first
+> thing anyone checks when a device drops off, and the value of publishing it is the *history* — an
+> intermittent dropout leaves nothing to look at after the fact if it only ever appeared on the
+> panel.
+
+> **R4.4.5** — Commands are accepted only while MQTT is enabled and connected, and are never
+> queued. A command that arrives during a disconnect is lost, which is correct: a reset the operator
+> asked for two hours ago is not one they still want.
+
+**The security position, stated plainly.** This makes an MQTT broker a control path into a metering
+device: a broker compromise, or anyone able to publish to it, can zero the totals. R4.4.1's magic
+payload stops accidents, not intent. That is an accepted trade for a device on a home network, and
+it is the reason §8's out-of-scope list still excludes anything that changes *configuration* over
+MQTT — a reset is recoverable by re-reading the meter, a repointed broker or a changed calibration
+is not.
+
 ### 4.5. Availability
 
 > **R4.5.1** — A Last Will and Testament on `<base>/status` set to `offline`, with an
@@ -433,9 +514,13 @@ The generated UI renders with M5GFX **Font0**, whose glyph table covers codepoin
 whose lookup increments above 176. Status strings, state names and error text destined for
 the display must therefore stay in printable 7-bit ASCII. No `✓`, no `✗`, no degree signs.
 
-This is easy to get wrong precisely because it works in the web mockup, which renders in a
-browser font with full Unicode. The exporter should reject non-ASCII in any element bound to
-these values (**Q5**).
+**Decided 2026-08-03 (Q5): the export FAILS.** Not a warning.
+
+This is the worst-shaped bug the pipeline can produce — correct in the design tool, garbage only on
+hardware — and it is the exact pattern that has cost this project the most: the mirrored Y axis, the
+portrait clamp, the manifest that over-claimed. Each looked right where it was authored. A warning
+would join the list of warnings this project has already watched being ignored until they became
+defects, so the gate refuses and names the element and screen.
 
 ---
 
@@ -676,7 +761,7 @@ ever reading it. This feature is the reason to implement it.
 | Guard | True when |
 | --- | --- |
 | `wifi.enabled` | `config.wifi.enabled` is set |
-| `wifi.configured` | an SSID is stored — the operator has provisioned it |
+| `wifi.configured` | an SSID is stored (Q13, decided 2026-08-03: **stored, not association-proven**) |
 | `mqtt.enabled` | `config.mqtt.enabled` is set |
 | `mqtt.configured` | a broker host is stored |
 
@@ -687,6 +772,12 @@ portal: the AP's SSID, its password (§7.4), and the portal address. Nothing her
 **WIFI ▸ WiFi info** — shown when configured. The SSID, the connection state (§3.1's ASCII
 vocabulary), the DHCP-assigned IP, and the RSSI. Read-only: changing the network is done through
 the portal or the text editors, not from a status page.
+
+> **R7.12** — "Configured" means an SSID is **stored**, not that association ever succeeded (Q13).
+> So this page appears the moment credentials exist, showing `CONN`, `RETRY` or `FAIL` and
+> `(waiting)` for the IP. That is deliberate: the page is most needed when the device is *not*
+> connecting, and gating it on a successful association would hide the only diagnostic the operator
+> has at exactly the wrong moment.
 
 **MQTT ▸ Setup** — shown when enabled. Shows **the address to browse to** (§7.6) plus a `Portal`
 toggle, and descends to the L2 editors as the fallback. The password editor is `writeOnly`, so it
@@ -707,6 +798,14 @@ MQTT's fields are **worse** to type than a passphrase. A broker host is `homeass
 `192.168.1.50`, a base topic is `watermeter/plant-3/inlet`, and §3.3 measures the character wheel
 at roughly 27 presses per character. Five such fields on three buttons is not a user interface.
 
+> **R7.14 — The site also serves a read-only status view** (Q15, decided 2026-08-03): live sensor
+> readings, WiFi and MQTT state, the last MQTT error, and the polling rate. Every value is already
+> in the catalogue and the server is already running, so it is close to free — and "why will MQTT
+> not connect" is far easier to answer in a browser than on a 240×135 panel with three buttons.
+>
+> Now that R7.9 makes the server permanent this is worth more than it was when the page existed for
+> ten minutes at a time: it becomes the ordinary way to look at the device.
+
 > **R7.8** — One page serves both. It presents a WiFi section (scan, pick, passphrase) and an MQTT
 > section (host, port, username, password, base topic, discovery prefix), and submits to the same
 > settings catalogue every other input surface writes to.
@@ -726,21 +825,76 @@ the very network the broker lives on.
 
 The **MQTT info** and **AP info** pages already show the IP, which is exactly what a browser needs.
 
-> **R7.9 — THE STA-SIDE PAGE IS OFF BY DEFAULT AND MUST BE TURNED ON FROM THE MENU.**
+> **R7.9 — THE WEB SERVER IS ALWAYS ACTIVE WHEN WIFI IS, AND EVERY PAGE IS BEHIND A LOGIN.**
+> Decided 2026-08-03 (Q14), replacing an earlier draft that had the page off by default with a
+> ten-minute timer.
 >
-> This follows the principle already established for the radio: "a radio that switches itself on is
-> a radio the owner did not consent to." A configuration server is more than that — it is reachable
-> by **every host on the operator's network**, not only by someone standing at the device, and it
-> can repoint the broker. An AP portal is gated by physical presence; a LAN-side one is not.
+> The model is the conventional one for this class of device — a router, a network camera, a PLC
+> gateway: the server runs whenever the device is on a network, and authentication rather than
+> availability is what protects it. **WiFi is the on/off switch**, and MQTT has its own; the server
+> itself is not separately gated. That is simpler to explain and simpler to use than a window the
+> operator has to keep re-opening, and it makes the diagnostic value of §7.6 permanently available
+> rather than available for ten minutes at a time.
 >
-> So `config.portal.enabled` is a setting, defaulting off, and the page shuts down on the same
-> ten-minute timer as the AP (R7.6). Turning it on is a deliberate act with a visible countdown.
+> The consequence to be clear-eyed about: the device is reachable by **every host on the operator's
+> network** for as long as WiFi is enabled, so the login is the entire defence. Which makes the next
+> two requirements load-bearing rather than decorative.
 
-> **R7.10** — The page is served over **HTTP**, so the MQTT password crosses the LAN in clear text.
-> This must be documented for the operator rather than quietly accepted. TLS is not a real option
-> here: a self-signed certificate produces a browser warning that trains people to click through
-> warnings, which is worse than the clear-text exposure it would fix. R7.9's "off unless
-> deliberately enabled, with a timeout" is the mitigation that actually helps.
+> **R7.9a — A DEFAULT PASSWORD MUST BE CHANGED, NOT MERELY CHANGEABLE.**
+>
+> The device ships with `admin`, which is standard practice and also the single most exploited
+> pattern in embedded equipment. What separates a device that survives that from one that does not is
+> whether the default is *allowed to persist*. So:
+>
+> - Until the password has been changed, **every page shows a persistent warning** naming the risk,
+>   and the change-password form is what the login lands on rather than the status page.
+> - The device's own display says so too: `config.portal.passwordDefault` is a derived value, and
+>   the WiFi info page shows `PASSWORD: DEFAULT` while it is unchanged. An operator who never opens
+>   a browser still finds out.
+> - It is **not** forced — a locked-out device on a wall is worse than a weakly-protected one on a
+>   home LAN — but it is impossible to miss.
+>
+> This is the one place this document argues with the "standard practice" it is following: the
+> practice that produced Mirai was default passwords that nothing ever nagged about.
+
+> **R7.9b — The login gates every page, including on the AP.**
+>
+> One barrier, no exceptions, because an exception is what someone finds. The default password is
+> displayed on the **AP info page** alongside the AP's WPA2 key (R7.5), for the same reason: an
+> operator standing at the device can read it, and someone who is not standing there cannot. First
+> provisioning therefore needs no prior knowledge, and no page is left unprotected to achieve that.
+>
+> Credentials are `config.portal.user` (default `admin`) and `config.portal.password`
+> (default `admin`, `writeOnly`). Being `writeOnly` they read back as zeros over Modbus per §5.1 —
+> the device's own login is the operator's secret, unlike the AP key of R5.3.
+
+> **R7.9c — The page carries EVERY setting, and is generated from the catalogue.**
+>
+> The owner asked for "a settings page where all the settings can be set up". That is 24+ settings
+> today — sensor calibration, the Modbus link block, LED behaviour, WiFi, MQTT — and hand-writing a
+> form per setting would guarantee the page drifts from the catalogue the moment one is added.
+>
+> So the form is **generated from the same catalogue the manifest is generated from** (decision D2).
+> Each `SettingDescriptor` already carries everything a form control needs: `kind` selects the
+> widget, `min`/`max`/`step` bound a numeric, `options` populate a select, `maxLength` sizes a text
+> input, `writeOnly` renders it as a password field. Adding a setting to the firmware catalogue adds
+> it to the web page with no HTML written — the same property that makes the manifest trustworthy.
+>
+> This also means the page cannot offer a setting the firmware does not have, or omit one it does.
+
+> **R7.10** — The page is served over **HTTP**. So the login password, the MQTT broker password and
+> the WiFi passphrase all cross the LAN in clear text whenever the form is submitted.
+>
+> This must be documented for the operator, not quietly accepted. TLS is not a real option here: a
+> self-signed certificate produces a browser warning that trains people to click through warnings,
+> which is worse than the exposure it would fix.
+>
+> **And R7.9's change to an always-on server removes the mitigation the earlier draft relied on.**
+> A ten-minute window bounded the exposure; a permanent server does not. What remains is the login
+> (R7.9a/b) and the fact that the device is on a LAN behind NAT rather than on the internet. That is
+> a reasonable posture for a home or plant network and an inadequate one for a device exposed to the
+> world — so the operator documentation must say, in as many words: **do not port-forward this
+> device.**
 
 > **R7.11** — Submitting the form is a **staged write followed by an apply**, exactly as §5's
 > register block requires. A form POST must not leave half a configuration live: the fields are
@@ -765,12 +919,30 @@ be closed almost for free:
 > screen; someone who is not standing there cannot. This costs one line of `softAP()` argument and
 > removes "anyone in radio range can reconfigure it" entirely.
 >
+> **R7.13 — NTP SYNCS THE RTC ON ASSOCIATION** (Q9, decided 2026-08-03). One query when WiFi comes
+> up, written to the RX8130CE at 0x32. It is the first thing that has ever set that clock.
+>
+> Two constraints from elsewhere in this document apply and are easy to overlook: the RTC is on the
+> **sensor I²C bus** (§2.1.2), so it is written once on association and never polled — R2.1.6 covers
+> it. And the query must not block the logic loop, so it goes through the same task the MQTT client
+> uses.
+>
+> Not exposed over Modbus for now: nothing consumes a wall-clock time yet — the MQTT payloads carry
+> no timestamps and Home Assistant stamps arrivals itself. The registers can be added when something
+> needs them.
+
 > **R7.6** — The AP shuts down after **10 minutes** without a completed provisioning, and on
 > success. A portal that stays up forever is a portal nobody remembers is running. The countdown
 > is shown on the AP info page.
 >
-> **R7.7** — While the AP is up the LEDs must say so, and `CardBusy`'s amber/blue is taken —
-> see **Q11** for which pattern.
+> **R7.7 — While the AP is up the LEDs show a slow blue pulse** (Q11, decided 2026-08-03):
+> `LedOverride::ApPortal`, on at `kApPortalPeriodMs` and off for the same, blue only.
+>
+> Blue already carries the network association in §3's vocabulary, and a slow single-channel pulse
+> is distinguishable from everything else there: never solid (reset accepted), never accelerating (a
+> countdown), and never two channels alternating (`CardBusy`). It is also distinguishable from
+> §3.3's *blue blink on flow*, which is a short blink on a pulse rather than a steady rhythm — but
+> that is the one collision worth testing for, so the host test asserts the two periods differ.
 
 ### 7.5. Consequences for the pack format
 
@@ -780,9 +952,12 @@ be closed almost for free:
   to answer before this ships.
 - **The skeleton generator must emit these screens**, and `assertCoversEverySetting` will refuse to
   generate until every new setting has an editor. That gate is what will keep this honest.
-- **Guards must round-trip through the pack format.** `PackFlow` has no guard field today, so
-  adding one is a `formatVersion` bump from 1 to 2 — the reader rejects a version it does not know,
-  so old and new firmware cannot silently disagree.
+- **Guards enter the pack format now, as `formatVersion` 2** (Q12, decided 2026-08-03). `PackFlow`
+  gains a `guardStr` offset alongside `actionStr`. The reader already refuses a version it does not
+  recognise, so a version-1 pack meets a version-2 firmware as a clean `BadFormatVersion` rather
+  than as a flow whose guard field is read out of whatever follows it. The round-trip test compares
+  every flow field, so the emitter and reader cannot drift apart on the new field either.
+  Deferring would have meant shipping the WiFi tree with dead entries and revisiting every screen.
 
 ## 8. Security
 
@@ -799,9 +974,19 @@ outbound network path. That deserves stating plainly rather than burying.
 > operator rather than quietly accepted. The same applies to credentials in a file on a
 > removable SD card (§3.3).
 >
-> **R8.3** — MQTT without TLS sends the broker password in plaintext over the network. TLS
-> is therefore offered (`config.mqtt.tls`), subject to the flash and RAM budget in §9.4. If
-> TLS does not fit, that fact must be documented, not discovered.
+> **R8.3 — TLS IS OUT OF SCOPE FOR THIS VERSION (Q3, decided 2026-08-03).** MQTT runs over plain
+> TCP, so the broker password and all telemetry cross the network in clear text.
+>
+> This is a deliberate choice for a device whose broker is on the same LAN, and it must be stated in
+> the operator documentation rather than left to be discovered. `config.mqtt.tls` is **not** added
+> as a setting: a toggle that does nothing is worse than its absence, because it implies protection
+> that is not there. Adding TLS later is a catalogue addition plus a certificate story, and the
+> §5 register block leaves room in `NET_MQTT_FLAGS` for it.
+>
+> What this does NOT excuse: R7.10's clear-text config page is mitigated by being off by default
+> with a timeout. Nothing similar mitigates MQTT, because it runs continuously by design. A
+> deployment that cannot accept a plain-text broker credential on its network should not enable
+> MQTT until TLS exists.
 >
 > **R8.4** — A factory reset must erase the credentials. A device leaving one owner's hands
 > must not carry their WiFi passphrase.
@@ -871,21 +1056,21 @@ experienced.
 
 | # | Question | Options | Recommendation |
 | --- | --- | --- | --- |
-| **Q1** | Can WiFi be kept off core 0 under `framework = arduino`? | (a) Build flags suffice; (b) needs a custom sdkconfig; (c) needs `framework = espidf`; (d) cannot be controlled | Being researched. If (d), report the measured cost and let the user decide — do not ship silently. |
-| **Q2** | Which bulk credential path? | (a) SD card file; (b) SoftAP portal; (c) Modbus only; (d) SD now, SoftAP later | **(d)** — SD reuses the card reader, filesystem and JSON parser that menu packs already require. |
-| **Q3** | Is TLS in scope for v1? | (a) Yes; (b) no, plaintext only; (c) only if it fits without a partition change | **(c)** — offer it if the budget allows, document plainly if not. |
-| **Q4** | Does the W:/M: indicator go on P0 or in the footer? | (a) P0 body; (b) footer row; (c) both | **(b)** — P0 is full, and the footer stack is already deterministic. |
-| **Q5** | Should the exporter reject non-ASCII in display-bound text? | (a) Hard failure; (b) warning; (c) no check | **(a)** — it renders as garbage on Font0 and looks fine in the mockup, which is the worst combination. |
-| **Q6** | Publish per-sensor JSON, or a topic per value? | (a) JSON per sensor; (b) topic per value | **(a)** — 8 publishes per cycle instead of 40, and HA consumes it natively. |
-| **Q7** | What happens to packs authored before the catalogue grew? | (a) Export fails until re-authored; (b) manifest carries a catalogue version and the exporter warns for values added after the pack's version; (c) completeness becomes per-category | **(b)** — keeps the rule's guarantee for new work without retroactively breaking old packs. |
-| **Q8** | Should MQTT accept commands (reset session, etc.)? | (a) Not in v1; (b) yes | **(a)** — publishing is a much smaller security surface than accepting control. Worth a follow-up requirement. |
-| **Q9** | Sync the RX8130CE RTC from NTP once WiFi exists? | (a) Yes; (b) no | **(a)** — cheap, and it makes the RTC useful for the first time. |
-| **Q10** | Should `wifi.rssi` be a Home Assistant entity? | (a) Yes, diagnostic category; (b) display only | **(a)** — it is the first thing anyone looks at when a device drops. |
-| **Q11** | Which LED pattern for "AP portal up"? | (a) A new override; (b) reuse `CardBusy`'s amber/blue; (c) no LED signal | **(a)** — reuse would make a provisioning AP indistinguishable from a card read, and §3 of the LED spec is deliberately unambiguous. Needs a shape distinct from solid, accelerating, single-channel and amber/blue. |
-| **Q12** | Do guards belong in the pack format now or later? | (a) Now, `formatVersion` 2; (b) info pages always visible until then | **(a)** — (b) means shipping the tree with dead entries and revisiting every screen later. The version bump is cheap because the reader already rejects unknown versions. |
-| **Q13** | Is `wifi.configured` "SSID stored" or "SSID stored AND association succeeded once"? | (a) SSID stored; (b) association proven | **(a)** — (b) would hide the WiFi info page precisely when the operator most needs to see why it is not connecting. |
-| **Q14** | Should the STA-side config page require a password of its own? | (a) No — rely on R7.9's off-by-default plus the timeout; (b) yes, the same per-device password as the AP; (c) HTTP basic auth with an operator-set password | **(b)** — the per-device password already exists for the AP and is already shown on screen, so reusing it costs nothing and closes "any host on the LAN can repoint the broker during the ten-minute window". (a) leaves that window genuinely open. |
-| **Q15** | Does the portal serve a live status page as well as the forms? | (a) Forms only; (b) forms plus a read-only status page | **(b)** — the information is already in the catalogue, the page is already being served, and "why is MQTT not connecting" is far easier to answer on a browser than on a 240×135 panel. Cheap, and it makes the ten-minute window useful for diagnosis rather than only for configuration. |
+| ~~**Q1**~~ | Can WiFi be kept off core 0 under `framework = arduino`? | **ANSWERED 2026-08-03 by measurement, not decision — see §2.1.3.** Split: the WiFi task moves with `-DCONFIG_ESP32_WIFI_TASK_PINNED_TO_CORE_1` because its core is a runtime field; lwIP's `tiT` cannot move, its affinity is a literal compiled into `liblwip.a`. So R2.1.0 cannot be fully satisfied under this framework. |
+| ~~**Q2**~~ | Which bulk credential path? | **DECIDED 2026-08-03: the web page**, for WiFi *and* MQTT — see §7.6. Supersedes this question's own recommendation of the SD card, and §3.3 records why that reasoning was wrong. |
+| ~~**Q3**~~ | Is TLS in scope for v1? | **DECIDED 2026-08-03: (b) plaintext only.** `config.mqtt.tls` is deliberately NOT added — a toggle that does nothing implies protection that is not there. See R8.3. |
+| ~~**Q4**~~ | Does the W:/M: indicator go on P0 or in the footer? | **DECIDED 2026-08-03: (b) footer.** Also puts it on every info page rather than only P0. |
+| ~~**Q5**~~ | Should the exporter reject non-ASCII in display-bound text? | (a) Hard failure; (b) warning; (c) no check | **(a)** — it renders as garbage on Font0 and looks fine in the mockup, which is the worst combination. |
+| **Q6** | Publish per-sensor JSON, or a topic per value? | (a) JSON per sensor; (b) topic per value | **(a)**, and already written into §4.2 as the specified behaviour with its reasoning — 8 publishes per cycle instead of 40, consumed natively by HA via `value_template`. **Not separately put to the owner**, so it stands as a specified default rather than a ratified decision; say so if (b) is wanted. |
+| ~~**Q7**~~ | What happens to packs authored before the catalogue grew? | **DECIDED 2026-08-03: (a) break them.** No live product, so backwards compatibility is not worth paying for; the skeleton generator IS the migration. Revisit the moment a customer has authored a pack — see §2.3. |
+| ~~**Q8**~~ | Should MQTT accept commands (reset session, etc.)? | **DECIDED 2026-08-03: (b) yes**, against my recommendation to defer. Specified in §4.4.1 with two safeguards the decision needs: an explicit `RESET` payload (the project's `0x5AA5` idiom) and unconditional rejection of RETAINED command messages, which would otherwise wipe the totals on every reconnect forever. |
+| ~~**Q9**~~ | Sync the RX8130CE RTC from NTP once WiFi exists? | **DECIDED 2026-08-03: (a) yes**, on association only, not polled — the RTC is on the sensor I²C bus (R2.1.6). Not exposed over Modbus yet. See R7.13. |
+| ~~**Q10**~~ | Should `wifi.rssi` be a Home Assistant entity? | (a) Yes, diagnostic category; (b) display only | **(a)** — it is the first thing anyone looks at when a device drops. |
+| ~~**Q11**~~ | Which LED pattern for "AP portal up"? | (a) A new override; (b) reuse `CardBusy`'s amber/blue; (c) no LED signal | **(a)** — reuse would make a provisioning AP indistinguishable from a card read, and §3 of the LED spec is deliberately unambiguous. Needs a shape distinct from solid, accelerating, single-channel and amber/blue. |
+| ~~**Q12**~~ | Do guards belong in the pack format now or later? | **DECIDED 2026-08-03: (a) now, `formatVersion` 2.** See §7.5. |
+| ~~**Q13**~~ | Is `wifi.configured` "SSID stored" or "SSID stored AND association succeeded once"? | (a) SSID stored; (b) association proven | **(a)** — (b) would hide the WiFi info page precisely when the operator most needs to see why it is not connecting. |
+| ~~**Q14**~~ | **REDESIGNED 2026-08-03.** The answer changed the model rather than picking an option: the web server is always active while WiFi is, every page sits behind a login defaulting to `admin`/`admin`, the password is changeable from a settings page that carries every setting, and WiFi and MQTT have their own on/off switches. See R7.9 and R7.9a-c. Original question: | (a) No — rely on R7.9's off-by-default plus the timeout; (b) yes, the same per-device password as the AP; (c) HTTP basic auth with an operator-set password | **(b)** — the per-device password already exists for the AP and is already shown on screen, so reusing it costs nothing and closes "any host on the LAN can repoint the broker during the ten-minute window". (a) leaves that window genuinely open. |
+| ~~**Q15**~~ | Does the portal serve a live status page as well as the forms? | (a) Forms only; (b) forms plus a read-only status page | **(b)** — the information is already in the catalogue, the page is already being served, and "why is MQTT not connecting" is far easier to answer on a browser than on a 240×135 panel. Cheap, and it makes the ten-minute window useful for diagnosis rather than only for configuration. |
 
 ---
 
