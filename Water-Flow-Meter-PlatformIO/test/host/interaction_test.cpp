@@ -130,6 +130,7 @@ struct Device {
   plc::SpiArbiter spiArbiter;
   ui::UiAssets assets = ui::loadGeneratedAssets();
   plc::LinkSettingsManager link;
+  plc::NetSettings net;
   ui::SettingsAccess settings;
   uint16_t connectedBitmap = 0xFF;
   /** What the last tick()'s InteractionHandler::update() returned. */
@@ -169,6 +170,10 @@ struct Device {
     settings.configs = configs;
     settings.connectedBitmap = &connectedBitmap;
     settings.sensorCount = plc::kNumSensors;
+    // Same reasoning as the line above about SettingsAccess itself: without this the fourteen
+    // network settings have no storage, every text edit silently refuses, and the tests below
+    // would pass against a device that cannot hold an SSID.
+    settings.net = &net;
     deps.settings = &settings;
     harness::factoryResets = 0;
     interactions.begin(now, harness::countFactoryReset, deps);
@@ -1457,6 +1462,160 @@ void ledI2cTrafficTests() {
   dev.leds.clearCardBusy();
 }
 
+/**
+ * N2b — the text editor driven through the real actions, not through TextEditor directly.
+ *
+ * text_editor_test.cpp already covers the engine's 97-position wheel exhaustively. What is
+ * untested until here is the WIRING: that a text setting opens the text editor rather than the
+ * numeric one, that ENTER-short does not ascend while the operator is still typing, that a commit
+ * reaches NetSettings, and that the two bindings an editor screen carries render text rather than
+ * the "0" a numeric read would produce.
+ *
+ * Driven through the action registry rather than through buttons because the dataset has no
+ * text-editor screens yet (N7a) — so there is no screen to press ENTER on. The registry is the
+ * same entry point InteractionHandler uses, so the handlers under test are the real ones.
+ */
+void textEditorWiringTests() {
+  std::printf("\n[N2b — text editing through the real action handlers]\n");
+  Device dev;
+  dev.boot();
+
+  const auto* ssid = ui::findSetting("config.wifi.ssid");
+  const auto* psk = ui::findSetting("config.wifi.psk");
+  check(ssid != nullptr && psk != nullptr, "the catalogue has the WiFi text settings");
+  if (!ssid || !psk) return;
+  check(ssid->kind == ui::SettingKind::Text, "config.wifi.ssid is a Text setting");
+  check(psk->writeOnly, "config.wifi.psk is marked write-only, so its editor masks");
+
+  auto dispatch = [&](const char* actionId) {
+    ui::UiActionContext ctx{dev.controller, dev.modbus, dev.leds, dev.prefs};
+    ctx.nowMs = dev.now;
+    ctx.settings = &dev.settings;
+    return ui::defaultActionRegistry().dispatch(actionId, ctx, ui_exporter::Flow{});
+  };
+
+  // resolveText takes the element, not a bare id — the same call the renderer makes.
+  auto resolveBinding = [&](const char* bindingId, char* out, std::size_t size) {
+    ui_exporter::Element el{};
+    el.id = "probe";
+    el.type = ui_exporter::ElementType::Value;
+    el.bindingId = bindingId;
+    return dev.bindings.resolveText(dev.controller.context(), el, out, size);
+  };
+
+  // ── Every Text setting must be scrubbable ─────────────────────────────────────
+  //
+  // The structural check. handleValueIncrement passes setting->step to adjustEdit, so a Text
+  // setting with step 0 opens on END and never moves — UP and DOWN do nothing at all. This asserts
+  // the property for the whole catalogue rather than for the one setting a behavioural test
+  // happens to drive.
+  std::size_t textSettings = 0;
+  bool everyTextStepUsable = true;
+  for (std::size_t i = 0; i < ui::settingCount(); ++i) {
+    const auto* s = ui::settingAt(i);
+    if (!s || s->kind != ui::SettingKind::Text) continue;
+    ++textSettings;
+    if (s->step == 0) {
+      everyTextStepUsable = false;
+      std::printf("      %s has step 0 — its editor cannot move off END\n", s->bindingId);
+    }
+    if (s->maxLength == 0) everyTextStepUsable = false;
+  }
+  std::printf("      %zu text settings inspected\n", textSettings);
+  check(textSettings == 7, "the catalogue declares seven text settings (§6.1)");
+  check(everyTextStepUsable, "every text setting has a non-zero step and a non-zero maxLength");
+
+  // ── Opening ──────────────────────────────────────────────────────────────────
+  dev.controller.beginTextEdit(ssid, 0, "");
+  check(dev.controller.editingText(), "beginTextEdit opens a TEXT edit");
+  check(dev.controller.editor().isText, "and the state says so, which is what the actions branch on");
+  // Documented behaviour: the wheel opens on END so re-entering a screen and leaving the value
+  // alone is one press (ui_text_editor.cpp). Asserted so the tests below rest on a stated fact.
+  check(dev.controller.editor().text.wheelIndex() == ui::TextCharset::kEndIndex,
+        "the wheel opens on END, so leaving a value untouched costs one press");
+
+  char rendered[80] = {};
+  resolveBinding("config.editor.pending", rendered, sizeof(rendered));
+  check(std::strstr(rendered, "[") != nullptr,
+        "config.editor.pending renders the wheel marker, not a formatted number");
+
+  // ── UP/DOWN move the wheel, and they must ACTUALLY move it ────────────────────
+  const std::size_t wheelAtOpen = dev.controller.editor().text.wheelIndex();
+  const int32_t pendingBefore = dev.controller.editor().pending;
+  dispatch("config.action.value.increment");
+  check(dev.controller.editor().pending == pendingBefore,
+        "UP leaves the numeric pending alone — a text edit has no number to step");
+  check(dev.controller.editor().text.wheelIndex() != wheelAtOpen,
+        "UP moved the wheel OFF its opening position (a step of 0 would fail here)");
+
+  // ── ENTER-short on a character types it and stays open ────────────────────────
+  // Land on a printable character deliberately: from END, one step forward reaches index 0, a space.
+  dev.controller.beginTextEdit(ssid, 0, "");
+  dispatch("config.action.value.increment");
+  const bool onPrintable =
+      ui::TextCharset::commandAt(dev.controller.editor().text.wheelIndex()) == ui::TextCommand::None;
+  check(onPrintable, "one step forward from END lands on a printable character");
+  dispatch("config.action.value.commit");
+  check(dev.controller.editingText(),
+        "ENTER-short on a character keeps the editor open — it types, it does not commit");
+  check(dev.controller.editor().text.length() == 1, "exactly one character was accepted");
+
+  // ── ENTER-short on END commits, and the value reaches storage ─────────────────
+  dev.controller.beginTextEdit(ssid, 0, "MyNetwork");
+  check(std::strcmp(dev.controller.editor().text.value(), "MyNetwork") == 0,
+        "beginTextEdit seeds from the stored value, so an existing SSID is edited not retyped");
+  check(dev.controller.editor().text.wheelIndex() == ui::TextCharset::kEndIndex,
+        "and it opens on END, so committing an unchanged value is a single press");
+  dispatch("config.action.value.commit");
+  check(!dev.controller.editor().active, "ENTER on END closes the editor");
+
+  char stored[80] = {};
+  dev.net.get(plc::NetField::WifiSsid, stored, sizeof(stored));
+  check(std::strcmp(stored, "MyNetwork") == 0,
+        "and the value reached NetSettings — committed, not merely staged");
+  check(dev.net.revision() > 0, "the revision bumped, so a polling master can see the change");
+
+  // ── The saved-value binding renders text, not a number ────────────────────────
+  char savedLine[80] = {};
+  resolveBinding("config.wifi.ssid", savedLine, sizeof(savedLine));
+  check(std::strcmp(savedLine, "MyNetwork") == 0,
+        "binding config.wifi.ssid renders the stored text (it read as \"0\" before this arm existed)");
+
+  resolveBinding("config.wifi.psk", savedLine, sizeof(savedLine));
+  check(std::strcmp(savedLine, "(not set)") == 0,
+        "an unset passphrase says so rather than rendering blank");
+
+  dev.net.stage(plc::NetField::WifiPsk, "hunter2");
+  dev.net.apply();
+  resolveBinding("config.wifi.psk", savedLine, sizeof(savedLine));
+  check(std::strcmp(savedLine, "********") == 0,
+        "a set passphrase masks on the saved line, at a fixed width that hides its length");
+
+  // ── Discard leaves the stored value untouched ─────────────────────────────────
+  dev.controller.beginTextEdit(ssid, 0, "MyNetwork");
+  dispatch("config.action.value.increment");
+  dispatch("config.action.value.commit");   // types a character into the buffer
+  check(dev.controller.editor().text.length() == 10, "a character was typed onto the seeded value");
+  dispatch("config.action.value.discard");
+  check(!dev.controller.editor().active, "ENTER-long closes the editor");
+  dev.net.get(plc::NetField::WifiSsid, stored, sizeof(stored));
+  check(std::strcmp(stored, "MyNetwork") == 0, "and discarding wrote nothing");
+
+  // ── No storage attached: refuse rather than pretend ───────────────────────────
+  ui::SettingsAccess orphan;
+  char out[8] = {};
+  check(!ui::readSettingText(*ssid, orphan, out, sizeof(out)),
+        "readSettingText refuses when no NetSettings is wired");
+  check(!ui::writeSettingText(*ssid, "x", orphan),
+        "and writeSettingText refuses too, instead of silently discarding the edit");
+
+  // ── The masked flag comes from the descriptor, not from the call site ─────────
+  dev.controller.beginTextEdit(psk, 0, "");
+  check(dev.controller.editor().text.masked(),
+        "opening the PSK editor masks automatically, because writeOnly drives it");
+  dev.controller.endEdit();
+}
+
 }  // namespace
 
 int main() {
@@ -1484,6 +1643,7 @@ int main() {
   confirmAbortTests();
   factoryResetHoldTests();
   linkApplyProtocolTests();
+  textEditorWiringTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

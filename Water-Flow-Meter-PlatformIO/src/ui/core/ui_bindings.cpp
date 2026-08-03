@@ -294,6 +294,13 @@ bool UiBindingResolver::resolveConfigBinding(const UiRenderContext& context,
       return false;
     }
     const auto& editor = controller_->editor();
+    if (editor.isText) {
+      // renderInto supplies the masking and the `text[K]` wheel marker, and truncates from the LEFT
+      // so the cursor stays on screen. formatSetting cannot serve here: it would need the buffer AND
+      // the wheel position, and it takes an int32_t.
+      editor.text.renderInto(buffer, bufferSize);
+      return true;
+    }
     formatSetting(*editor.setting, editor.pending, buffer, bufferSize);
     return true;
   }
@@ -341,6 +348,18 @@ bool UiBindingResolver::resolveConfigBinding(const UiRenderContext& context,
   if (const auto* setting = findSetting(bindingId)) {
     if (!settings_) {
       return false;
+    }
+    // Text settings take the other accessor pair. Without this arm they reached readSetting, which
+    // has no int32_t reading for them and returns 0 — so an editor's "Saved" line would have shown
+    // an SSID as "0". formatSettingText applies the masking, so a passphrase reads "********" and a
+    // never-set field reads "(not set)" rather than rendering blank.
+    if (setting->kind == ui::SettingKind::Text) {
+      char stored[TextEditor::kMaxLength + 1] = {};
+      if (!readSettingText(*setting, *settings_, stored, sizeof(stored))) {
+        return false;
+      }
+      formatSettingText(*setting, stored, buffer, bufferSize);
+      return true;
     }
     const int32_t value = readSetting(*setting, sensor, *settings_);
     formatSetting(*setting, value, buffer, bufferSize);

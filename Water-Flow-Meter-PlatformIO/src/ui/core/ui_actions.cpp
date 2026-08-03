@@ -135,9 +135,20 @@ void handleNavDescend(const UiActionContext& ctx, const ui_exporter::Flow&) {
   // screen — closes any editor instead of opening one.
   if (const auto* setting = settingEditedByScreen(ctx.resolvedTarget)) {
     const uint8_t sensor = ctx.controller.navigator().sensorIndex();
-    const int32_t current =
-        ctx.settings ? readSetting(*setting, sensor, *ctx.settings) : 0;
-    ctx.controller.beginEdit(setting, sensor, current);
+    if (setting->kind == ui::SettingKind::Text) {
+      // Seeded from the stored value so an existing SSID is edited rather than retyped. An empty
+      // buffer on failure is the right fallback: a text editor that opens blank is usable, one
+      // seeded with garbage is not.
+      char current[ui::TextEditor::kMaxLength + 1] = {};
+      if (ctx.settings) {
+        readSettingText(*setting, *ctx.settings, current, sizeof(current));
+      }
+      ctx.controller.beginTextEdit(setting, sensor, current);
+    } else {
+      const int32_t current =
+          ctx.settings ? readSetting(*setting, sensor, *ctx.settings) : 0;
+      ctx.controller.beginEdit(setting, sensor, current);
+    }
   } else {
     ctx.controller.endEdit();
   }
@@ -217,6 +228,28 @@ void handleValueCommit(const UiActionContext& ctx, const ui_exporter::Flow&) {
   if (!editor.active || !editor.setting || !ctx.settings) {
     return;
   }
+
+  // A text edit spends most of its ENTER-shorts typing, not committing: the press accepts the
+  // character under the wheel and the editor stays open. Only END concludes it (§6.3).
+  if (editor.isText) {
+    if (ctx.controller.enterTextShort(ctx.nowMs) != ui::TextEditResult::Commit) {
+      return;  // still typing — do NOT ascend
+    }
+    // Re-read through editor() rather than reusing the reference: enterTextShort mutated the state.
+    const auto& done = ctx.controller.editor();
+    if (!writeSettingText(*done.setting, done.text.value(), *ctx.settings)) {
+      // No Nyquist analogue for text — a refused write here is a bad field or absent storage, and
+      // there is nothing an override could fix, so it must not offer "DOWN = Save anyway".
+      ctx.controller.setCommitFailed(true);
+      return;
+    }
+    ctx.controller.endEdit();
+    if (ctx.controller.navigator().ascend()) {
+      ctx.controller.syncPageFromScreen(ctx.controller.navigator().current(), ctx.nowMs);
+    }
+    return;
+  }
+
   if (!writeSetting(*editor.setting, editor.sensorIndex, editor.pending, *ctx.settings)) {
     // Which failure? A Nyquist refusal parks the write awaiting an override confirmation, and
     // is the ONLY one an override can resolve — so it is the only one that may offer

@@ -60,36 +60,44 @@ constexpr SettingDescriptor kSettings[] = {
     // registerAddress is the FIRST register of each text field, which is what a Modbus master
     // needs; the span follows from maxLength via net_reg::textRegisters(). The three flags that
     // share register 564 all report 564 — truthful, and the accessor knows which bit each means.
+    //
+    // TEXT SETTINGS CARRY step = 1, NOT 0. min/max are meaningless for text — adjustSetting has no
+    // text arm by design (§6.2 item 5) — but `step` is NOT decorative: handleValueIncrement passes
+    // `setting->step` straight to adjustEdit, which for a text edit becomes TextEditor::scrub().
+    // A step of 0 scrubs by nothing, so UP and DOWN would do absolutely nothing and every text
+    // editor would open on END with no way to move off it — unusable, and invisible to any test
+    // that only asserts the wheel is "not at zero". A host check now asserts this for every Text
+    // setting so the next one added cannot repeat it.
     {"config.wifi.enabled", SettingTarget::WifiEnabled, SettingKind::Boolean,
      0, 1, 1, kBoolOptions, kBoolOptionCount, nullptr, false,
      plc::net_reg::kWifiEnabled, kNoRegister, "WiFi radio enabled", 0, false},
     {"config.wifi.ssid", SettingTarget::WifiSsid, SettingKind::Text,
-     0, 0, 0, nullptr, 0, nullptr, false,
+     0, 0, 1, nullptr, 0, nullptr, false,
      plc::net_reg::kWifiSsid, kNoRegister, "WiFi network name", 32, false},
     {"config.wifi.psk", SettingTarget::WifiPsk, SettingKind::Text,
-     0, 0, 0, nullptr, 0, nullptr, false,
+     0, 0, 1, nullptr, 0, nullptr, false,
      plc::net_reg::kWifiPsk, kNoRegister, "WiFi passphrase (never read back)", 63, true},
 
     {"config.mqtt.enabled", SettingTarget::MqttEnabled, SettingKind::Boolean,
      0, 1, 1, kBoolOptions, kBoolOptionCount, nullptr, false,
      plc::net_reg::kMqttEnabled, kNoRegister, "MQTT client enabled", 0, false},
     {"config.mqtt.host", SettingTarget::MqttHost, SettingKind::Text,
-     0, 0, 0, nullptr, 0, nullptr, false,
+     0, 0, 1, nullptr, 0, nullptr, false,
      plc::net_reg::kMqttHost, kNoRegister, "MQTT broker hostname or IP", 64, false},
     {"config.mqtt.port", SettingTarget::MqttPort, SettingKind::Numeric,
      1, 65535, 1, nullptr, 0, nullptr, false,
      plc::net_reg::kMqttPort, kNoRegister, "MQTT broker port", 0, false},
     {"config.mqtt.user", SettingTarget::MqttUser, SettingKind::Text,
-     0, 0, 0, nullptr, 0, nullptr, false,
+     0, 0, 1, nullptr, 0, nullptr, false,
      plc::net_reg::kMqttUser, kNoRegister, "MQTT username", 32, false},
     {"config.mqtt.password", SettingTarget::MqttPassword, SettingKind::Text,
-     0, 0, 0, nullptr, 0, nullptr, false,
+     0, 0, 1, nullptr, 0, nullptr, false,
      plc::net_reg::kMqttPassword, kNoRegister, "MQTT password (never read back)", 32, true},
     {"config.mqtt.baseTopic", SettingTarget::MqttBaseTopic, SettingKind::Text,
-     0, 0, 0, nullptr, 0, nullptr, false,
+     0, 0, 1, nullptr, 0, nullptr, false,
      plc::net_reg::kMqttBaseTopic, kNoRegister, "MQTT topic prefix for this device", 48, false},
     {"config.mqtt.discoveryPrefix", SettingTarget::MqttDiscoveryPrefix, SettingKind::Text,
-     0, 0, 0, nullptr, 0, nullptr, false,
+     0, 0, 1, nullptr, 0, nullptr, false,
      plc::net_reg::kMqttPrefix, kNoRegister,
      "Home Assistant discovery prefix (default homeassistant)", 32, false},
     {"config.mqtt.publishPeriod", SettingTarget::MqttPublishPeriod, SettingKind::Numeric,

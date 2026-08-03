@@ -9,6 +9,7 @@
 #include "ui/core/ui_pages.h"
 #include "ui/pack/ui_pack_selector.h"
 #include "ui/core/ui_settings.h"
+#include "ui/core/ui_text_editor.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
 
@@ -103,6 +104,16 @@ struct UiEditorState {
   uint8_t sensorIndex = 0;
   int32_t pending = 0;
   int32_t saved = 0;
+  /**
+   * True when this is a `SettingKind::Text` edit, and `text` rather than `pending` holds the value.
+   *
+   * A flag beside the descriptor rather than a second editor state, because every gesture means
+   * the same thing in both: UP/DOWN move, ENTER-short advances, ENTER-long discards. The two
+   * editors differ in what "move" does, not in how they are driven — which is why no new action
+   * ids and no new screen kind were needed for text (§6.3).
+   */
+  bool isText = false;
+  ui::TextEditor text{};
   /** Set when a commit failed its Nyquist check and DOWN can force it (§5.5). */
   bool nyquistPrompt = false;
   /**
@@ -170,8 +181,31 @@ class UiController {
 
   const UiEditorState& editor() const { return editor_; }
   void beginEdit(const ui::SettingDescriptor* setting, uint8_t sensorIndex, int32_t current);
+
+  /**
+   * Opens a text edit on `setting`, seeded with `current` (§6.3).
+   *
+   * Separate from beginEdit for the reason §6.2 gives for the accessor pair: the initial value is a
+   * string, and squeezing it through the int32_t parameter is not expressible.
+   */
+  void beginTextEdit(const ui::SettingDescriptor* setting,
+                     uint8_t sensorIndex,
+                     const char* current);
+
   void endEdit();
   void adjustEdit(int32_t delta, uint32_t nowMs);
+
+  /**
+   * ENTER-short inside a text edit: accept the wheel character, delete, or finish.
+   *
+   * Returns what the editor concluded so the action can decide whether to write and ascend or
+   * stay on the screen. Returns `Continue` when no text edit is open, so a caller that asks on
+   * the wrong screen does nothing rather than committing something.
+   */
+  ui::TextEditResult enterTextShort(uint32_t nowMs);
+
+  /** True while a `SettingKind::Text` edit is open. */
+  bool editingText() const { return editor_.active && editor_.isText; }
   void setNyquistPrompt(bool on) { editor_.nyquistPrompt = on; }
   void setCommitFailed(bool on) { editor_.commitFailed = on; }
 
