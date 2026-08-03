@@ -43,6 +43,34 @@ namespace plc {
  * Arduino-free and allocation-free, so the whole protocol is host-testable. The interleavings
  * that matter — a request arriving mid-frame, a release arriving before a repaint, a renderer
  * that never closes its frame — are the ones no bench test would reliably reproduce.
+ *
+ * ── HOW OFTEN THIS ACTUALLY MATTERS ───────────────────────────────────────────────────────
+ *
+ * Rarely, and that is deliberate. The complete set of card accesses in the design is:
+ *
+ *   | When                        | What                                  | Display live? |
+ *   | Boot                        | read /ui/active, read the pack        | No            |
+ *   | Opening the Select Menu page| enumerate /ui/, read the pointer      | YES           |
+ *   | Selecting an entry          | write or delete /ui/active, then boot | Yes, briefly  |
+ *
+ * Nothing else touches the card. In particular nothing is logged to it, and there is no
+ * background reader.
+ *
+ * Two consequences that are correctness statements, not observations:
+ *
+ *  1. **Every runtime access originates from the UI thread at a known point — a button press.**
+ *     There is no task racing the renderer, so this class is NOT thread-safe and does not need
+ *     to be. Anyone adding a background card reader must add locking first; the cheap version
+ *     here is only sound because of the table above.
+ *
+ *  2. **The selector's directory listing is the only case that genuinely needs arbitration.**
+ *     Boot has no display to contend with, and the write is followed immediately by a reboot —
+ *     so it need not hand the bus back at all, and `releaseCard` before a reboot would only buy
+ *     a repaint of a screen about to vanish.
+ *
+ * The 500 ms timeout is therefore a safety net rather than a working path: it exists for a
+ * wedged renderer, which is defensive, not expected. Said plainly so nobody reads its presence
+ * as evidence that contention is routine.
  */
 
 enum class BusState : uint8_t {

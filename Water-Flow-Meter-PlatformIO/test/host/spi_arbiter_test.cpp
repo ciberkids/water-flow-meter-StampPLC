@@ -236,6 +236,49 @@ void ledStatusTests() {
   check(!everWhite, "it is never solid white, which §3.5 reserves for reset acceptance");
 }
 
+
+void accessPatternTests() {
+  std::printf("\n[the three real access points — see the table in spi_arbiter.h]\n");
+
+  // 1. Boot: no display, so no contention. Already covered by bootGrantTests, restated here as
+  //    part of the inventory so the three cases sit together.
+  {
+    SpiArbiter bus;
+    check(bus.requestCard(0), "boot: granted with no frame ever opened");
+  }
+
+  // 2. Opening the selector: the ONE case that genuinely needs arbitration. The operator is
+  //    looking at the page while the directory is enumerated, so an artifact here is the one a
+  //    user would actually see.
+  {
+    SpiArbiter bus;
+    FakeRenderer renderer(bus);
+    for (int i = 0; i < 3; ++i) renderer.pass(80);          // the selector page is on screen
+    renderer.beginAndHang(80);                              // a frame happens to be open
+    check(!bus.requestCard(renderer.now), "selector: the enumeration waits for the frame");
+    bus.noteFrameEnded(renderer.now);
+    renderer.inFrame = false;
+    check(bus.cardGranted(), "then reads the directory");
+    bus.releaseCard(renderer.now);
+    renderer.pass(80);
+    check(renderer.fullRepaints == 1, "and the page is repainted in full afterwards");
+    check(!renderer.tornFrame, "with nothing torn");
+  }
+
+  // 3. Selecting an entry: write, then reboot. It need not hand the bus back — a repaint of a
+  //    screen about to disappear buys nothing — and holding it until the reboot must be safe.
+  {
+    SpiArbiter bus;
+    FakeRenderer renderer(bus);
+    renderer.pass(80);
+    check(bus.requestCard(renderer.now), "select: granted between frames");
+    for (int i = 0; i < 5; ++i) renderer.pass(80);
+    check(bus.cardGranted(), "and held right up to the reboot without being released");
+    check(renderer.framesSkipped == 5, "the display simply stops drawing until the reboot");
+    check(!renderer.tornFrame, "and no frame is torn on the way out");
+  }
+}
+
 }  // namespace
 
 int main() {
@@ -247,6 +290,7 @@ int main() {
   fullRepaintTests();
   hungRendererTests();
   idempotenceTests();
+  accessPatternTests();
   ledStatusTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
