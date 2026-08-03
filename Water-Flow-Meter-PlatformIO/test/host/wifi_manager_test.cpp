@@ -271,6 +271,13 @@ void backoffTests() {
   check(everyRungWaited, "the delay the machine reports is the delay it actually waits");
   check(growsWhileBelowCeiling, "the measured delay GROWS on every rung below the ceiling");
   check(neverExceedsCeiling, "and never exceeds the 5 min ceiling (R3.1.2)");
+  // R3.1.2's NUMBERS, not the class's own view of them. Every assertion around this one derives its
+  // expectation from WifiManager::kMaxBackoffMs, so raising the ceiling from 5 minutes to 20 left
+  // the whole suite green — the checks pinned the clamp's LOGIC but the requirement's figure not at
+  // all. These two lines are what make the constants answerable to the document.
+  check(WifiManager::kMaxBackoffMs == 300000u,
+        "the ceiling IS five minutes, as R3.1.2 states — not merely self-consistent");
+  check(WifiManager::kInitialBackoffMs == 1000u, "and the ladder starts at one second (R3.1.2)");
   check(reported[kRungs - 1] >= WifiManager::kMaxBackoffMs -
                                     WifiManager::kMaxBackoffMs / WifiManager::kBackoffJitterDivisor,
         "at the ceiling it sits inside the jitter band, not below it");
@@ -697,6 +704,120 @@ void wireEncodingTests() {
 
 }  // namespace
 
+// ────────────────────────────────────────────────────────────────────────────────────
+// A passphrase-only correction must reach the radio (R7.6).
+//
+// noteProvisioningComplete()'s guard used to compare the stored SSID against the SSID the radio was
+// given. That cannot see the single most likely correction an operator makes after a failed
+// association: retyping a mistyped passphrase on the SAME network. The change was swallowed, and the
+// device sat out its backoff ladder — or held the provisioning AP up for the full ten minutes —
+// carrying a passphrase it had already been told was wrong. The guard now compares a fingerprint of
+// SSID *and* passphrase.
+//
+// Breaks if: the guard reverts to comparing names, or the fingerprint stops being recorded when
+// credentials reach the radio.
+// ────────────────────────────────────────────────────────────────────────────────────
+void credentialChangeTests() {
+  std::printf("\n[a passphrase-only correction must reach the radio — R7.6]\n");
+
+  // ── Mid-backoff: the corrected passphrase must go out at once ─────────────────
+  {
+    NetSettings settings;
+    FakeRadio radio(kMacA);
+    WifiManager manager(settings, radio);
+    uint32_t now = 5000;
+
+    radio.linkAfterConnect = RadioLink::AuthFailed;
+    enableWifi(settings, "MyNetwork", "wrong-passphrase");
+    manager.update(now);
+    manager.update(now += kTickMs);
+    check(manager.state() == WifiState::Retrying, "a wrong passphrase lands in Retrying");
+    const int attemptsBefore = radio.connectCount;
+
+    // The operator fixes ONLY the passphrase. Same SSID.
+    radio.linkAfterConnect = RadioLink::Up;
+    settings.stage(NetField::WifiPsk, "correct-passphrase");
+    settings.apply();
+    manager.noteProvisioningComplete(now += kTickMs);
+
+    check(radio.connectCount > attemptsBefore,
+          "the corrected passphrase reaches the radio immediately, without waiting out the ladder");
+    manager.update(now += kTickMs);
+    check(manager.state() == WifiState::Connected, "and the device associates");
+  }
+
+  // ── With the AP up: success must also close the portal (R7.6's "and on success") ─
+  {
+    NetSettings settings;
+    FakeRadio radio(kMacA);
+    WifiManager manager(settings, radio);
+    uint32_t now = 5000;
+
+    radio.linkAfterConnect = RadioLink::AuthFailed;
+    enableWifi(settings, "MyNetwork", "wrong-passphrase");
+    manager.update(now);
+    manager.update(now += kTickMs);
+    manager.requestApPortal(now += kTickMs);
+    check(manager.state() == WifiState::ApPortal, "the AP is raised for provisioning");
+    const int stopsBefore = radio.stopApCount;
+
+    // The portal is used to fix only the passphrase.
+    radio.linkAfterConnect = RadioLink::Up;
+    settings.stage(NetField::WifiPsk, "correct-passphrase");
+    settings.apply();
+    manager.noteProvisioningComplete(now += kTickMs);
+
+    check(radio.stopApCount > stopsBefore,
+          "the AP is torn down on success rather than running its full ten minutes (R7.6)");
+    manager.update(now += kTickMs);
+    check(manager.state() == WifiState::Connected, "and the device joins the corrected network");
+  }
+
+  // ── The property the old guard was protecting must still hold ──────────────────
+  //
+  // The fix must not overshoot: an apply that changes NOTHING about the credentials — an operator
+  // committing an unrelated MQTT setting through R5.5's single apply path — must not bounce a
+  // working link.
+  {
+    NetSettings settings;
+    FakeRadio radio(kMacA);
+    WifiManager manager(settings, radio);
+    uint32_t now = 5000;
+
+    radio.linkAfterConnect = RadioLink::Up;
+    enableWifi(settings, "MyNetwork", "right-passphrase");
+    manager.update(now);
+    manager.update(now += kTickMs);
+    check(manager.state() == WifiState::Connected, "the device is associated");
+    const int connectsBefore = radio.connectCount;
+    const int disconnectsBefore = radio.disconnectCount;
+
+    settings.stageMqttPort(8883);   // nothing to do with WiFi
+    settings.apply();
+    manager.noteProvisioningComplete(now += kTickMs);
+
+    check(radio.connectCount == connectsBefore,
+          "an unrelated apply does NOT re-associate — the idempotence guard still guards");
+    check(radio.disconnectCount == disconnectsBefore, "and does not drop the link");
+    check(manager.state() == WifiState::Connected, "the link survives it");
+  }
+
+  // ── The fingerprint must actually distinguish the cases ───────────────────────
+  check(WifiManager::fingerprintOf("net", "secret") !=
+            WifiManager::fingerprintOf("net", "secret2"),
+        "a passphrase change changes the fingerprint");
+  check(WifiManager::fingerprintOf("net", "secret") !=
+            WifiManager::fingerprintOf("net2", "secret"),
+        "an SSID change changes it too");
+  check(WifiManager::fingerprintOf("net", "secret") ==
+            WifiManager::fingerprintOf("net", "secret"),
+        "and it is stable for identical credentials");
+  // The separator earns its keep here: without it these two would collide, and a credential change
+  // that only moved the boundary between the fields would be invisible.
+  check(WifiManager::fingerprintOf("ab", "c") != WifiManager::fingerprintOf("a", "bc"),
+        "moving the boundary between SSID and passphrase is not a collision");
+}
+
 int main() {
   std::printf("plc::WifiManager — the WiFi state machine (§3, §7.4)\n\n");
   happyPathTests();
@@ -711,6 +832,7 @@ int main() {
   apIdentityTests();
   rolloverTests();
   wireEncodingTests();
+  credentialChangeTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

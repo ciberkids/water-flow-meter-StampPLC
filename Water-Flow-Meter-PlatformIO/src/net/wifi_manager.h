@@ -265,6 +265,16 @@ class WifiManager {
   const char* ssid() const { return ssid_; }
 
   /**
+   * FNV-1a over ssid, a separator, then psk — the identity of a credential PAIR.
+   *
+   * Public and static because it is a pure function of its arguments and the test has to be able to
+   * assert the property the guard depends on: that a passphrase-only change moves it, and that
+   * moving the boundary between the two fields is not a collision. A private helper would have left
+   * that provable only indirectly, through the state machine.
+   */
+  static uint64_t fingerprintOf(const char* ssid, const char* psk);
+
+  /**
    * `water_flow_meter_<n>`, stable for the life of the device (R7.5a).
    *
    * Derived from the MAC and never randomised per boot, because R5.3 has a remote operator read
@@ -364,6 +374,22 @@ class WifiManager {
 
   uint8_t mac_[6] = {};
   char ssid_[NetSettings::kMaxValueBytes + 1] = {};
+  /**
+   * Fingerprint of the credentials LAST HANDED TO THE RADIO — SSID and passphrase together.
+   *
+   * noteProvisioningComplete() needs to answer "are the stored credentials different from the ones
+   * the radio is using". It used to answer it by comparing the SSID alone, which cannot see the
+   * commonest correction there is: the operator retyped a mistyped passphrase on the same network.
+   * That change was silently swallowed — measured at 73 s of dead time mid-backoff, and a full 600 s
+   * with the provisioning AP still up, which is R7.6's "and on success" going unhonoured.
+   *
+   * A fingerprint rather than a copy of the passphrase, because a second plaintext copy of a secret
+   * is a second place it can leak from (§8.1) and nothing here needs to read it back. 64-bit FNV-1a:
+   * a collision would swallow one credential change, and at 2^-64 per change that is far below the
+   * rate at which an operator mistypes the same passphrase twice.
+   */
+  uint64_t credentialFingerprint_ = 0;
+
   char apSsid_[kApNameBytes] = {};
   char apPassword_[kApNameBytes] = {};
 

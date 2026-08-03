@@ -815,6 +815,85 @@ void constantTimeTests() {
 
 }  // namespace
 
+// ────────────────────────────────────────────────────────────────────────────────────
+// A submission that stages no network field must NOT apply (R5.5a).
+//
+// submit() used to call NetSettings::apply() unconditionally. R5.5a accepts that a DELIBERATE apply
+// promotes whatever a Modbus master has staged but not committed — one apply path, last apply wins.
+// It does not excuse applying when this surface staged nothing: a POST of only store-backed fields
+// would then destroy a master's half-written multi-register block for no reason, report no change,
+// and be invisible from both ends.
+//
+// The existing coverage could not catch this: it asserted "nothing was applied" in a fixture where
+// no master had staged anything, so there was nothing for a stray apply to promote. These tests
+// stage from the master side FIRST, which is what makes a stray apply observable.
+//
+// Breaks if: the apply guard is removed, or networkFieldsStaged stops being incremented.
+// ────────────────────────────────────────────────────────────────────────────────────
+void applyOnlyWhenStagedTests() {
+  std::printf("\n[a POST that stages nothing must not apply — R5.5a]\n");
+
+  // ── A store-only submission must leave a master's in-flight block alone ───────
+  {
+    NetSettings net;
+    FakeStore store;
+    PortalForm form(net, &store, plc::kNumSensors);
+
+    // A master stages half an SSID and has not written the apply magic yet.
+    net.stage(plc::NetField::WifiSsid, "MasterHalfWritten");
+    check(net.isEmpty(plc::NetField::WifiSsid),
+          "the master's SSID is staged only — live is still empty");
+
+    const uint16_t revisionBefore = net.revision();
+    const auto result = form.submit("config.modbusSlaveId=9");
+    check(result.ok(), "a store-only submission still succeeds");
+    check(result.networkFieldsStaged == 0, "and it staged no network field");
+    check(!result.committed, "so it reports nothing committed");
+    check(net.revision() == revisionBefore,
+          "the revision did not move, so no apply happened");
+    check(net.isEmpty(plc::NetField::WifiSsid),
+          "and the master's half-written SSID is STILL only staged — not promoted by a "
+          "submission that had nothing of its own to save");
+  }
+
+  // ── A submission of no recognised field at all is the same ────────────────────
+  {
+    NetSettings net;
+    FakeStore store;
+    PortalForm form(net, &store, plc::kNumSensors);
+    net.stage(plc::NetField::MqttHost, "10.0.0.9");
+    const uint16_t revisionBefore = net.revision();
+    form.submit("");
+    check(net.revision() == revisionBefore, "an empty body applies nothing");
+    check(net.isEmpty(plc::NetField::MqttHost), "and leaves a staged broker host staged");
+  }
+
+  // ── But a real network submission DOES apply, master block included (R5.5a) ────
+  //
+  // The other half of the contract. Guarding the apply must not turn the portal into a surface that
+  // cannot commit — and when it does commit, R5.5a's accepted behaviour is that the master's
+  // pending field goes live with it. That is documented, deliberate, and asserted here so nobody
+  // "fixes" it later without reading §5.5a.
+  {
+    NetSettings net;
+    FakeStore store;
+    PortalForm form(net, &store, plc::kNumSensors);
+    net.stage(plc::NetField::WifiSsid, "FromTheMaster");
+
+    const auto result = form.submit("config.mqtt.host=10.0.0.5");
+    check(result.ok(), "a network submission succeeds");
+    check(result.networkFieldsStaged == 1, "and reports the one field it staged");
+    check(result.committed, "and commits");
+
+    char buf[80] = {};
+    net.get(plc::NetField::MqttHost, buf, sizeof(buf));
+    check(std::strcmp(buf, "10.0.0.5") == 0, "the portal's own field went live");
+    net.get(plc::NetField::WifiSsid, buf, sizeof(buf));
+    check(std::strcmp(buf, "FromTheMaster") == 0,
+          "and so did the master's pending field — R5.5a's one-apply-path, stated as a test");
+  }
+}
+
 int main() {
   std::printf("plc::PortalForm — the configuration portal's form logic (§7.6, §7.9a, §8)\n\n");
   coverageTests();
@@ -829,6 +908,7 @@ int main() {
   storeTests();
   capacityAgreementTests();
   constantTimeTests();
+  applyOnlyWhenStagedTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

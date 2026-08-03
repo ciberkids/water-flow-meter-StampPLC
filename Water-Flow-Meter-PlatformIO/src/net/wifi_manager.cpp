@@ -190,12 +190,32 @@ void WifiManager::enterEnabled() {
   }
 }
 
+uint64_t WifiManager::fingerprintOf(const char* ssid, const char* psk) {
+  // The separator matters: without it ("ab","c") and ("a","bc") would fingerprint identically, so a
+  // credential change that only moved the boundary would be invisible.
+  uint64_t hash = 1469598103934665603ull;  // FNV-1a 64 offset basis
+  const auto mix = [&hash](const char* text) {
+    for (const char* p = text; p && *p != '\0'; ++p) {
+      hash ^= static_cast<uint8_t>(*p);
+      hash *= 1099511628211ull;
+    }
+    hash ^= 0xFFu;  // separator
+    hash *= 1099511628211ull;
+  };
+  mix(ssid);
+  mix(psk);
+  return hash;
+}
+
 void WifiManager::beginConnect() {
   char ssid[NetSettings::kMaxValueBytes + 1] = {};
   char psk[NetSettings::kMaxValueBytes + 1] = {};
   settings_.get(NetField::WifiSsid, ssid, sizeof(ssid));
   settings_.get(NetField::WifiPsk, psk, sizeof(psk));
   std::memcpy(ssid_, ssid, sizeof(ssid_));
+  // Recorded at the moment the credentials reach the radio, so the comparison in
+  // noteProvisioningComplete() is against what is actually in use rather than against a name.
+  credentialFingerprint_ = fingerprintOf(ssid, psk);
 
   const bool accepted = radio_.connect(ssid, psk);
 
@@ -412,10 +432,17 @@ void WifiManager::noteProvisioningComplete(uint32_t nowMs) {
   // The idempotence that makes this safe to call from EVERY apply path (R5.5 — there is one).
   // An operator committing an unrelated MQTT setting at the panel goes through the same apply as
   // the portal's form, and it must not bounce a working link. So the test is not "did an apply
-  // happen" but "is the stored network different from the one the radio is on".
-  char stored[NetSettings::kMaxValueBytes + 1] = {};
-  settings_.get(NetField::WifiSsid, stored, sizeof(stored));
-  if (std::strcmp(stored, ssid_) == 0) {
+  // happen" but "are the stored CREDENTIALS different from the ones the radio was given".
+  //
+  // Credentials, not the SSID. Comparing the name alone swallowed a passphrase-only correction —
+  // the single most likely thing an operator does after a failed association — leaving the device
+  // to run out its backoff ladder, or sit with the AP up for the full ten minutes, holding a
+  // passphrase it had already been told was right. See credentialFingerprint_.
+  char storedSsid[NetSettings::kMaxValueBytes + 1] = {};
+  char storedPsk[NetSettings::kMaxValueBytes + 1] = {};
+  settings_.get(NetField::WifiSsid, storedSsid, sizeof(storedSsid));
+  settings_.get(NetField::WifiPsk, storedPsk, sizeof(storedPsk));
+  if (fingerprintOf(storedSsid, storedPsk) == credentialFingerprint_) {
     return;
   }
 

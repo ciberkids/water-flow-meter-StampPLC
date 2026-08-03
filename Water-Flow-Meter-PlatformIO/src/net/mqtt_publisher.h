@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "modbus/register_map.h"
+#include "net/mqtt_limits.h"
 
 namespace plc {
 
@@ -165,10 +166,16 @@ class MqttPublisher {
    *  this number growing to hold one. */
   static constexpr std::size_t kQueueCapacity = 16;
 
-  /** R4.1.6 — what the transport sets `out_buffer_size` to. Lives here, in the host-compiled half,
-   *  so the R4.4.8 length test and the transport share ONE constant rather than two that drift.
-   *  §4.4.7: a payload over this is dropped by esp-mqtt with no log and no entity in HA. */
-  static constexpr int kOutBufferBytes = 2048;
+  /**
+   * R4.1.6 — what the transport sets `out_buffer_size` to.
+   *
+   * DERIVED, not declared. This used to be its own `= 2048`, while ha_discovery.h declared a second
+   * independent 2048 that the R4.4.8 worst-case test measured against. Both headers claimed to be
+   * the single source of truth. Now there is one, in net/mqtt_limits.h, and this is a view of it —
+   * so changing the buffer moves the transport and the test together, which is what R4.4.8 asks
+   * for. §4.4.7: a payload over this is dropped by esp-mqtt with no log and no entity in HA.
+   */
+  static constexpr int kOutBufferBytes = static_cast<int>(kMqttOutBufferSize);
 
   /** A payload this queue would accept but the client could never send is a silent loss by
    *  construction (§4.4.7), so the two bounds are reconciled at compile time rather than by review. */

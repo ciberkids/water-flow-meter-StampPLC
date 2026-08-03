@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "modbus/register_map.h"  // kNumSensors — one source for "how many sensors exist"
+#include "net/mqtt_limits.h"     // kMqttOutBufferSize — the ONE definition (R4.4.8)
 #include "net/net_settings.h"     // netFieldCapacity — the topic length caps already live there
 
 namespace plc {
@@ -27,16 +28,13 @@ namespace plc {
  * guess a size — see `kMqttOutBufferSize` below, which is the one number R4.4.8 is about.
  */
 
-// ── The buffer constants R4.4.8 requires to be shared ────────────────────────────────
+// ── The buffer constant R4.4.8 requires to be shared ─────────────────────────────────
 //
-// R4.1.6/R4.4.8: `esp_mqtt_client_config_t.buffer_size` defaults to 1024 and a payload larger than
-// the buffer is dropped with a -1 return, no log, no entity. §4.1.1 sets `out_buffer_size = 2048`.
-// That number lives HERE rather than next to the client config so the host test that measures the
-// worst-case payload and the client that has to carry it cannot drift apart — which is the whole
-// point of R4.4.8's "the buffer value and the test share one constant".
-
-/** What `esp_mqtt_client_config_t.out_buffer_size` MUST be set to (§4.1.1, R4.1.6). */
-inline constexpr std::size_t kMqttOutBufferSize = 2048;
+// `kMqttOutBufferSize` now comes from net/mqtt_limits.h, which is its ONLY definition. It used to be
+// declared here as well as in mqtt_publisher.h — two independent 2048s, each with a comment claiming
+// to be the single source of truth. The transport read the publisher's copy; the worst-case test
+// below measured the copy declared here. Halving one would have left this test green over a client
+// that silently dropped every discovery payload.
 
 /**
  * Slack the worst-case discovery payload must leave inside the buffer.

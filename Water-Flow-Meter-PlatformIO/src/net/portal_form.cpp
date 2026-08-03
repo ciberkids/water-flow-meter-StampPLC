@@ -871,7 +871,11 @@ void PortalForm::handleField(const char* name,
         ++result.fieldsAccepted;
         return;
       case Pass::StageNetwork:
-        if (!net_.stage(ref.textField, value)) addError(result, name, PortalFieldError::Refused);
+        if (!net_.stage(ref.textField, value)) {
+          addError(result, name, PortalFieldError::Refused);
+        } else {
+          ++result.networkFieldsStaged;
+        }
         return;
       case Pass::WriteExternal:
         return;
@@ -920,8 +924,12 @@ void PortalForm::handleField(const char* name,
       ++result.fieldsAccepted;
       return;
     case Pass::StageNetwork:
-      if (!ref.external && !stageNetScalar(net_, setting.target, resolved)) {
-        addError(result, name, PortalFieldError::Refused);
+      if (!ref.external) {
+        if (!stageNetScalar(net_, setting.target, resolved)) {
+          addError(result, name, PortalFieldError::Refused);
+        } else {
+          ++result.networkFieldsStaged;
+        }
       }
       return;
     case Pass::WriteExternal:
@@ -993,8 +1001,18 @@ PortalSubmitResult PortalForm::submit(const char* body) {
 
   runPass(body, Pass::StageNetwork, result);
   // One apply for the whole submission, so the radio and the MQTT client see a single transition
-  // rather than one per field.
-  result.committed = net_.apply();
+  // rather than one per field — but ONLY if this submission actually staged a network field.
+  //
+  // This used to be unconditional, and that was a real defect rather than a redundant call. R5.5a
+  // accepts that a deliberate apply promotes whatever a Modbus master has staged but not yet
+  // committed: there is one apply path and the last apply wins. What it does not excuse is applying
+  // when the portal staged NOTHING — a POST of only store-backed fields, or of no recognised field
+  // at all, would still promote a master's half-written multi-register block. That destroys somebody
+  // else's in-flight configuration for no reason, produces no change to report, and is invisible
+  // from both ends.
+  if (result.networkFieldsStaged > 0) {
+    result.committed = net_.apply();
+  }
 
   runPass(body, Pass::WriteExternal, result);
   if (!result.ok() && result.storedSomething()) {

@@ -120,6 +120,17 @@ struct PortalSubmitResult {
   /** True when NetSettings::apply() reported an actual change. False for a no-op submission. */
   bool committed = false;
   /**
+   * How many network fields this submission actually staged.
+   *
+   * Exists to gate the apply. submit() used to call NetSettings::apply() unconditionally, which
+   * means a POST touching only store-backed fields — or a POST that staged nothing at all — still
+   * promoted whatever was pending. R5.5a accepts that a *deliberate* apply promotes a Modbus
+   * master's in-flight block (one apply path, last apply wins); it does not excuse applying when
+   * this surface staged nothing, which would destroy a master's half-written block for no reason
+   * whatsoever and with nothing to show the operator for it.
+   */
+  std::size_t networkFieldsStaged = 0;
+  /**
    * Writes the injected store accepted.
    *
    * Tracked separately from `committed` because they are two different sinks, and a submission may
