@@ -43,6 +43,13 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/pack_test" \
   src/ui/pack/ui_pack.cpp \
   src/ui/generated/GeneratedUi.cpp
 
+# The firmware-owned Select Menu page. Exists so a pack that omits a selector cannot trap the
+# operator, so the cases that matter are the awkward ones: an empty card, more packs than the page
+# holds, and a pointer naming a pack that is not there.
+g++ "${CXXFLAGS[@]}" -o "$OUT/pack_selector_test" \
+  test/host/pack_selector_test.cpp \
+  src/ui/pack/ui_pack_selector.cpp
+
 # The shared-SPI handover. The requirement is "no visible artifacts", which is stronger than
 # "no corruption" — so what is asserted is that the card never takes the bus between a
 # startWrite() and its endWrite(), under interleavings no bench reproduces on demand.
@@ -101,6 +108,8 @@ echo
 "$OUT/pack_loader_test"
 echo
 "$OUT/spi_arbiter_test"
+echo
+"$OUT/pack_selector_test"
 echo
 
 # The manifest the design tool validates against is generated from the firmware's own
