@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-03T19:17:31.231Z",
+  "generatedAt": "2026-08-03T20:09:08.339Z",
   "screenCount": 78,
   "elementCount": 538,
   "dataset": [
@@ -9126,7 +9126,7 @@
     },
     {
       "id": "net-mqtt-setup",
-      "name": "M2 — Broker setup",
+      "name": "M2 — Broker",
       "description": "MQTT entry M2. ENTER descends; UP/DOWN move within the level.",
       "elements": [
         {
@@ -9138,7 +9138,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "MQTT > Broker setup",
+              "text": "MQTT > Broker",
               "emphasis": "normal",
               "align": "left"
             }
@@ -9234,7 +9234,7 @@
         },
         {
           "id": "f-enter",
-          "label": "Open Broker setup",
+          "label": "Open Broker",
           "trigger": {
             "type": "button",
             "button": "enter",
@@ -9381,7 +9381,7 @@
     {
       "id": "net-mqtt-host",
       "name": "B1 — Broker host",
-      "description": "MQTT Setup entry B1. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B1. ENTER edits; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
@@ -9392,7 +9392,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "MQTT Setup > Broker host",
+              "text": "MQTT Broker > Broker host",
               "emphasis": "normal",
               "align": "left"
             }
@@ -9506,7 +9506,7 @@
     {
       "id": "net-mqtt-port",
       "name": "B2 — Port",
-      "description": "MQTT Setup entry B2. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B2. ENTER edits; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
@@ -9517,7 +9517,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "MQTT Setup > Port",
+              "text": "MQTT Broker > Port",
               "emphasis": "normal",
               "align": "left"
             }
@@ -9804,7 +9804,7 @@
     {
       "id": "net-mqtt-user",
       "name": "B3 — Username",
-      "description": "MQTT Setup entry B3. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B3. ENTER edits; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
@@ -9815,7 +9815,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "MQTT Setup > Username",
+              "text": "MQTT Broker > Username",
               "emphasis": "normal",
               "align": "left"
             }
@@ -9929,7 +9929,7 @@
     {
       "id": "net-mqtt-password",
       "name": "B4 — Password",
-      "description": "MQTT Setup entry B4. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B4. ENTER edits; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
@@ -9940,7 +9940,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "MQTT Setup > Password",
+              "text": "MQTT Broker > Password",
               "emphasis": "normal",
               "align": "left"
             }
@@ -10054,7 +10054,7 @@
     {
       "id": "net-mqtt-base-topic",
       "name": "B5 — Base topic",
-      "description": "MQTT Setup entry B5. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B5. ENTER edits; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
@@ -10065,7 +10065,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "MQTT Setup > Base topic",
+              "text": "MQTT Broker > Base topic",
               "emphasis": "normal",
               "align": "left"
             }
@@ -10179,7 +10179,7 @@
     {
       "id": "net-mqtt-prefix",
       "name": "B6 — HA prefix",
-      "description": "MQTT Setup entry B6. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B6. ENTER edits; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
@@ -10190,7 +10190,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "MQTT Setup > HA prefix",
+              "text": "MQTT Broker > HA prefix",
               "emphasis": "normal",
               "align": "left"
             }
@@ -10304,7 +10304,7 @@
     {
       "id": "net-mqtt-period",
       "name": "B7 — Publish period",
-      "description": "MQTT Setup entry B7. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B7. ENTER edits; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
@@ -10315,7 +10315,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "MQTT Setup > Publish period",
+              "text": "MQTT Broker > Publish period",
               "emphasis": "normal",
               "align": "left"
             }
@@ -10602,7 +10602,7 @@
     {
       "id": "net-mqtt-ha-discovery",
       "name": "B8 — HA discovery",
-      "description": "MQTT Setup entry B8. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B8. ENTER edits; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
@@ -10613,7 +10613,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "MQTT Setup > HA discovery",
+              "text": "MQTT Broker > HA discovery",
               "emphasis": "normal",
               "align": "left"
             }
@@ -10900,7 +10900,7 @@
     {
       "id": "net-mqtt-tls",
       "name": "B9 — TLS",
-      "description": "MQTT Setup entry B9. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B9. ENTER edits; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
@@ -10911,7 +10911,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "MQTT Setup > TLS",
+              "text": "MQTT Broker > TLS",
               "emphasis": "normal",
               "align": "left"
             }
@@ -11198,7 +11198,7 @@
     {
       "id": "net-mqtt-qos",
       "name": "B10 — QoS",
-      "description": "MQTT Setup entry B10. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B10. ENTER edits; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
@@ -11209,7 +11209,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "MQTT Setup > QoS",
+              "text": "MQTT Broker > QoS",
               "emphasis": "normal",
               "align": "left"
             }
@@ -11496,7 +11496,7 @@
     {
       "id": "net-mqtt-setup-back",
       "name": "B.BACK — Back",
-      "description": "Ascends one level, out of MQTT Setup.",
+      "description": "Ascends one level, out of MQTT Broker.",
       "elements": [
         {
           "id": "hdr-title",
@@ -11507,7 +11507,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "MQTT Setup",
+              "text": "MQTT Broker",
               "emphasis": "normal",
               "align": "left"
             }

@@ -1376,7 +1376,7 @@ static constexpr ui_exporter::Flow kNetMqttEnabledEditFlows[] = {
     { "f-discard", "Discard and go back", "net-mqtt-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttSetup_NetMqttSetupHdrTitle_Text = { "MQTT > Broker setup", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttSetup_NetMqttSetupHdrTitle_Text = { "MQTT > Broker", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttSetup_NetMqttSetupFieldLabel_Text = { "Open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttSetup_NetMqttSetupFieldValue_Text = { "Settings >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttSetup_NetMqttSetupFooterHint_Text = { "UP/DN page  ENTER open  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -1393,7 +1393,7 @@ static constexpr ui_exporter::Element kNetMqttSetupElements[] = {
 static constexpr ui_exporter::Flow kNetMqttSetupFlows[] = {
     { "f-next", "Next entry", "net-mqtt-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "net-mqtt-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open Broker setup", "net-mqtt-host", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-enter", "Open Broker", "net-mqtt-host", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
@@ -1416,7 +1416,7 @@ static constexpr ui_exporter::Flow kNetMqttBackFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttHost_NetMqttHostHdrTitle_Text = { "MQTT Setup > Broker host", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttHost_NetMqttHostHdrTitle_Text = { "MQTT Broker > Broker host", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttHost_NetMqttHostFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttHost_NetMqttHostFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttHost_NetMqttHostFooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -1436,7 +1436,7 @@ static constexpr ui_exporter::Flow kNetMqttHostFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttPort_NetMqttPortHdrTitle_Text = { "MQTT Setup > Port", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttPort_NetMqttPortHdrTitle_Text = { "MQTT Broker > Port", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttPort_NetMqttPortFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttPort_NetMqttPortFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttPort_NetMqttPortFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -1483,7 +1483,7 @@ static constexpr ui_exporter::Flow kNetMqttPortEditFlows[] = {
     { "f-discard", "Discard and go back", "net-mqtt-port", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttUser_NetMqttUserHdrTitle_Text = { "MQTT Setup > Username", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttUser_NetMqttUserHdrTitle_Text = { "MQTT Broker > Username", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttUser_NetMqttUserFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttUser_NetMqttUserFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttUser_NetMqttUserFooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -1503,7 +1503,7 @@ static constexpr ui_exporter::Flow kNetMqttUserFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttPassword_NetMqttPasswordHdrTitle_Text = { "MQTT Setup > Password", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttPassword_NetMqttPasswordHdrTitle_Text = { "MQTT Broker > Password", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttPassword_NetMqttPasswordFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttPassword_NetMqttPasswordFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttPassword_NetMqttPasswordFooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -1523,7 +1523,7 @@ static constexpr ui_exporter::Flow kNetMqttPasswordFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttBaseTopic_NetMqttBaseTopicHdrTitle_Text = { "MQTT Setup > Base topic", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttBaseTopic_NetMqttBaseTopicHdrTitle_Text = { "MQTT Broker > Base topic", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttBaseTopic_NetMqttBaseTopicFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttBaseTopic_NetMqttBaseTopicFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttBaseTopic_NetMqttBaseTopicFooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -1543,7 +1543,7 @@ static constexpr ui_exporter::Flow kNetMqttBaseTopicFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttPrefix_NetMqttPrefixHdrTitle_Text = { "MQTT Setup > HA prefix", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttPrefix_NetMqttPrefixHdrTitle_Text = { "MQTT Broker > HA prefix", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttPrefix_NetMqttPrefixFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttPrefix_NetMqttPrefixFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttPrefix_NetMqttPrefixFooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -1563,7 +1563,7 @@ static constexpr ui_exporter::Flow kNetMqttPrefixFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttPeriod_NetMqttPeriodHdrTitle_Text = { "MQTT Setup > Publish period", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttPeriod_NetMqttPeriodHdrTitle_Text = { "MQTT Broker > Publish period", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttPeriod_NetMqttPeriodFieldLabel_Text = { "Current s", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttPeriod_NetMqttPeriodFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttPeriod_NetMqttPeriodFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -1610,7 +1610,7 @@ static constexpr ui_exporter::Flow kNetMqttPeriodEditFlows[] = {
     { "f-discard", "Discard and go back", "net-mqtt-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttHaDiscovery_NetMqttHaDiscoveryHdrTitle_Text = { "MQTT Setup > HA discovery", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttHaDiscovery_NetMqttHaDiscoveryHdrTitle_Text = { "MQTT Broker > HA discovery", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttHaDiscovery_NetMqttHaDiscoveryFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttHaDiscovery_NetMqttHaDiscoveryFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttHaDiscovery_NetMqttHaDiscoveryFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -1657,7 +1657,7 @@ static constexpr ui_exporter::Flow kNetMqttHaDiscoveryEditFlows[] = {
     { "f-discard", "Discard and go back", "net-mqtt-ha-discovery", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttTls_NetMqttTlsHdrTitle_Text = { "MQTT Setup > TLS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttTls_NetMqttTlsHdrTitle_Text = { "MQTT Broker > TLS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttTls_NetMqttTlsFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttTls_NetMqttTlsFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttTls_NetMqttTlsFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -1704,7 +1704,7 @@ static constexpr ui_exporter::Flow kNetMqttTlsEditFlows[] = {
     { "f-discard", "Discard and go back", "net-mqtt-tls", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosHdrTitle_Text = { "MQTT Setup > QoS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosHdrTitle_Text = { "MQTT Broker > QoS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -1751,7 +1751,7 @@ static constexpr ui_exporter::Flow kNetMqttQosEditFlows[] = {
     { "f-discard", "Discard and go back", "net-mqtt-qos", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttSetupBack_NetMqttSetupBackHdrTitle_Text = { "MQTT Setup", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttSetupBack_NetMqttSetupBackHdrTitle_Text = { "MQTT Broker", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttSetupBack_NetMqttSetupBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttSetupBack_NetMqttSetupBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
@@ -1972,7 +1972,7 @@ const ui_exporter::Screen kGeneratedScreens[] = {
     { "net-wifi-back", "W.BACK — Back", kNetWifiBackElements, sizeof(kNetWifiBackElements) / sizeof(kNetWifiBackElements[0]), kNetWifiBackFlows, sizeof(kNetWifiBackFlows) / sizeof(kNetWifiBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-enabled", "M1 — Enabled", kNetMqttEnabledElements, sizeof(kNetMqttEnabledElements) / sizeof(kNetMqttEnabledElements[0]), kNetMqttEnabledFlows, sizeof(kNetMqttEnabledFlows) / sizeof(kNetMqttEnabledFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-enabled-edit", "M1.V — Edit Enabled", kNetMqttEnabledEditElements, sizeof(kNetMqttEnabledEditElements) / sizeof(kNetMqttEnabledEditElements[0]), kNetMqttEnabledEditFlows, sizeof(kNetMqttEnabledEditFlows) / sizeof(kNetMqttEnabledEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-setup", "M2 — Broker setup", kNetMqttSetupElements, sizeof(kNetMqttSetupElements) / sizeof(kNetMqttSetupElements[0]), kNetMqttSetupFlows, sizeof(kNetMqttSetupFlows) / sizeof(kNetMqttSetupFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-setup", "M2 — Broker", kNetMqttSetupElements, sizeof(kNetMqttSetupElements) / sizeof(kNetMqttSetupElements[0]), kNetMqttSetupFlows, sizeof(kNetMqttSetupFlows) / sizeof(kNetMqttSetupFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-back", "M.BACK — Back", kNetMqttBackElements, sizeof(kNetMqttBackElements) / sizeof(kNetMqttBackElements[0]), kNetMqttBackFlows, sizeof(kNetMqttBackFlows) / sizeof(kNetMqttBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-host", "B1 — Broker host", kNetMqttHostElements, sizeof(kNetMqttHostElements) / sizeof(kNetMqttHostElements[0]), kNetMqttHostFlows, sizeof(kNetMqttHostFlows) / sizeof(kNetMqttHostFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-port", "B2 — Port", kNetMqttPortElements, sizeof(kNetMqttPortElements) / sizeof(kNetMqttPortElements[0]), kNetMqttPortFlows, sizeof(kNetMqttPortFlows) / sizeof(kNetMqttPortFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
@@ -2021,7 +2021,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-03T19:17:31.231Z", 78, 538
+    "2026-08-03T20:09:08.339Z", 78, 538
 };
 
 }  // namespace ui_exporter
