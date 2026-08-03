@@ -311,11 +311,21 @@ only path that works with nothing but the device in your hand.
 | **SmartConfig / ESP-TOUCH** | Needs a vendor phone app | Medium | UDP broadcast of the PSK | Opaque failure |
 | **BLE provisioning** | Good, needs an app | High, and BLE shares the radio with WiFi | Pairing model | — |
 
-**Recommendation:** the **SD card file** as the bulk path. It is the cheapest by a wide
-margin because `Loadable_UI_Menu_Packs.md` already puts a card reader, a filesystem and a
-JSON parser in the firmware; this reuses all three. It also matches how the operator already
-configures this device — by preparing a card at a desk. SoftAP is the better product answer
-and the wrong first answer.
+**Superseded 2026-08-03.** The owner chose the **web page** (§7.6), for both WiFi and MQTT, and
+that is the better answer than the SD-card file this section originally recommended. Three reasons
+the earlier reasoning was wrong:
+
+- It judged SoftAP "the better product answer and the wrong first answer" on the assumption the
+  portal needed a web stack we did not have. `WebServer` and `DNSServer` ship **bundled** with
+  arduino-esp32 2.0.17 (verified), so the portal costs no dependency at all.
+- It weighed only the WiFi passphrase. MQTT adds five more text fields, and at the measured ~27
+  presses per character the card and the character wheel are both worse than a form by a wide
+  margin.
+- The card path would have put credentials in clear text on removable media — a comparable
+  exposure to R7.10's clear-text HTTP, but persistent rather than confined to a ten-minute window.
+
+The SD-card file remains a reasonable **later** addition for fleet provisioning, where preparing
+many cards at a desk beats visiting many devices with a phone. It is not needed for one device.
 
 ### 3.4. What the display shows
 
@@ -623,8 +633,9 @@ portal: the AP's SSID, its password (§7.4), and the portal address. Nothing her
 vocabulary), the DHCP-assigned IP, and the RSSI. Read-only: changing the network is done through
 the portal or the text editors, not from a status page.
 
-**MQTT ▸ Setup** — shown when enabled. Descends to the L2 editors. The password editor is
-`writeOnly`, so it renders masked per §6.3's R6.3.1.
+**MQTT ▸ Setup** — shown when enabled. Shows **the address to browse to** (§7.6) plus a `Portal`
+toggle, and descends to the L2 editors as the fallback. The password editor is `writeOnly`, so it
+renders masked per §6.3's R6.3.1.
 
 **MQTT ▸ MQTT info** — shown when configured. Broker host and port, username, connection state,
 and the password as `********` when one is set or `(not set)` when not. Never the password itself.
@@ -632,6 +643,60 @@ and the password as `********` when one is set or `(not set)` when not. Never th
 > **R7.4** — A page that shows an IP address must show something meaningful before one is
 > assigned. `0.0.0.0` reads as a fault; `(waiting)` reads as a state. Same for RSSI before
 > association.
+
+### 7.6. The configuration web page, for WiFi *and* MQTT
+
+Specified by the project owner on 2026-08-03: MQTT is configured through a web page too, for the
+same reason WiFi is. That is the right call and it generalises further than it first appears —
+MQTT's fields are **worse** to type than a passphrase. A broker host is `homeassistant.local` or
+`192.168.1.50`, a base topic is `watermeter/plant-3/inlet`, and §3.3 measures the character wheel
+at roughly 27 presses per character. Five such fields on three buttons is not a user interface.
+
+> **R7.8** — One page serves both. It presents a WiFi section (scan, pick, passphrase) and an MQTT
+> section (host, port, username, password, base topic, discovery prefix), and submits to the same
+> settings catalogue every other input surface writes to.
+
+**Where it is reachable from changes with the state, and that is the useful part:**
+
+| WiFi state | Page served on | Address the menu shows |
+| --- | --- | --- |
+| Enabled, not configured | the provisioning **AP** | the AP's own address, e.g. `192.168.4.1` |
+| Configured and associated | the operator's **network**, at the DHCP address | that address |
+
+So the flow is: enable WiFi → join the device's AP → set the network → the device joins it → now
+browse to the device on your own LAN and set up MQTT. MQTT setup needs a working network anyway
+because the broker is on it, so serving that page over STA is not a compromise — it is the only
+sequence that makes sense. Re-entering AP mode to configure MQTT would disconnect the device from
+the very network the broker lives on.
+
+The **MQTT info** and **AP info** pages already show the IP, which is exactly what a browser needs.
+
+> **R7.9 — THE STA-SIDE PAGE IS OFF BY DEFAULT AND MUST BE TURNED ON FROM THE MENU.**
+>
+> This follows the principle already established for the radio: "a radio that switches itself on is
+> a radio the owner did not consent to." A configuration server is more than that — it is reachable
+> by **every host on the operator's network**, not only by someone standing at the device, and it
+> can repoint the broker. An AP portal is gated by physical presence; a LAN-side one is not.
+>
+> So `config.portal.enabled` is a setting, defaulting off, and the page shuts down on the same
+> ten-minute timer as the AP (R7.6). Turning it on is a deliberate act with a visible countdown.
+
+> **R7.10** — The page is served over **HTTP**, so the MQTT password crosses the LAN in clear text.
+> This must be documented for the operator rather than quietly accepted. TLS is not a real option
+> here: a self-signed certificate produces a browser warning that trains people to click through
+> warnings, which is worse than the clear-text exposure it would fix. R7.9's "off unless
+> deliberately enabled, with a timeout" is the mitigation that actually helps.
+
+> **R7.11** — Submitting the form is a **staged write followed by an apply**, exactly as §5's
+> register block requires. A form POST must not leave half a configuration live: the fields are
+> staged, validated together, then committed. This is the same protocol a Modbus master uses and
+> the same one the display editors use — the portal earns no special path.
+
+**The on-display editors stay.** The completeness rule (§2.3) requires every `category: "setting"`
+value to have a reachable editor, and R7.3 forbids hiding an editor behind a guard. So the L2 text
+editors remain the fallback — for a site with no phone or laptop to hand, and for the case where
+the portal itself will not come up. The web page is the path anyone will actually use; the editors
+are the path that is always there.
 
 ### 7.4. The AP is not open, and it does not stay up
 
@@ -764,6 +829,8 @@ experienced.
 | **Q11** | Which LED pattern for "AP portal up"? | (a) A new override; (b) reuse `CardBusy`'s amber/blue; (c) no LED signal | **(a)** — reuse would make a provisioning AP indistinguishable from a card read, and §3 of the LED spec is deliberately unambiguous. Needs a shape distinct from solid, accelerating, single-channel and amber/blue. |
 | **Q12** | Do guards belong in the pack format now or later? | (a) Now, `formatVersion` 2; (b) info pages always visible until then | **(a)** — (b) means shipping the tree with dead entries and revisiting every screen later. The version bump is cheap because the reader already rejects unknown versions. |
 | **Q13** | Is `wifi.configured` "SSID stored" or "SSID stored AND association succeeded once"? | (a) SSID stored; (b) association proven | **(a)** — (b) would hide the WiFi info page precisely when the operator most needs to see why it is not connecting. |
+| **Q14** | Should the STA-side config page require a password of its own? | (a) No — rely on R7.9's off-by-default plus the timeout; (b) yes, the same per-device password as the AP; (c) HTTP basic auth with an operator-set password | **(b)** — the per-device password already exists for the AP and is already shown on screen, so reusing it costs nothing and closes "any host on the LAN can repoint the broker during the ten-minute window". (a) leaves that window genuinely open. |
+| **Q15** | Does the portal serve a live status page as well as the forms? | (a) Forms only; (b) forms plus a read-only status page | **(b)** — the information is already in the catalogue, the page is already being served, and "why is MQTT not connecting" is far easier to answer on a browser than on a 240×135 panel. Cheap, and it makes the ten-minute window useful for diagnosis rather than only for configuration. |
 
 ---
 
