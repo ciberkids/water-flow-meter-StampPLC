@@ -43,6 +43,13 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/pack_test" \
   src/ui/pack/ui_pack.cpp \
   src/ui/generated/GeneratedUi.cpp
 
+# The network settings store and its register packing. Driven the way a Modbus master drives it:
+# registers in arbitrary order, block writes across read-only regions, applies that must be refused.
+g++ "${CXXFLAGS[@]}" -o "$OUT/net_settings_test" \
+  test/host/net_settings_test.cpp \
+  src/net/net_settings.cpp \
+  src/net/net_register_map.cpp
+
 # The firmware-owned Select Menu page. Exists so a pack that omits a selector cannot trap the
 # operator, so the cases that matter are the awkward ones: an empty card, more packs than the page
 # holds, and a pointer naming a pack that is not there.
@@ -112,6 +119,8 @@ echo
 "$OUT/spi_arbiter_test"
 echo
 "$OUT/pack_selector_test"
+echo
+"$OUT/net_settings_test"
 echo
 
 # The manifest the design tool validates against is generated from the firmware's own
