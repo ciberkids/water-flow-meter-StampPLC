@@ -69,6 +69,38 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/pack_loader_test" \
   src/ui/pack/ui_pack.cpp \
   src/ui/generated/GeneratedUi.cpp
 
+# ── The four network modules (N4, N5, N6, N8a) ────────────────────────────────
+#
+# Each is split so the POLICY half is Arduino-free and lands here, while the SDK-facing adapter
+# (mqtt_transport_esp.h, the WifiRadio implementation, the WebServer routing) is not host-compiled.
+# Without these four blocks the suite compiled and ran 68 checks while ~580 sat inert on disk —
+# which is the exact shape of "a check that isn't checking" this project keeps rediscovering, so
+# they are wired the moment they exist rather than when the firmware wiring is finished.
+
+# N4 — the WiFi state machine: backoff ladder, AP window, and the provisioning hand-off.
+g++ "${CXXFLAGS[@]}" -o "$OUT/wifi_manager_test" \
+  test/host/wifi_manager_test.cpp \
+  src/net/wifi_manager.cpp \
+  src/net/net_settings.cpp
+
+# N5 — the MQTT publish policy: cadence, the drop order, topic construction.
+g++ "${CXXFLAGS[@]}" -o "$OUT/mqtt_publisher_test" \
+  test/host/mqtt_publisher_test.cpp \
+  src/net/mqtt_publisher.cpp
+
+# N6 — Home Assistant discovery payloads, including the R4.4.8 worst-case buffer bound.
+g++ "${CXXFLAGS[@]}" -o "$OUT/ha_discovery_test" \
+  test/host/ha_discovery_test.cpp \
+  src/net/ha_discovery.cpp
+
+# N8a — the configuration portal's form generation, parsing, validation and escaping.
+g++ "${CXXFLAGS[@]}" -o "$OUT/portal_form_test" \
+  test/host/portal_form_test.cpp \
+  src/net/portal_form.cpp \
+  src/net/net_settings.cpp \
+  src/net/net_register_map.cpp \
+  src/ui/core/ui_settings_types.cpp
+
 g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/sensor_state_test" \
   test/host/sensor_state_test.cpp \
   src/sensors/sensor_state_engine.cpp
@@ -117,6 +149,14 @@ echo
 "$OUT/pack_selector_test"
 echo
 "$OUT/net_settings_test"
+echo
+"$OUT/wifi_manager_test"
+echo
+"$OUT/mqtt_publisher_test"
+echo
+"$OUT/ha_discovery_test"
+echo
+"$OUT/portal_form_test"
 echo
 
 # The manifest the design tool validates against is generated from the firmware's own
