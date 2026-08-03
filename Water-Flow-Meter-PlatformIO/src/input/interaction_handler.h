@@ -35,6 +35,14 @@ struct InteractionResult {
    * toast on the display and nothing on the panel.
    */
   bool resetAccepted = false;
+  /**
+   * The §3.4.1 recovery gesture completed: open the firmware-drawn Select Menu page.
+   *
+   * The point of the gesture is that it depends on nothing the active pack drew. If a pack
+   * validates and then renders nothing legible, paging to a selector page is no help — so this
+   * is the way back in, and the firmware draws the selector itself.
+   */
+  bool openPackSelector = false;
 };
 
 class InteractionHandler {
@@ -74,6 +82,8 @@ class InteractionHandler {
   static constexpr uint32_t kGestureLongPressMs = 1500;
   /** UP+DOWN released within this window is a display-off request, not a hold. */
   static constexpr uint32_t kDisplayOffComboMaxMs = 1000;
+  /** §3.4.1. Long enough to be deliberate, short enough to be usable one-handed. */
+  static constexpr uint32_t kSelectorComboHoldMs = 3000;
 
   struct FactoryResetState {
     bool holdActive = false;
@@ -120,6 +130,19 @@ class InteractionHandler {
     uint32_t startMs = 0;
   };
 
+  /**
+   * UP + DOWN + ENTER held for 3 s — the only free combination (§3.4.1).
+   *
+   * UP/DOWN page, UP+DOWN is display-off, ENTER-short descends and ENTER-long escapes, so all
+   * three at once is what was left. It is also effectively impossible to hit by accident, which
+   * matters because it is deliberately available from every screen at every level.
+   */
+  struct SelectorComboState {
+    bool active = false;
+    uint32_t startMs = 0;
+    bool fired = false;
+  };
+
   struct ComboState {
     bool active = false;
     uint32_t startMs = 0;
@@ -143,6 +166,7 @@ class InteractionHandler {
 
   /** Arms on arrival at a screen carrying an unattended Timeout flow; fires when it expires. */
   void handleEntryTimer(uint32_t nowMs, UiController& uiController);
+  void handleSelectorCombo(uint32_t nowMs, ButtonInputManager& buttonInput, InteractionResult* result);
   void scheduleFactoryReset(uint32_t nowMs);
   void handleHoldCountdown(uint32_t nowMs,
                            ButtonInputManager& buttonInput,
@@ -163,6 +187,7 @@ class InteractionHandler {
   FactoryResetState factoryResetState_{};
   HoldCountdownState holdCountdown_{};
   EntryTimerState entryTimer_{};
+  SelectorComboState selectorCombo_{};
   ComboState comboState_{};
   EditorRepeatState editorRepeat_{};
   FactoryResetFn factoryResetFn_ = nullptr;

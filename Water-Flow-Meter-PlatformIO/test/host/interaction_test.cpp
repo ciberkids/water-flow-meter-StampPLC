@@ -186,6 +186,14 @@ struct Device {
 
   /** Passes on which a reset was reported accepted — the §3.5 white-latch signal. */
   std::size_t resetAcceptedPasses = 0;
+  /**
+   * Times the selector was asked to open.
+   *
+   * Counted rather than read from lastResult, which is a snapshot of the LAST pass: a gesture
+   * that fires mid-hold and then keeps ticking would look like it never fired at all. That is
+   * exactly how the first version of these tests failed.
+   */
+  std::size_t selectorOpens = 0;
 
   SensorData sensors[plc::kNumSensors] = {};
   SensorCharacteristics configs[plc::kNumSensors] = {};
@@ -213,6 +221,9 @@ struct Device {
     // correctly re-triggered one.
     if (result.resetAccepted) {
       resetAcceptedPasses += 1;
+    }
+    if (result.openPackSelector) {
+      selectorOpens += 1;
     }
     controller.update(now, sensors, configs, 0, 0xFF, 0.0, 0.0, 0.0f, leds, result.countdown);
     // firmware.cpp:446 — the renderer runs on every pass of the logic loop and decides for
@@ -256,6 +267,21 @@ struct Device {
     }
     press(b, false);
     tick(30);
+  }
+
+  /** All three buttons, held. §3.4.1's recovery gesture needs 3 s. */
+  void holdAllThree(uint32_t forMs) {
+    press(ButtonInputManager::Button::Up, true);
+    press(ButtonInputManager::Button::Down, true);
+    press(ButtonInputManager::Button::Enter, true);
+    for (uint32_t elapsed = 0; elapsed < forMs; elapsed += 50) tick(50);
+  }
+
+  void releaseAllThree() {
+    press(ButtonInputManager::Button::Up, false);
+    press(ButtonInputManager::Button::Down, false);
+    press(ButtonInputManager::Button::Enter, false);
+    tick(50);
   }
 
   /** Both UP and DOWN together, briefly — the display-off combo of §3. */
@@ -1251,6 +1277,61 @@ void spiHandoverRenderTests() {
         "no handover ever needed the wedged-renderer timeout, so frames close cleanly");
 }
 
+
+void recoveryGestureTests() {
+  std::printf("\n[UP+DOWN+ENTER recovery gesture — §3.4.1]\n");
+
+  {
+    Device dev;
+    dev.boot();
+    dev.holdAllThree(2900);
+    check(dev.selectorOpens == 0, "just under 3 s does not open the selector");
+    dev.tick(200);
+    check(dev.selectorOpens == 1, "past 3 s it does");
+
+    // Fires once, not on every subsequent pass — otherwise the selector would be re-entered
+    // continuously for as long as the operator kept holding.
+    for (int i = 0; i < 10; ++i) dev.tick(50);
+    check(dev.selectorOpens == 1, "and does not re-fire while the buttons stay held");
+    dev.releaseAllThree();
+  }
+
+  // THE COLLISION THAT MATTERS. §3 gives UP+DOWN to display-off, with a 1000 ms window. The
+  // recovery gesture is the same two buttons plus ENTER, held three times as long.
+  {
+    Device dev;
+    dev.boot();
+    const auto* before = dev.controller.navigator().current();
+    dev.holdAllThree(3100);
+    check(dev.selectorOpens == 1, "the three-button hold opened the selector");
+    check(dev.controller.mode() != UiMode::Idle,
+          "and did NOT also trip display-off, which is the same two buttons plus ENTER");
+    dev.releaseAllThree();
+    check(dev.controller.navigator().current() == before,
+          "releasing the three does not also page or descend on the way out");
+  }
+
+  // The reverse direction: the plain display-off combo must still work untouched.
+  {
+    Device dev;
+    dev.boot();
+    dev.tapUpDown();
+    check(dev.controller.mode() == UiMode::Idle, "UP+DOWN alone still turns the display off");
+    check(dev.selectorOpens == 0, "and does not open the selector");
+  }
+
+  // Available from any depth, because a pack that renders nothing illegible could have left the
+  // operator anywhere.
+  {
+    Device dev;
+    dev.boot();
+    descendToAnEditor(dev);
+    check(dev.controller.navigator().depth() > 0, "nested somewhere");
+    dev.holdAllThree(3100);
+    check(dev.selectorOpens == 1, "the gesture works from a nested level too");
+  }
+}
+
 }  // namespace
 
 int main() {
@@ -1264,6 +1345,7 @@ int main() {
   toastCancellationTests();
   resetAcceptanceLedTests();
   spiHandoverRenderTests();
+  recoveryGestureTests();
   configListPagingTests();
   configEditorDescentTests();
   sensorEditorDescentTests();

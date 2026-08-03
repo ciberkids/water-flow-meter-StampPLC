@@ -77,6 +77,10 @@ InteractionResult InteractionHandler::update(uint32_t nowMs,
                                              ButtonInputManager& buttonInput,
                                              UiController& uiController) {
   InteractionResult result{};
+  // Before the display-off combo. That one already requires ENTER to be UP, so the two cannot
+  // both fire — but ordering it first makes the precedence explicit rather than incidental, and
+  // §3.4.1's gesture must win outright: it is the route back in when the UI is unusable.
+  handleSelectorCombo(nowMs, buttonInput, &result);
   handleDisplayOffCombo(nowMs, buttonInput, uiController);
   handleEditorRepeat(nowMs, buttonInput, uiController);
   handleFactoryReset(nowMs, &result.countdown);
@@ -251,6 +255,38 @@ const ui_exporter::Flow* findEntryTimeoutFlow(const ui_exporter::Screen* screen)
     return &flow;
   }
   return nullptr;
+}
+
+void InteractionHandler::handleSelectorCombo(uint32_t nowMs,
+                                             ButtonInputManager& buttonInput,
+                                             InteractionResult* result) {
+  const bool up = buttonInput.isPressed(ButtonInputManager::Button::Up);
+  const bool down = buttonInput.isPressed(ButtonInputManager::Button::Down);
+  const bool enter = buttonInput.isPressed(ButtonInputManager::Button::Enter);
+  const bool all = up && down && enter;
+
+  if (!all) {
+    selectorCombo_ = SelectorComboState{};
+    return;
+  }
+
+  if (!selectorCombo_.active) {
+    selectorCombo_.active = true;
+    selectorCombo_.startMs = nowMs;
+    selectorCombo_.fired = false;
+  }
+
+  // Swallow the discrete events for the whole hold. Without this, releasing the three buttons
+  // would also dispatch UP-short, DOWN-short and ENTER-short against whatever screen is showing,
+  // so recovering from an unusable pack would page and descend on the way out.
+  buttonInput.clearEvents();
+
+  if (!selectorCombo_.fired && nowMs - selectorCombo_.startMs >= kSelectorComboHoldMs) {
+    selectorCombo_.fired = true;
+    if (result) {
+      result->openPackSelector = true;
+    }
+  }
 }
 
 void InteractionHandler::handleEntryTimer(uint32_t nowMs, UiController& uiController) {
