@@ -1,7 +1,8 @@
 # Session Handoff
 
-**Updated:** 2026-08-01
-**Branch:** `fix/pipeline-verification-gates` — 42 commits ahead of `main`, pushed, in sync
+**Updated:** 2026-08-03
+**Branch:** `fix/pipeline-verification-gates` — 55 commits ahead of `main`, pushed, in sync
+**CI:** green on `45f9fe6` (all three jobs)
 **PR:** not opened
 
 The previous version of this file was 22 commits stale and worse than useless: it told a
@@ -32,8 +33,13 @@ cd web/mockup && npm ci && npx tsc --noEmit && npm run test:unit && npm run test
 npm run export:firmware
 ```
 
-Last run, 2026-08-01: firmware SUCCESS (RAM 7.8 %, Flash 18.1 %); **180 host checks** across
-six suites; 21 unit; 27 exporter; export `ok` with **9/9 gates and no warnings**.
+Last run, 2026-08-03: firmware SUCCESS (RAM 7.8 %, Flash 18.1 %); **356 host checks** across
+**ten** suites; 21 unit; 34 exporter; export `ok` with **9/9 gates and no warnings**.
+
+The pack round trip spans both jobs: `npm run test:exporter` writes
+`web/mockup/tests/fixtures/default.uipack`, and the firmware host suite reads it back with the
+real C++ reader. Run the web suites **before** the host suites on a fresh clone, or `pack_test`
+reports a missing fixture.
 
 The Cypress suite is **gone** (2026-08-01). It ran the exporter with
 `--screens tests/fixtures/legacy-screens.json` and no `--out` override, so every run
@@ -97,21 +103,47 @@ build. Nearly every serious bug on this branch has been a disagreement between t
 | Sensor settings were not persisted at commit | and a disabled channel's calibration never at all |
 | Link apply never re-bound the slave ID | and rollback could therefore never fire |
 
-### Known broken
+### Closed since, on 2026-08-02/03
 
-- **Acknowledgement toasts never appear.** The screens exist; nothing drives their entry timer.
-  `Display_UI_Requirements` §6.6 *certifies* this requirement satisfied. It is not.
-- **The Nyquist override screen is never pushed**, so §5.5's "save anyway" path is unreachable.
-- **D4** — the browser's dataset never reaches the exporter, so Export exports what is on
-  *disk*. Also needs theme writeback: `App.tsx` syncs theme one way only.
-- **Menu packs: 0 % built.** No SD-card code anywhere. The specification is thorough and its
-  factual claims check out; nothing implements it.
-- **WiFi/MQTT**: 2 of 9 slices done — the text-entry engine and the text-setting type system.
+- **Acknowledgement toasts work.** Needed a screen-entry timer for the unattended kind of
+  timeout, plus `UiNavigator::replaceCurrent` — a toast dismisses itself with `nav.back`, so
+  pushing it onto the confirm screen would have ascended back into "RESET TOTALS?".
+- **The Nyquist prompt** now fires only for an actual Nyquist refusal (it fired for all six
+  reasons `writeSetting` can fail), and UP/DOWN do what the on-screen text says. Previously the
+  prompt read "UP=Edit DOWN=Save anyway" while those buttons still adjusted the value.
+- **D4** — the exporter now exports what is on screen. It was **two** parts, not three: theme
+  writeback already existed at `App.tsx:1053-1062`. I reported otherwise twice, on an agent's
+  finding; it was wrong.
+- **The white acceptance latch** fires for every reset, not only the one that reboots.
+- **README** rewritten — it recommended `pio test -d tests/build` twice and that target does
+  not exist.
+- **Cypress deleted**, replaced by an in-memory dataset/IR parity test. It ran the exporter with
+  an obsolete fixture and no `--out`, overwriting committed firmware assets on every run.
+
+### Menu packs — built, except the wiring
+
+| Slice | State |
+| --- | --- |
+| `.uipack` format: emitter, reader, round trip, header fuzz | **done** — 20 checks |
+| Boot selection ladder + anti-boot-loop guard | **done** — 46 checks |
+| SPI arbitration (§4.10) | **done** — 49 checks |
+| SD storage adapter | **done**, compiles; unproven on hardware |
+| Select Menu page | **done** — 29 checks |
+| `firmware.cpp` wiring + UP+DOWN+ENTER recovery (§3.4.1) | **not started** |
+
+The real dataset emits to 16,995 bytes; string dedup saves 6,395 of 12,154 string bytes. The
+round trip compares all 375 elements and 175 flows against the generated table, and caught two
+real emitter/reader disagreements on its first run.
+
+**WiFi/MQTT**: 2 of 9 slices — the text-entry engine and the text-setting type system. §4.4 of
+the requirement still needs the corrected Home Assistant facts: `volume_flow_rate` with `L/s` is
+valid but HA infers **0 decimals** for that device class, so a payload without
+`suggested_display_precision` renders 0.35 L/s as "0". Floor is HA ≥ 2024.12.
 
 ### Nothing has run on hardware
 
-Not once. The RS485 pin correction, the LED patterns and every gesture and timing are verified
-only against the datasheet, the specifications and 180 host checks. **G1** — measuring
+Not once. The RS485 pin correction, the LED patterns, the SD adapter and every gesture and timing
+are verified only against the datasheet, the specifications and 356 host checks. **G1** — measuring
 `pollingRate_kHz` — is the only item that strictly needs the device, and it is now also a
 prerequisite for the WiFi work, whose acceptance criterion is a 5 % budget against a radio-off
 baseline that does not exist yet.
@@ -153,7 +185,22 @@ evidence at all. Before this branch, `interaction_handler.cpp`, `ui_controller.c
 
 ---
 
-## 6. Mistakes to know about
+## 6. Where to pick up
+
+1. **Wire the loader into `firmware.cpp`** — call it at boot before the display comes up (§4.5
+   keeps that window contention-free), append the selector to the root ring, and implement the
+   UP+DOWN+ENTER recovery gesture of §3.4.1. That gesture has to reach the selector from any
+   state *without consulting the active pack*, which is what makes it a recovery route. This is
+   also where the feature stops being host-provable.
+2. **Or WiFi slice N0** — the polling-rate spike. Its acceptance criterion budgets 5 % against a
+   radio-off baseline that does not exist yet; that baseline is **G1** and needs the board.
+3. Smaller and still open: the export gate for ring closure, the I2 append-only catalogue check,
+   `animation` residue across five layers, the simulator's missing nav stack, `carea/` (tracked,
+   18 files), and rewrites of `web/mockup/README.md` and `UI_Firmware_Interface.md`.
+
+---
+
+## 7. Mistakes to know about
 
 Early on I ran `git add -A` and swept the user's uncommitted work into commit `af177cf` after
 telling them their work was untouched. I corrected the record rather than rewriting history

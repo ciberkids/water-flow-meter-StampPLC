@@ -19,3 +19,9 @@ Water-Flow-Meter-PlatformIO/.pio/
 web/mockup/test-results/
 web/mockup/server.log
 web/mockup/test_output.txt
+
+# Agent worktrees created by Workflow isolation — never source.
+.claude/
+
+# TypeScript incremental build cache.
+*.tsbuildinfo
