@@ -466,9 +466,64 @@ Strings are packed two characters per register, high byte first, `NUL`-padded, n
 | 618–633 | `NET_MQTT_PASSWORD` | text, 32 bytes, **write-only** |
 | 634–657 | `NET_MQTT_BASE_TOPIC` | text, 48 bytes |
 | 658–673 | `NET_MQTT_DISCOVERY_PREFIX` | text, 32 bytes |
-| 690 | `NET_APPLY` | write `0x5AA5` to commit the staged block |
-| 691 | `NET_REVISION` | increments on each successful apply |
-| 692 | `NET_LAST_ERROR` | enum, read-only |
+| 674 | `NET_PORTAL_ENABLED` | bool — the STA-side config page (R7.9) |
+| 675 | `NET_PORTAL_REMAINING_S` | uint16, read-only — seconds left on the AP/portal timer |
+| 676–691 | `NET_AP_SSID` | text, 32 bytes, read-only (§5.2) |
+| 692–707 | `NET_AP_PASSWORD` | text, 32 bytes, read-only (§5.2) |
+| 708–711 | `NET_AP_IP` | packed, read-only — the portal address |
+| 730 | `NET_APPLY` | write `0x5AA5` to commit the staged block |
+| 731 | `NET_REVISION` | increments on each successful apply |
+| 732 | `NET_LAST_ERROR` | enum, read-only |
+
+### 5.2. Remote setup over RS485 is a first-class path, not a side effect
+
+Specified by the project owner on 2026-08-03: a remote operator on the bus should be able to enable
+WiFi, retrieve the AP information, and do the same for MQTT.
+
+This works out well because **the register block already IS the model** — §3.2 requires one
+implementation, so a Modbus write and a display edit are the same operation. What the original
+block was missing is the *readback* half. Enabling WiFi remotely is useless if you cannot then see
+what the device is waiting for, so five registers are added above.
+
+**Two distinct remote flows, and the second is the more useful one:**
+
+| | |
+| --- | --- |
+| **Fully remote** | Write `NET_WIFI_SSID` and `NET_WIFI_PSK`, apply. The device joins the network; read `NET_WIFI_IP` to confirm. Then write the MQTT block and apply again. **No AP, no portal, no site visit.** |
+| **Remote-assisted** | Write `NET_WIFI_ENABLED` = 1 with no credentials. The device raises its AP. Read `NET_AP_SSID`, `NET_AP_PASSWORD` and `NET_AP_IP` and read them out to whoever is on site, who joins and completes provisioning in a browser. |
+
+The first is the answer for a device on a bus you already reach. The second is for handing off to
+someone standing at a device you cannot see — which is precisely why the AP password has to be
+*readable* rather than only displayed on the panel.
+
+> **R5.3** — `NET_AP_SSID`, `NET_AP_PASSWORD` and `NET_AP_IP` are **readable**, and are the only
+> credential registers that are. They describe an access point the device is currently offering,
+> which is not a secret the device is keeping — it is one it is broadcasting the existence of, and
+> any radio in range already sees the SSID.
+>
+> This is a deliberate asymmetry with §5.1: the WiFi PSK and MQTT password remain **write-only**,
+> because those are the *operator's* secrets and the device has no business handing them back. The
+> AP password is the *device's* own, generated per-device from the MAC, and disclosing it to whoever
+> already controls the bus grants nothing they could not do anyway — they can write credentials
+> directly.
+
+> **R5.4** — `NET_PORTAL_ENABLED` is writable over RS485, so the sequence "provision the network
+> remotely, then open the config page and browse to it" is available without ever touching the
+> device. Combined with `NET_PORTAL_REMAINING_S` a supervisory system can see the window closing.
+
+> **R5.5** — Every one of these is the SAME staged write the display uses: fields, then `0x5AA5` to
+> `NET_APPLY`. A 32-register SSID must not cause sixteen reconnection attempts, and a partially
+> written MQTT block must not be half-applied. There is one apply path and the portal, the display
+> and the bus all go through it.
+
+**The security position, stated rather than assumed.** Writing credentials over Modbus RTU sends
+them in clear text over an unauthenticated bus — already noted in §8's R8.2, and unchanged by this.
+What R5.3 adds is that reading the AP password over the same bus is *also* clear text. Both are
+acceptable for the same reason: **the RS485 pair is already a trust boundary.** Anyone who can read
+it can also write it, and anyone who can write it can already repoint the broker or change the
+network. Adding readback does not widen the surface; it makes an existing level of access useful.
+What it does mean is that a deployment where the bus is not trusted should not enable WiFi from it —
+and that belongs in the operator documentation, not in a mitigation this firmware can apply.
 
 > **R5.1** — Reading a write-only field returns zeros. It must not return the stored
 > secret, and it must not raise an exception either, because a master doing a block read
@@ -480,9 +535,9 @@ Strings are packed two characters per register, high byte first, `NUL`-padded, n
 > user who is deliberately moving the device to a new AP. `NET_LAST_ERROR` reports the
 > failure instead.
 
-Growing the bank from 420 to ~700 registers costs about 560 bytes of RAM
-(`register_bank.h` stores one `uint16_t` per register). Against 327 KB, that is not a
-consideration.
+Growing the bank from 420 to 733 registers costs about **626 bytes** of RAM
+(`register_bank.h` stores one `uint16_t` per register). Against 327 KB — 8.2 % used today — that is
+not a consideration, and it buys full remote configurability.
 
 ---
 
