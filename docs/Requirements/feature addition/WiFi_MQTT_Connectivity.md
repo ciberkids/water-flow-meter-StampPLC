@@ -539,43 +539,130 @@ every depth.
 
 ---
 
-## 7. Menu-pack integration
+## 7. The menu tree
 
-> **R7.1** — Every new value is an ordinary catalogue entry. No screen, binding or action in
-> this feature may be special-cased in the renderer or the router.
->
-> **R7.2** — The built-in default menu must be extended with the new screens, since it is
-> the fallback when no pack loads and it must satisfy the completeness rule itself.
->
-> **R7.3** — Packs authored against an older catalogue must not become unloadable. The load
-> path's soft failure (appending built-in editors) already covers this; what needs deciding
-> is the export path — see **Q7**.
+Specified by the project owner on 2026-08-03. **WiFi is never enabled automatically and AP mode is
+never entered automatically** — both are consequences of a setting the operator changed on the
+display. A radio that switches itself on is a radio the owner did not consent to.
 
-The new screens, following the existing naming:
+### 7.1. Shape
+
+Two new entries at the **root level**, siblings of the existing info pages, reachable by paging
+UP/DOWN like everything else:
 
 ```
-info-p0-global-status        + W:/M: indicator            (§3.4.1)
-config-n1-wifi               WiFi submenu
-  config-n1-wifi-enabled       boolean editor
-  config-n1-wifi-ssid          text editor
-  config-n1-wifi-psk           text editor, masked
-  info-n1-wifi-status          SSID / state / IP / RSSI   (§3.4.2)
-config-n2-mqtt               MQTT submenu
-  config-n2-mqtt-enabled       boolean editor
-  config-n2-mqtt-host          text editor
-  config-n2-mqtt-port          numeric editor
-  config-n2-mqtt-user          text editor
-  config-n2-mqtt-password      text editor, masked
-  config-n2-mqtt-topic         text editor
-  config-n2-mqtt-prefix        text editor
-  config-n2-mqtt-period        numeric editor
-  config-n2-mqtt-discovery     boolean editor
-  config-n2-mqtt-tls           boolean editor
-  config-n2-mqtt-qos           enum editor
-  info-n2-mqtt-status          state / broker / last error
+L0  P0 Global status … P8 Factory reset ─► WIFI ─► MQTT ─► (wraps to P0)
+                                            │        │
+L1  ┌───────────────────────────────────────┘        └──────────────────┐
+    Enabled            true/false  (boolean editor)                     Enabled        true/false
+    AP info            ⟨only when enabled and NOT configured⟩           MQTT info      ⟨only when configured⟩
+    WiFi info          ⟨only when configured⟩                           Setup          ⟨only when enabled⟩
+    BACK                                                                BACK
+                                                                         │
+L2                                                                       └─► Broker host   (text)
+                                                                             Port          (numeric)
+                                                                             Username      (text)
+                                                                             Password      (text, masked)
+                                                                             Base topic    (text)
+                                                                             BACK
 ```
 
----
+These are **ordinary dataset screens**, not firmware-drawn like the Select Menu page. So a menu
+pack can restyle or relocate them, which is what the owner asked for. The Select Menu page is
+firmware-drawn because it is the recovery route (§3.4.1 of the pack requirement); these are not,
+and should not be special-cased.
+
+> **R7.1** — WiFi and MQTT entries follow the navigation contract of
+> `Display_UI_Requirements` §3 without exception: UP/DOWN page siblings, ENTER-short descends,
+> ENTER-long escapes to P0, each level ends with a `BACK` entry, and every editor commits on
+> ENTER-short and discards on ENTER-long.
+
+### 7.2. Conditional entries need flow guards, which do not exist yet
+
+The owner's shape is explicitly state-dependent — "if enabled is true and there are no settings
+then there is a menu item called AP info". Every screen in the tree today is unconditional, so
+this is new machinery.
+
+**The vocabulary already exists and is unimplemented.** `ScreenFlow.guard` is in the web schema
+(`src/types.ts:94`, `schemaDefinitions.ts:113`) and `Flow::guard` is in the emitted C++ struct —
+and every guard in the current dataset is `nullptr`, with nothing in `interaction_handler.cpp`
+ever reading it. This feature is the reason to implement it.
+
+> **R7.2** — A flow may carry a `guard`: a catalogue value id evaluated at navigation time. When
+> the guard resolves false the flow is skipped, so paging steps over the entry as if it were not
+> there and the ring closes without it.
+
+> **R7.3 — A GUARD MAY HIDE AN INFORMATION PAGE. IT MAY NEVER HIDE AN EDITOR.**
+>
+> This is the constraint that keeps the design honest, and it comes from the completeness rule
+> (`Loadable_UI_Menu_Packs` §3.0.1): every `category: "setting"` value must have a **reachable**
+> editor, and the export gate has to decide that statically. A guarded editor is only
+> conditionally reachable, and no static check can evaluate a runtime guard — so allowing it would
+> silently turn the completeness rule into a rule about nothing.
+>
+> Consequently `Enabled` is always present in both submenus, and only the *information* pages and
+> the MQTT `Setup` descent are guarded. A setting is therefore always reachable: enable the
+> feature and its editors appear, and `Enabled` itself is never hidden.
+
+### 7.3. What each page shows
+
+**Guard conditions**, as catalogue values so they are testable and bindable:
+
+| Guard | True when |
+| --- | --- |
+| `wifi.enabled` | `config.wifi.enabled` is set |
+| `wifi.configured` | an SSID is stored — the operator has provisioned it |
+| `mqtt.enabled` | `config.mqtt.enabled` is set |
+| `mqtt.configured` | a broker host is stored |
+
+**WIFI ▸ AP info** — shown when enabled and *not* configured, which is the state that means "the
+operator wants WiFi and has not told us which network". Displays what someone needs to reach the
+portal: the AP's SSID, its password (§7.4), and the portal address. Nothing here is editable.
+
+**WIFI ▸ WiFi info** — shown when configured. The SSID, the connection state (§3.1's ASCII
+vocabulary), the DHCP-assigned IP, and the RSSI. Read-only: changing the network is done through
+the portal or the text editors, not from a status page.
+
+**MQTT ▸ Setup** — shown when enabled. Descends to the L2 editors. The password editor is
+`writeOnly`, so it renders masked per §6.3's R6.3.1.
+
+**MQTT ▸ MQTT info** — shown when configured. Broker host and port, username, connection state,
+and the password as `********` when one is set or `(not set)` when not. Never the password itself.
+
+> **R7.4** — A page that shows an IP address must show something meaningful before one is
+> assigned. `0.0.0.0` reads as a fault; `(waiting)` reads as a state. Same for RSSI before
+> association.
+
+### 7.4. The AP is not open, and it does not stay up
+
+AP mode activating on "enabled but unconfigured" is the owner's specified behaviour and it is the
+right default — it makes an unprovisioned device self-service. But an open access point appearing
+on an industrial device that may sit on a wall unattended is an exposure worth closing, and it can
+be closed almost for free:
+
+> **R7.5** — The provisioning AP is **WPA2-protected with a per-device password**, derived from
+> the MAC and displayed on the AP info page. An operator standing at the device reads it off the
+> screen; someone who is not standing there cannot. This costs one line of `softAP()` argument and
+> removes "anyone in radio range can reconfigure it" entirely.
+>
+> **R7.6** — The AP shuts down after **10 minutes** without a completed provisioning, and on
+> success. A portal that stays up forever is a portal nobody remembers is running. The countdown
+> is shown on the AP info page.
+>
+> **R7.7** — While the AP is up the LEDs must say so, and `CardBusy`'s amber/blue is taken —
+> see **Q11** for which pattern.
+
+### 7.5. Consequences for the pack format
+
+- **The catalogue grows by 14 settings and ~10 derived values.** Per the rule in
+  `ui_value_catalogue.h`, additions alone do not require an ABI bump — but the completeness rule
+  means existing packs become incomplete, which is exactly what **Q4** (catalogue versioning) has
+  to answer before this ships.
+- **The skeleton generator must emit these screens**, and `assertCoversEverySetting` will refuse to
+  generate until every new setting has an editor. That gate is what will keep this honest.
+- **Guards must round-trip through the pack format.** `PackFlow` has no guard field today, so
+  adding one is a `formatVersion` bump from 1 to 2 — the reader rejects a version it does not know,
+  so old and new firmware cannot silently disagree.
 
 ## 8. Security
 
@@ -674,6 +761,9 @@ experienced.
 | **Q8** | Should MQTT accept commands (reset session, etc.)? | (a) Not in v1; (b) yes | **(a)** — publishing is a much smaller security surface than accepting control. Worth a follow-up requirement. |
 | **Q9** | Sync the RX8130CE RTC from NTP once WiFi exists? | (a) Yes; (b) no | **(a)** — cheap, and it makes the RTC useful for the first time. |
 | **Q10** | Should `wifi.rssi` be a Home Assistant entity? | (a) Yes, diagnostic category; (b) display only | **(a)** — it is the first thing anyone looks at when a device drops. |
+| **Q11** | Which LED pattern for "AP portal up"? | (a) A new override; (b) reuse `CardBusy`'s amber/blue; (c) no LED signal | **(a)** — reuse would make a provisioning AP indistinguishable from a card read, and §3 of the LED spec is deliberately unambiguous. Needs a shape distinct from solid, accelerating, single-channel and amber/blue. |
+| **Q12** | Do guards belong in the pack format now or later? | (a) Now, `formatVersion` 2; (b) info pages always visible until then | **(a)** — (b) means shipping the tree with dead entries and revisiting every screen later. The version bump is cheap because the reader already rejects unknown versions. |
+| **Q13** | Is `wifi.configured` "SSID stored" or "SSID stored AND association succeeded once"? | (a) SSID stored; (b) association proven | **(a)** — (b) would hide the WiFi info page precisely when the operator most needs to see why it is not connecting. |
 
 ---
 
