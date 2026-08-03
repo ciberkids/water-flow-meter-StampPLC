@@ -74,8 +74,9 @@ bool NetRegisterMap::stageWrite(NetSettings& settings, uint16_t address, uint16_
     case net_reg::kMqttPort:    return settings.stageMqttPort(value);
     case net_reg::kMqttPeriodS: return settings.stageMqttPublishPeriodS(value);
     case net_reg::kMqttFlags:
-      settings.stageMqttHaDiscovery((value & 0x01u) != 0);
-      return settings.stageMqttQos((value & 0x02u) != 0 ? 1 : 0);
+      settings.stageMqttHaDiscovery((value & NetRegisterMap::kFlagHaDiscovery) != 0);
+      settings.stageMqttTls((value & NetRegisterMap::kFlagTls) != 0);
+      return settings.stageMqttQos((value & NetRegisterMap::kFlagQos1) != 0 ? 1 : 0);
     default:
       break;
   }
@@ -125,9 +126,8 @@ void NetRegisterMap::publish(const NetSettings& settings, uint16_t* out, std::si
   put(net_reg::kMqttEnabled, settings.mqttEnabled() ? 1 : 0);
   put(net_reg::kMqttPort, settings.mqttPort());
   put(net_reg::kMqttPeriodS, settings.mqttPublishPeriodS());
-  put(net_reg::kMqttFlags,
-      static_cast<uint16_t>((settings.mqttHaDiscovery() ? 0x01u : 0u) |
-                            (settings.mqttQos() != 0 ? 0x02u : 0u)));
+  // One assembler for this word, shared with the UI's read-modify-write path.
+  put(net_reg::kMqttFlags, NetRegisterMap::mqttFlags(settings));
   put(net_reg::kRevision, settings.revision());
 
   for (std::size_t i = 0; i < static_cast<std::size_t>(NetField::Count); ++i) {

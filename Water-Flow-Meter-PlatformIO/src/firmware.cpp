@@ -33,6 +33,7 @@ static_assert(WIFI_TASK_CORE_ID == 1,
 #include "modbus/register_bank.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
+#include "net/net_settings.h"
 #include "sensors/sensor_state_engine.h"
 #include "ui/core/ui_actions.h"
 #include "ui/core/ui_bindings.h"
@@ -126,6 +127,16 @@ const ui::UiActionRegistry& kUiActionRegistry = ui::defaultActionRegistry();
 UiRenderer uiRenderer;
 UiController uiController;
 ui::SettingsAccess uiSettingsAccess;
+
+/**
+ * WiFi, MQTT and portal configuration (WiFi_MQTT_Connectivity.md §6.1).
+ *
+ * Present from N1c so the fourteen settings have live storage the moment the menu can reach them.
+ * The radio itself arrives in N4; until then these values are editable, persisted and readable over
+ * RS485 but act on nothing — which is the correct order, because a setting whose storage does not
+ * yet exist cannot be exercised by the pack-completeness rule.
+ */
+plc::NetSettings netSettings;
 
 SensorStateEngine::Dependencies sensorEngineDeps{
     .sensors = sensors,
@@ -645,6 +656,7 @@ void setup() {
   uiSettingsAccess.configs = configs;
   uiSettingsAccess.connectedBitmap = &connectedSensorsBitmap;
   uiSettingsAccess.sensorCount = kNumSensors;
+  uiSettingsAccess.net = &netSettings;
   uiBindingResolver.bindSettings(&uiSettingsAccess, &uiController);
 
   // ── Load the selected menu pack, BEFORE the display is initialised ──────────────

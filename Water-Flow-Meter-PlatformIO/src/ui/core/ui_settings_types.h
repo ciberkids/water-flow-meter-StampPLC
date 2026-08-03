@@ -30,7 +30,26 @@ enum class SettingTarget : uint8_t {
   SensorConnected,
   SensorMultiplier,
   SensorAdjust,
-  SensorMaxFlow
+  SensorMaxFlow,
+  // ── Network (WiFi_MQTT_Connectivity.md §6.1) ───────────────────────────────────
+  //
+  // One target per setting even where several share a register: kMqttFlags packs HA discovery,
+  // QoS and TLS into register 564, and giving them a single target would leave the accessor
+  // unable to tell which bit the caller meant.
+  WifiEnabled,
+  WifiSsid,
+  WifiPsk,
+  MqttEnabled,
+  MqttHost,
+  MqttPort,
+  MqttUser,
+  MqttPassword,
+  MqttBaseTopic,
+  MqttDiscoveryPrefix,
+  MqttPublishPeriod,
+  MqttHaDiscovery,
+  MqttTls,
+  MqttQos
 };
 
 struct SettingOption {

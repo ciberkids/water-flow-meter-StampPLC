@@ -101,6 +101,14 @@ class NetSettings {
   uint16_t mqttPublishPeriodS() const { return live_.mqttPublishPeriodS; }
   bool mqttHaDiscovery() const { return live_.mqttHaDiscovery; }
   uint8_t mqttQos() const { return live_.mqttQos; }
+  /**
+   * Whether to connect with `mqtts://` rather than `mqtt://`.
+   *
+   * Off by default. `CONFIG_MQTT_TRANSPORT_SSL=y` in the shipped sdkconfig, so this costs only the
+   * certificate handling — but it also raises the per-connection RAM and CPU cost on a device whose
+   * §2.1 budget is the measurement itself, which is why it is opt-in.
+   */
+  bool mqttTls() const { return live_.mqttTls; }
 
   // ── Staging ───────────────────────────────────────────────────────────────────
   /**
@@ -128,6 +136,7 @@ class NetSettings {
   bool stageMqttPublishPeriodS(uint16_t seconds);
   bool stageMqttHaDiscovery(bool on);
   bool stageMqttQos(uint8_t qos);
+  bool stageMqttTls(bool on);
 
   /** Reads back a STAGED value, so an editor can show what is pending. */
   bool getStaged(NetField field, char* out, std::size_t size) const;
@@ -169,6 +178,7 @@ class NetSettings {
     uint16_t mqttPublishPeriodS = 10;
     bool mqttHaDiscovery = true;
     uint8_t mqttQos = 0;
+    bool mqttTls = false;
   };
 
   static bool copyInto(char* dest, std::size_t capacity, const char* value);

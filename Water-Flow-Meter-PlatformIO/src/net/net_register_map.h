@@ -36,7 +36,14 @@ inline constexpr uint16_t kMqttEnabled       = 560;
 inline constexpr uint16_t kMqttState         = 561;  // read-only
 inline constexpr uint16_t kMqttPort          = 562;
 inline constexpr uint16_t kMqttPeriodS       = 563;
-inline constexpr uint16_t kMqttFlags         = 564;  // bit 0 HA discovery, bit 1 QoS
+// bit 0 HA discovery, bit 1 QoS, bit 2 TLS.
+//
+// Three booleans in one register rather than three registers, because a master that wants to turn
+// the whole MQTT client on in one shot should not need three round trips. The cost is that a
+// read-modify-write is mandatory: writing this register sets ALL THREE flags, so a caller changing
+// one bit must preserve the others. `NetRegisterMap::mqttFlags()` exists so the UI has one place to
+// get the current word from rather than reconstructing the bit layout at each call site.
+inline constexpr uint16_t kMqttFlags         = 564;
 inline constexpr uint16_t kMqttLastCmdResult = 565;  // read-only, R4.4.2d
 inline constexpr uint16_t kMqttHost          = 570;  // 32 registers, 64 bytes
 inline constexpr uint16_t kMqttUser          = 602;  // 16 registers, 32 bytes
@@ -136,6 +143,25 @@ class NetRegisterMap {
 
   /** Packs the live settings into `out`, which must span the whole block. */
   static void publish(const NetSettings& settings, uint16_t* out, std::size_t count);
+
+  /**
+   * The current `kMqttFlags` word, assembled from the LIVE settings.
+   *
+   * The read half of the read-modify-write that register 564 forces on anyone changing one of its
+   * three booleans. Exposed rather than left to callers because reconstructing the bit layout at
+   * each call site is how bit 2 would eventually get cleared by a write meant only for bit 0 — the
+   * shared-register bug this method exists to make unlikely.
+   */
+  static uint16_t mqttFlags(const NetSettings& settings) {
+    return static_cast<uint16_t>((settings.mqttHaDiscovery() ? 0x01u : 0u) |
+                                 (settings.mqttQos() != 0 ? 0x02u : 0u) |
+                                 (settings.mqttTls() ? 0x04u : 0u));
+  }
+
+  /** Bit masks within `kMqttFlags`, so no caller writes the literals. */
+  static constexpr uint16_t kFlagHaDiscovery = 0x01u;
+  static constexpr uint16_t kFlagQos1        = 0x02u;
+  static constexpr uint16_t kFlagTls         = 0x04u;
 
   /** Two characters per register, high byte first. */
   static uint16_t packChars(char high, char low) {

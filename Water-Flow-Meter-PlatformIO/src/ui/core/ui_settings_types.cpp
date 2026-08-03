@@ -1,6 +1,7 @@
 #include "ui/core/ui_settings_types.h"
 
 #include "modbus/register_map.h"
+#include "net/net_register_map.h"
 
 #include <cstdio>
 #include <cstring>
@@ -18,6 +19,13 @@ constexpr SettingOption kParityOptions[] = {{"None", 0}, {"Even", 1}, {"Odd", 2}
 constexpr SettingOption kStopBitOptions[] = {{"1", 1}, {"2", 2}};
 constexpr SettingOption kLedVolumeOptions[] = {{"1", 1}, {"10", 10}, {"100", 100}};
 constexpr SettingOption kBoolOptions[] = {{"Off", 0}, {"On", 1}};
+// §4.2 implements QoS 0 and 1. QoS 2 is deliberately absent rather than present-and-rejected:
+// an option the wheel can land on but the client refuses is a worse experience than one that
+// was never offered.
+constexpr SettingOption kQosOptions[] = {{"0", 0}, {"1", 1}};
+
+constexpr uint8_t kBoolOptionCount =
+    static_cast<uint8_t>(sizeof(kBoolOptions) / sizeof(kBoolOptions[0]));
 
 // Ranges and steps mirror Display_UI_Requirements §5.2 and §5.3.
 constexpr SettingDescriptor kSettings[] = {
@@ -45,7 +53,61 @@ constexpr SettingDescriptor kSettings[] = {
     {"config.sensor.adjust", SettingTarget::SensorAdjust, SettingKind::Numeric,
      -32768, 32767, 1, nullptr, 0, nullptr, true, kNoRegister, plc::OFF_CFG_ADJUST, "Frequency offset Adjust", 0, false},
     {"config.sensor.maxFlow", SettingTarget::SensorMaxFlow, SettingKind::Numeric,
-     0, 65535, 1, nullptr, 0, "L/min", true, kNoRegister, plc::OFF_CFG_Q_MAX, "Nominal max flow Q", 0, false}};
+     0, 65535, 1, nullptr, 0, "L/min", true, kNoRegister, plc::OFF_CFG_Q_MAX, "Nominal max flow Q", 0, false},
+
+    // ── Network: WiFi_MQTT_Connectivity.md §6.1, fourteen settings of which seven are text ──
+    //
+    // registerAddress is the FIRST register of each text field, which is what a Modbus master
+    // needs; the span follows from maxLength via net_reg::textRegisters(). The three flags that
+    // share register 564 all report 564 — truthful, and the accessor knows which bit each means.
+    {"config.wifi.enabled", SettingTarget::WifiEnabled, SettingKind::Boolean,
+     0, 1, 1, kBoolOptions, kBoolOptionCount, nullptr, false,
+     plc::net_reg::kWifiEnabled, kNoRegister, "WiFi radio enabled", 0, false},
+    {"config.wifi.ssid", SettingTarget::WifiSsid, SettingKind::Text,
+     0, 0, 0, nullptr, 0, nullptr, false,
+     plc::net_reg::kWifiSsid, kNoRegister, "WiFi network name", 32, false},
+    {"config.wifi.psk", SettingTarget::WifiPsk, SettingKind::Text,
+     0, 0, 0, nullptr, 0, nullptr, false,
+     plc::net_reg::kWifiPsk, kNoRegister, "WiFi passphrase (never read back)", 63, true},
+
+    {"config.mqtt.enabled", SettingTarget::MqttEnabled, SettingKind::Boolean,
+     0, 1, 1, kBoolOptions, kBoolOptionCount, nullptr, false,
+     plc::net_reg::kMqttEnabled, kNoRegister, "MQTT client enabled", 0, false},
+    {"config.mqtt.host", SettingTarget::MqttHost, SettingKind::Text,
+     0, 0, 0, nullptr, 0, nullptr, false,
+     plc::net_reg::kMqttHost, kNoRegister, "MQTT broker hostname or IP", 64, false},
+    {"config.mqtt.port", SettingTarget::MqttPort, SettingKind::Numeric,
+     1, 65535, 1, nullptr, 0, nullptr, false,
+     plc::net_reg::kMqttPort, kNoRegister, "MQTT broker port", 0, false},
+    {"config.mqtt.user", SettingTarget::MqttUser, SettingKind::Text,
+     0, 0, 0, nullptr, 0, nullptr, false,
+     plc::net_reg::kMqttUser, kNoRegister, "MQTT username", 32, false},
+    {"config.mqtt.password", SettingTarget::MqttPassword, SettingKind::Text,
+     0, 0, 0, nullptr, 0, nullptr, false,
+     plc::net_reg::kMqttPassword, kNoRegister, "MQTT password (never read back)", 32, true},
+    {"config.mqtt.baseTopic", SettingTarget::MqttBaseTopic, SettingKind::Text,
+     0, 0, 0, nullptr, 0, nullptr, false,
+     plc::net_reg::kMqttBaseTopic, kNoRegister, "MQTT topic prefix for this device", 48, false},
+    {"config.mqtt.discoveryPrefix", SettingTarget::MqttDiscoveryPrefix, SettingKind::Text,
+     0, 0, 0, nullptr, 0, nullptr, false,
+     plc::net_reg::kMqttPrefix, kNoRegister,
+     "Home Assistant discovery prefix (default homeassistant)", 32, false},
+    {"config.mqtt.publishPeriod", SettingTarget::MqttPublishPeriod, SettingKind::Numeric,
+     1, 3600, 1, nullptr, 0, "s", false,
+     plc::net_reg::kMqttPeriodS, kNoRegister, "Minimum interval between publishes", 0, false},
+    {"config.mqtt.haDiscovery", SettingTarget::MqttHaDiscovery, SettingKind::Boolean,
+     0, 1, 1, kBoolOptions, kBoolOptionCount, nullptr, false,
+     plc::net_reg::kMqttFlags, kNoRegister,
+     "Publish Home Assistant discovery messages (bit 0 of 564)", 0, false},
+    {"config.mqtt.tls", SettingTarget::MqttTls, SettingKind::Boolean,
+     0, 1, 1, kBoolOptions, kBoolOptionCount, nullptr, false,
+     plc::net_reg::kMqttFlags, kNoRegister,
+     "Connect with TLS (bit 2 of 564)", 0, false},
+    {"config.mqtt.qos", SettingTarget::MqttQos, SettingKind::Enum,
+     0, 1, 1, kQosOptions,
+     static_cast<uint8_t>(sizeof(kQosOptions) / sizeof(kQosOptions[0])), nullptr, false,
+     plc::net_reg::kMqttFlags, kNoRegister,
+     "Publish QoS (bit 1 of 564)", 0, false}};
 
 constexpr std::size_t kSettingCount = sizeof(kSettings) / sizeof(kSettings[0]);
 

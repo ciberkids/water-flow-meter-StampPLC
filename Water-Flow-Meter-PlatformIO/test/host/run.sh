@@ -98,6 +98,8 @@ g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/interaction_test" \
   src/modbus/link_settings.cpp \
   src/bus/spi_arbiter.cpp \
   src/ui/pack/ui_pack_selector.cpp \
+  src/net/net_settings.cpp \
+  src/net/net_register_map.cpp \
   src/ui/generated/GeneratedUi.cpp
 
 "$OUT/nav_test"
