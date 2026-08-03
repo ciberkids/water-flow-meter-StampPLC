@@ -463,18 +463,46 @@ state.
 > `REG_LINK_APPLY` — the project's established idiom for "this is destructive, prove you meant it".
 > Without it, any stray publish to the topic zeroes a customer's totals.
 
-> **R4.4.2 — A RETAINED COMMAND MESSAGE MUST BE IGNORED.** This is the specific hazard that makes
-> command topics dangerous on a metering device, and it is not obvious.
+> **R4.4.2 — A RESET IS RATE-LIMITED, AND THE LIMIT IS THE PRIMARY GUARD.**
+> Owner's design, 2026-08-03, and it is better than the retain check that preceded it.
 >
-> If a `reset-totals` command is ever published with the retain flag set — by a mis-scripted
-> automation, or by hand during testing — the broker keeps it. The device then receives it **on
-> every single reconnect, forever**, wiping the totals each time it comes back from a power cut or a
-> WiFi blip. The counters would appear to reset at random and nothing on the device would explain
-> why.
+> The principle, in the owner's words: *a reset failing remotely is not a breaking thing; the device
+> entering a reset loop is.* So the guard is built to fail in that direction — when in doubt, swallow
+> the command, log it, and carry on.
 >
-> So the client inspects the retain flag and discards retained messages on command topics
-> unconditionally. It must also log the discard loudly, because a retained command sitting on the
-> broker is a fault the operator has to clear at the broker.
+> **Why a rate limit rather than only a retain check.** A retained message is one *cause* of a loop.
+> A rate limit addresses the *failure mode*, so it also catches the causes nobody predicted: an
+> automation republishing every ten seconds, a flapping connection redelivering QoS 1, a second
+> controller nobody knew was subscribed. The retain check is kept as well (R4.4.2c) because it is
+> cheap and stops the commonest cause at source — but it is no longer what the safety rests on.
+>
+> **R4.4.2a — the clock must be the right kind of clock.** The interval is measured on
+> `millis()`, not on the RTC. A monotonic uptime cannot jump, whereas an NTP sync can move the wall
+> clock backwards mid-operation and would silently re-arm the limit. The RTC timestamp is recorded
+> and reported *alongside* it, because that is what an operator can act on — but it is never what
+> the comparison is made against. `kResetMinIntervalMs` = **60 s** per command kind: far longer than
+> any plausible loop, far shorter than any legitimate repeat.
+>
+> **R4.4.2b — the limit must survive a reboot, because the worst loop reboots.** An in-RAM
+> `millis()` guard handles a device that stays up. It does nothing for the shape that matters most:
+> a reset that triggers a crash, a reboot, a reconnect, a redelivered command, another reset —
+> because `millis()` starts again each time. So the last accepted reset is also persisted, and the
+> guard consults both.
+>
+> This is the same structure as the menu-pack anti-boot-loop counter (`Loadable_UI_Menu_Packs` §3.6),
+> for the same reason, and it inherits the same discipline: **the persisted value is written only
+> when a reset is ACCEPTED.** Writing on every rejection would mean a looping command loops NVS
+> writes too, turning a nuisance into flash wear.
+>
+> **R4.4.2c — a retained command message is still discarded**, unconditionally, and logged. It is a
+> fault the operator has to clear at the broker, so saying so is worth more than silently
+> rate-limiting it forever.
+>
+> **R4.4.2d — a refusal must be visible, not merely logged.** Home Assistant will show a button; a
+> button that silently does nothing is worse than one that reports why. So a rejected command sets
+> `mqtt.lastCommandResult` — a catalogue value, published on the status topic and shown on the MQTT
+> info page — to one of `accepted`, `rate-limited`, `retained-ignored` or `bad-payload`. The operator
+> pressing the button learns the answer without reading a serial log they do not have.
 
 > **R4.4.3** — Commands go through the SAME path as everything else: `reset-session` issues the
 > Modbus command a master would (`REG_MASTER_RESET_ALL_SESSION`), not a private code path. So a
