@@ -109,6 +109,15 @@ class PackLoader {
    */
   void noteSuccessfulRender(PackAttemptCounter& attempts);
 
+  /**
+   * Longest pointer-file name accepted, including the terminator.
+   *
+   * Public because the storage adapter's directory listing has to agree with it — a name the
+   * adapter is willing to report but the loader will not accept would appear in the selector and
+   * then fail to load, which is the worst of both.
+   */
+  static constexpr std::size_t kMaxNameBytes = 64;
+
   /** Why a card pack was refused, when the outcome is BuiltInInvalid. */
   PackStatus packStatus() const { return packStatus_; }
 
@@ -124,8 +133,6 @@ class PackLoader {
    * is a boundary, not tidiness.
    */
   static bool nameIsSafe(const char* name);
-
-  static constexpr std::size_t kMaxNameBytes = 64;
 
   char name_[kMaxNameBytes] = {};
   PackStatus packStatus_ = PackStatus::Ok;
