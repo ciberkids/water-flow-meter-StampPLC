@@ -160,6 +160,14 @@ void LedController::update(uint32_t nowMs,
       applyOutputs(state.red, state.green, state.blue);
       return;
     }
+    case plc::LedOverride::CardBusy: {
+      // The SD card holds the shared SPI bus, so the display cannot report anything and the LEDs
+      // are the only channel left. Held until the arbiter says the handover is over — unlike the
+      // other overrides this one has no duration of its own, because a card read does not.
+      const plc::LedState state = plc::cardBusyState(nowMs - cardBusyStartMs_);
+      applyOutputs(state.red, state.green, state.blue);
+      return;
+    }
     case plc::LedOverride::ResetRamp: {
       const plc::LedState state = plc::resetRampState(nowMs, rampRemainingMs_, rampTotalMs_);
       applyOutputs(state.red, state.green, state.blue);
@@ -209,4 +217,17 @@ void LedController::clampConfig() {
 void LedController::resetPulseState() {
   pulseActive_ = false;
   pulseStartMs_ = 0;
+}
+
+void LedController::setCardBusy(uint32_t nowMs) {
+  if (override_ != plc::LedOverride::CardBusy) {
+    override_ = plc::LedOverride::CardBusy;
+    cardBusyStartMs_ = nowMs;
+  }
+}
+
+void LedController::clearCardBusy() {
+  if (override_ == plc::LedOverride::CardBusy) {
+    override_ = plc::LedOverride::None;
+  }
 }

@@ -43,6 +43,13 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/pack_test" \
   src/ui/pack/ui_pack.cpp \
   src/ui/generated/GeneratedUi.cpp
 
+# The shared-SPI handover. The requirement is "no visible artifacts", which is stronger than
+# "no corruption" — so what is asserted is that the card never takes the bus between a
+# startWrite() and its endWrite(), under interleavings no bench reproduces on demand.
+g++ "${CXXFLAGS[@]}" -o "$OUT/spi_arbiter_test" \
+  test/host/spi_arbiter_test.cpp \
+  src/bus/spi_arbiter.cpp
+
 # The boot selection ladder. Storage and the NVS counter are interfaces, so every failure rung —
 # no card, a dangling pointer, "../.." in the pointer file, a pack that validates and then crashes
 # the renderer — is reachable here and on no bench.
@@ -92,6 +99,8 @@ echo
 "$OUT/pack_test"
 echo
 "$OUT/pack_loader_test"
+echo
+"$OUT/spi_arbiter_test"
 echo
 
 # The manifest the design tool validates against is generated from the firmware's own

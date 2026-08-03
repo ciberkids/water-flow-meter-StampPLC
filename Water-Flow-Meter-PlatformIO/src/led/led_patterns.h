@@ -22,7 +22,15 @@ enum class LedOverride : uint8_t {
   /** §3.5 — accelerating white flash during a destructive countdown. */
   ResetRamp,
   /** §3.5 — solid white, the signal that a reset was accepted. */
-  ResetAccepted
+  ResetAccepted,
+  /**
+   * The SD card holds the shared SPI bus, so the display cannot report anything.
+   *
+   * The LEDs are the only status channel during a bus handover, and an operator who sees a dark
+   * panel and no other sign of life is an operator who pulls the card mid-write. See
+   * bus/spi_arbiter.h.
+   */
+  CardBusy
 };
 
 struct LedState {
@@ -39,6 +47,16 @@ constexpr uint32_t kBootStallBlinkMs = 500;
 // §3.5
 constexpr uint32_t kRampSlowestMs = 600;
 constexpr uint32_t kRampFastestMs = 60;
+
+/**
+ * Card-busy pulse period.
+ *
+ * Slow and steady, deliberately unlike anything else in the vocabulary: the boot snake steps
+ * every 150 ms, the reset ramp accelerates, and acceptance is solid. A calm 400 ms alternation
+ * reads as "working, wait" rather than "something is wrong", which is the honest message — a
+ * card read is a normal operation that simply cannot share the panel.
+ */
+constexpr uint32_t kCardBusyPeriodMs = 400;
 
 /**
  * Blink period for a reset countdown, derived from the FRACTION remaining.
@@ -61,6 +79,19 @@ constexpr uint32_t resetRampPeriodMs(uint32_t remainingMs, uint32_t totalMs) {
 }
 
 /** R -> G -> B, one channel at a time. */
+/**
+ * Red+green (amber) alternating with blue, while the card owns the bus.
+ *
+ * Chosen to be unmistakable against the rest of §3: it is never solid (which means accepted),
+ * never accelerating (which means a countdown), and never a single channel (which is the normal
+ * flow/ready/volume vocabulary). Two channels alternating with the third is a combination
+ * nothing else produces.
+ */
+constexpr LedState cardBusyState(uint32_t elapsedMs) {
+  const bool second = ((elapsedMs / kCardBusyPeriodMs) % 2u) == 1u;
+  return second ? LedState{false, false, true} : LedState{true, true, false};
+}
+
 constexpr LedState bootSnakeState(uint32_t elapsedMs) {
   const uint32_t step = (elapsedMs / kBootStepMs) % 3;
   return {step == 0, step == 1, step == 2};

@@ -39,6 +39,13 @@ class LedController {
   void setResetRamp(uint32_t remainingMs, uint32_t totalMs);
   /** §3.5: solid white for `holdMs`, the signal that a reset was accepted. */
   void noteResetAccepted(uint32_t nowMs, uint32_t holdMs);
+
+  /**
+   * The card has taken the shared SPI bus, so the LEDs must carry the status (§3.4/§3.5
+   * vocabulary; see bus/spi_arbiter.h). Held until clearCardBusy().
+   */
+  void setCardBusy(uint32_t nowMs);
+  void clearCardBusy();
   /** §3.5: countdown aborted — stop with no white flash, so it cannot read as done. */
   void clearResetRamp();
 
@@ -80,4 +87,5 @@ class LedController {
   uint32_t rampRemainingMs_ = 0;
   uint32_t rampTotalMs_ = 0;
   uint32_t acceptedUntilMs_ = 0;
+  uint32_t cardBusyStartMs_ = 0;
 };
