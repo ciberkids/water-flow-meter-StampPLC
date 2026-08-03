@@ -263,8 +263,6 @@ const SENSOR_SETTINGS = [
 ];
 const S_RING = [...SENSOR_SETTINGS.map((s) => s.id), "config-sensor-settings-back"];
 
-assertCoversEverySetting(DEVICE, SENSOR_SETTINGS);
-
 SENSOR_SETTINGS.forEach((s, i) => {
   const v = byId.get(s.binding);
   const unit = v?.unit ? ` ${v.unit}` : "";
@@ -309,6 +307,156 @@ screens.push({
   ]
 });
 
+// ── L0/L1/L2 WiFi and MQTT (WiFi_MQTT_Connectivity.md §7.1) ─────────────────
+//
+// Two new root-level entries, siblings of P0..P8, each descending into its own level. Ordinary
+// dataset screens, not firmware-drawn: §7.1 is explicit that a menu pack must be able to restyle
+// or relocate them, unlike the Select Menu page which is firmware-drawn because it is the recovery
+// route.
+//
+// The INFORMATION pages of §7.1 (AP info, WiFi info, MQTT info) are deliberately NOT here. They
+// display runtime state — association status, the DHCP address, the AP password — and none of those
+// derived values exist in the catalogue until N4 builds the state machine that produces them.
+// Emitting the pages now would mean binding ids the resolver cannot serve, which the
+// firmware-manifest-resolvable gate would reject, or worse, placeholder text pretending to be
+// status. They arrive with the state they describe.
+//
+// Nothing here is guarded either. R7.3 permits a guard to hide an information page and forbids it
+// from hiding an editor, because the completeness rule has to be decidable statically and no static
+// check can evaluate a runtime guard. Since this slice emits only editors, the honest thing is to
+// emit them unconditionally: every one of the fourteen settings is reachable by paging, with no
+// guard for the export gate to reason around. Configuring a broker before switching MQTT on is also
+// the friendlier order.
+const WIFI_L1 = [
+  { page: "W1", id: "net-wifi-enabled", title: "Enabled", binding: "config.wifi.enabled" },
+  { page: "W2", id: "net-wifi-ssid", title: "Network (SSID)", binding: "config.wifi.ssid" },
+  { page: "W3", id: "net-wifi-psk", title: "Passphrase", binding: "config.wifi.psk" }
+];
+const WIFI_RING = [...WIFI_L1.map((w) => w.id), "net-wifi-back"];
+
+const MQTT_L1 = [
+  { page: "M1", id: "net-mqtt-enabled", title: "Enabled", binding: "config.mqtt.enabled" },
+  { page: "M2", id: "net-mqtt-setup", title: "Broker setup", binding: null, descendTo: "net-mqtt-host" }
+];
+const MQTT_RING = [...MQTT_L1.map((m) => m.id), "net-mqtt-back"];
+
+const MQTT_SETUP = [
+  { page: "B1", id: "net-mqtt-host", title: "Broker host", binding: "config.mqtt.host" },
+  { page: "B2", id: "net-mqtt-port", title: "Port", binding: "config.mqtt.port" },
+  { page: "B3", id: "net-mqtt-user", title: "Username", binding: "config.mqtt.user" },
+  { page: "B4", id: "net-mqtt-password", title: "Password", binding: "config.mqtt.password" },
+  { page: "B5", id: "net-mqtt-base-topic", title: "Base topic", binding: "config.mqtt.baseTopic" },
+  { page: "B6", id: "net-mqtt-prefix", title: "HA prefix", binding: "config.mqtt.discoveryPrefix" },
+  { page: "B7", id: "net-mqtt-period", title: "Publish period", binding: "config.mqtt.publishPeriod" },
+  { page: "B8", id: "net-mqtt-ha-discovery", title: "HA discovery", binding: "config.mqtt.haDiscovery" },
+  { page: "B9", id: "net-mqtt-tls", title: "TLS", binding: "config.mqtt.tls" },
+  { page: "B10", id: "net-mqtt-qos", title: "QoS", binding: "config.mqtt.qos" }
+];
+const MQTT_SETUP_RING = [...MQTT_SETUP.map((b) => b.id), "net-mqtt-setup-back"];
+
+/**
+ * Emits one navigation level: an entry screen per item, an editor for each that binds a setting,
+ * and the closing BACK page.
+ *
+ * Factored rather than copied because there are now five levels with identical structure, and the
+ * ring wiring is exactly the part that is silently wrong when hand-repeated.
+ */
+function emitLevel({ items, ring, crumb, backId, backName }) {
+  items.forEach((item, i) => {
+    const isDescent = item.binding === null;
+    const v = item.binding ? byId.get(item.binding) : null;
+    if (item.binding && !v) throw new Error(`catalogue has no value "${item.binding}"`);
+    const unit = v?.unit ? ` ${v.unit}` : "";
+    screens.push({
+      id: item.id,
+      name: `${item.page} — ${item.title}`,
+      description: `${crumb} entry ${item.page}. ENTER ${isDescent ? "descends" : "edits"}; UP/DOWN move within the level.`,
+      elements: [
+        text("hdr-title", L.headerY, `${crumb} > ${item.title}`),
+        text("field-label", L.bodyY, isDescent ? "Open" : `Current${unit}`, { emphasis: "muted" }),
+        ...(item.binding
+          ? [value("field-value", L.valueY, item.binding, { emphasis: "strong" })]
+          : [text("field-value", L.valueY, "Settings >", { emphasis: "strong" })]),
+        text("footer-hint", L.footerY,
+          isDescent ? "UP/DN page  ENTER open  hold ENTER exit"
+                    : "UP/DN page  ENTER edit  hold ENTER exit",
+          { emphasis: "muted" }),
+        scrollbar()
+      ],
+      flows: [
+        ...ringFlows(ring, i),
+        btn("f-enter", isDescent ? `Open ${item.title}` : "Edit value", "enter", "short",
+            A.descend, isDescent ? item.descendTo : editorId(item.id)),
+        btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+      ]
+    });
+    if (item.binding) {
+      screens.push(editorScreen({
+        page: item.page, screenId: editorId(item.id), title: item.title,
+        binding: item.binding, parentId: item.id
+      }));
+    }
+  });
+  screens.push({
+    id: backId,
+    name: backName,
+    description: `Ascends one level, out of ${crumb}.`,
+    elements: [
+      text("hdr-title", L.headerY, crumb),
+      text("back-label", L.valueY, "< BACK", { emphasis: "strong" }),
+      text("footer-hint", L.footerY, "ENTER go back", { emphasis: "muted" }),
+      scrollbar()
+    ],
+    flows: [
+      ...ringFlows(ring, ring.length - 1),
+      btn("f-back", "Back one level", "enter", "short", A.back),
+      btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+    ]
+  });
+}
+
+// The two root-level entries. Their ring is the INFO ring, so they page with P0..P8.
+[
+  { id: "net-wifi-root", name: "WIFI — WiFi", crumb: "WiFi", enter: "net-wifi-enabled",
+    prev: "info-p8-factory-reset", next: "net-mqtt-root",
+    lines: ["Radio, network name and", "passphrase."] },
+  { id: "net-mqtt-root", name: "MQTT — MQTT", crumb: "MQTT", enter: "net-mqtt-enabled",
+    prev: "net-wifi-root", next: "info-p0-global-status",
+    lines: ["Broker, credentials and", "Home Assistant discovery."] }
+].forEach((r) => {
+  screens.push({
+    id: r.id,
+    name: r.name,
+    description: `Root-level ${r.crumb} entry. ENTER descends into the ${r.crumb} level.`,
+    elements: [
+      text("hdr-title", L.headerY, r.crumb.toUpperCase()),
+      text("line-1", L.bodyY, r.lines[0], { emphasis: "muted" }),
+      text("line-2", L.bodyY + 12, r.lines[1], { emphasis: "muted" }),
+      text("prompt", L.valueY + 14, "ENTER to open >", { emphasis: "strong" }),
+      text("footer-hint", L.footerY, "UP/DN page  ENTER open", { emphasis: "muted" }),
+      scrollbar()
+    ],
+    flows: [
+      btn("f-next", "Next page", "down", "short", A.next, r.next),
+      btn("f-prev", "Previous page", "up", "short", A.prev, r.prev),
+      btn("f-enter", `Open ${r.crumb} settings`, "enter", "short", A.descend, r.enter),
+      btn("f-escape", "Back to main screen", "enter", "long", A.escape, "info-p0-global-status")
+    ]
+  });
+});
+
+// Checked here rather than earlier: it must see EVERY list, and the network lists are declared
+// above this point. Placed before the emit calls so a missing editor fails before any screen is
+// written rather than after.
+assertCoversEverySetting([...DEVICE, ...WIFI_L1, ...MQTT_L1, ...MQTT_SETUP], SENSOR_SETTINGS);
+
+emitLevel({ items: WIFI_L1, ring: WIFI_RING, crumb: "WiFi",
+            backId: "net-wifi-back", backName: "W.BACK — Back" });
+emitLevel({ items: MQTT_L1, ring: MQTT_RING, crumb: "MQTT",
+            backId: "net-mqtt-back", backName: "M.BACK — Back" });
+emitLevel({ items: MQTT_SETUP, ring: MQTT_SETUP_RING, crumb: "MQTT Setup",
+            backId: "net-mqtt-setup-back", backName: "B.BACK — Back" });
+
 // ── P8 Factory Reset info page ───────────────────────────────────────────────
 screens.push({
   id: "info-p8-factory-reset",
@@ -323,7 +471,7 @@ screens.push({
     scrollbar()
   ],
   flows: [
-    btn("f-next", "Next page", "down", "short", A.next, "info-p0-global-status"),
+    btn("f-next", "Next page", "down", "short", A.next, "net-wifi-root"),
     btn("f-prev", "Previous page", "up", "short", A.prev, "info-p7-enter-config"),
     btn("f-enter", "Open confirm screen", "enter", "short", A.descend, "confirm-factory-reset"),
     btn("f-escape", "Back to main screen", "enter", "long", A.escape, "info-p0-global-status")
@@ -587,7 +735,8 @@ for (const s of kept) {
   }
   if (s.id === "info-p0-global-status") {
     for (const f of s.flows) {
-      if (f.id === "f-prev") f.targetScreenId = "info-p8-factory-reset";
+      // The root ring now ends with the two network entries, so UP from P0 reaches MQTT, not P8.
+      if (f.id === "f-prev") f.targetScreenId = "net-mqtt-root";
     }
   }
 }

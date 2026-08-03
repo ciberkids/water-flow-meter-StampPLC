@@ -6,6 +6,7 @@
 // without deliberately shipping a broken pack. So the ladder takes storage and the attempt
 // counter as interfaces and is driven here with fakes.
 #include "ui/pack/ui_pack_loader.h"
+#include "ui/generated/GeneratedUi.h"
 
 #include <cstdio>
 #include <cstring>
@@ -122,7 +123,11 @@ void happyPathTests(const std::vector<uint8_t>& good) {
   f.storage.contents = good;
   check(f.run() == ui::LoadOutcome::CardPack, "the pack is selected");
   check(f.pack.valid(), "and is usable");
-  check(f.pack.screenCount() == 48, "with all 48 screens");
+  // Derived from the emitted table, not a literal: the fixture IS the default dataset, so the
+  // count is whatever the generator last produced. A hard-coded 48 made this test fail every time
+  // a screen was added, which says nothing about the loader.
+  check(f.pack.screenCount() == ui_exporter::kGeneratedScreenCount,
+        "with every screen the generated table has");
   check(std::strcmp(f.loader.selectedName(), "default.uipack") == 0,
         "the selection is reported for the boot message");
 

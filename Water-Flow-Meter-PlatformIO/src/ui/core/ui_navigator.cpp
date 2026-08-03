@@ -23,10 +23,17 @@ uint8_t sensorIndexFromId(const char* id) {
   return static_cast<uint8_t>(*digits - '0');
 }
 
-/** Follows a screen's DOWN/short flow to its sibling, or null if it has none. */
-const ui_exporter::Screen* nextSibling(const ui_exporter::Screen* screen,
-                                       const ui_exporter::Screen* const* all,
-                                       std::size_t count) {
+/**
+ * Follows a screen's DOWN/short flow to its sibling, or null if it has none.
+ *
+ * Searches the generated table DIRECTLY rather than a caller-supplied copy of it. The copy used to
+ * be a fixed `const Screen* all[kMaxRing * 4]` — 64 entries — which silently truncated once the
+ * dataset passed 64 screens: every screen beyond the cap became unfindable, so any ring containing
+ * one broke in the middle and reported the wrong member count. Adding the WiFi and MQTT levels took
+ * the dataset to 82 and tripped exactly that. Searching the real table removes the capacity rather
+ * than raising it, so the next batch of screens cannot reintroduce this.
+ */
+const ui_exporter::Screen* nextSibling(const ui_exporter::Screen* screen) {
   if (!screen || !screen->flows) {
     return nullptr;
   }
@@ -35,9 +42,10 @@ const ui_exporter::Screen* nextSibling(const ui_exporter::Screen* screen,
     if (flow.trigger != ui_exporter::FlowTrigger::Button) continue;
     if (flow.button != ui_exporter::FlowButton::Down) continue;
     if (!flow.targetScreenId) continue;
-    for (std::size_t s = 0; s < count; ++s) {
-      if (all[s] && all[s]->id && std::strcmp(all[s]->id, flow.targetScreenId) == 0) {
-        return all[s];
+    for (std::size_t s = 0; s < ui_exporter::kGeneratedScreenCount; ++s) {
+      const auto& candidate = ui_exporter::kGeneratedScreens[s];
+      if (candidate.id && std::strcmp(candidate.id, flow.targetScreenId) == 0) {
+        return &candidate;
       }
     }
     return nullptr;
@@ -108,19 +116,14 @@ bool UiNavigator::ringPosition(uint8_t* indexOut, uint8_t* countOut) const {
   }
 
   // The ring is only walkable through the generated screen table, which the
-  // navigator does not hold — so resolve siblings against it directly.
+  // navigator does not hold — so nextSibling resolves against it directly.
   const ui_exporter::Screen* members[kMaxRing] = {};
-  const ui_exporter::Screen* all[kMaxRing * 4] = {};
-  std::size_t allCount = 0;
-  for (std::size_t i = 0; i < ui_exporter::kGeneratedScreenCount && allCount < (kMaxRing * 4); ++i) {
-    all[allCount++] = &ui_exporter::kGeneratedScreens[i];
-  }
 
   uint8_t count = 0;
   const ui_exporter::Screen* walk = current_;
   while (walk && count < kMaxRing) {
     members[count++] = walk;
-    walk = nextSibling(walk, all, allCount);
+    walk = nextSibling(walk);
     if (walk == current_) {
       break;  // Closed the ring.
     }

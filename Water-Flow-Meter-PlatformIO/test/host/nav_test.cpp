@@ -41,12 +41,15 @@ int main() {
   std::printf("[info ring]\n");
   nav.reset(p0);
   check(nav.current() == p0 && nav.depth() == 0, "reset lands on P0 at depth 0");
+  // §7.1 put WIFI and MQTT at the ROOT level, as siblings of the info pages rather than under
+  // Configuration — so the ring is eleven, and P8 now steps to WIFI instead of wrapping.
   const char* expect[] = {"info-p1-instant-flow","info-p2-cumulative-liters",
     "info-p3-cumulative-m3","info-p4-session-liters","info-p5-session-m3",
     "info-p6-max-flow","info-p7-enter-config","info-p8-factory-reset",
+    "net-wifi-root","net-mqtt-root",
     "info-p0-global-status"};
   bool ok = true;
-  for (int i = 0; i < 9; ++i) {
+  for (int i = 0; i < 11; ++i) {
     nav.goToSibling(follow(nav.current(), ui_exporter::FlowButton::Down,
                            ui_exporter::FlowGesture::Short));
     if (std::strcmp(idOf(nav.current()), expect[i]) != 0) {
@@ -54,11 +57,12 @@ int main() {
       ok = false;
     }
   }
-  check(ok, "9 DOWN presses traverse P0..P8 and wrap to P0");
+  check(ok, "11 DOWN presses traverse P0..P8, WIFI, MQTT and wrap to P0");
   check(nav.depth() == 0, "sibling moves never change depth");
 
   uint8_t ri = 0, rc = 0;
-  check(nav.ringPosition(&ri, &rc) && rc == 9, "info ring reports 9 members");
+  check(nav.ringPosition(&ri, &rc) && rc == 11,
+        "info ring reports 11 members (P0-P8 + WIFI + MQTT)");
 
   std::printf("\n[descend to the deepest documented path]\n");
   nav.reset(p0);

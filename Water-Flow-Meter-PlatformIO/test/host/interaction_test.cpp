@@ -718,10 +718,19 @@ void editorDatasetInvariantTests() {
     }
   }
 
-  check(editors == 10, "exactly ten screens declare config.editor.pending — the ten editors");
+  // Derived from the catalogue rather than hard-coded. The invariant is "one editor per setting"
+  // — the completeness rule — and a literal 10 only restated how many settings there happened to
+  // be, so adding the fourteen network settings broke a test that was not actually wrong about
+  // anything. Counting from settingCount() states the rule the export gate enforces.
+  std::printf("      %zu editors / %zu list pages / %zu catalogue settings\n",
+              static_cast<std::size_t>(editors), static_cast<std::size_t>(settingListPages),
+              ui::settingCount());
+  check(static_cast<std::size_t>(editors) == ui::settingCount(),
+        "every catalogue setting has exactly one editor screen (the completeness rule)");
   check(pendingMatchesCommit,
         "a screen shows a pending value if and only if it has a commit flow");
-  check(settingListPages == 10, "ten list pages display a saved setting without being editors");
+  check(static_cast<std::size_t>(settingListPages) == ui::settingCount(),
+        "and exactly one list page displays each setting without being its editor");
   check(everyListPageHasItsEditor,
         "every setting list page's ENTER-short descends onto a real editor (§5.7)");
 }

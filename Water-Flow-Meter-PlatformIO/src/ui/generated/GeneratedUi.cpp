@@ -21,7 +21,7 @@ static constexpr ui_exporter::Element kInfoP0GlobalStatusElements[] = {
 
 static constexpr ui_exporter::Flow kInfoP0GlobalStatusFlows[] = {
     { "f-next", "Next page", "info-p1-instant-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Prev page", "info-p8-factory-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-prev", "Prev page", "net-mqtt-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
@@ -959,6 +959,7 @@ static constexpr ui_exporter::Flow kConfigS1ConnectedFlows[] = {
 };
 
 static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditHdrTitle_Text = { "Edit > Connected", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditRangeHint_Text = { "Off / On", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -967,6 +968,7 @@ static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1Connect
 
 static constexpr ui_exporter::Element kConfigS1ConnectedEditElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditRangeHint_Text, nullptr, nullptr },
     { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditPendingLabel_Text, nullptr, nullptr },
     { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditPendingValue_Text, nullptr, "config.editor.pending" },
     { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditSavedLabel_Text, nullptr, nullptr },
@@ -1154,6 +1156,788 @@ static constexpr ui_exporter::Flow kConfigSensorSettingsBackFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
+static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootHdrTitle_Text = { "WIFI", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootLine1_Text = { "Radio, network name and", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootLine2_Text = { "passphrase.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootPrompt_Text = { "ENTER to open >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootFooterHint_Text = { "UP/DN page  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetWifiRootElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiRoot_NetWifiRootHdrTitle_Text, nullptr, nullptr },
+    { "line-1", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetWifiRoot_NetWifiRootLine1_Text, nullptr, nullptr },
+    { "line-2", ui_exporter::ElementType::Text, 8, 42, 0, 0, &kNetWifiRoot_NetWifiRootLine2_Text, nullptr, nullptr },
+    { "prompt", ui_exporter::ElementType::Text, 8, 64, 0, 0, &kNetWifiRoot_NetWifiRootPrompt_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiRoot_NetWifiRootFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetWifiRootFlows[] = {
+    { "f-next", "Next page", "net-mqtt-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous page", "info-p8-factory-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Open WiFi settings", "net-wifi-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootHdrTitle_Text = { "MQTT", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootLine1_Text = { "Broker, credentials and", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootLine2_Text = { "Home Assistant discovery.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootPrompt_Text = { "ENTER to open >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootFooterHint_Text = { "UP/DN page  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttRootElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttRoot_NetMqttRootHdrTitle_Text, nullptr, nullptr },
+    { "line-1", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttRoot_NetMqttRootLine1_Text, nullptr, nullptr },
+    { "line-2", ui_exporter::ElementType::Text, 8, 42, 0, 0, &kNetMqttRoot_NetMqttRootLine2_Text, nullptr, nullptr },
+    { "prompt", ui_exporter::ElementType::Text, 8, 64, 0, 0, &kNetMqttRoot_NetMqttRootPrompt_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttRoot_NetMqttRootFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttRootFlows[] = {
+    { "f-next", "Next page", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous page", "net-wifi-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Open MQTT settings", "net-mqtt-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetWifiEnabled_NetWifiEnabledHdrTitle_Text = { "WiFi > Enabled", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiEnabled_NetWifiEnabledFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiEnabled_NetWifiEnabledFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiEnabled_NetWifiEnabledFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetWifiEnabledElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiEnabled_NetWifiEnabledHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetWifiEnabled_NetWifiEnabledFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetWifiEnabled_NetWifiEnabledFieldValue_Text, nullptr, "config.wifi.enabled" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiEnabled_NetWifiEnabledFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetWifiEnabledFlows[] = {
+    { "f-next", "Next entry", "net-wifi-ssid", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-wifi-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "net-wifi-enabled-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetWifiEnabledEdit_NetWifiEnabledEditHdrTitle_Text = { "Edit > Enabled", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiEnabledEdit_NetWifiEnabledEditRangeHint_Text = { "Off / On", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiEnabledEdit_NetWifiEnabledEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiEnabledEdit_NetWifiEnabledEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiEnabledEdit_NetWifiEnabledEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiEnabledEdit_NetWifiEnabledEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiEnabledEdit_NetWifiEnabledEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetWifiEnabledEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiEnabledEdit_NetWifiEnabledEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetWifiEnabledEdit_NetWifiEnabledEditRangeHint_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetWifiEnabledEdit_NetWifiEnabledEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetWifiEnabledEdit_NetWifiEnabledEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetWifiEnabledEdit_NetWifiEnabledEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetWifiEnabledEdit_NetWifiEnabledEditSavedValue_Text, nullptr, "config.wifi.enabled" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiEnabledEdit_NetWifiEnabledEditFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetWifiEnabledEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "net-wifi-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "net-wifi-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetWifiSsid_NetWifiSsidHdrTitle_Text = { "WiFi > Network (SSID)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiSsid_NetWifiSsidFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiSsid_NetWifiSsidFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiSsid_NetWifiSsidFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetWifiSsidElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiSsid_NetWifiSsidHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetWifiSsid_NetWifiSsidFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetWifiSsid_NetWifiSsidFieldValue_Text, nullptr, "config.wifi.ssid" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiSsid_NetWifiSsidFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetWifiSsidFlows[] = {
+    { "f-next", "Next entry", "net-wifi-psk", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-wifi-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "net-wifi-ssid-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetWifiSsidEdit_NetWifiSsidEditHdrTitle_Text = { "Edit > Network (SSID)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiSsidEdit_NetWifiSsidEditRangeHint_Text = { "0 to 0", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiSsidEdit_NetWifiSsidEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiSsidEdit_NetWifiSsidEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiSsidEdit_NetWifiSsidEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiSsidEdit_NetWifiSsidEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiSsidEdit_NetWifiSsidEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetWifiSsidEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiSsidEdit_NetWifiSsidEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetWifiSsidEdit_NetWifiSsidEditRangeHint_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetWifiSsidEdit_NetWifiSsidEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetWifiSsidEdit_NetWifiSsidEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetWifiSsidEdit_NetWifiSsidEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetWifiSsidEdit_NetWifiSsidEditSavedValue_Text, nullptr, "config.wifi.ssid" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiSsidEdit_NetWifiSsidEditFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetWifiSsidEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "net-wifi-ssid", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "net-wifi-ssid", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetWifiPsk_NetWifiPskHdrTitle_Text = { "WiFi > Passphrase", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiPsk_NetWifiPskFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiPsk_NetWifiPskFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiPsk_NetWifiPskFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetWifiPskElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiPsk_NetWifiPskHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetWifiPsk_NetWifiPskFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetWifiPsk_NetWifiPskFieldValue_Text, nullptr, "config.wifi.psk" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiPsk_NetWifiPskFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetWifiPskFlows[] = {
+    { "f-next", "Next entry", "net-wifi-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-wifi-ssid", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "net-wifi-psk-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetWifiPskEdit_NetWifiPskEditHdrTitle_Text = { "Edit > Passphrase", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiPskEdit_NetWifiPskEditRangeHint_Text = { "0 to 0", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiPskEdit_NetWifiPskEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiPskEdit_NetWifiPskEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiPskEdit_NetWifiPskEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiPskEdit_NetWifiPskEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiPskEdit_NetWifiPskEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetWifiPskEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiPskEdit_NetWifiPskEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetWifiPskEdit_NetWifiPskEditRangeHint_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetWifiPskEdit_NetWifiPskEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetWifiPskEdit_NetWifiPskEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetWifiPskEdit_NetWifiPskEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetWifiPskEdit_NetWifiPskEditSavedValue_Text, nullptr, "config.wifi.psk" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiPskEdit_NetWifiPskEditFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetWifiPskEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "net-wifi-psk", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "net-wifi-psk", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetWifiBack_NetWifiBackHdrTitle_Text = { "WiFi", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiBack_NetWifiBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiBack_NetWifiBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetWifiBackElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiBack_NetWifiBackHdrTitle_Text, nullptr, nullptr },
+    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kNetWifiBack_NetWifiBackBackLabel_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiBack_NetWifiBackFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetWifiBackFlows[] = {
+    { "f-next", "Next entry", "net-wifi-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-wifi-psk", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttEnabled_NetMqttEnabledHdrTitle_Text = { "MQTT > Enabled", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttEnabled_NetMqttEnabledFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttEnabled_NetMqttEnabledFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttEnabled_NetMqttEnabledFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttEnabledElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttEnabled_NetMqttEnabledHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttEnabled_NetMqttEnabledFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttEnabled_NetMqttEnabledFieldValue_Text, nullptr, "config.mqtt.enabled" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttEnabled_NetMqttEnabledFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttEnabledFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-setup", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "net-mqtt-enabled-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttEnabledEdit_NetMqttEnabledEditHdrTitle_Text = { "Edit > Enabled", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttEnabledEdit_NetMqttEnabledEditRangeHint_Text = { "Off / On", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttEnabledEdit_NetMqttEnabledEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttEnabledEdit_NetMqttEnabledEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttEnabledEdit_NetMqttEnabledEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttEnabledEdit_NetMqttEnabledEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttEnabledEdit_NetMqttEnabledEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttEnabledEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttEnabledEdit_NetMqttEnabledEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttEnabledEdit_NetMqttEnabledEditRangeHint_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttEnabledEdit_NetMqttEnabledEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttEnabledEdit_NetMqttEnabledEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttEnabledEdit_NetMqttEnabledEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttEnabledEdit_NetMqttEnabledEditSavedValue_Text, nullptr, "config.mqtt.enabled" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttEnabledEdit_NetMqttEnabledEditFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttEnabledEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "net-mqtt-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "net-mqtt-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttSetup_NetMqttSetupHdrTitle_Text = { "MQTT > Broker setup", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttSetup_NetMqttSetupFieldLabel_Text = { "Open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttSetup_NetMqttSetupFieldValue_Text = { "Settings >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttSetup_NetMqttSetupFooterHint_Text = { "UP/DN page  ENTER open  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttSetupElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttSetup_NetMqttSetupHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttSetup_NetMqttSetupFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kNetMqttSetup_NetMqttSetupFieldValue_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttSetup_NetMqttSetupFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttSetupFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Open Broker setup", "net-mqtt-host", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttBack_NetMqttBackHdrTitle_Text = { "MQTT", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttBack_NetMqttBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttBack_NetMqttBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttBackElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttBack_NetMqttBackHdrTitle_Text, nullptr, nullptr },
+    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kNetMqttBack_NetMqttBackBackLabel_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttBack_NetMqttBackFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttBackFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-setup", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttHost_NetMqttHostHdrTitle_Text = { "MQTT Setup > Broker host", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttHost_NetMqttHostFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttHost_NetMqttHostFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttHost_NetMqttHostFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttHostElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttHost_NetMqttHostHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttHost_NetMqttHostFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttHost_NetMqttHostFieldValue_Text, nullptr, "config.mqtt.host" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttHost_NetMqttHostFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttHostFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-port", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-setup-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "net-mqtt-host-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttHostEdit_NetMqttHostEditHdrTitle_Text = { "Edit > Broker host", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttHostEdit_NetMqttHostEditRangeHint_Text = { "0 to 0", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttHostEdit_NetMqttHostEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttHostEdit_NetMqttHostEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttHostEdit_NetMqttHostEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttHostEdit_NetMqttHostEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttHostEdit_NetMqttHostEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttHostEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttHostEdit_NetMqttHostEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttHostEdit_NetMqttHostEditRangeHint_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttHostEdit_NetMqttHostEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttHostEdit_NetMqttHostEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttHostEdit_NetMqttHostEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttHostEdit_NetMqttHostEditSavedValue_Text, nullptr, "config.mqtt.host" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttHostEdit_NetMqttHostEditFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttHostEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "net-mqtt-host", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "net-mqtt-host", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttPort_NetMqttPortHdrTitle_Text = { "MQTT Setup > Port", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttPort_NetMqttPortFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPort_NetMqttPortFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttPort_NetMqttPortFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttPortElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttPort_NetMqttPortHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttPort_NetMqttPortFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttPort_NetMqttPortFieldValue_Text, nullptr, "config.mqtt.port" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttPort_NetMqttPortFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttPortFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-user", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-host", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "net-mqtt-port-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttPortEdit_NetMqttPortEditHdrTitle_Text = { "Edit > Port", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttPortEdit_NetMqttPortEditRangeHint_Text = { "1 to 65535", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPortEdit_NetMqttPortEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPortEdit_NetMqttPortEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttPortEdit_NetMqttPortEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPortEdit_NetMqttPortEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPortEdit_NetMqttPortEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttPortEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttPortEdit_NetMqttPortEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttPortEdit_NetMqttPortEditRangeHint_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttPortEdit_NetMqttPortEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttPortEdit_NetMqttPortEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttPortEdit_NetMqttPortEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttPortEdit_NetMqttPortEditSavedValue_Text, nullptr, "config.mqtt.port" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttPortEdit_NetMqttPortEditFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttPortEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "net-mqtt-port", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "net-mqtt-port", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttUser_NetMqttUserHdrTitle_Text = { "MQTT Setup > Username", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttUser_NetMqttUserFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttUser_NetMqttUserFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttUser_NetMqttUserFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttUserElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttUser_NetMqttUserHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttUser_NetMqttUserFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttUser_NetMqttUserFieldValue_Text, nullptr, "config.mqtt.user" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttUser_NetMqttUserFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttUserFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-password", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-port", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "net-mqtt-user-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttUserEdit_NetMqttUserEditHdrTitle_Text = { "Edit > Username", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttUserEdit_NetMqttUserEditRangeHint_Text = { "0 to 0", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttUserEdit_NetMqttUserEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttUserEdit_NetMqttUserEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttUserEdit_NetMqttUserEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttUserEdit_NetMqttUserEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttUserEdit_NetMqttUserEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttUserEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttUserEdit_NetMqttUserEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttUserEdit_NetMqttUserEditRangeHint_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttUserEdit_NetMqttUserEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttUserEdit_NetMqttUserEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttUserEdit_NetMqttUserEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttUserEdit_NetMqttUserEditSavedValue_Text, nullptr, "config.mqtt.user" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttUserEdit_NetMqttUserEditFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttUserEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "net-mqtt-user", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "net-mqtt-user", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttPassword_NetMqttPasswordHdrTitle_Text = { "MQTT Setup > Password", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttPassword_NetMqttPasswordFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPassword_NetMqttPasswordFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttPassword_NetMqttPasswordFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttPasswordElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttPassword_NetMqttPasswordHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttPassword_NetMqttPasswordFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttPassword_NetMqttPasswordFieldValue_Text, nullptr, "config.mqtt.password" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttPassword_NetMqttPasswordFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttPasswordFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-base-topic", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-user", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "net-mqtt-password-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttPasswordEdit_NetMqttPasswordEditHdrTitle_Text = { "Edit > Password", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttPasswordEdit_NetMqttPasswordEditRangeHint_Text = { "0 to 0", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPasswordEdit_NetMqttPasswordEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPasswordEdit_NetMqttPasswordEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttPasswordEdit_NetMqttPasswordEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPasswordEdit_NetMqttPasswordEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPasswordEdit_NetMqttPasswordEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttPasswordEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttPasswordEdit_NetMqttPasswordEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttPasswordEdit_NetMqttPasswordEditRangeHint_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttPasswordEdit_NetMqttPasswordEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttPasswordEdit_NetMqttPasswordEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttPasswordEdit_NetMqttPasswordEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttPasswordEdit_NetMqttPasswordEditSavedValue_Text, nullptr, "config.mqtt.password" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttPasswordEdit_NetMqttPasswordEditFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttPasswordEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "net-mqtt-password", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "net-mqtt-password", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttBaseTopic_NetMqttBaseTopicHdrTitle_Text = { "MQTT Setup > Base topic", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttBaseTopic_NetMqttBaseTopicFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttBaseTopic_NetMqttBaseTopicFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttBaseTopic_NetMqttBaseTopicFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttBaseTopicElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttBaseTopic_NetMqttBaseTopicHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttBaseTopic_NetMqttBaseTopicFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttBaseTopic_NetMqttBaseTopicFieldValue_Text, nullptr, "config.mqtt.baseTopic" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttBaseTopic_NetMqttBaseTopicFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttBaseTopicFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-prefix", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-password", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "net-mqtt-base-topic-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttBaseTopicEdit_NetMqttBaseTopicEditHdrTitle_Text = { "Edit > Base topic", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttBaseTopicEdit_NetMqttBaseTopicEditRangeHint_Text = { "0 to 0", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttBaseTopicEdit_NetMqttBaseTopicEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttBaseTopicEdit_NetMqttBaseTopicEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttBaseTopicEdit_NetMqttBaseTopicEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttBaseTopicEdit_NetMqttBaseTopicEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttBaseTopicEdit_NetMqttBaseTopicEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttBaseTopicEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttBaseTopicEdit_NetMqttBaseTopicEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttBaseTopicEdit_NetMqttBaseTopicEditRangeHint_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttBaseTopicEdit_NetMqttBaseTopicEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttBaseTopicEdit_NetMqttBaseTopicEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttBaseTopicEdit_NetMqttBaseTopicEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttBaseTopicEdit_NetMqttBaseTopicEditSavedValue_Text, nullptr, "config.mqtt.baseTopic" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttBaseTopicEdit_NetMqttBaseTopicEditFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttBaseTopicEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "net-mqtt-base-topic", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "net-mqtt-base-topic", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttPrefix_NetMqttPrefixHdrTitle_Text = { "MQTT Setup > HA prefix", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttPrefix_NetMqttPrefixFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPrefix_NetMqttPrefixFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttPrefix_NetMqttPrefixFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttPrefixElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttPrefix_NetMqttPrefixHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttPrefix_NetMqttPrefixFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttPrefix_NetMqttPrefixFieldValue_Text, nullptr, "config.mqtt.discoveryPrefix" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttPrefix_NetMqttPrefixFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttPrefixFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-base-topic", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "net-mqtt-prefix-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttPrefixEdit_NetMqttPrefixEditHdrTitle_Text = { "Edit > HA prefix", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttPrefixEdit_NetMqttPrefixEditRangeHint_Text = { "0 to 0", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPrefixEdit_NetMqttPrefixEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPrefixEdit_NetMqttPrefixEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttPrefixEdit_NetMqttPrefixEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPrefixEdit_NetMqttPrefixEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPrefixEdit_NetMqttPrefixEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttPrefixEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttPrefixEdit_NetMqttPrefixEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttPrefixEdit_NetMqttPrefixEditRangeHint_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttPrefixEdit_NetMqttPrefixEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttPrefixEdit_NetMqttPrefixEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttPrefixEdit_NetMqttPrefixEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttPrefixEdit_NetMqttPrefixEditSavedValue_Text, nullptr, "config.mqtt.discoveryPrefix" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttPrefixEdit_NetMqttPrefixEditFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttPrefixEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "net-mqtt-prefix", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "net-mqtt-prefix", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttPeriod_NetMqttPeriodHdrTitle_Text = { "MQTT Setup > Publish period", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttPeriod_NetMqttPeriodFieldLabel_Text = { "Current s", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPeriod_NetMqttPeriodFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttPeriod_NetMqttPeriodFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttPeriodElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttPeriod_NetMqttPeriodHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttPeriod_NetMqttPeriodFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttPeriod_NetMqttPeriodFieldValue_Text, nullptr, "config.mqtt.publishPeriod" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttPeriod_NetMqttPeriodFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttPeriodFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-ha-discovery", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-prefix", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "net-mqtt-period-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttPeriodEdit_NetMqttPeriodEditHdrTitle_Text = { "Edit > Publish period", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttPeriodEdit_NetMqttPeriodEditRangeHint_Text = { "1 to 3600 s", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPeriodEdit_NetMqttPeriodEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPeriodEdit_NetMqttPeriodEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttPeriodEdit_NetMqttPeriodEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPeriodEdit_NetMqttPeriodEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttPeriodEdit_NetMqttPeriodEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttPeriodEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttPeriodEdit_NetMqttPeriodEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttPeriodEdit_NetMqttPeriodEditRangeHint_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttPeriodEdit_NetMqttPeriodEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttPeriodEdit_NetMqttPeriodEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttPeriodEdit_NetMqttPeriodEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttPeriodEdit_NetMqttPeriodEditSavedValue_Text, nullptr, "config.mqtt.publishPeriod" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttPeriodEdit_NetMqttPeriodEditFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttPeriodEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "net-mqtt-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "net-mqtt-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttHaDiscovery_NetMqttHaDiscoveryHdrTitle_Text = { "MQTT Setup > HA discovery", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttHaDiscovery_NetMqttHaDiscoveryFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttHaDiscovery_NetMqttHaDiscoveryFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttHaDiscovery_NetMqttHaDiscoveryFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttHaDiscoveryElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttHaDiscovery_NetMqttHaDiscoveryHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttHaDiscovery_NetMqttHaDiscoveryFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttHaDiscovery_NetMqttHaDiscoveryFieldValue_Text, nullptr, "config.mqtt.haDiscovery" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttHaDiscovery_NetMqttHaDiscoveryFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttHaDiscoveryFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-tls", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "net-mqtt-ha-discovery-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditHdrTitle_Text = { "Edit > HA discovery", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditRangeHint_Text = { "Off / On", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttHaDiscoveryEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditRangeHint_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditSavedValue_Text, nullptr, "config.mqtt.haDiscovery" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttHaDiscoveryEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "net-mqtt-ha-discovery", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "net-mqtt-ha-discovery", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttTls_NetMqttTlsHdrTitle_Text = { "MQTT Setup > TLS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttTls_NetMqttTlsFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttTls_NetMqttTlsFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttTls_NetMqttTlsFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttTlsElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttTls_NetMqttTlsHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttTls_NetMqttTlsFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttTls_NetMqttTlsFieldValue_Text, nullptr, "config.mqtt.tls" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttTls_NetMqttTlsFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttTlsFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-qos", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-ha-discovery", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "net-mqtt-tls-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttTlsEdit_NetMqttTlsEditHdrTitle_Text = { "Edit > TLS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttTlsEdit_NetMqttTlsEditRangeHint_Text = { "Off / On", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttTlsEdit_NetMqttTlsEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttTlsEdit_NetMqttTlsEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttTlsEdit_NetMqttTlsEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttTlsEdit_NetMqttTlsEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttTlsEdit_NetMqttTlsEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttTlsEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttTlsEdit_NetMqttTlsEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttTlsEdit_NetMqttTlsEditRangeHint_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttTlsEdit_NetMqttTlsEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttTlsEdit_NetMqttTlsEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttTlsEdit_NetMqttTlsEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttTlsEdit_NetMqttTlsEditSavedValue_Text, nullptr, "config.mqtt.tls" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttTlsEdit_NetMqttTlsEditFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttTlsEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "net-mqtt-tls", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "net-mqtt-tls", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosHdrTitle_Text = { "MQTT Setup > QoS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttQosElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttQos_NetMqttQosHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttQos_NetMqttQosFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttQos_NetMqttQosFieldValue_Text, nullptr, "config.mqtt.qos" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttQos_NetMqttQosFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttQosFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-setup-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-tls", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "net-mqtt-qos-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttQosEdit_NetMqttQosEditHdrTitle_Text = { "Edit > QoS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttQosEdit_NetMqttQosEditRangeHint_Text = { "0 / 1", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttQosEdit_NetMqttQosEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttQosEdit_NetMqttQosEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttQosEdit_NetMqttQosEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttQosEdit_NetMqttQosEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttQosEdit_NetMqttQosEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttQosEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttQosEdit_NetMqttQosEditHdrTitle_Text, nullptr, nullptr },
+    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttQosEdit_NetMqttQosEditRangeHint_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttQosEdit_NetMqttQosEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttQosEdit_NetMqttQosEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttQosEdit_NetMqttQosEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttQosEdit_NetMqttQosEditSavedValue_Text, nullptr, "config.mqtt.qos" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttQosEdit_NetMqttQosEditFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttQosEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "net-mqtt-qos", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "net-mqtt-qos", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttSetupBack_NetMqttSetupBackHdrTitle_Text = { "MQTT Setup", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttSetupBack_NetMqttSetupBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttSetupBack_NetMqttSetupBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttSetupBackElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttSetupBack_NetMqttSetupBackHdrTitle_Text, nullptr, nullptr },
+    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kNetMqttSetupBack_NetMqttSetupBackBackLabel_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttSetupBack_NetMqttSetupBackFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttSetupBackFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-host", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-qos", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
 static constexpr ui_exporter::TextPayload kInfoP8FactoryReset_InfoP8FactoryResetHdrTitle_Text = { "P8 FACTORY RESET", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP8FactoryReset_InfoP8FactoryResetWarning1_Text = { "Erases all totals, sensor", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP8FactoryReset_InfoP8FactoryResetWarning2_Text = { "config and LED settings.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -1171,7 +1955,7 @@ static constexpr ui_exporter::Element kInfoP8FactoryResetElements[] = {
 
 
 static constexpr ui_exporter::Flow kInfoP8FactoryResetFlows[] = {
-    { "f-next", "Next page", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-next", "Next page", "net-wifi-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous page", "info-p7-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-enter", "Open confirm screen", "confirm-factory-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
@@ -1311,6 +2095,40 @@ const ui_exporter::Screen kGeneratedScreens[] = {
     { "config-s4-max-flow", "S4 — Max Flow (Q)", kConfigS4MaxFlowElements, sizeof(kConfigS4MaxFlowElements) / sizeof(kConfigS4MaxFlowElements[0]), kConfigS4MaxFlowFlows, sizeof(kConfigS4MaxFlowFlows) / sizeof(kConfigS4MaxFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-s4-max-flow-edit", "S4.V — Edit Max Flow (Q)", kConfigS4MaxFlowEditElements, sizeof(kConfigS4MaxFlowEditElements) / sizeof(kConfigS4MaxFlowEditElements[0]), kConfigS4MaxFlowEditFlows, sizeof(kConfigS4MaxFlowEditFlows) / sizeof(kConfigS4MaxFlowEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-sensor-settings-back", "S.BACK — Back", kConfigSensorSettingsBackElements, sizeof(kConfigSensorSettingsBackElements) / sizeof(kConfigSensorSettingsBackElements[0]), kConfigSensorSettingsBackFlows, sizeof(kConfigSensorSettingsBackFlows) / sizeof(kConfigSensorSettingsBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-root", "WIFI — WiFi", kNetWifiRootElements, sizeof(kNetWifiRootElements) / sizeof(kNetWifiRootElements[0]), kNetWifiRootFlows, sizeof(kNetWifiRootFlows) / sizeof(kNetWifiRootFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-root", "MQTT — MQTT", kNetMqttRootElements, sizeof(kNetMqttRootElements) / sizeof(kNetMqttRootElements[0]), kNetMqttRootFlows, sizeof(kNetMqttRootFlows) / sizeof(kNetMqttRootFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-enabled", "W1 — Enabled", kNetWifiEnabledElements, sizeof(kNetWifiEnabledElements) / sizeof(kNetWifiEnabledElements[0]), kNetWifiEnabledFlows, sizeof(kNetWifiEnabledFlows) / sizeof(kNetWifiEnabledFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-enabled-edit", "W1.V — Edit Enabled", kNetWifiEnabledEditElements, sizeof(kNetWifiEnabledEditElements) / sizeof(kNetWifiEnabledEditElements[0]), kNetWifiEnabledEditFlows, sizeof(kNetWifiEnabledEditFlows) / sizeof(kNetWifiEnabledEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-ssid", "W2 — Network (SSID)", kNetWifiSsidElements, sizeof(kNetWifiSsidElements) / sizeof(kNetWifiSsidElements[0]), kNetWifiSsidFlows, sizeof(kNetWifiSsidFlows) / sizeof(kNetWifiSsidFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-ssid-edit", "W2.V — Edit Network (SSID)", kNetWifiSsidEditElements, sizeof(kNetWifiSsidEditElements) / sizeof(kNetWifiSsidEditElements[0]), kNetWifiSsidEditFlows, sizeof(kNetWifiSsidEditFlows) / sizeof(kNetWifiSsidEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-psk", "W3 — Passphrase", kNetWifiPskElements, sizeof(kNetWifiPskElements) / sizeof(kNetWifiPskElements[0]), kNetWifiPskFlows, sizeof(kNetWifiPskFlows) / sizeof(kNetWifiPskFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-psk-edit", "W3.V — Edit Passphrase", kNetWifiPskEditElements, sizeof(kNetWifiPskEditElements) / sizeof(kNetWifiPskEditElements[0]), kNetWifiPskEditFlows, sizeof(kNetWifiPskEditFlows) / sizeof(kNetWifiPskEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-back", "W.BACK — Back", kNetWifiBackElements, sizeof(kNetWifiBackElements) / sizeof(kNetWifiBackElements[0]), kNetWifiBackFlows, sizeof(kNetWifiBackFlows) / sizeof(kNetWifiBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-enabled", "M1 — Enabled", kNetMqttEnabledElements, sizeof(kNetMqttEnabledElements) / sizeof(kNetMqttEnabledElements[0]), kNetMqttEnabledFlows, sizeof(kNetMqttEnabledFlows) / sizeof(kNetMqttEnabledFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-enabled-edit", "M1.V — Edit Enabled", kNetMqttEnabledEditElements, sizeof(kNetMqttEnabledEditElements) / sizeof(kNetMqttEnabledEditElements[0]), kNetMqttEnabledEditFlows, sizeof(kNetMqttEnabledEditFlows) / sizeof(kNetMqttEnabledEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-setup", "M2 — Broker setup", kNetMqttSetupElements, sizeof(kNetMqttSetupElements) / sizeof(kNetMqttSetupElements[0]), kNetMqttSetupFlows, sizeof(kNetMqttSetupFlows) / sizeof(kNetMqttSetupFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-back", "M.BACK — Back", kNetMqttBackElements, sizeof(kNetMqttBackElements) / sizeof(kNetMqttBackElements[0]), kNetMqttBackFlows, sizeof(kNetMqttBackFlows) / sizeof(kNetMqttBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-host", "B1 — Broker host", kNetMqttHostElements, sizeof(kNetMqttHostElements) / sizeof(kNetMqttHostElements[0]), kNetMqttHostFlows, sizeof(kNetMqttHostFlows) / sizeof(kNetMqttHostFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-host-edit", "B1.V — Edit Broker host", kNetMqttHostEditElements, sizeof(kNetMqttHostEditElements) / sizeof(kNetMqttHostEditElements[0]), kNetMqttHostEditFlows, sizeof(kNetMqttHostEditFlows) / sizeof(kNetMqttHostEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-port", "B2 — Port", kNetMqttPortElements, sizeof(kNetMqttPortElements) / sizeof(kNetMqttPortElements[0]), kNetMqttPortFlows, sizeof(kNetMqttPortFlows) / sizeof(kNetMqttPortFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-port-edit", "B2.V — Edit Port", kNetMqttPortEditElements, sizeof(kNetMqttPortEditElements) / sizeof(kNetMqttPortEditElements[0]), kNetMqttPortEditFlows, sizeof(kNetMqttPortEditFlows) / sizeof(kNetMqttPortEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-user", "B3 — Username", kNetMqttUserElements, sizeof(kNetMqttUserElements) / sizeof(kNetMqttUserElements[0]), kNetMqttUserFlows, sizeof(kNetMqttUserFlows) / sizeof(kNetMqttUserFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-user-edit", "B3.V — Edit Username", kNetMqttUserEditElements, sizeof(kNetMqttUserEditElements) / sizeof(kNetMqttUserEditElements[0]), kNetMqttUserEditFlows, sizeof(kNetMqttUserEditFlows) / sizeof(kNetMqttUserEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-password", "B4 — Password", kNetMqttPasswordElements, sizeof(kNetMqttPasswordElements) / sizeof(kNetMqttPasswordElements[0]), kNetMqttPasswordFlows, sizeof(kNetMqttPasswordFlows) / sizeof(kNetMqttPasswordFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-password-edit", "B4.V — Edit Password", kNetMqttPasswordEditElements, sizeof(kNetMqttPasswordEditElements) / sizeof(kNetMqttPasswordEditElements[0]), kNetMqttPasswordEditFlows, sizeof(kNetMqttPasswordEditFlows) / sizeof(kNetMqttPasswordEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-base-topic", "B5 — Base topic", kNetMqttBaseTopicElements, sizeof(kNetMqttBaseTopicElements) / sizeof(kNetMqttBaseTopicElements[0]), kNetMqttBaseTopicFlows, sizeof(kNetMqttBaseTopicFlows) / sizeof(kNetMqttBaseTopicFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-base-topic-edit", "B5.V — Edit Base topic", kNetMqttBaseTopicEditElements, sizeof(kNetMqttBaseTopicEditElements) / sizeof(kNetMqttBaseTopicEditElements[0]), kNetMqttBaseTopicEditFlows, sizeof(kNetMqttBaseTopicEditFlows) / sizeof(kNetMqttBaseTopicEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-prefix", "B6 — HA prefix", kNetMqttPrefixElements, sizeof(kNetMqttPrefixElements) / sizeof(kNetMqttPrefixElements[0]), kNetMqttPrefixFlows, sizeof(kNetMqttPrefixFlows) / sizeof(kNetMqttPrefixFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-prefix-edit", "B6.V — Edit HA prefix", kNetMqttPrefixEditElements, sizeof(kNetMqttPrefixEditElements) / sizeof(kNetMqttPrefixEditElements[0]), kNetMqttPrefixEditFlows, sizeof(kNetMqttPrefixEditFlows) / sizeof(kNetMqttPrefixEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-period", "B7 — Publish period", kNetMqttPeriodElements, sizeof(kNetMqttPeriodElements) / sizeof(kNetMqttPeriodElements[0]), kNetMqttPeriodFlows, sizeof(kNetMqttPeriodFlows) / sizeof(kNetMqttPeriodFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-period-edit", "B7.V — Edit Publish period", kNetMqttPeriodEditElements, sizeof(kNetMqttPeriodEditElements) / sizeof(kNetMqttPeriodEditElements[0]), kNetMqttPeriodEditFlows, sizeof(kNetMqttPeriodEditFlows) / sizeof(kNetMqttPeriodEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-ha-discovery", "B8 — HA discovery", kNetMqttHaDiscoveryElements, sizeof(kNetMqttHaDiscoveryElements) / sizeof(kNetMqttHaDiscoveryElements[0]), kNetMqttHaDiscoveryFlows, sizeof(kNetMqttHaDiscoveryFlows) / sizeof(kNetMqttHaDiscoveryFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-ha-discovery-edit", "B8.V — Edit HA discovery", kNetMqttHaDiscoveryEditElements, sizeof(kNetMqttHaDiscoveryEditElements) / sizeof(kNetMqttHaDiscoveryEditElements[0]), kNetMqttHaDiscoveryEditFlows, sizeof(kNetMqttHaDiscoveryEditFlows) / sizeof(kNetMqttHaDiscoveryEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-tls", "B9 — TLS", kNetMqttTlsElements, sizeof(kNetMqttTlsElements) / sizeof(kNetMqttTlsElements[0]), kNetMqttTlsFlows, sizeof(kNetMqttTlsFlows) / sizeof(kNetMqttTlsFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-tls-edit", "B9.V — Edit TLS", kNetMqttTlsEditElements, sizeof(kNetMqttTlsEditElements) / sizeof(kNetMqttTlsEditElements[0]), kNetMqttTlsEditFlows, sizeof(kNetMqttTlsEditFlows) / sizeof(kNetMqttTlsEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-qos", "B10 — QoS", kNetMqttQosElements, sizeof(kNetMqttQosElements) / sizeof(kNetMqttQosElements[0]), kNetMqttQosFlows, sizeof(kNetMqttQosFlows) / sizeof(kNetMqttQosFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-qos-edit", "B10.V — Edit QoS", kNetMqttQosEditElements, sizeof(kNetMqttQosEditElements) / sizeof(kNetMqttQosEditElements[0]), kNetMqttQosEditFlows, sizeof(kNetMqttQosEditFlows) / sizeof(kNetMqttQosEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-setup-back", "B.BACK — Back", kNetMqttSetupBackElements, sizeof(kNetMqttSetupBackElements) / sizeof(kNetMqttSetupBackElements[0]), kNetMqttSetupBackFlows, sizeof(kNetMqttSetupBackFlows) / sizeof(kNetMqttSetupBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "info-p8-factory-reset", "P8 — Factory Reset", kInfoP8FactoryResetElements, sizeof(kInfoP8FactoryResetElements) / sizeof(kInfoP8FactoryResetElements[0]), kInfoP8FactoryResetFlows, sizeof(kInfoP8FactoryResetFlows) / sizeof(kInfoP8FactoryResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-reset-totals", "Reset totals?", kConfirmResetTotalsElements, sizeof(kConfirmResetTotalsElements) / sizeof(kConfirmResetTotalsElements[0]), kConfirmResetTotalsFlows, sizeof(kConfirmResetTotalsFlows) / sizeof(kConfirmResetTotalsFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-reset-session", "Reset session?", kConfirmResetSessionElements, sizeof(kConfirmResetSessionElements) / sizeof(kConfirmResetSessionElements[0]), kConfirmResetSessionFlows, sizeof(kConfirmResetSessionFlows) / sizeof(kConfirmResetSessionFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
@@ -1340,7 +2158,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-03T07:39:21.766Z", 48, 375
+    "2026-08-03T12:59:52.321Z", 82, 573
 };
 
 }  // namespace ui_exporter

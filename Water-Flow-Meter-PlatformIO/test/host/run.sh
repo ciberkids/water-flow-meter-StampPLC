@@ -70,7 +70,8 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/spi_arbiter_test" \
 g++ "${CXXFLAGS[@]}" -o "$OUT/pack_loader_test" \
   test/host/pack_loader_test.cpp \
   src/ui/pack/ui_pack_loader.cpp \
-  src/ui/pack/ui_pack.cpp
+  src/ui/pack/ui_pack.cpp \
+  src/ui/generated/GeneratedUi.cpp
 
 g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/sensor_state_test" \
   test/host/sensor_state_test.cpp \
