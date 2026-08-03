@@ -229,6 +229,11 @@ struct Device {
     if (result.packSelectionCommitted) {
       selectionCommits += 1;
     }
+    // firmware.cpp:495-501 drives the LED controller separately from the UI controller. Without
+    // this the harness never ran LedController::update at all, so any assertion about LED output
+    // — including how much I2C traffic it generates — passed for the wrong reason.
+    leds.setSuspended(result.ledsSuspended);
+    leds.update(now, 0.0, 0.0, true, false);
     controller.update(now, sensors, configs, 0, 0xFF, 0.0, 0.0, 0.0f, leds, result.countdown);
     // firmware.cpp:446 — the renderer runs on every pass of the logic loop and decides for
     // itself whether to paint. That decision is what the cadence tests below measure.
@@ -1416,6 +1421,42 @@ void selectorCommitTests() {
   }
 }
 
+
+void ledI2cTrafficTests() {
+  std::printf("\n[the LED must not compete with the sensor bus — R2.1.6]\n");
+
+  // The expander the LEDs sit on (PI4IOE5V6408, 0x43) shares its I2C bus with the one
+  // readPlcInput reads the sensors through (AW9523B, 0x59): SCL 15, SDA 13, one driver mutex. So
+  // an LED write is not free — it is contention with the measurement.
+  Device dev;
+  dev.boot();
+  auto& board = m5stamplc_stub::board();
+
+  // Settle, then measure the steady state: nothing changing, LEDs already correct.
+  for (int i = 0; i < 20; ++i) dev.tick(1);
+  const uint32_t settled = board.setStatusLightCalls;
+  for (int i = 0; i < 1000; ++i) dev.tick(1);
+  const uint32_t steady = board.setStatusLightCalls - settled;
+
+  std::printf("      %u expander writes across 1000 idle passes\n", steady);
+  // Before the dirty check this was one write per pass — 1000 on this exact loop. The bound is
+  // deliberately generous: what matters is the ORDER of magnitude, not an exact count that would
+  // break on any unrelated timing change.
+  check(steady < 50,
+        "an idle second does not write the shared bus a thousand times");
+
+  // And the patterns that genuinely change state must still be driven, or the fix would have
+  // bought accuracy by breaking the LED requirement.
+  const uint32_t beforeRamp = board.setStatusLightCalls;
+  dev.leds.setCardBusy(dev.now);
+  for (int i = 0; i < 20; ++i) dev.tick(100);  // spans several 400 ms card-busy phases
+  const uint32_t duringRamp = board.setStatusLightCalls - beforeRamp;
+  std::printf("      %u writes across 2 s of the card-busy pattern\n", duringRamp);
+  check(duringRamp >= 3,
+        "a pattern that alternates is still driven onto the pins, not suppressed");
+  dev.leds.clearCardBusy();
+}
+
 }  // namespace
 
 int main() {
@@ -1432,6 +1473,7 @@ int main() {
   recoveryGestureTests();
   selectorPageTests();
   selectorCommitTests();
+  ledI2cTrafficTests();
   configListPagingTests();
   configEditorDescentTests();
   sensorEditorDescentTests();

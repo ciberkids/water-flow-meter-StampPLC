@@ -195,6 +195,32 @@ void LedController::update(uint32_t nowMs,
 }
 
 void LedController::applyOutputs(bool redOn, bool greenOn, bool blueOn) {
+  // ── Dirty check. This is a measurement-accuracy fix, not a tidiness one. ──────────
+  //
+  // setStatusLight writes the PI4IOE5V6408 expander at 0x43, and that sits on the SAME I2C bus
+  // (SCL 15 / SDA 13, one driver mutex) as the AW9523B at 0x59 that readPlcInput reads the flow
+  // sensors through. The sensor "polling" is therefore I2C traffic, not GPIO reads — there is no
+  // pin, which is also why hardware pulse counting is unavailable on this board.
+  //
+  // update() runs every pass of the logic loop, which ends in vTaskDelay(1) at 1000 Hz, and this
+  // function used to write unconditionally. So core 1 was issuing a read-modify-write to the LED
+  // expander roughly a thousand times a second on the bus core 0 depends on for every sample.
+  //
+  // The steady state is overwhelmingly "the LEDs are already showing the right thing": green
+  // solid, blue idle, red between pulses. Writing only on a change removes almost all of that
+  // traffic while leaving the boot snake, the reset ramp and the card-busy pattern — which
+  // genuinely change state — completely unaffected.
+  //
+  // This matters for R2.1.1's 5 % budget as much as for accuracy: it must land BEFORE the
+  // radio-off baseline is recorded, or a post-fix radio-ON measurement could beat a pre-fix
+  // radio-OFF one and the comparison would flatter the radio.
+  if (outputsInitialised_ && redOn == lastRed_ && greenOn == lastGreen_ && blueOn == lastBlue_) {
+    return;
+  }
+  lastRed_ = redOn;
+  lastGreen_ = greenOn;
+  lastBlue_ = blueOn;
+  outputsInitialised_ = true;
   M5StamPLC.setStatusLight(redOn ? 255 : 0, greenOn ? 255 : 0, blueOn ? 255 : 0);
 }
 

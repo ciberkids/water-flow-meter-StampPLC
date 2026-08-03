@@ -69,6 +69,12 @@ class LedController {
   static constexpr uint32_t kBlueHoldMs = 500;
   static constexpr uint32_t kBlueBlinkIntervalMs = 250;
 
+  /**
+   * Writes the RGB expander only when the state actually changed.
+   *
+   * See the note in the .cpp: the expander shares its I2C bus with the sensor inputs, so an
+   * unconditional write at loop rate was competing with the measurement itself.
+   */
   void applyOutputs(bool redOn, bool greenOn, bool blueOn);
   void clampConfig();
   void resetPulseState();
@@ -88,4 +94,9 @@ class LedController {
   uint32_t rampTotalMs_ = 0;
   uint32_t acceptedUntilMs_ = 0;
   uint32_t cardBusyStartMs_ = 0;
+  bool lastRed_ = false;
+  bool lastGreen_ = false;
+  bool lastBlue_ = false;
+  /** False until the first write, so the initial all-off state is actually driven onto the pins. */
+  bool outputsInitialised_ = false;
 };
