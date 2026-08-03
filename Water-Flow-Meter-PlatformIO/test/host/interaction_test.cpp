@@ -506,6 +506,62 @@ void repaintCadenceTests() {
   paging.resetFrames();
   for (int i = 0; i < 40; ++i) paging.tick(25);
   check(paging.frames() <= 2, "after paging it returns to 1 Hz rather than staying fast");
+
+  // ── §7's number, stated rather than implied ──────────────────────────────────
+  //
+  // Everything above asserts the SHAPE of the cadence (fast while interactive, slow while not).
+  // None of it asserts §7's actual figure: a button press must be acknowledged on screen within
+  // 100 ms. The paging check came closest, but only because tap() happens to advance 90 ms — so it
+  // would have kept passing if the deadline slipped to 90.
+  //
+  // Measured from the RELEASE, because that is when a short gesture completes and the action fires.
+  Device latency;
+  latency.boot();
+  latency.press(ButtonInputManager::Button::Down, true);
+  latency.tick(30);
+  latency.tick(30);
+  const auto* screenBeforeRelease = latency.controller.navigator().current();
+  latency.press(ButtonInputManager::Button::Down, false);
+  latency.resetFrames();
+  uint32_t elapsed = 0;
+  uint32_t paintedAt = 0;
+  for (int i = 0; i < 30 && paintedAt == 0; ++i) {  // a 300 ms window, sampled every 10 ms
+    latency.tick(10);
+    elapsed += 10;
+    if (latency.frames() >= 1) paintedAt = elapsed;
+  }
+  std::printf("      first repaint %u ms after the release\n", paintedAt);
+  check(latency.controller.navigator().current() != screenBeforeRelease,
+        "the release completed the gesture and moved the ring");
+  check(paintedAt > 0 && paintedAt <= 100,
+        "a button press is acknowledged on screen within 100 ms of release (§7)");
+
+  // ── Per-frame WORK, which is the half a host cannot time ─────────────────────
+  //
+  // What this suite genuinely cannot check: whether the work in one repaint fits inside 100 ms on
+  // an ESP32-S3 driving a real SPI panel. Host wall-clock on x86 is not a proxy for that, and
+  // measuring it here would look like validating a device timing requirement with irrelevant
+  // hardware — worse than not measuring it, because it would read as covered. That measurement
+  // belongs to N9, on the board.
+  //
+  // What IS checkable is the work itself: a frame draws a bounded number of primitives. If a future
+  // screen or binding change multiplies the per-frame draw count, the timing risk grows
+  // proportionally, and this notices even though it cannot time anything.
+  Device work;
+  work.boot();
+  check(descendToAnEditor(work), "an editor opened for the per-frame work count");
+  work.resetFrames();
+  work.tick(100);  // long enough for exactly one interactive repaint
+  auto& panel = m5stamplc_stub::board().Display;
+  const uint32_t framesDrawn = panel.fillScreens;
+  const uint32_t primitives = panel.drawStrings + panel.fillRects + panel.drawRects +
+                              panel.fillCircles + panel.prints;
+  std::printf("      %u frame(s), %u draw primitives\n", framesDrawn, primitives);
+  check(framesDrawn >= 1, "the editor painted at least one frame in 100 ms");
+  // A generous ceiling. It is not a performance target — it is a tripwire for an order-of-magnitude
+  // change, which is the kind that turns a comfortable frame budget into a missed deadline.
+  check(primitives > 0 && primitives < 200,
+        "and did so with a bounded number of draw primitives, not an unbounded sweep");
 }
 
 // ── DEFECT 2: the value editor opened on the config LIST pages ─────────────────────────

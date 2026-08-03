@@ -353,7 +353,11 @@ const WIFI_RING = [...WIFI_L1.map((w) => w.id), "net-wifi-back"];
 
 const MQTT_L1 = [
   { page: "M1", id: "net-mqtt-enabled", title: "Enabled", binding: "config.mqtt.enabled" },
-  { page: "M2", id: "net-mqtt-setup", title: "Broker setup", binding: null, descendTo: "net-mqtt-host" }
+  // "Broker", not "Broker setup". Since §6.3 removed on-device text entry, five of the ten rows in
+  // that level are read-only displays — a name promising setup would be half a lie, and the first
+  // row the descent lands on (the broker host) is one of the read-only ones. The rows themselves
+  // say where to change them.
+  { page: "M2", id: "net-mqtt-setup", title: "Broker", binding: null, descendTo: "net-mqtt-host" }
 ];
 const MQTT_RING = [...MQTT_L1.map((m) => m.id), "net-mqtt-back"];
 
@@ -481,7 +485,7 @@ emitLevel({ items: WIFI_L1, ring: WIFI_RING, crumb: "WiFi",
             backId: "net-wifi-back", backName: "W.BACK — Back" });
 emitLevel({ items: MQTT_L1, ring: MQTT_RING, crumb: "MQTT",
             backId: "net-mqtt-back", backName: "M.BACK — Back" });
-emitLevel({ items: MQTT_SETUP, ring: MQTT_SETUP_RING, crumb: "MQTT Setup",
+emitLevel({ items: MQTT_SETUP, ring: MQTT_SETUP_RING, crumb: "MQTT Broker",
             backId: "net-mqtt-setup-back", backName: "B.BACK — Back" });
 
 // ── P8 Factory Reset info page ───────────────────────────────────────────────

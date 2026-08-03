@@ -1401,6 +1401,16 @@ and the accuracy of the measurement is the reason this product exists. The host-
 are being built first only because N0 needs hardware that is not to hand; nothing after N0 is
 *shippable* until it has run.
 
+**What the host suite cannot check, and why it is not faked.** §7 requires a button press to be
+acknowledged on screen within 100 ms. The host suite now asserts the *scheduling* half of that
+directly — measured from the gesture's completion, and mutation-tested by removing the
+screen-change repaint trigger to confirm the check goes red. What it cannot assert is whether the
+*work* in one repaint fits inside 100 ms on an ESP32-S3 driving a real SPI panel: host wall-clock on
+x86 is not a proxy for that, and timing it there would read as covered while validating nothing.
+So N9 owns the frame-cost measurement, and the host suite instead bounds the per-frame draw-primitive
+count — a tripwire for the order-of-magnitude change that turns a comfortable budget into a missed
+deadline.
+
 **Why the WDT item is on N9.** `CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0=y` with
 `CONFIG_ESP_TASK_WDT_PANIC=y` and a 5 s timeout means core 0's idle task must get scheduled. The
 polling loop is a tight loop with no `vTaskDelay`; it yields only because `readPlcInput` blocks on
