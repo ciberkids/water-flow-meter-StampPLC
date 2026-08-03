@@ -380,6 +380,45 @@ drift — see §4.3.
 9. Failures are logged with the specific reason, and the reason is shown briefly on screen at
    boot. A silent fallback would leave the operator believing their pack loaded.
 
+
+### 4.10. SPI arbitration — no artifacts, by construction
+
+Decided 2026-08-03. Implemented in `src/bus/spi_arbiter.{h,cpp}`, 40 host checks.
+
+§2 warns that the card and the LCD share MOSI 8, MISO 9 and SCLK 7 with separate chip selects.
+The requirement is **no visible artifacts**, which is strictly stronger than "no corruption", and
+that difference decides the design:
+
+> A mutex around each SPI transaction prevents corruption and still permits a **torn frame**. The
+> renderer draws a screen as a sequence of transactions, so releasing the bus partway leaves half
+> a picture on the panel. Interleaving at transaction granularity cannot be made clean.
+
+The bus is therefore handed over at **frame granularity**, as a state machine rather than a lock:
+
+```
+DisplayOwns ──requestCard──► CardRequested ──frame closes──► CardOwns
+     ▲                                                          │
+     └──── repaint done ──── DisplayResuming ◄──releaseCard─────┘
+```
+
+| Rule | Why |
+| --- | --- |
+| The **display owns the bus by default**; the card asks and waits. | The display is the operator's feedback channel and is never preempted. |
+| A grant happens **only** when no frame is open — `startWrite()`/`endWrite()` are the boundary. | This makes a torn frame impossible rather than unlikely. |
+| While the card holds the bus the renderer draws **nothing**, not something partial. | A skipped frame is invisible; half a frame is an artifact. |
+| On release the display owes **one full repaint**. | What is on the panel describes state from before the handover; an incremental update would leave it. |
+| At boot the grant is **immediate** — no frame has ever opened. | Which is why §4.5's "card access at boot only" stays preferred: no contention to arbitrate. |
+| A frame open for 500 ms yields anyway. | A wedged renderer must not lock out menu selection forever, and nothing that is not progressing can be torn. |
+
+**The LEDs carry the status while the card holds the bus**, because the display cannot:
+`LedOverride::CardBusy`, an amber/blue alternation at 400 ms (`led_patterns.h::cardBusyState`).
+Deliberately unlike everything in `RGB_LED_Behavior` §3 — never solid, never accelerating, never a
+single channel — so it cannot be mistaken for reset acceptance or a countdown. An operator facing
+a dark panel with no other sign of life is one who pulls the card mid-write.
+
+The fallback is unchanged: the embedded default menu of §3.7, which the loader already selects for
+every failure rung of §3.6.
+
 ---
 
 ## 5. Exporter / Translator Requirements
