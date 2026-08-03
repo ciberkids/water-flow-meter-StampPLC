@@ -119,6 +119,23 @@ void handleFactoryReset(const UiActionContext& ctx, const ui_exporter::Flow&) {
 // Display_UI_Requirements §3.2: ENTER-short descends, ENTER-long escapes to P0,
 // BACK ascends one level. UP/DOWN move within a level, which is a sibling move and
 // must not change depth.
+/**
+ * R8.2a — restore the portal login to admin/admin.
+ *
+ * The menu half of the recovery. Deliberately NOT routed through the factory reset that used to be
+ * the only way out of a forgotten portal password: this touches the two portal fields and nothing
+ * else, so the operator keeps their cumulative volume and their per-sensor calibration.
+ *
+ * Guarded by a hold-to-confirm screen like every other destructive action, because it does lower the
+ * device's security to a published default — but only for someone who is already standing at it.
+ */
+void handleResetPortalLogin(const UiActionContext& ctx, const ui_exporter::Flow&) {
+  ctx.controller.notifyInteraction(ctx.nowMs);
+  if (ctx.settings && ctx.settings->net) {
+    ctx.settings->net->resetPortalCredentials();
+  }
+}
+
 void handleNavDescend(const UiActionContext& ctx, const ui_exporter::Flow&) {
   ctx.controller.notifyInteraction(ctx.nowMs);
   if (!ctx.resolvedTarget) {
@@ -278,6 +295,7 @@ constexpr UiActionBinding kDefaultBindings[] = {
     {"core.action.reset-session", handleResetSession},
     {"core.action.reset-all-measured", handleResetAllMeasured},
     {"core.action.factory-reset", handleFactoryReset},
+    {"core.action.reset-portal-login", handleResetPortalLogin},
     {"ui.action.nav.descend", handleNavDescend},
     {"ui.action.nav.back", handleNavBack},
     {"ui.action.nav.escape", handleNavEscape},

@@ -343,7 +343,11 @@ screens.push({
 const WIFI_L1 = [
   { page: "W1", id: "net-wifi-enabled", title: "Enabled", binding: "config.wifi.enabled" },
   { page: "W2", id: "net-wifi-ssid", title: "Network (SSID)", binding: "config.wifi.ssid" },  // read-only
-  { page: "W3", id: "net-wifi-psk", title: "Passphrase", binding: "config.wifi.psk" }
+  { page: "W3", id: "net-wifi-psk", title: "Passphrase", binding: "config.wifi.psk" },
+  // R8.2a. Lives in the WiFi level because the portal is reached through the AP the radio raises,
+  // and because §6.3 left the panel with no other way to influence the portal at all.
+  { page: "W4", id: "net-wifi-portal-reset", title: "Reset portal login", binding: null,
+    descendTo: "confirm-reset-portal-login" }
 ];
 const WIFI_RING = [...WIFI_L1.map((w) => w.id), "net-wifi-back"];
 
@@ -517,6 +521,14 @@ const CONFIRMS = [
     id: "confirm-factory-reset", name: "Factory reset?", title: "FACTORY RESET?",
     warn: "Wipes NVS and reboots.", warn2: "This cannot be undone.",
     holdMs: 30000, action: "core.action.factory-reset", toast: null
+  },
+  {
+    // R8.2a. A 3 s hold, matching "reset totals" rather than the factory reset's 30 s: this is
+    // recoverable and destroys nothing, but it does drop the portal to a published default, so it
+    // is not a single press either.
+    id: "confirm-reset-portal-login", name: "Reset portal login?", title: "RESET PORTAL LOGIN?",
+    warn: "Restores admin/admin. Totals,", warn2: "config and calibration kept.",
+    holdMs: 3000, action: "core.action.reset-portal-login", toast: "toast-portal-login-reset"
   }
 ];
 
@@ -548,7 +560,10 @@ for (const c of CONFIRMS) {
 
 const TOASTS = [
   { id: "toast-totals-reset", name: "Totals reset", message: "TOTALS RESET" },
-  { id: "toast-session-reset", name: "Session reset", message: "SESSION RESET" }
+  { id: "toast-session-reset", name: "Session reset", message: "SESSION RESET" },
+  // R8.2a. Names the credential explicitly rather than saying "done": the operator now has to go
+  // and use admin/admin, and a toast that does not say so leaves them guessing what changed.
+  { id: "toast-portal-login-reset", name: "Portal login reset", message: "LOGIN: admin/admin" }
 ];
 for (const t of TOASTS) {
   screens.push({

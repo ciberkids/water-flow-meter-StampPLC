@@ -37,6 +37,11 @@
       "description": "Wipes NVS, clears Modbus config, and reboots"
     },
     {
+      "id": "core.action.reset-portal-login",
+      "label": "Reset portal login",
+      "description": "Restores the configuration portal login to admin/admin, leaving totals, calibration and network settings untouched (R8.2a)"
+    },
+    {
       "id": "ui.action.nav.descend",
       "label": "Descend one level",
       "description": "Push the flow's target level onto the navigation stack"

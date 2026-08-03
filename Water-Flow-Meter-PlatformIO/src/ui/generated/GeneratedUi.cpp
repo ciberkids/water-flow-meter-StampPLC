@@ -1284,8 +1284,29 @@ static constexpr ui_exporter::Element kNetWifiPskElements[] = {
 
 
 static constexpr ui_exporter::Flow kNetWifiPskFlows[] = {
-    { "f-next", "Next entry", "net-wifi-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-next", "Next entry", "net-wifi-portal-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "net-wifi-ssid", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetWifiPortalReset_NetWifiPortalResetHdrTitle_Text = { "WiFi > Reset portal login", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiPortalReset_NetWifiPortalResetFieldLabel_Text = { "Open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiPortalReset_NetWifiPortalResetFieldValue_Text = { "Settings >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiPortalReset_NetWifiPortalResetFooterHint_Text = { "UP/DN page  ENTER open  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetWifiPortalResetElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiPortalReset_NetWifiPortalResetHdrTitle_Text, nullptr, nullptr },
+    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetWifiPortalReset_NetWifiPortalResetFieldLabel_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kNetWifiPortalReset_NetWifiPortalResetFieldValue_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiPortalReset_NetWifiPortalResetFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetWifiPortalResetFlows[] = {
+    { "f-next", "Next entry", "net-wifi-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-wifi-psk", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Open Reset portal login", "confirm-reset-portal-login", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
@@ -1303,7 +1324,7 @@ static constexpr ui_exporter::Element kNetWifiBackElements[] = {
 
 static constexpr ui_exporter::Flow kNetWifiBackFlows[] = {
     { "f-next", "Next entry", "net-wifi-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-wifi-psk", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-wifi-portal-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
@@ -1835,6 +1856,27 @@ static constexpr ui_exporter::Flow kConfirmFactoryResetFlows[] = {
     { "f-confirm", "Factory reset", nullptr, ui_exporter::FlowTrigger::Timeout, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 30000, nullptr, nullptr, nullptr, "core.action.factory-reset", nullptr, 0 }
 };
 
+static constexpr ui_exporter::TextPayload kConfirmResetPortalLogin_ConfirmResetPortalLoginTitle_Text = { "RESET PORTAL LOGIN?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfirmResetPortalLogin_ConfirmResetPortalLoginWarning1_Text = { "Restores admin/admin. Totals,", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfirmResetPortalLogin_ConfirmResetPortalLoginWarning2_Text = { "config and calibration kept.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfirmResetPortalLogin_ConfirmResetPortalLoginTimerValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfirmResetPortalLogin_ConfirmResetPortalLoginFooterHint_Text = { "ENTER exit  hold ENTER confirm", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kConfirmResetPortalLoginElements[] = {
+    { "overlay-bg", ui_exporter::ElementType::Box, 0, 0, 240, 135, nullptr, nullptr, nullptr },
+    { "title", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfirmResetPortalLogin_ConfirmResetPortalLoginTitle_Text, nullptr, nullptr },
+    { "warning-1", ui_exporter::ElementType::Text, 8, 48, 0, 0, &kConfirmResetPortalLogin_ConfirmResetPortalLoginWarning1_Text, nullptr, nullptr },
+    { "warning-2", ui_exporter::ElementType::Text, 8, 60, 0, 0, &kConfirmResetPortalLogin_ConfirmResetPortalLoginWarning2_Text, nullptr, nullptr },
+    { "timer-value", ui_exporter::ElementType::Value, 104, 84, 0, 0, &kConfirmResetPortalLogin_ConfirmResetPortalLoginTimerValue_Text, nullptr, "countdown.value" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmResetPortalLogin_ConfirmResetPortalLoginFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kConfirmResetPortalLoginFlows[] = {
+    { "f-exit", "Exit without acting", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
+    { "f-confirm", "Reset portal login", "toast-portal-login-reset", ui_exporter::FlowTrigger::Timeout, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 3000, nullptr, nullptr, nullptr, "core.action.reset-portal-login", nullptr, 0 }
+};
+
 static constexpr ui_exporter::TextPayload kToastTotalsReset_ToastTotalsResetMessage_Text = { "TOTALS RESET", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kToastTotalsReset_ToastTotalsResetSub_Text = { "Returning...", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
@@ -1860,6 +1902,20 @@ static constexpr ui_exporter::Element kToastSessionResetElements[] = {
 
 
 static constexpr ui_exporter::Flow kToastSessionResetFlows[] = {
+    { "f-dismiss", "Dismiss", nullptr, ui_exporter::FlowTrigger::Timeout, ui_exporter::FlowButton::None, ui_exporter::FlowGesture::Short, 2000, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kToastPortalLoginReset_ToastPortalLoginResetMessage_Text = { "LOGIN: admin/admin", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kToastPortalLoginReset_ToastPortalLoginResetSub_Text = { "Returning...", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kToastPortalLoginResetElements[] = {
+    { "overlay-bg", ui_exporter::ElementType::Box, 0, 0, 240, 135, nullptr, nullptr, nullptr },
+    { "message", ui_exporter::ElementType::Text, 8, 58, 0, 0, &kToastPortalLoginReset_ToastPortalLoginResetMessage_Text, nullptr, nullptr },
+    { "sub", ui_exporter::ElementType::Text, 8, 74, 0, 0, &kToastPortalLoginReset_ToastPortalLoginResetSub_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kToastPortalLoginResetFlows[] = {
     { "f-dismiss", "Dismiss", nullptr, ui_exporter::FlowTrigger::Timeout, ui_exporter::FlowButton::None, ui_exporter::FlowGesture::Short, 2000, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
@@ -1912,6 +1968,7 @@ const ui_exporter::Screen kGeneratedScreens[] = {
     { "net-wifi-enabled-edit", "W1.V — Edit Enabled", kNetWifiEnabledEditElements, sizeof(kNetWifiEnabledEditElements) / sizeof(kNetWifiEnabledEditElements[0]), kNetWifiEnabledEditFlows, sizeof(kNetWifiEnabledEditFlows) / sizeof(kNetWifiEnabledEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-wifi-ssid", "W2 — Network (SSID)", kNetWifiSsidElements, sizeof(kNetWifiSsidElements) / sizeof(kNetWifiSsidElements[0]), kNetWifiSsidFlows, sizeof(kNetWifiSsidFlows) / sizeof(kNetWifiSsidFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-wifi-psk", "W3 — Passphrase", kNetWifiPskElements, sizeof(kNetWifiPskElements) / sizeof(kNetWifiPskElements[0]), kNetWifiPskFlows, sizeof(kNetWifiPskFlows) / sizeof(kNetWifiPskFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-portal-reset", "W4 — Reset portal login", kNetWifiPortalResetElements, sizeof(kNetWifiPortalResetElements) / sizeof(kNetWifiPortalResetElements[0]), kNetWifiPortalResetFlows, sizeof(kNetWifiPortalResetFlows) / sizeof(kNetWifiPortalResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-wifi-back", "W.BACK — Back", kNetWifiBackElements, sizeof(kNetWifiBackElements) / sizeof(kNetWifiBackElements[0]), kNetWifiBackFlows, sizeof(kNetWifiBackFlows) / sizeof(kNetWifiBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-enabled", "M1 — Enabled", kNetMqttEnabledElements, sizeof(kNetMqttEnabledElements) / sizeof(kNetMqttEnabledElements[0]), kNetMqttEnabledFlows, sizeof(kNetMqttEnabledFlows) / sizeof(kNetMqttEnabledFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-enabled-edit", "M1.V — Edit Enabled", kNetMqttEnabledEditElements, sizeof(kNetMqttEnabledEditElements) / sizeof(kNetMqttEnabledEditElements[0]), kNetMqttEnabledEditFlows, sizeof(kNetMqttEnabledEditFlows) / sizeof(kNetMqttEnabledEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
@@ -1937,8 +1994,10 @@ const ui_exporter::Screen kGeneratedScreens[] = {
     { "confirm-reset-totals", "Reset totals?", kConfirmResetTotalsElements, sizeof(kConfirmResetTotalsElements) / sizeof(kConfirmResetTotalsElements[0]), kConfirmResetTotalsFlows, sizeof(kConfirmResetTotalsFlows) / sizeof(kConfirmResetTotalsFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-reset-session", "Reset session?", kConfirmResetSessionElements, sizeof(kConfirmResetSessionElements) / sizeof(kConfirmResetSessionElements[0]), kConfirmResetSessionFlows, sizeof(kConfirmResetSessionFlows) / sizeof(kConfirmResetSessionFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-factory-reset", "Factory reset?", kConfirmFactoryResetElements, sizeof(kConfirmFactoryResetElements) / sizeof(kConfirmFactoryResetElements[0]), kConfirmFactoryResetFlows, sizeof(kConfirmFactoryResetFlows) / sizeof(kConfirmFactoryResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "confirm-reset-portal-login", "Reset portal login?", kConfirmResetPortalLoginElements, sizeof(kConfirmResetPortalLoginElements) / sizeof(kConfirmResetPortalLoginElements[0]), kConfirmResetPortalLoginFlows, sizeof(kConfirmResetPortalLoginFlows) / sizeof(kConfirmResetPortalLoginFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "toast-totals-reset", "Totals reset", kToastTotalsResetElements, sizeof(kToastTotalsResetElements) / sizeof(kToastTotalsResetElements[0]), kToastTotalsResetFlows, sizeof(kToastTotalsResetFlows) / sizeof(kToastTotalsResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "toast-session-reset", "Session reset", kToastSessionResetElements, sizeof(kToastSessionResetElements) / sizeof(kToastSessionResetElements[0]), kToastSessionResetFlows, sizeof(kToastSessionResetFlows) / sizeof(kToastSessionResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 }
+    { "toast-session-reset", "Session reset", kToastSessionResetElements, sizeof(kToastSessionResetElements) / sizeof(kToastSessionResetElements[0]), kToastSessionResetFlows, sizeof(kToastSessionResetFlows) / sizeof(kToastSessionResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "toast-portal-login-reset", "Portal login reset", kToastPortalLoginResetElements, sizeof(kToastPortalLoginResetElements) / sizeof(kToastPortalLoginResetElements[0]), kToastPortalLoginResetFlows, sizeof(kToastPortalLoginResetFlows) / sizeof(kToastPortalLoginResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 }
 };
 
 static constexpr ui_exporter::ThemeColor kThemeColors[] = {
@@ -1962,7 +2021,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-03T13:35:29.428Z", 75, 524
+    "2026-08-03T19:17:31.231Z", 78, 538
 };
 
 }  // namespace ui_exporter

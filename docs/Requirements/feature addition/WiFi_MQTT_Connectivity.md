@@ -1257,6 +1257,16 @@ would choose deliberately, so it is not left as a consequence.
 > reached by somebody who is already locked out and improvising, and a recovery step that silently
 > needs a follow-up write is one they will conclude did not work.
 >
+> **R8.2d** — The menu path sits in the **WiFi level** (`W4 Reset portal login`), behind a **3 s
+> hold-to-confirm** with an acknowledgement toast that reads `LOGIN: admin/admin`.
+>
+> The WiFi level because the portal is reached through the AP the radio raises, and because §6.3
+> left the panel with no other way to influence the portal at all. 3 s rather than the factory
+> reset's 30 s because nothing is destroyed and it is fully reversible — but not a single press
+> either, since it does drop the device to a published default. The toast names the credential
+> instead of saying "done": the operator has to go and use it, and a toast that omits it leaves them
+> guessing what changed.
+>
 > **R8.2c** — The revision still bumps, so a master polling `NET_REVISION` can tell the command
 > landed, and `portalPasswordIsDefault()` returns true again — which re-raises the §7.9a nag rather
 > than leaving the device quietly back on a shipped default.

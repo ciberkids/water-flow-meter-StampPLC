@@ -1613,6 +1613,100 @@ void textIsDisplayOnlyTests() {
   }
 }
 
+/**
+ * R8.2a — the MENU half of portal-login recovery.
+ *
+ * net_settings_test covers the store and the RS485 command. What is only testable here is that the
+ * panel can actually reach it: the action is registered, it lands on NetSettings, and the dataset
+ * puts it behind a hold-to-confirm rather than a single press.
+ */
+void portalLoginResetMenuTests() {
+  std::printf("\n[R8.2a — resetting the portal login from the menu]\n");
+  Device dev;
+  dev.boot();
+
+  // Establish a device with a changed login and configuration worth keeping.
+  dev.net.stage(plc::NetField::PortalPassword, "correct-horse");
+  dev.net.stage(plc::NetField::WifiSsid, "PlantFloor");
+  dev.net.stageMqttPort(8883);
+  dev.net.apply();
+  check(!dev.net.portalPasswordIsDefault(), "the login starts changed");
+
+  // ── The action is registered and reaches the settings ─────────────────────────
+  ui::UiActionContext ctx{dev.controller, dev.modbus, dev.leds, dev.prefs};
+  ctx.nowMs = dev.now;
+  ctx.settings = &dev.settings;
+  check(ui::defaultActionRegistry().dispatch("core.action.reset-portal-login", ctx,
+                                            ui_exporter::Flow{}),
+        "core.action.reset-portal-login is registered");
+  check(dev.net.portalPasswordIsDefault(), "and it restored the login");
+  char buf[80] = {};
+  dev.net.get(plc::NetField::WifiSsid, buf, sizeof(buf));
+  check(std::strcmp(buf, "PlantFloor") == 0, "leaving the SSID alone");
+  check(dev.net.mqttPort() == 8883, "and the broker port");
+
+  // ── With no settings wired it must not crash ──────────────────────────────────
+  ui::UiActionContext bare{dev.controller, dev.modbus, dev.leds, dev.prefs};
+  bare.nowMs = dev.now;
+  check(ui::defaultActionRegistry().dispatch("core.action.reset-portal-login", bare,
+                                            ui_exporter::Flow{}),
+        "dispatching with no SettingsAccess is a no-op, not a null dereference");
+
+  // ── The dataset guards it behind a hold, and says what the new login is ───────
+  const ui_exporter::Screen* confirm = nullptr;
+  const ui_exporter::Screen* toast = nullptr;
+  const ui_exporter::Screen* entry = nullptr;
+  for (std::size_t i = 0; i < ui_exporter::kGeneratedScreenCount; ++i) {
+    const auto& sc = ui_exporter::kGeneratedScreens[i];
+    if (!sc.id) continue;
+    if (std::strcmp(sc.id, "confirm-reset-portal-login") == 0) confirm = &sc;
+    if (std::strcmp(sc.id, "toast-portal-login-reset") == 0) toast = &sc;
+    if (std::strcmp(sc.id, "net-wifi-portal-reset") == 0) entry = &sc;
+  }
+  check(confirm != nullptr, "the confirm screen is in the generated table");
+  check(toast != nullptr, "so is the acknowledgement toast");
+  check(entry != nullptr, "and the WiFi-level entry that reaches it");
+
+  if (confirm) {
+    const ui_exporter::Flow* hold = nullptr;
+    for (std::size_t i = 0; i < confirm->flowCount; ++i) {
+      const auto& f = confirm->flows[i];
+      if (f.actionId && std::strcmp(f.actionId, "core.action.reset-portal-login") == 0) hold = &f;
+    }
+    check(hold != nullptr, "the confirm screen carries the reset action");
+    if (hold) {
+      // A single press must not drop the device to a published default. A hold is encoded as
+      // Timeout + Enter with timeoutMs — NOT as a gesture; `gesture` is unused on a timeout
+      // trigger. That is the same pair armHoldCountdown matches on, so asserting it here is
+      // asserting the contract the interaction handler actually reads.
+      check(hold->trigger == ui_exporter::FlowTrigger::Timeout,
+            "and it is a HELD flow (Timeout + timeoutMs), not a single press");
+      check(hold->button == ui_exporter::FlowButton::Enter,
+            "held on ENTER, which is what armHoldCountdown looks for");
+      std::printf("      hold is %u ms\n", static_cast<unsigned>(hold->timeoutMs));
+      check(hold->timeoutMs >= 3000, "held for at least 3 s");
+    }
+  }
+  if (entry) {
+    const ui_exporter::Flow* descend = nullptr;
+    for (std::size_t i = 0; i < entry->flowCount; ++i) {
+      const auto& f = entry->flows[i];
+      if (f.targetScreenId &&
+          std::strcmp(f.targetScreenId, "confirm-reset-portal-login") == 0) descend = &f;
+    }
+    check(descend != nullptr, "the WiFi entry descends onto the confirm screen");
+  }
+  if (toast) {
+    bool namesTheCredential = false;
+    for (std::size_t i = 0; i < toast->elementCount; ++i) {
+      const auto* text = toast->elements[i].text;
+      if (text && text->text && std::strstr(text->text, "admin")) namesTheCredential = true;
+    }
+    check(namesTheCredential,
+          "the toast names the new login, so the operator is not left guessing what changed");
+  }
+}
+
 }  // namespace
 
 int main() {
@@ -1641,6 +1735,7 @@ int main() {
   factoryResetHoldTests();
   linkApplyProtocolTests();
   textIsDisplayOnlyTests();
+  portalLoginResetMenuTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

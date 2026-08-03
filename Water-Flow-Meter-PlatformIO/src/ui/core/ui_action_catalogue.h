@@ -28,6 +28,9 @@ inline constexpr ActionDescriptor kActionCatalogue[] = {
     {"core.action.reset-session", "Reset session counters", "Issues the Reset Session Modbus command for all ready sensors"},
     {"core.action.reset-all-measured", "Reset all measured totals", "Issues the Reset All Measured Modbus command"},
     {"core.action.factory-reset", "Factory reset", "Wipes NVS, clears Modbus config, and reboots"},
+    {"core.action.reset-portal-login", "Reset portal login",
+     "Restores the configuration portal login to admin/admin, leaving totals, calibration and "
+     "network settings untouched (R8.2a)"},
     {"ui.action.nav.descend", "Descend one level", "Push the flow's target level onto the navigation stack"},
     {"ui.action.nav.back", "Back one level", "Pop one level off the navigation stack"},
     {"ui.action.nav.escape", "Escape to main screen", "Clear the navigation stack back to P0, discarding any uncommitted edit"},

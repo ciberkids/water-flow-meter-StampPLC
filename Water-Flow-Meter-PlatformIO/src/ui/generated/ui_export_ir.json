@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-03T13:35:29.428Z",
-  "screenCount": 75,
-  "elementCount": 524,
+  "generatedAt": "2026-08-03T19:17:31.231Z",
+  "screenCount": 78,
+  "elementCount": 538,
   "dataset": [
     {
       "id": "info-p0-global-status",
@@ -8542,7 +8542,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "net-wifi-back",
+          "targetScreenId": "net-wifi-portal-reset",
           "actionId": "ui.action.page.next"
         },
         {
@@ -8555,6 +8555,141 @@
           },
           "targetScreenId": "net-wifi-ssid",
           "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "net-wifi-portal-reset",
+      "name": "W4 — Reset portal login",
+      "description": "WiFi entry W4. ENTER descends; UP/DOWN move within the level.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "WiFi > Reset portal login",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-label",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Open",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "field-value",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Settings >",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN page  ENTER open  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-wifi-back",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-wifi-psk",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open Reset portal login",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-portal-login",
+          "actionId": "ui.action.nav.descend"
         },
         {
           "id": "f-escape",
@@ -8662,7 +8797,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "net-wifi-psk",
+          "targetScreenId": "net-wifi-portal-reset",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -12011,6 +12146,134 @@
       "submenus": []
     },
     {
+      "id": "confirm-reset-portal-login",
+      "name": "Reset portal login?",
+      "description": "Confirm screen. Inverted gestures per §3.2: ENTER-short exits, ENTER held 3000 ms confirms.",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "kind": {
+            "type": "box",
+            "payload": {
+              "width": 240,
+              "height": 135
+            }
+          },
+          "size": {
+            "width": 240,
+            "height": 135
+          }
+        },
+        {
+          "id": "title",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "RESET PORTAL LOGIN?",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "warning-1",
+          "position": {
+            "x": 8,
+            "y": 48
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Restores admin/admin. Totals,",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "warning-2",
+          "position": {
+            "x": 8,
+            "y": 60
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "config and calibration kept.",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "timer-value",
+          "position": {
+            "x": 104,
+            "y": 84
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "countdown.value"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "ENTER exit  hold ENTER confirm",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-exit",
+          "label": "Exit without acting",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.nav.back"
+        },
+        {
+          "id": "f-confirm",
+          "label": "Reset portal login",
+          "trigger": {
+            "type": "timeout",
+            "durationMs": 3000,
+            "holdButton": "enter"
+          },
+          "actionId": "core.action.reset-portal-login",
+          "targetScreenId": "toast-portal-login-reset"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
       "id": "toast-totals-reset",
       "name": "Totals reset",
       "description": "Acknowledgement toast. Auto-dismisses after 2 s with no button held (§3.8 auto timeout).",
@@ -12113,6 +12376,76 @@
             "type": "text",
             "payload": {
               "text": "SESSION RESET",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "sub",
+          "position": {
+            "x": 8,
+            "y": 74
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Returning...",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-dismiss",
+          "label": "Dismiss",
+          "trigger": {
+            "type": "timeout",
+            "durationMs": 2000
+          },
+          "actionId": "ui.action.nav.back"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "toast-portal-login-reset",
+      "name": "Portal login reset",
+      "description": "Acknowledgement toast. Auto-dismisses after 2 s with no button held (§3.8 auto timeout).",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "kind": {
+            "type": "box",
+            "payload": {
+              "width": 240,
+              "height": 135
+            }
+          },
+          "size": {
+            "width": 240,
+            "height": 135
+          }
+        },
+        {
+          "id": "message",
+          "position": {
+            "x": 8,
+            "y": 58
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "LOGIN: admin/admin",
               "emphasis": "strong",
               "align": "left"
             }
