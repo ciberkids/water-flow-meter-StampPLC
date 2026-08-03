@@ -787,6 +787,24 @@ someone standing at a device you cannot see — which is precisely why the AP pa
 > remotely, then open the config page and browse to it" is available without ever touching the
 > device. Combined with `NET_PORTAL_REMAINING_S` a supervisory system can see the window closing.
 
+> **R5.5a — ONE APPLY PATH, ACCEPTED WITH ITS CONSEQUENCE** (owner, 2026-08-03). R5.5's single
+> apply path means an apply promotes **every** pending field, not only the one the caller touched.
+> So if a master is midway through writing a multi-register field when an operator commits any
+> setting at the panel, the master's partial value is promoted with it.
+>
+> Per-surface staging was considered and rejected: it would contradict R5.5, triple the storage for
+> every field, and need merge semantics of its own. So would refusing a panel commit while a master
+> is mid-write, which lets an off-site party block the panel in front of somebody's face.
+>
+> **The accepted behaviour is: concurrent configuration from two surfaces is not supported, and the
+> last apply wins.** This is a documented characteristic, not a defect to be fixed later. It needs
+> two parties configuring one device within seconds of each other to occur at all.
+>
+> One narrower case WAS fixed rather than accepted, because it failed in the opposite direction:
+> the read-modify-write on the shared flags register (564) used to rebuild from LIVE, which
+> *discarded* a master's staged bits instead of promoting them. It now reads staged, so it composes.
+> See `NetRegisterMap::mqttFlagsStaged`.
+>
 > **R5.5** — Every one of these is the SAME staged write the display uses: fields, then `0x5AA5` to
 > `NET_APPLY`. A 32-register SSID must not cause sixteen reconnection attempts, and a partially
 > written MQTT block must not be half-applied. There is one apply path and the portal, the display
@@ -1219,6 +1237,41 @@ outbound network path. That deserves stating plainly rather than burying.
 >
 > **R8.4** — A factory reset must erase the credentials. A device leaving one owner's hands
 > must not carry their WiFi passphrase.
+
+---
+
+### 8.2. Losing the portal password must not cost the totals
+
+**Decided 2026-08-03 by the owner.** The portal login ships as `admin`/`admin` and is changed
+through the portal itself; §6.3 removed the only path that could have edited it at the panel. That
+left one recovery: a factory reset, which also erases cumulative volume and every sensor's
+calibration. Paying for a forgotten password with the measurement record is not a trade anybody
+would choose deliberately, so it is not left as a consequence.
+
+> **R8.2a** — The portal login is resettable to `admin`/`admin` from **the menu** and **over
+> RS485** (`NET_PORTAL_RESET` = 710, write `0x5AA5`). The reset touches **only** the two portal
+> fields; totals, calibration, WiFi and MQTT settings are untouched.
+>
+> **R8.2b** — Both paths act **immediately**, without a separate apply. Every other write in this
+> block stages and waits for `0x5AA5` at `NET_APPLY`, and this one deliberately does not: it is
+> reached by somebody who is already locked out and improvising, and a recovery step that silently
+> needs a follow-up write is one they will conclude did not work.
+>
+> **R8.2c** — The revision still bumps, so a master polling `NET_REVISION` can tell the command
+> landed, and `portalPasswordIsDefault()` returns true again — which re-raises the §7.9a nag rather
+> than leaving the device quietly back on a shipped default.
+
+**The owner's rationale was "physical access to the device should recover it", and the menu path is
+what delivers that.** The RS485 path is a convenience — and it is worth being precise that it costs
+nothing in exposure: `NET_PORTAL_PASSWORD` at 720 is already **writable**, so anyone who can reach
+register 710 could already set the login to a value of their own choosing. The command adds
+discoverability and an expressible intention ("restore the known default" is not the same operation
+as "set this string"), not a new capability.
+
+What the magic requirement buys is the accident case rather than the attacker case: §5.1 requires a
+block write across the whole region to succeed rather than except, so a master zero-filling 500–732
+must not silently reset the login on its way past. A host check zero-fills all 233 registers and
+asserts the login survives.
 
 ---
 

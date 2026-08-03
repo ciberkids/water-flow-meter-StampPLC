@@ -56,6 +56,17 @@ inline constexpr uint16_t kPortalRemainingS = 675;  // read-only
 inline constexpr uint16_t kApSsid           = 676;  // 16 registers, read-only
 inline constexpr uint16_t kApPassword       = 692;  // 16 registers, read-only — R5.3
 inline constexpr uint16_t kApIp             = 708;  // 2 registers, read-only
+// Write kApplyMagic here to restore the portal login to admin/admin (R8.2a).
+//
+// Acts IMMEDIATELY rather than staging, unlike every value register in this block. A recovery
+// action that needs a second write to take effect is a recovery action somebody gets half-way
+// through — and the whole point is that it works when the operator is locked out and improvising.
+//
+// This adds no exposure a master did not already have: kPortalPassword at 720 is WRITABLE, so
+// anyone who can reach this register could already set the login to a value of their choosing. The
+// command exists for discoverability, and because "reset to a known default" is a different
+// intention from "set to this string" and deserves to be expressible.
+inline constexpr uint16_t kPortalReset      = 710;
 inline constexpr uint16_t kPortalUser       = 712;  // 8 registers, 16 bytes
 inline constexpr uint16_t kPortalPassword   = 720;  // 16 registers, write-only
 

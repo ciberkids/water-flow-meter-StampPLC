@@ -168,6 +168,18 @@ class NetSettings {
   /** Discards staged changes, restoring pending to live. */
   void revert();
 
+  /**
+   * Restores the portal login to `admin`/`admin` (R8.2a).
+   *
+   * Writes LIVE and PENDING together and bumps the revision, because this is a command rather than
+   * a staged value: it is reached when somebody is locked out of the portal, and a recovery step
+   * that silently needs a follow-up apply is one they will believe failed.
+   *
+   * Touches ONLY the two portal fields. The forgotten-password path must not cost the operator
+   * their totals or their calibration, which is what routing this through a factory reset would do.
+   */
+  void resetPortalCredentials();
+
   uint16_t revision() const { return revision_; }
 
   /**

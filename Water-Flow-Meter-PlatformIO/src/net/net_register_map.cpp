@@ -40,6 +40,7 @@ bool NetRegisterMap::isWritable(uint16_t address) {
     case net_reg::kMqttPort:
     case net_reg::kMqttPeriodS:
     case net_reg::kMqttFlags:
+    case net_reg::kPortalReset:
     case net_reg::kApply:
       return true;
     // Read-only: state, diagnostics, and everything describing the AP the device offers.
@@ -73,6 +74,14 @@ bool NetRegisterMap::stageWrite(NetSettings& settings, uint16_t address, uint16_
     case net_reg::kMqttEnabled: return settings.stageMqttEnabled(value != 0);
     case net_reg::kMqttPort:    return settings.stageMqttPort(value);
     case net_reg::kMqttPeriodS: return settings.stageMqttPublishPeriodS(value);
+    case net_reg::kPortalReset:
+      // A command, not a value: only the magic acts, anything else is ignored rather than treated
+      // as a password. The magic requirement is what stops a block write across the region from
+      // resetting the login as a side effect.
+      if (value == net_reg::kApplyMagic) {
+        settings.resetPortalCredentials();
+      }
+      return true;
     case net_reg::kMqttFlags:
       settings.stageMqttHaDiscovery((value & NetRegisterMap::kFlagHaDiscovery) != 0);
       settings.stageMqttTls((value & NetRegisterMap::kFlagTls) != 0);

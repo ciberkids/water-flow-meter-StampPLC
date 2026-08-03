@@ -236,6 +236,87 @@ void blockWriteTests() {
 
 }  // namespace
 
+/**
+ * Portal-login recovery (R8.2a).
+ *
+ * The portal password has no panel row and is changed through the portal itself, so losing it used
+ * to mean a factory reset — totals and calibration included. Two recovery paths now exist, and what
+ * matters is that they restore ONLY the login.
+ */
+void portalResetTests() {
+  std::printf("\n[portal-login recovery — R8.2a]\n");
+  plc::NetSettings net;
+
+  // Establish a configured device with a changed login and real measurement-adjacent config.
+  net.stage(plc::NetField::PortalUser, "plantops");
+  net.stage(plc::NetField::PortalPassword, "correct-horse");
+  net.stage(plc::NetField::WifiSsid, "PlantFloor");
+  net.stage(plc::NetField::MqttHost, "192.168.1.10");
+  net.stageMqttPort(8883);
+  net.stageMqttTls(true);
+  check(net.apply(), "a configured device applies");
+  check(!net.portalPasswordIsDefault(), "and its portal password is no longer the shipped default");
+  const uint16_t revisionBefore = net.revision();
+
+  // ── Path 1: the direct call, which the menu confirm screen uses ────────────────
+  net.resetPortalCredentials();
+  char buf[80] = {};
+  net.get(plc::NetField::PortalUser, buf, sizeof(buf));
+  check(std::strcmp(buf, "admin") == 0, "the user is back to admin");
+  net.get(plc::NetField::PortalPassword, buf, sizeof(buf));
+  check(std::strcmp(buf, "admin") == 0, "the password is back to admin");
+  check(net.portalPasswordIsDefault(), "so the §7.9a nag re-raises itself");
+  check(net.revision() > revisionBefore, "the revision bumped, so a polling master sees it landed");
+
+  // The whole point: nothing else moved.
+  net.get(plc::NetField::WifiSsid, buf, sizeof(buf));
+  check(std::strcmp(buf, "PlantFloor") == 0, "the WiFi SSID is untouched");
+  net.get(plc::NetField::MqttHost, buf, sizeof(buf));
+  check(std::strcmp(buf, "192.168.1.10") == 0, "the broker is untouched");
+  check(net.mqttPort() == 8883, "the port is untouched");
+  check(net.mqttTls(), "the TLS flag is untouched");
+
+  // Live AND pending together — a recovery step must not need a follow-up apply.
+  check(!net.dirty(), "nothing is left staged, so no apply is required to finish");
+  net.getStaged(plc::NetField::PortalPassword, buf, sizeof(buf));
+  check(std::strcmp(buf, "admin") == 0, "pending matches live rather than holding the old password");
+
+  // ── Path 2: over RS485 ────────────────────────────────────────────────────────
+  plc::NetSettings viaBus;
+  viaBus.stage(plc::NetField::PortalPassword, "hunter2");
+  viaBus.apply();
+  check(!viaBus.portalPasswordIsDefault(), "a second device has a changed login");
+
+  check(plc::NetRegisterMap::isWritable(plc::net_reg::kPortalReset),
+        "the reset register is writable");
+  check(plc::NetRegisterMap::stageWrite(viaBus, plc::net_reg::kPortalReset, plc::net_reg::kApplyMagic),
+        "writing the magic is accepted");
+  check(viaBus.portalPasswordIsDefault(),
+        "and acts IMMEDIATELY — no apply needed, which is what a locked-out operator needs");
+
+  // ── The magic is required, so a block write cannot reset the login by accident ──
+  plc::NetSettings sweep;
+  sweep.stage(plc::NetField::PortalPassword, "hunter2");
+  sweep.apply();
+  for (uint16_t v : {static_cast<uint16_t>(0), static_cast<uint16_t>(1),
+                     static_cast<uint16_t>(0xFFFF), static_cast<uint16_t>(0x5AA4)}) {
+    plc::NetRegisterMap::stageWrite(sweep, plc::net_reg::kPortalReset, v);
+  }
+  check(!sweep.portalPasswordIsDefault(),
+        "every non-magic value is ignored, so a sweep across the block leaves the login alone");
+
+  // And a real block write across the whole region must still not trip it.
+  plc::NetSettings block;
+  block.stage(plc::NetField::PortalPassword, "hunter2");
+  block.apply();
+  for (uint16_t a = plc::net_reg::kBase; a < plc::net_reg::kEnd; ++a) {
+    if (a == plc::net_reg::kApply) continue;
+    plc::NetRegisterMap::stageWrite(block, a, 0x0000);
+  }
+  check(!block.portalPasswordIsDefault(),
+        "a zero-fill of all 233 registers does not reset the login either");
+}
+
 int main() {
   std::printf("plc::NetSettings — text settings storage and register packing\n\n");
   defaultsTests();
@@ -245,6 +326,7 @@ int main() {
   applyProtocolTests();
   secrecyTests();
   blockWriteTests();
+  portalResetTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

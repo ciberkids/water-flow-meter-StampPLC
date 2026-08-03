@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <initializer_list>
 
 namespace plc {
 
@@ -158,5 +159,17 @@ bool NetSettings::apply() {
 }
 
 void NetSettings::revert() { pending_ = live_; }
+
+void NetSettings::resetPortalCredentials() {
+  const std::size_t user = indexOf(NetField::PortalUser);
+  const std::size_t pass = indexOf(NetField::PortalPassword);
+  for (Block* block : {&live_, &pending_}) {
+    copyInto(block->text[user], netFieldCapacity(NetField::PortalUser), kDefaultPortalUser);
+    copyInto(block->text[pass], netFieldCapacity(NetField::PortalPassword), kDefaultPortalPassword);
+  }
+  // Bumped even though nothing else changed, so a master polling the revision can tell the command
+  // landed. portalPasswordIsDefault() now reports true again, which is what re-raises the §7.9a nag.
+  ++revision_;
+}
 
 }  // namespace plc
