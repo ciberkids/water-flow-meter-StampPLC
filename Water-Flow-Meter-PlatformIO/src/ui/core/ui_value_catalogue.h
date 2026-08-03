@@ -25,6 +25,20 @@ namespace ui {
  * table can be exercised by `test/host/run.sh`.
  */
 
+/**
+ * The catalogue's ABI version (Loadable_UI_Menu_Packs.md §4.7b).
+ *
+ * A menu pack records the version it was built against. The firmware accepts a pack targeting
+ * this version or an OLDER one — the completeness rule means an older pack can only be missing
+ * editors the firmware can supply itself — and refuses a newer one, which may reference values
+ * that do not exist here.
+ *
+ * **Bump this whenever a value is added, removed or renamed.** An addition alone is backward
+ * compatible and does not require it; a removal or a rename does, because a pack built before the
+ * change may bind an id that has gone.
+ */
+constexpr uint16_t kUiCatalogueAbi = 1;
+
 enum class ValueCategory : uint8_t { Setting, Reading, Accumulated, System, Derived };
 
 enum class ValueType : uint8_t { Number, String, Boolean };

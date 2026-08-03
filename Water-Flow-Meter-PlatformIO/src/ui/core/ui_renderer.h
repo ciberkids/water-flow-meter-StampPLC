@@ -1,5 +1,7 @@
 #pragma once
 
+#include "bus/spi_arbiter.h"
+
 #include <cstddef>
 #include <cstdint>
 
@@ -18,6 +20,16 @@ class UiRenderer {
   void begin();
   void applyTheme(const ui::ThemePalette& palette);
   void bindScreenRouter(const ui::UiScreenRouter* router);
+
+  /**
+   * Binds the shared-SPI arbiter (§4.10). Optional: with none bound the renderer assumes it
+   * owns the bus, which is correct on a build with no card support.
+   *
+   * When bound, update() asks `mayBeginFrame()` BEFORE opening a frame and never during one, and
+   * honours `consumeFullRepaintRequest()` after a handover. Checking mid-frame would reintroduce
+   * exactly the torn frame the arbiter exists to prevent.
+   */
+  void bindSpiArbiter(plc::SpiArbiter* arbiter);
   void bindBindingResolver(const ui::UiBindingResolver* resolver);
 
   void update(uint32_t nowMs, const UiRenderContext& context);
@@ -84,4 +96,5 @@ class UiRenderer {
   bool lastCountdownActive_ = false;
   const ui::UiScreenRouter* screenRouter_ = nullptr;
   const ui::UiBindingResolver* bindingResolver_ = nullptr;
+  plc::SpiArbiter* spiArbiter_ = nullptr;
 };

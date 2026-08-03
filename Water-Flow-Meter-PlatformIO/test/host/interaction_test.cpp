@@ -127,6 +127,7 @@ struct Device {
   UiController controller;
   ButtonInputManager buttons;
   plc::InteractionHandler interactions;
+  plc::SpiArbiter spiArbiter;
   ui::UiAssets assets = ui::loadGeneratedAssets();
   plc::LinkSettingsManager link;
   ui::SettingsAccess settings;
@@ -175,6 +176,7 @@ struct Device {
     // can see the settings and the controller; anything less and every config binding falls
     // back to its placeholder.
     bindings.bindSettings(&settings, &controller);
+    renderer.bindSpiArbiter(&spiArbiter);
     renderer.applyTheme(assets.palette);
     renderer.bindScreenRouter(&router);
     renderer.bindBindingResolver(&bindings);
@@ -1213,6 +1215,42 @@ void resetAcceptanceLedTests() {
         "acceptance is reported once, on the completing pass only");
 }
 
+
+void spiHandoverRenderTests() {
+  std::printf("\n[the renderer honours the SPI handover — §4.10]\n");
+
+  Device dev;
+  dev.boot();
+  for (int i = 0; i < 4; ++i) dev.tick(100);
+  // frames() counts full repaints, which the renderer only performs on a screen CHANGE — a
+  // steady-state tick legitimately paints nothing, so the change has to be provoked.
+  dev.resetFrames();
+  dev.tap(ButtonInputManager::Button::Down);
+  check(dev.frames() > 0, "changing screen repaints while the renderer owns the bus");
+
+  // Hand the bus to the card between frames, as the selector's directory scan does.
+  check(dev.spiArbiter.requestCard(dev.now), "the card takes the bus between frames");
+  dev.resetFrames();
+  for (int i = 0; i < 5; ++i) {
+    dev.tap(ButtonInputManager::Button::Down);  // keep changing screen, so a repaint is due
+  }
+  check(dev.frames() == 0,
+        "and the renderer paints NOTHING while it is held, even with a repaint due");
+
+  // Give it back: one full repaint is owed, because the panel now shows pre-handover state.
+  dev.spiArbiter.releaseCard(dev.now);
+  dev.resetFrames();
+  dev.tick(100);
+  check(dev.frames() > 0,
+        "handing it back forces a FULL repaint even with no further screen change, because the "
+        "panel shows pre-handover state");
+
+  // And the frame really was closed each pass, so the card is not blocked by a stale open frame.
+  check(dev.spiArbiter.mayBeginFrame(), "the frame is closed after each pass, not left open");
+  check(dev.spiArbiter.timeouts() == 0,
+        "no handover ever needed the wedged-renderer timeout, so frames close cleanly");
+}
+
 }  // namespace
 
 int main() {
@@ -1225,6 +1263,7 @@ int main() {
   toastTests();
   toastCancellationTests();
   resetAcceptanceLedTests();
+  spiHandoverRenderTests();
   configListPagingTests();
   configEditorDescentTests();
   sensorEditorDescentTests();

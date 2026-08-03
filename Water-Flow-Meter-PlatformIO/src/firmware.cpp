@@ -20,6 +20,8 @@
 #include "ui/core/ui_bindings.h"
 #include "ui/core/ui_module.h"
 #include "ui/core/ui_screen_router.h"
+#include "ui/core/ui_value_catalogue.h"
+#include "ui/pack/ui_pack_storage_sd.h"
 
 using namespace plc;
 
@@ -82,6 +84,24 @@ ModbusDependencies modbusDeps{.sensors = sensors,
 
 ModbusManager modbusManager(modbusDeps);
 const ui::UiAssets kUiAssets = ui::loadGeneratedAssets();
+
+// ── Loadable menu packs (Loadable_UI_Menu_Packs.md) ──────────────────────────────
+//
+// The arbiter must be constructed before anything that can touch the shared SPI bus, and the
+// storage adapter holds a reference to it for its lifetime.
+plc::SpiArbiter spiArbiter;
+/** SD chip select is 10; the LCD holds 12. 4 MHz is deliberately modest for a shared bus. */
+plc::SdPackStorage packStorage(spiArbiter, 10, 4000000);
+ui::PackLoader packLoader;
+ui::MenuPack menuPack;
+/**
+ * The pack is read IN PLACE, so these bytes must outlive it. Heap rather than static: a device
+ * with no card should not pay 64 KB of RAM for a feature it is not using, and this is freed
+ * again when the load does not succeed.
+ */
+uint8_t* packBuffer = nullptr;
+ui::LoadOutcome packOutcome = ui::LoadOutcome::BuiltInNoCard;
+bool packRenderConfirmed = false;
 ui::UiScreenRouter uiScreenRouter(kUiAssets);
 ui::UiBindingResolver uiBindingResolver;
 const ui::UiActionRegistry& kUiActionRegistry = ui::defaultActionRegistry();
@@ -494,6 +514,30 @@ void logicTaskCode(void * pvParameters) {
 
     uiRenderer.update(now, uiController.context());
 
+    // §3.6 step 11 — clear the attempt counter only after a card pack has actually DRAWN.
+    //
+    // Clearing it after validation would prove nothing: validation is exactly what a pack that
+    // crashes the renderer already passed. Waiting for a real frame is what makes the
+    // anti-boot-loop guard meaningful, so a pack that validates and then takes the renderer down
+    // is on its second strike next boot and its third boot runs the built-in default.
+    //
+    // Gated on renderer progress rather than on a timer: a frame that the arbiter skipped because
+    // the card held the bus must not count as a successful render.
+    if (packOutcome == ui::LoadOutcome::CardPack && !packRenderConfirmed &&
+        uiController.context().currentScreen != nullptr && spiArbiter.mayBeginFrame()) {
+      plc::NvsPackAttemptCounter packAttempts(preferences);
+      packLoader.noteSuccessfulRender(packAttempts);
+      packRenderConfirmed = true;
+      Serial.println("[ui] menu pack rendered; boot-loop guard cleared");
+    }
+
+    // The LEDs are the only status channel while the card holds the shared bus (§4.10).
+    if (spiArbiter.cardBusy()) {
+      ledController.setCardBusy(now);
+    } else {
+      ledController.clearCardBusy();
+    }
+
     // A committed link change reopens the port AND rebinds the eModbus workers, so a
     // slave-ID change takes effect without a reboot. It used to need one, which meant the
     // device kept answering on the old ID while the new one was already persisted.
@@ -543,6 +587,44 @@ void setup() {
   uiSettingsAccess.sensorCount = kNumSensors;
   uiBindingResolver.bindSettings(&uiSettingsAccess, &uiController);
 
+  // ── Load the selected menu pack, BEFORE the display is initialised ──────────────
+  //
+  // §4.5 and §4.10: no frame has ever been opened here, so the arbiter grants the bus
+  // immediately and there is no contention to manage. This is the cheapest window there will
+  // ever be, which is why the specification puts card access in it.
+  {
+    plc::NvsPackAttemptCounter packAttempts(preferences);
+    packBuffer = static_cast<uint8_t*>(malloc(ui::PackLoader::kMaxPackBytes));
+    if (!packBuffer) {
+      // Out of heap is not a pack failure — nothing was attempted — so it must not burn an
+      // attempt or delete a good selection.
+      Serial.println("[ui] no heap for a menu pack; running the built-in default");
+      packOutcome = ui::LoadOutcome::BuiltInNoCard;
+    } else {
+      packOutcome = packLoader.load(packStorage, packAttempts, ui::kUiCatalogueAbi, packBuffer,
+                                    ui::PackLoader::kMaxPackBytes, &menuPack);
+      if (packOutcome != ui::LoadOutcome::CardPack) {
+        free(packBuffer);
+        packBuffer = nullptr;
+      }
+    }
+
+    // §4.9 — a silent fallback would leave the operator believing their pack loaded.
+    if (packOutcome == ui::LoadOutcome::CardPack) {
+      Serial.printf("[ui] menu pack \"%s\" loaded: %u screens\n", packLoader.selectedName(),
+                    static_cast<unsigned>(menuPack.screenCount()));
+    } else if (ui::loadOutcomeIsFailure(packOutcome)) {
+      Serial.printf("[ui] menu pack NOT loaded (%s", ui::loadOutcomeText(packOutcome));
+      if (packOutcome == ui::LoadOutcome::BuiltInInvalid) {
+        Serial.printf(": %s", ui::packStatusText(packLoader.packStatus()));
+      }
+      Serial.println("); running the built-in default");
+    } else {
+      Serial.printf("[ui] built-in menu (%s)\n", ui::loadOutcomeText(packOutcome));
+    }
+  }
+
+  uiRenderer.bindSpiArbiter(&spiArbiter);
   uiRenderer.bindScreenRouter(&uiScreenRouter);
   uiRenderer.bindBindingResolver(&uiBindingResolver);
   uiRenderer.applyTheme(kUiAssets.palette);

@@ -17,6 +17,24 @@ constexpr int kGlyphWidthBase = 6;
 constexpr int kGlyphWidthValue = 7;
 constexpr uint16_t kCountdownOverlayColor = 0x39E7;
 
+/**
+ * Closes the arbiter's frame on every exit path from update().
+ *
+ * update() returns from several places — idle, no screen, an asset error. A frame left open
+ * because one of those paths forgot to close it would block the card until the arbiter's 500 ms
+ * timeout, on every single pass, which would look like the card being intermittently unreadable.
+ * RAII removes the possibility rather than relying on each branch remembering.
+ */
+struct FrameGuard {
+  plc::SpiArbiter* arbiter;
+  uint32_t nowMs;
+  ~FrameGuard() {
+    if (arbiter) {
+      arbiter->noteFrameEnded(nowMs);
+    }
+  }
+};
+
 
 int16_t applyAlignment(int16_t origin, int16_t width, ui_exporter::TextAlign align) {
   switch (align) {
@@ -58,10 +76,28 @@ void UiRenderer::bindBindingResolver(const ui::UiBindingResolver* resolver) {
   bindingResolver_ = resolver;
 }
 
+void UiRenderer::bindSpiArbiter(plc::SpiArbiter* arbiter) { spiArbiter_ = arbiter; }
+
 void UiRenderer::update(uint32_t nowMs, const UiRenderContext& context) {
   if (!screenRouter_) {
     return;
   }
+
+  // §4.10. Asked once, here, before anything is drawn. While the card holds the shared bus the
+  // renderer draws NOTHING rather than something partial: a skipped frame is invisible, half a
+  // frame is an artifact. The LEDs report during the handover because the panel cannot.
+  if (spiArbiter_ && !spiArbiter_->mayBeginFrame()) {
+    return;
+  }
+  if (spiArbiter_ && spiArbiter_->consumeFullRepaintRequest()) {
+    // Whatever is on the panel describes state from before the handover, by an unknown amount, so
+    // an incremental update would leave it visible. Forcing the full path discards that.
+    lastScreen_ = nullptr;
+  }
+  if (spiArbiter_) {
+    spiArbiter_->noteFrameBegan(nowMs);
+  }
+  const FrameGuard frameGuard{spiArbiter_, nowMs};
 
   if (context.mode == UiMode::Idle) {
     M5StamPLC.setBacklight(false);

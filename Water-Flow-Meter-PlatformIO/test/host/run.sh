@@ -89,6 +89,7 @@ g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/interaction_test" \
   src/input/button_input.cpp \
   src/input/interaction_handler.cpp \
   src/modbus/link_settings.cpp \
+  src/bus/spi_arbiter.cpp \
   src/ui/generated/GeneratedUi.cpp
 
 "$OUT/nav_test"
