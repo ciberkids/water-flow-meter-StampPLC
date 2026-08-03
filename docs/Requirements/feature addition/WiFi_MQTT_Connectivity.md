@@ -70,9 +70,27 @@ publishes it.** That would be a self-defeating outcome.
 
 Therefore:
 
+> **R2.1.0 — CORE 0 IS DEDICATED TO SENSOR POLLING AND NOTHING ELSE.** Stated by the project
+> owner on 2026-08-03 as a standing invariant, and it outranks R2.1.1: the 5 % budget below is a
+> *measurement* that must hold, while this is a *structural* rule about what may run where.
+>
+> Nothing belonging to WiFi, MQTT, the display, the card or Modbus may be scheduled on core 0.
+> Everything else lives on core 1, which today runs Modbus RTU at priority 8 and the logic/UI at
+> priority 1 and will have to accommodate the radio too.
+>
+> The reason is the product's reason for existing: the device counts pulses, and a pulse missed
+> because core 0 was doing something else is a measurement error that no amount of downstream
+> processing recovers. Every other feature is negotiable against this one.
+>
+> **If the framework will not let the WiFi stack off core 0, the feature does not ship in that
+> form.** Two consequences follow, and neither is "accept the degradation quietly":
+> re-examine whether the stack can be pinned via sdkconfig, and if it truly cannot, report the
+> measured cost and let the owner decide. §11 Q1 is where that answer goes.
+
 > **R2.1.1** — Enabling WiFi **must not** reduce the measured `pollingRate_kHz` by more than
 > **5 %** from its radio-off baseline, measured over 60 s at steady state with the radio
-> associated and MQTT publishing at its configured cadence.
+> associated and MQTT publishing at its configured cadence. This is the empirical check that
+> R2.1.0 was actually achieved, not an allowance to violate it.
 >
 > **R2.1.2** — The device must record the radio-off baseline once, at the first boot after a
 > firmware update, and expose both the baseline and the live rate. A regression must be
@@ -87,9 +105,27 @@ The acceptance test is deliberately expressed against a value the device already
 so this criterion is measurable the day the hardware arrives, with no extra instrumentation.
 That is also the answer to open decision **G1** — the same measurement serves both.
 
+### 2.1.1. The radio also contends with RS485, not only with the counter
+
+Raised by the project owner on 2026-08-03, and it widens the blast radius: this feature touches
+more than the menu work did, because **core 1 already carries Modbus RTU at priority 8** and the
+radio has to fit alongside it.
+
+Modbus RTU is timing-sensitive in a way MQTT is not. A frame is delimited by a 3.5-character
+silent interval, so a task that starves the RS485 handler for a few milliseconds does not slow it
+down — it makes the master see a framing error and retry. So:
+
+> **R2.1.4** — The WiFi and MQTT tasks must run at a priority **below** the Modbus handler's, so
+> a radio event can never delay a frame in progress.
+>
+> **R2.1.5** — Acceptance must measure the **Modbus error rate** as well as the polling rate,
+> before and after enabling the radio. A retry rate that climbs is the symptom, and it is
+> invisible to any test that only watches `pollingRate_kHz`.
+
 **Mitigations** to be confirmed against the framework (see §11 Q1): pinning the WiFi and
-MQTT tasks off core 0, disabling modem power-save (which trades latency spikes for current),
-and keeping the MQTT client out of any code path the UI or Modbus tasks call.
+MQTT tasks off core 0 per R2.1.0, keeping them below Modbus in priority per R2.1.4, disabling
+modem power-save (which trades latency spikes for current), and keeping the MQTT client out of
+any code path the UI or Modbus tasks call.
 
 > A note on honesty: if it turns out the Arduino framework will not let us keep WiFi off
 > core 0, the correct outcome is **not** to ship anyway and hope. It is to report the measured
