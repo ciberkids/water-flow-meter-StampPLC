@@ -194,6 +194,7 @@ struct Device {
    * exactly how the first version of these tests failed.
    */
   std::size_t selectorOpens = 0;
+  std::size_t selectionCommits = 0;
 
   SensorData sensors[plc::kNumSensors] = {};
   SensorCharacteristics configs[plc::kNumSensors] = {};
@@ -224,6 +225,9 @@ struct Device {
     }
     if (result.openPackSelector) {
       selectorOpens += 1;
+    }
+    if (result.packSelectionCommitted) {
+      selectionCommits += 1;
     }
     controller.update(now, sensors, configs, 0, 0xFF, 0.0, 0.0, 0.0f, leds, result.countdown);
     // firmware.cpp:446 — the renderer runs on every pass of the logic loop and decides for
@@ -1332,6 +1336,86 @@ void recoveryGestureTests() {
   }
 }
 
+
+void selectorPageTests() {
+  std::printf("\n[the firmware-drawn Select Menu page — §3.4]\n");
+
+  char names[3][ui::PackLoader::kMaxNameBytes] = {};
+  std::snprintf(names[0], sizeof(names[0]), "production.uipack");
+  std::snprintf(names[1], sizeof(names[1]), "service.uipack");
+
+  Device dev;
+  dev.boot();
+  dev.controller.openPackSelector(names, 2, "production.uipack", dev.now);
+  check(dev.controller.selectorActive(), "the page opens");
+  check(!dev.controller.editor().active,
+        "and discards any pending edit, since it is reachable from inside an editor");
+
+  // The page is painted by the FIRMWARE, not from the screen table — that is what makes it work
+  // when a pack draws nothing. Asserted on the strings that actually reached the panel.
+  dev.resetFrames();
+  dev.tick(100);
+  const std::string& painted = m5stamplc_stub::board().Display.strings;
+  check(painted.find("SELECT MENU") != std::string::npos, "it paints its own title");
+  check(painted.find("Built-in") != std::string::npos, "entry 0 is always the built-in default");
+  check(painted.find("production.uipack") != std::string::npos, "the card's packs are listed");
+  check(painted.find("*") != std::string::npos, "and the running menu is marked");
+
+  // UP/DOWN move the cursor rather than paging the screen behind.
+  const std::size_t before = dev.controller.packSelector().cursor();
+  dev.tap(ButtonInputManager::Button::Down);
+  check(dev.controller.packSelector().cursor() != before, "DOWN moves the cursor");
+  check(dev.controller.selectorActive(), "and does not leave the page");
+
+  // ENTER-long leaves without selecting, as it does on every other screen.
+  //
+  // Two ticks, not one: the first registers the press and the second is where the hold duration
+  // is evaluated. A single long tick only ever produces a SHORT press on release, which is how
+  // the first version of this check accidentally committed a selection instead of leaving.
+  dev.press(ButtonInputManager::Button::Enter, true);
+  dev.tick(50);
+  dev.tick(1600);
+  dev.press(ButtonInputManager::Button::Enter, false);
+  dev.tick(50);
+  check(!dev.controller.selectorActive(), "ENTER-long leaves without selecting");
+  check(dev.selectionCommits == 0, "and commits nothing");
+}
+
+void selectorCommitTests() {
+  std::printf("\n[committing a selection]\n");
+
+  char names[2][ui::PackLoader::kMaxNameBytes] = {};
+  std::snprintf(names[0], sizeof(names[0]), "production.uipack");
+  std::snprintf(names[1], sizeof(names[1]), "service.uipack");
+
+  {
+    Device dev;
+    dev.boot();
+    dev.controller.openPackSelector(names, 2, "production.uipack", dev.now);
+    // Move off the running entry, then commit.
+    while (dev.controller.packSelector().commitAction() == ui::PackSelector::Commit::Nothing) {
+      dev.controller.packSelector().moveCursor(1);
+    }
+    dev.tap(ButtonInputManager::Button::Enter);
+    check(dev.selectionCommits == 1, "ENTER-short on a different entry commits");
+    check(dev.controller.packSelector().commitAction() != ui::PackSelector::Commit::Nothing,
+          "and the caller can still read what to write");
+  }
+  {
+    // Choosing what is already running: leaving is the honest response. Rebooting into an
+    // identical UI would look like the press was ignored.
+    Device dev;
+    dev.boot();
+    dev.controller.openPackSelector(names, 2, "production.uipack", dev.now);
+    while (dev.controller.packSelector().commitAction() != ui::PackSelector::Commit::Nothing) {
+      dev.controller.packSelector().moveCursor(1);
+    }
+    dev.tap(ButtonInputManager::Button::Enter);
+    check(dev.selectionCommits == 0, "ENTER on the already-running entry commits nothing");
+    check(!dev.controller.selectorActive(), "and leaves the page rather than doing nothing at all");
+  }
+}
+
 }  // namespace
 
 int main() {
@@ -1346,6 +1430,8 @@ int main() {
   resetAcceptanceLedTests();
   spiHandoverRenderTests();
   recoveryGestureTests();
+  selectorPageTests();
+  selectorCommitTests();
   configListPagingTests();
   configEditorDescentTests();
   sensorEditorDescentTests();

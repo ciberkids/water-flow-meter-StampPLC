@@ -95,6 +95,13 @@ InteractionResult InteractionHandler::update(uint32_t nowMs,
     handleHoldCountdown(nowMs, buttonInput, uiController, &result);
   }
 
+  // While the Select Menu page is open it owns the buttons entirely. It is a firmware-drawn page
+  // that is not in the screen table, so the flow-matching path below has nothing to match against
+  // and would silently drop every press.
+  if (handlePackSelector(nowMs, buttonInput, uiController, &result)) {
+    return result;
+  }
+
   if (!factoryResetBusy && !holdCountdown_.active) {
     ButtonInputManager::ButtonEvent event;
     while (buttonInput.popEvent(&event)) {
@@ -255,6 +262,43 @@ const ui_exporter::Flow* findEntryTimeoutFlow(const ui_exporter::Screen* screen)
     return &flow;
   }
   return nullptr;
+}
+
+bool InteractionHandler::handlePackSelector(uint32_t nowMs,
+                                           ButtonInputManager& buttonInput,
+                                           UiController& uiController,
+                                           InteractionResult* result) {
+  if (!uiController.selectorActive()) {
+    return false;
+  }
+
+  ButtonInputManager::ButtonEvent event;
+  while (buttonInput.popEvent(&event)) {
+    switch (event.button) {
+      case ButtonInputManager::Button::Up:
+        uiController.packSelector().moveCursor(-1);
+        break;
+      case ButtonInputManager::Button::Down:
+        uiController.packSelector().moveCursor(1);
+        break;
+      case ButtonInputManager::Button::Enter:
+        if (event.isLongPress) {
+          // ENTER-long leaves without selecting, matching what it means on every other screen:
+          // the non-committing way out (§3.2).
+          uiController.closePackSelector(nowMs);
+        } else if (uiController.packSelector().commitAction() == ui::PackSelector::Commit::Nothing) {
+          // Choosing what is already running is not a no-op from the operator's point of view —
+          // they pressed a button and expect something. Leaving is the honest response, since
+          // rebooting into an identical UI would look like the press was ignored.
+          uiController.closePackSelector(nowMs);
+        } else if (result) {
+          result->packSelectionCommitted = true;
+        }
+        break;
+    }
+    uiController.notifyInteraction(nowMs);
+  }
+  return true;
 }
 
 void InteractionHandler::handleSelectorCombo(uint32_t nowMs,

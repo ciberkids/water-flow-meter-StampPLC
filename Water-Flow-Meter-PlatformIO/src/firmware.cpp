@@ -531,6 +531,48 @@ void logicTaskCode(void * pvParameters) {
       Serial.println("[ui] menu pack rendered; boot-loop guard cleared");
     }
 
+    // ── §3.4.1: the recovery gesture opens the firmware-drawn Select Menu page ──────
+    if (interactions.openPackSelector && !uiController.selectorActive()) {
+      // The directory is scanned fresh, not cached: the card may have been changed since the page
+      // was last opened, and a stale list would offer a pack that is no longer there. This is the
+      // one card access that happens with the display live, so it goes through the arbiter (§4.10)
+      // and the LEDs report during the handover.
+      static char packNames[ui::PackSelector::kMaxEntries][ui::PackLoader::kMaxNameBytes];
+      std::size_t found = 0;
+      char activeName[ui::PackLoader::kMaxNameBytes] = {};
+      if (packStorage.mount()) {
+        found = packStorage.listPacks(packNames, ui::PackSelector::kMaxEntries);
+        if (!packStorage.readPointer(activeName, sizeof(activeName))) {
+          activeName[0] = '\0';
+        }
+      }
+      uiController.openPackSelector(packNames, found, activeName[0] ? activeName : nullptr, now);
+    }
+
+    // ── §3.5: a committed selection writes the pointer and reboots ─────────────────
+    if (interactions.packSelectionCommitted) {
+      const auto action = uiController.packSelector().commitAction();
+      bool written = false;
+      if (packStorage.mount()) {
+        // Reboot rather than a hot swap: the active pack's buffer is referenced by the router, the
+        // renderer and the interaction handler at once, and swapping it while they hold offsets
+        // into it is a use-after-free waiting to happen (§3.5).
+        written = action == ui::PackSelector::Commit::DeletePointer
+                      ? packStorage.deletePointer()
+                      : packStorage.writePointer(uiController.packSelector().commitName());
+      }
+      if (written) {
+        Serial.println("[ui] menu selection saved; restarting");
+        // The boot snake already signals "reloading" (§3.4 of the LED spec), so no extra
+        // acknowledgement is needed for the second or so before the reset.
+        delay(50);
+        esp_restart();
+      } else {
+        Serial.println("[ui] could not save the menu selection; staying on the current menu");
+        uiController.closePackSelector(now);
+      }
+    }
+
     // The LEDs are the only status channel while the card holds the shared bus (§4.10).
     if (spiArbiter.cardBusy()) {
       ledController.setCardBusy(now);

@@ -99,6 +99,12 @@ void UiRenderer::update(uint32_t nowMs, const UiRenderContext& context) {
   }
   const FrameGuard frameGuard{spiArbiter_, nowMs};
 
+  // Before every table-driven path, and sharing none of it (§3.4.1).
+  if (context.selectorActive) {
+    drawPackSelector(context);
+    return;
+  }
+
   if (context.mode == UiMode::Idle) {
     M5StamPLC.setBacklight(false);
     auto& display = M5StamPLC.Display;
@@ -441,4 +447,60 @@ uint16_t UiRenderer::toRgb565(std::uint32_t argb) {
   const std::uint16_t g6 = static_cast<std::uint16_t>(g >> 2);
   const std::uint16_t b5 = static_cast<std::uint16_t>(b >> 3);
   return static_cast<std::uint16_t>((r5 << 11) | (g6 << 5) | b5);
+}
+
+void UiRenderer::drawPackSelector(const UiRenderContext& context) {
+  auto& display = M5StamPLC.Display;
+  M5StamPLC.setBacklight(true);
+
+  // Repainted in full on every pass. The list is short, this page is open for seconds at a time,
+  // and the alternative — tracking which row changed — would be complexity spent on the one
+  // screen whose whole purpose is to work when other things do not.
+  display.startWrite();
+  display.fillScreen(backgroundColor_);
+  display.setFont(&fonts::Font0);
+
+  display.setTextColor(textColor_, backgroundColor_);
+  display.drawString("SELECT MENU", 4, 4);
+
+  const ui::PackSelector* selector = context.selector;
+  if (!selector) {
+    // selectorActive without a selector is a wiring bug, not an operator-visible state. Say so
+    // rather than painting an empty page they cannot escape.
+    display.setTextColor(warningColor_, backgroundColor_);
+    display.drawString("selector unavailable", 4, 20);
+    display.endWrite();
+    lastScreen_ = nullptr;
+    return;
+  }
+
+  for (std::size_t i = 0; i < selector->entryCount(); ++i) {
+    const int32_t y = static_cast<int32_t>(20 + i * 12);
+    const bool onCursor = i == selector->cursor();
+    // The cursor is a leading '>' rather than an inverted row: Font0 has no bold, and inverting
+    // would mean a fillRect per row — more bus traffic on the one screen that most needs to be
+    // dependable.
+    display.setTextColor(onCursor ? highlightColor_ : textColor_, backgroundColor_);
+    display.drawString(onCursor ? ">" : " ", 4, y);
+    display.drawString(selector->labelAt(i), 16, y);
+    if (selector->isActive(i)) {
+      // §3.4: the running menu is marked, so the operator can see what they are leaving.
+      display.drawString("*", 228, y);
+    }
+  }
+
+  display.setTextColor(textColor_, backgroundColor_);
+  if (selector->truncated()) {
+    // Said out loud rather than silently dropped — an operator whose pack is missing from the
+    // list would otherwise conclude the card was faulty.
+    display.drawString("...more on card, not shown", 4, 116);
+  } else {
+    display.drawString("UP/DN choose  ENTER select", 4, 116);
+  }
+  display.endWrite();
+
+  // The table-driven path tracks the last screen to decide on incremental updates; this page is
+  // not in the table, so leaving a stale pointer there would let the next ordinary frame skip its
+  // repaint and show the selector underneath.
+  lastScreen_ = nullptr;
 }

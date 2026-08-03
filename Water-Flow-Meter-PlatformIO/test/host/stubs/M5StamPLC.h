@@ -17,6 +17,7 @@
 // checkable by counting fillScreen calls per unit of simulated time. Pixels are not: what
 // they should contain is a layout question the web mockup already owns.
 #include <cstdint>
+#include <string>
 
 namespace m5stamplc_stub {
 
@@ -40,16 +41,36 @@ struct DisplayRecorder {
   uint32_t fillCircles = 0;
   uint32_t startWrites = 0;
   uint32_t endWrites = 0;
+  uint32_t drawStrings = 0;
+  /**
+   * Everything drawn this frame, joined by '|'.
+   *
+   * Recorded rather than merely counted so a test can assert what the selector actually SHOWS —
+   * which entry carries the cursor, which is marked active, whether the truncation notice
+   * appeared. A count would only prove that something was painted.
+   */
+  std::string strings;
   int rotation = 0;
   int16_t cursorX = 0;
   int16_t cursorY = 0;
 
   void setRotation(int value) { rotation = value; }
-  void fillScreen(uint16_t) { ++fillScreens; }
+  void fillScreen(uint16_t) {
+    ++fillScreens;
+    // A full clear starts a new frame, so what was drawn before it is no longer on the panel.
+    strings.clear();
+  }
   void setTextColor(uint16_t, uint16_t) {}
   void setTextColor(uint16_t) {}
   void setTextSize(int) {}
   void setFont(const void*) {}
+  void drawString(const char* text, int32_t, int32_t) {
+    ++drawStrings;
+    if (text) {
+      strings += text;
+      strings += '|';
+    }
+  }
   void startWrite() { ++startWrites; }
   void endWrite() { ++endWrites; }
   void setCursor(int16_t x, int16_t y) {

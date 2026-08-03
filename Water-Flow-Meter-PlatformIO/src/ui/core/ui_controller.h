@@ -7,6 +7,7 @@
 #include "led/led_controller.h"
 #include "ui/core/ui_navigator.h"
 #include "ui/core/ui_pages.h"
+#include "ui/pack/ui_pack_selector.h"
 #include "ui/core/ui_settings.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
@@ -50,6 +51,20 @@ struct UiRenderContext {
   const char* countdownScreenId = nullptr;
   /** Screen the navigator is on. Null only before begin() has run. */
   const ui_exporter::Screen* currentScreen = nullptr;
+  /**
+   * The firmware-drawn Select Menu page is open (§3.4).
+   *
+   * When set, the renderer paints the selector itself and ignores the screen table entirely.
+   * That is the requirement, not an optimisation: §3.4.1 says the gesture "works even if the
+   * active pack draws nothing at all", which is only true if the firmware draws this page.
+   */
+  bool selectorActive = false;
+  /**
+   * The live selector, when `selectorActive`. A pointer rather than a flattened copy: the list is
+   * already owned by the controller, and duplicating it into the context would be one more place
+   * for the two to disagree.
+   */
+  const ui::PackSelector* selector = nullptr;
   /** Position within the current level's ring, for the scrollbar. 0 = unknown. */
   uint8_t ringIndex = 0;
   uint8_t ringCount = 0;
@@ -160,6 +175,21 @@ class UiController {
   void setNyquistPrompt(bool on) { editor_.nyquistPrompt = on; }
   void setCommitFailed(bool on) { editor_.commitFailed = on; }
 
+  // ── The firmware-owned Select Menu page (§3.4) ────────────────────────────────
+  //
+  // Held here because the interaction handler routes buttons to it and the renderer paints it,
+  // and both already hold a UiController. Opening it discards any pending edit: it is reachable
+  // from inside an editor, and committing a half-typed value on the way out would be worse than
+  // losing it.
+  void openPackSelector(const char (*names)[ui::PackLoader::kMaxNameBytes],
+                        std::size_t count,
+                        const char* activeName,
+                        uint32_t nowMs);
+  void closePackSelector(uint32_t nowMs);
+  bool selectorActive() const { return selectorActive_; }
+  ui::PackSelector& packSelector() { return packSelector_; }
+  const ui::PackSelector& packSelector() const { return packSelector_; }
+
  private:
   static constexpr uint32_t kIdleTimeoutMs = 120000;  // 2 minutes
 
@@ -170,6 +200,8 @@ class UiController {
   uint32_t lastInteractionMs_ = 0;
 
   ui::UiNavigator navigator_;
+  ui::PackSelector packSelector_{};
+  bool selectorActive_ = false;
   UiEditorState editor_{};
   UiRenderContext context_;
 };

@@ -149,6 +149,8 @@ void UiController::update(uint32_t nowMs,
   // the repaint cadence. See UiRenderContext::interactive.
   context_.interactive = editor_.active || countdown.active;
   context_.currentScreen = navigator_.current();
+  context_.selectorActive = selectorActive_;
+  context_.selector = selectorActive_ ? &packSelector_ : nullptr;
   uint8_t ringIndex = 0;
   uint8_t ringCount = 0;
   if (navigator_.ringPosition(&ringIndex, &ringCount)) {
@@ -200,4 +202,23 @@ void UiController::updateIdleState(uint32_t nowMs) {
       enterIdle(nowMs);
     }
   }
+}
+
+void UiController::openPackSelector(const char (*names)[ui::PackLoader::kMaxNameBytes],
+                                    std::size_t count,
+                                    const char* activeName,
+                                    uint32_t nowMs) {
+  // Rebuilt every time rather than cached: the card may have been changed since the page was last
+  // opened, and a stale list would offer a pack that is no longer there.
+  packSelector_.begin(names, count, activeName);
+  // Any pending edit is discarded. The selector is reachable from inside an editor via §3.4.1's
+  // gesture, and committing a half-typed value on the way out would be worse than losing it.
+  endEdit();
+  selectorActive_ = true;
+  notifyInteraction(nowMs);
+}
+
+void UiController::closePackSelector(uint32_t nowMs) {
+  selectorActive_ = false;
+  notifyInteraction(nowMs);
 }

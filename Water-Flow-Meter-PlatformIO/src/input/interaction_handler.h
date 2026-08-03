@@ -43,6 +43,13 @@ struct InteractionResult {
    * is the way back in, and the firmware draws the selector itself.
    */
   bool openPackSelector = false;
+  /**
+   * The operator committed a selection. The caller writes the pointer file and reboots (§3.5).
+   *
+   * Reported rather than performed: writing needs the SD adapter and rebooting needs the platform,
+   * and keeping both out of the interaction layer is what lets the whole decision be host-tested.
+   */
+  bool packSelectionCommitted = false;
 };
 
 class InteractionHandler {
@@ -167,6 +174,12 @@ class InteractionHandler {
   /** Arms on arrival at a screen carrying an unattended Timeout flow; fires when it expires. */
   void handleEntryTimer(uint32_t nowMs, UiController& uiController);
   void handleSelectorCombo(uint32_t nowMs, ButtonInputManager& buttonInput, InteractionResult* result);
+
+  /** Routes buttons to the Select Menu page while it is open. True when it consumed the pass. */
+  bool handlePackSelector(uint32_t nowMs,
+                          ButtonInputManager& buttonInput,
+                          UiController& uiController,
+                          InteractionResult* result);
   void scheduleFactoryReset(uint32_t nowMs);
   void handleHoldCountdown(uint32_t nowMs,
                            ButtonInputManager& buttonInput,

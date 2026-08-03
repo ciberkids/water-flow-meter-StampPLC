@@ -30,6 +30,19 @@ class UiRenderer {
    * exactly the torn frame the arbiter exists to prevent.
    */
   void bindSpiArbiter(plc::SpiArbiter* arbiter);
+
+ private:
+  /**
+   * Paints the Select Menu page directly, without consulting the screen table.
+   *
+   * §3.4.1: the gesture that opens this page "works even if the active pack draws nothing at
+   * all", which is only true if the firmware draws the page itself. So this deliberately shares
+   * no code with the generated-table path — a pack cannot influence what it looks like, and a
+   * pack that breaks the table cannot break this.
+   */
+  void drawPackSelector(const UiRenderContext& context);
+
+ public:
   void bindBindingResolver(const ui::UiBindingResolver* resolver);
 
   void update(uint32_t nowMs, const UiRenderContext& context);
