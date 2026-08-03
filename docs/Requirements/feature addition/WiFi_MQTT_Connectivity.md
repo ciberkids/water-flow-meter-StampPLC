@@ -165,7 +165,22 @@ The answer is a split, not a yes or no:
 | WiFi (`pp`) | 0 by default (`CONFIG_ESP32_WIFI_TASK_PINNED_TO_CORE_0=y`) | **Yes** — `wifi_task_core_id` is a *runtime* field of `wifi_init_config_t`, filled by `WIFI_INIT_CONFIG_DEFAULT()` in `WiFiGeneric.cpp`, which is compiled from source. `-DCONFIG_ESP32_WIFI_TASK_PINNED_TO_CORE_1` moves it. |
 | lwIP `tiT` | 0, priority **18** | **No.** `liblwip.a(sys_arch.c.obj)`'s `sys_thread_new` emits the core id as a literal `movi.n a7, 0`, compiled into a shipped archive. No build flag reaches it. |
 | Supplicant / timer helpers | `tskNO_AFFINITY` | No — they float onto either core. |
+| `mqtt_task` (esp-mqtt) | `tskNO_AFFINITY` — `CONFIG_MQTT_TASK_CORE_SELECTION_ENABLED` is **not** set, so `esp_mqtt_client_start` takes the `xTaskCreate` branch, and `task.h:450` forwards `tskNO_AFFINITY` | Core: no. **Priority: yes** — `task_prio` is a runtime field. See R4.1.5: setting it to 1 makes the core question moot. |
 | Arduino event + main loop | 1 already | n/a |
+
+**Priority is the lever that matters, not affinity.** The polling task is priority 2 on core 0. Any
+task at priority 1 cannot preempt it *on either core*, so an unpinned priority-1 task is harmless
+even when the scheduler places it on core 0. This is why R4.1.5 fixes the MQTT task at priority 1
+rather than trying to pin it: the affinity question stops being load-bearing. The same reasoning
+does **not** rescue lwIP, which is priority 18 and therefore preempts polling whenever it has a
+packet to process.
+
+**What the residual actually costs.** Steady-state MQTT is one publish per `publishPeriod` (default
+10 s) — a handful of packets, so `tiT` is idle almost all the time. The one genuinely high-traffic
+mode is the configuration portal (§7.6), and it is user-initiated, menu-gated, and time-boxed by
+R7.4 rather than always-on. The invariant therefore survives in the case that runs 99.99 % of the
+time, and degrades only in a mode the user explicitly opened. That is a characteristic to measure
+(N9), not a reason to redesign.
 
 So **R2.1.0 as written cannot be fully satisfied under `framework = arduino`.** The options:
 
@@ -379,6 +394,49 @@ P0, which is more useful for the same cost.
 > **R4.1.4** — Client ID must be stable and unique, derived from the device MAC. Two devices
 > with the same client ID will disconnect each other in a loop, and diagnosing that from the
 > device end is miserable.
+>
+> **R4.1.5** — The MQTT task runs at **priority 1** — below the priority-2 polling task and far
+> below the priority-8 Modbus server. This is the requirement that makes R2.1.0 and R2.1.4 hold
+> for MQTT; see §2.1.3 for why priority rather than affinity is the lever.
+>
+> **R4.1.6** — `out_buffer_size` is set explicitly, and **every publish return value is
+> checked**. See §4.4.7 — a payload larger than the buffer is dropped silently, and the
+> observable symptom is an entity that never appears in Home Assistant, with nothing logged.
+
+### 4.1.1. The client is the one already in the box
+
+**Decided 2026-08-03.** Verified against the installed toolchain, not chosen from a comparison of
+third-party libraries: ESP-IDF's own `esp-mqtt` is **already present and already linked**.
+
+| Evidence | Finding |
+| --- | --- |
+| `tools/sdk/esp32s3/lib/libmqtt.a` | Prebuilt and shipped |
+| `include/mqtt/esp-mqtt/include/mqtt_client.h` | On the default include path |
+| `CONFIG_MQTT_PROTOCOL_311=y` | MQTT 3.1.1 compiled in |
+| `CONFIG_MQTT_TRANSPORT_SSL=y` | TLS available if ever wanted |
+
+So `lib_deps` does not grow, which matters here beyond mere tidiness: PubSubClient and
+arduino-mqtt publish from the **caller's** task, which would put broker I/O on whichever task
+called `publish()` and hand us the exact core-0 and priority-inversion problems §2.1.3 is about.
+`esp-mqtt` owns a task, and exposes the two fields that make it conform:
+
+```c
+esp_mqtt_client_config_t cfg = {};   // IDF 4.4 — FLAT struct
+cfg.task_prio       = 1;             // R4.1.5
+cfg.out_buffer_size = 2048;          // R4.1.6
+cfg.lwt_topic       = "<base>/status";   // R4.5 availability, for free
+cfg.lwt_msg         = "offline";
+cfg.lwt_retain      = 1;
+cfg.reconnect_timeout_ms = ...;      // R4.1.2 backoff, for free
+```
+
+> ⚠️ **This is the IDF 4.4 flat config struct.** Every ESP-IDF 5.x example on the internet writes
+> `.broker.address.uri`, `.credentials.username`, `.session.keepalive` — a nested layout that does
+> **not exist** in IDF v4.4.7 and will not compile here. Fields are flat: `.uri`, `.host`, `.port`,
+> `.username`, `.password`, `.keepalive`, `.lwt_topic`. Confirmed by reading the installed header.
+
+LWT and reconnect backoff being library features rather than our code is the real prize: R4.1.2
+and R4.5 are satisfied by configuration instead of by a state machine we would have to test.
 
 ### 4.2. Topic layout
 
@@ -412,11 +470,24 @@ and radio airtime — which §2.1 cares about directly.
 
 ### 4.4. Home Assistant discovery
 
-*Pending verification against the current Home Assistant documentation — the exact
-`device_class`, `state_class` and unit strings, the discovery topic structure, and what is
-required for the Water dashboard are being checked against primary sources rather than
-written from memory, because HA changes these between releases and a wrong string produces
-an entity that silently never appears.*
+**Verified 2026-08-03** against two primary sources rather than written from memory: Home
+Assistant's own `developers.home-assistant.io` sensor-entity reference and
+`home-assistant.io/integrations/sensor.mqtt`, cross-checked against a **live HA instance**
+running `core-2026.7.4` with the MQTT integration loaded. Verified this way because a wrong string
+here produces an entity that silently never appears — there is no error to read.
+
+What the live instance confirmed, from its own MQTT config entry:
+
+| Setting | Value on the live instance |
+| --- | --- |
+| `discovery_prefix` | `homeassistant` |
+| `birth_message` | topic `homeassistant/status`, payload `online` |
+| `will_message` | topic `homeassistant/status`, payload `offline` |
+
+and, from a real `platform: mqtt` sensor's registry entry, that `suggested_display_precision`
+is honoured — it lands in the entity registry as
+`options.sensor.suggested_display_precision`. That closes the open worry that HA would infer
+0 decimals and render a litres-per-second reading as a bare integer.
 
 The intent is fixed even where the spelling is not:
 
@@ -438,6 +509,94 @@ The intent is fixed even where the spelling is not:
 >
 > **R4.4.6** — Discovery is republished on every reconnect, and whenever the connected-sensor
 > bitmap changes, so enabling a sensor makes its entity appear.
+>
+> **R4.4.7** — The device **subscribes to `homeassistant/status`** and republishes discovery on
+> receiving `online`. R4.4.5's retained messages cover an HA restart that reconnects to the same
+> broker; the birth message covers the case they do not — a broker restart that dropped retained
+> state, or an HA database migration. Both were confirmed present on the live instance.
+
+#### 4.4.a. The exact strings
+
+Quoted literally from HA's sensor-entity reference. The MQTT discovery payload uses the
+snake-case string form of each `SensorDeviceClass` member.
+
+| Our value | `device_class` | `unit_of_measurement` | `state_class` |
+| --- | --- | --- | --- |
+| Instantaneous flow | `volume_flow_rate` | `L/min` | `measurement` |
+| Cumulative volume, session | `water` | `L` | `total_increasing` |
+| Cumulative volume, lifetime | `water` | `m³` | `total_increasing` |
+| Board temperature | `temperature` | `°C` | `measurement` |
+| Polling rate, undersampling | *(none)* | `kHz` / *(none)* | `measurement` |
+
+Permitted units, so a later change of mind stays inside the allowed set rather than silently
+breaking the entity:
+
+- `volume_flow_rate` → `m³/h`, `m³/min`, `m³/s`, `ft³/min`, `L/h`, `L/min`, `L/s`, `gal/d`,
+  `gal/h`, `gal/min`, `mL/s`
+- `water` → `L`, `gal`, `m³`, `ft³`, `CCF`, `MCF`
+- `state_class` → `measurement`, `measurement_angle`, `total`, `total_increasing`
+
+**R4.4.4's answer, concretely:** the Water dashboard needs `device_class: water` **and** a
+`state_class` of `total_increasing` (or `total`) **and** a unit from the `water` list. All three,
+together — that combination is what makes long-term statistics accumulate. `total_increasing` is
+correct for our lifetime counter because it is monotonic and HA handles the reset-to-zero case
+itself. Diagnostics carry `entity_category: diagnostic`, which for sensors is the **only**
+permitted value of that key.
+
+#### 4.4.b. One topic per entity, not one payload per device
+
+Discovery topic, per entity:
+
+```
+homeassistant/sensor/<node_id>/<object_id>/config      retained
+```
+
+with a `device` block repeated in each payload — that repetition is what groups them under one
+device (R4.4.2):
+
+```json
+{
+  "device": {
+    "identifiers": ["wfm_<mac-suffix>"],
+    "name": "Water Flow Meter",
+    "manufacturer": "M5Stack",
+    "model": "StampPLC",
+    "sw_version": "<firmware version>",
+    "configuration_url": "http://<ip>/"
+  },
+  "unique_id": "wfm_<mac-suffix>_s1_flow",
+  "state_topic": "<base>/sensor/1/state",
+  "value_template": "{{ value_json.flow }}",
+  "availability_topic": "<base>/status",
+  "device_class": "volume_flow_rate",
+  "unit_of_measurement": "L/min",
+  "state_class": "measurement",
+  "suggested_display_precision": 2
+}
+```
+
+HA also offers a newer **device-based** discovery format — a single
+`homeassistant/device/<id>/config` carrying every component at once. **Rejected**, and for the
+reason R4.1.6 exists: 8 sensors × 5 metrics is 40 components in one payload, which would run to
+several kilobytes and is exactly the shape that overruns the client buffer and vanishes without a
+diagnostic. Forty small retained messages cost nothing after the first connect and each stays
+comfortably inside the buffer. `unique_id` follows the pattern the reference implementation on the
+live instance uses (`<device>_<metric>_<origin>`), which is what lets a user rename an entity in
+the HA UI and keep the rename across restarts (R4.4.3).
+
+#### 4.4.7. The buffer is a silent failure, so it gets a test
+
+`esp_mqtt_client_config_t.buffer_size` defaults to **1024 bytes**. A discovery payload carrying the
+full device block sits in the same order of magnitude. On overflow `esp_mqtt_client_publish`
+returns `-1` and the message is simply not sent: no entity, no log line, no clue.
+
+> **R4.4.8** — A **host test** serialises the worst-case discovery payload — longest sensor name,
+> longest base topic, longest `sw_version` — and asserts its length is under the configured
+> `out_buffer_size` with margin. The buffer value and the test share one constant.
+
+This gets a test rather than just a bigger buffer because a bigger buffer is a guess that stops
+being true the next time a field is added, whereas the test fails at that moment. Given this
+project's history, the check that computes the real length is worth more than the margin.
 
 ### 4.4.1. Command topics — Home Assistant can act, not only observe
 
@@ -1107,19 +1266,38 @@ experienced.
 Ordered so that each slice is verifiable when it lands, and so the riskiest unknown is
 resolved before the expensive work.
 
-| Slice | Content | Gate |
-| --- | --- | --- |
-| **N0** | **Spike:** WiFi associated, task pinned off core 0, measure `pollingRate_kHz` against baseline. No MQTT, no UI. | A1. If this fails, §2.1 forces a redesign — which is exactly why it is first. |
-| **N1** | Text settings: `SettingKind::Text`, the accessor pair, `maxLength`, `writeOnly`, manifest and schema changes, host tests | A6, A7 |
-| **N2** | The text editor screen kind, charset, cursor, masking, new actions — **engine landed early**, see `ui/core/ui_text_editor.h` and its 47 host checks | A8 ✅ |
-| **N3** | Network register block, staged apply, revision, error reporting | A5, A6, A7 |
-| **N4** | WiFi state machine, backoff, NVS persistence, status bindings | A13 |
-| **N5** | MQTT client, topic layout, cadence, LWT, queue policy | A11 |
-| **N6** | Home Assistant discovery payloads and republish rules | A2, A3, A4 |
-| **N7** | Menu-pack screens, default-menu extension, completeness migration (Q7) | A9, A10, A12 |
-| **N8** | SD-card credential file (Q2) | — |
-| **N9** | Hardware validation: polling rate, brownout under TX, HA end-to-end | A1–A4, R9.3.1 |
+| Slice | Content | Gate | State |
+| --- | --- | --- | --- |
+| **N0** | **Spike:** WiFi associated, task pinned off core 0, measure `pollingRate_kHz` against baseline. No MQTT, no UI. | A1. If this fails, §2.1 forces a redesign — which is exactly why it is first. | ⛔ needs hardware |
+| **N1a** | `SettingKind::Text`, accessor pair, `maxLength`, `writeOnly`, manifest and schema changes | A6, A7 | ✅ |
+| **N1b** | `NetSettings` — nine text fields, staged/apply, revision, secret masking | A6, A7 | ✅ 50 checks |
+| **N1c** | Declare the 14 settings in the catalogue | A6, A7 | ▶ **atomic with N7a** |
+| **N2a** | Text-editor engine: charset, cursor, masking, 97-position wheel | A8 | ✅ 47 checks |
+| **N2b** | Wire the editor into the UI — screen kind and actions | A8 | ▶ next |
+| **N3** | Network register block 500–732, staged apply, revision, error reporting | A5, A6, A7 | ✅ 50 checks |
+| **N4** | WiFi state machine, backoff, NVS persistence, status bindings | A13 | |
+| **N5** | MQTT client (`esp-mqtt`, §4.1.1), topic layout, cadence, LWT, queue policy | A11 | unblocked 2026-08-03 |
+| **N6** | Home Assistant discovery payloads (§4.4.a/b) and republish rules | A2, A3, A4 | unblocked 2026-08-03 |
+| **N7a** | Default-pack editors for all 14 settings, regenerated `.uipack` | A9, A12 | ▶ **atomic with N1c** |
+| **N7b** | Menu screens with flow guards, completeness migration (Q7) | A10 | |
+| **N8a** | Configuration web portal (§7.6) — `WebServer` + `DNSServer`, catalogue-generated form | A9 | |
+| **N8b** | SD-card credential file (Q2) | — | |
+| **N9** | Hardware validation: polling rate, brownout under TX, HA end-to-end, **task-WDT survival with the portal active** | A1–A4, R9.3.1 | ⛔ needs hardware |
+
+**Why N1c and N7a are one change, not two.** `assertCoversEverySetting` in the exporter refuses to
+emit a pack that does not reach every declared setting. Declaring the settings without their
+editors therefore breaks the build, and adding editors for settings that do not exist is not
+expressible. The two land together with a regenerated default pack, because these settings ship
+*in* the provisioned default menu rather than being customer-added.
 
 **N0 is not optional and must not be reordered.** Every slice after it assumes the answer to
 §2.1 is favourable. If it is not, N1–N8 would be built on a premise the device disproves,
-and the accuracy of the measurement is the reason this product exists.
+and the accuracy of the measurement is the reason this product exists. The host-verifiable slices
+are being built first only because N0 needs hardware that is not to hand; nothing after N0 is
+*shippable* until it has run.
+
+**Why the WDT item is on N9.** `CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0=y` with
+`CONFIG_ESP_TASK_WDT_PANIC=y` and a 5 s timeout means core 0's idle task must get scheduled. The
+polling loop is a tight loop with no `vTaskDelay`; it yields only because `readPlcInput` blocks on
+I²C. Adding lwIP traffic on the same core eats that margin, so "does it still boot with the portal
+open" is a real question with a panic as its failure mode.

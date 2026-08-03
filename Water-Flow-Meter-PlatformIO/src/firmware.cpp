@@ -2,9 +2,27 @@
 #include <Preferences.h>
 #include <ModbusServerRTU.h>
 #include <esp_system.h>
+#include <esp_wifi.h>
 
 #include <cstdint>
 #include <cstdio>
+
+// Core 0 belongs to pulse polling (Project_document §3.2). The WiFi task would land there by
+// default, at priority 23 — above both the polling task and lwIP.
+//
+// platformio.ini defines CONFIG_ESP32_WIFI_TASK_PINNED_TO_CORE_1 to move it, and this assert is
+// what proves the flag arrived: WIFI_TASK_CORE_ID is what WIFI_INIT_CONFIG_DEFAULT() writes into
+// wifi_init_config_t::wifi_task_core_id, so if it reads 1 here, the task esp_wifi_init() creates
+// is pinned to core 1.
+//
+// An assert rather than a comment because the alternative is a silent regression: delete the build
+// flag and the firmware still compiles, still runs, still associates — and quietly starts stealing
+// cycles from the measurement that is the reason this product exists. This project has been bitten
+// repeatedly by checks that did not check; a build-time failure is the cheapest possible check.
+static_assert(WIFI_TASK_CORE_ID == 1,
+              "The WiFi task must not run on core 0, which is reserved for pulse polling. "
+              "Restore -DCONFIG_ESP32_WIFI_TASK_PINNED_TO_CORE_1=1 in platformio.ini "
+              "(see WiFi_MQTT_Connectivity.md §2.1.3).");
 
 #include "input/button_input.h"
 #include "input/interaction_handler.h"
