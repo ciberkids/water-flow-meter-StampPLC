@@ -1271,14 +1271,14 @@ resolved before the expensive work.
 | **N0** | **Spike:** WiFi associated, task pinned off core 0, measure `pollingRate_kHz` against baseline. No MQTT, no UI. | A1. If this fails, §2.1 forces a redesign — which is exactly why it is first. | ⛔ needs hardware |
 | **N1a** | `SettingKind::Text`, accessor pair, `maxLength`, `writeOnly`, manifest and schema changes | A6, A7 | ✅ |
 | **N1b** | `NetSettings` — nine text fields, staged/apply, revision, secret masking | A6, A7 | ✅ 50 checks |
-| **N1c** | Declare the 14 settings in the catalogue | A6, A7 | ▶ **atomic with N7a** |
+| **N1c** | Declare the 14 settings in the catalogue | A6, A7 | ✅ manifest regenerated |
 | **N2a** | Text-editor engine: charset, cursor, masking, 97-position wheel | A8 | ✅ 47 checks |
-| **N2b** | Wire the editor into the UI — screen kind and actions | A8 | ▶ next |
+| **N2b** | Wire the editor into the UI — no new screen kind or actions were needed | A8 | ✅ 28 checks |
 | **N3** | Network register block 500–732, staged apply, revision, error reporting | A5, A6, A7 | ✅ 50 checks |
-| **N4** | WiFi state machine, backoff, NVS persistence, status bindings | A13 | |
+| **N4** | WiFi state machine, backoff, NVS persistence, status bindings | A13 | ▶ next — also unblocks the §7.1 info pages |
 | **N5** | MQTT client (`esp-mqtt`, §4.1.1), topic layout, cadence, LWT, queue policy | A11 | unblocked 2026-08-03 |
 | **N6** | Home Assistant discovery payloads (§4.4.a/b) and republish rules | A2, A3, A4 | unblocked 2026-08-03 |
-| **N7a** | Default-pack editors for all 14 settings, regenerated `.uipack` | A9, A12 | ▶ **atomic with N1c** |
+| **N7a** | Default-pack editors for all 14 settings, regenerated `.uipack` | A9, A12 | ✅ 34 screens, 82 total |
 | **N7b** | Menu screens with flow guards, completeness migration (Q7) | A10 | |
 | **N8a** | Configuration web portal (§7.6) — `WebServer` + `DNSServer`, catalogue-generated form | A9 | |
 | **N8b** | SD-card credential file (Q2) | — | |
