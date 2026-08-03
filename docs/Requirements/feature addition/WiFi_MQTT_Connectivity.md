@@ -122,6 +122,68 @@ down — it makes the master see a framing error and retry. So:
 > before and after enabling the radio. A retry rate that climbs is the symptom, and it is
 > invisible to any test that only watches `pollingRate_kHz`.
 
+### 2.1.2. The counter is I²C-bound, not CPU-bound — so core affinity is not enough
+
+Established 2026-08-03 by reading the board library, and it reframes R2.1.0.
+
+`M5StamPLC.readPlcInput()` reads the **AW9523B at 0x59**. It is an I²C expander, not a GPIO. Two
+things follow immediately:
+
+- **Hardware pulse counting is unavailable.** There is no pin to attach PCNT or `attachInterrupt`
+  to, so "move the counter out of harm's way" — normally the right answer — is off the table
+  without changing the board.
+- **The polling loop is I²C traffic.** What starves it is contention for that bus, not for a CPU.
+
+And the RGB LED is the **PI4IOE5V6408 at 0x43 — the same bus**, SCL 15 / SDA 13, one driver mutex
+(`StampPLC specifications.md` §1.1). `LedController::applyOutputs` wrote it unconditionally, and
+`ledController.update()` runs every pass of a loop that ends in `vTaskDelay(1)` at 1000 Hz.
+
+> Measured by disabling the fix and re-running the host suite: **1000 expander writes per 1000
+> idle passes, now 0.** Core 1 was competing with the measurement a thousand times a second, radio
+> off, before WiFi entered the picture at all.
+
+> **R2.1.6 — NO SUBSYSTEM MAY WRITE THE SENSOR I²C BUS WITHOUT NEED.** Any device on
+> SCL 15 / SDA 13 — the LED expander, the INA226, the LM75B, the RTC — must be written only when
+> its state actually changes, and polled only as often as its purpose requires. A dirty check is
+> the minimum; a rate limit is better for anything that legitimately changes often.
+>
+> This sits alongside R2.1.0 rather than under it, because **core affinity does not protect the
+> measurement.** R2.1.0 keeps foreign *computation* off core 0; R2.1.6 keeps foreign *bus traffic*
+> away from the sampler. Both are needed and neither implies the other.
+
+Fixed in `led_controller.cpp` on 2026-08-03, deliberately **before** the radio-off baseline is
+recorded: a post-fix radio-ON measurement beating a pre-fix radio-OFF one would have made
+R2.1.1's 5 % comparison flatter the radio.
+
+### 2.1.3. What the framework will and will not allow
+
+Verified 2026-08-03 against the installed toolchain — arduino-esp32 **2.0.17** (package
+3.20017.0, IDF v4.4.7), by reading the prebuilt sdkconfig and disassembling the shipped archives.
+The answer is a split, not a yes or no:
+
+| Task | Core | Movable? |
+| --- | --- | --- |
+| WiFi (`pp`) | 0 by default (`CONFIG_ESP32_WIFI_TASK_PINNED_TO_CORE_0=y`) | **Yes** — `wifi_task_core_id` is a *runtime* field of `wifi_init_config_t`, filled by `WIFI_INIT_CONFIG_DEFAULT()` in `WiFiGeneric.cpp`, which is compiled from source. `-DCONFIG_ESP32_WIFI_TASK_PINNED_TO_CORE_1` moves it. |
+| lwIP `tiT` | 0, priority **18** | **No.** `liblwip.a(sys_arch.c.obj)`'s `sys_thread_new` emits the core id as a literal `movi.n a7, 0`, compiled into a shipped archive. No build flag reaches it. |
+| Supplicant / timer helpers | `tskNO_AFFINITY` | No — they float onto either core. |
+| Arduino event + main loop | 1 already | n/a |
+
+So **R2.1.0 as written cannot be fully satisfied under `framework = arduino`.** The options:
+
+1. Move the WiFi task, accept `tiT` on core 0, and measure. This is what R2.1.0's own escape clause
+   prescribes, and `tiT` only runs when there is traffic to process — at a 10 s publish cadence
+   that is very little. Unmeasured, though: no hardware figure exists yet.
+2. Rebuild the SDK (`framework = espidf`, or a fork with `custom_sdkconfig`) and set
+   `CONFIG_LWIP_TCPIP_TASK_AFFINITY_CPU1`. Real, but it requires arduino-esp32 3.x / IDF 5.x —
+   where `DNSServer` was rewritten onto AsyncUDP and **spawns a task**, so this choice interacts
+   with the provisioning design rather than being independent of it. The symbol is also renamed to
+   `CONFIG_ESP_WIFI_TASK_PINNED_TO_CORE_*` in 5.x.
+3. Move the counter to hardware — **unavailable**, per §2.1.2.
+
+**Correction to an earlier claim in this document's history:** it was previously asserted that a
+`-D` in `build_flags` cannot change what a prebuilt WiFi library already did. That is refuted for
+the WiFi task, whose core is a runtime value. It remains true for lwIP.
+
 **Mitigations** to be confirmed against the framework (see §11 Q1): pinning the WiFi and
 MQTT tasks off core 0 per R2.1.0, keeping them below Modbus in priority per R2.1.4, disabling
 modem power-save (which trades latency spikes for current), and keeping the MQTT client out of
