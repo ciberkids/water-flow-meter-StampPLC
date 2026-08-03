@@ -294,13 +294,6 @@ bool UiBindingResolver::resolveConfigBinding(const UiRenderContext& context,
       return false;
     }
     const auto& editor = controller_->editor();
-    if (editor.isText) {
-      // renderInto supplies the masking and the `text[K]` wheel marker, and truncates from the LEFT
-      // so the cursor stays on screen. formatSetting cannot serve here: it would need the buffer AND
-      // the wheel position, and it takes an int32_t.
-      editor.text.renderInto(buffer, bufferSize);
-      return true;
-    }
     formatSetting(*editor.setting, editor.pending, buffer, bufferSize);
     return true;
   }
@@ -354,7 +347,7 @@ bool UiBindingResolver::resolveConfigBinding(const UiRenderContext& context,
     // an SSID as "0". formatSettingText applies the masking, so a passphrase reads "********" and a
     // never-set field reads "(not set)" rather than rendering blank.
     if (setting->kind == ui::SettingKind::Text) {
-      char stored[TextEditor::kMaxLength + 1] = {};
+      char stored[plc::NetSettings::kMaxValueBytes + 1] = {};
       if (!readSettingText(*setting, *settings_, stored, sizeof(stored))) {
         return false;
       }

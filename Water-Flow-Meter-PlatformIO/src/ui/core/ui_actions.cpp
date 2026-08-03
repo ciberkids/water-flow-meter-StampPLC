@@ -135,15 +135,11 @@ void handleNavDescend(const UiActionContext& ctx, const ui_exporter::Flow&) {
   // screen — closes any editor instead of opening one.
   if (const auto* setting = settingEditedByScreen(ctx.resolvedTarget)) {
     const uint8_t sensor = ctx.controller.navigator().sensorIndex();
+    // Text settings are NOT editable here. There is no on-device text entry at all: §6.3 records
+    // why the three-button character wheel was removed. A screen that displays an SSID is a
+    // read-only row, so descending onto it must not open an editor that cannot accept input.
     if (setting->kind == ui::SettingKind::Text) {
-      // Seeded from the stored value so an existing SSID is edited rather than retyped. An empty
-      // buffer on failure is the right fallback: a text editor that opens blank is usable, one
-      // seeded with garbage is not.
-      char current[ui::TextEditor::kMaxLength + 1] = {};
-      if (ctx.settings) {
-        readSettingText(*setting, *ctx.settings, current, sizeof(current));
-      }
-      ctx.controller.beginTextEdit(setting, sensor, current);
+      ctx.controller.endEdit();
     } else {
       const int32_t current =
           ctx.settings ? readSetting(*setting, sensor, *ctx.settings) : 0;
@@ -226,27 +222,6 @@ void handleValueCommit(const UiActionContext& ctx, const ui_exporter::Flow&) {
   ctx.controller.notifyInteraction(ctx.nowMs);
   const auto& editor = ctx.controller.editor();
   if (!editor.active || !editor.setting || !ctx.settings) {
-    return;
-  }
-
-  // A text edit spends most of its ENTER-shorts typing, not committing: the press accepts the
-  // character under the wheel and the editor stays open. Only END concludes it (§6.3).
-  if (editor.isText) {
-    if (ctx.controller.enterTextShort(ctx.nowMs) != ui::TextEditResult::Commit) {
-      return;  // still typing — do NOT ascend
-    }
-    // Re-read through editor() rather than reusing the reference: enterTextShort mutated the state.
-    const auto& done = ctx.controller.editor();
-    if (!writeSettingText(*done.setting, done.text.value(), *ctx.settings)) {
-      // No Nyquist analogue for text — a refused write here is a bad field or absent storage, and
-      // there is nothing an override could fix, so it must not offer "DOWN = Save anyway".
-      ctx.controller.setCommitFailed(true);
-      return;
-    }
-    ctx.controller.endEdit();
-    if (ctx.controller.navigator().ascend()) {
-      ctx.controller.syncPageFromScreen(ctx.controller.navigator().current(), ctx.nowMs);
-    }
     return;
   }
 

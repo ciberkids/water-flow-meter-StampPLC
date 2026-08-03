@@ -5259,7 +5259,7 @@
           "kind": "text",
           "x": 8,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
+          "content": "Set via web portal or RS485",
           "emphasis": "muted"
         },
         {
@@ -5295,17 +5295,6 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-wifi-ssid-edit",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
           "id": "f-escape",
           "label": "Exit to main screen",
           "trigger": {
@@ -5315,112 +5304,6 @@
           },
           "targetScreenId": "info-p0-global-status",
           "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-wifi-ssid-edit",
-      "name": "W2.V — Edit Network (SSID)",
-      "description": "Value editor for W2. ENTER commits and ascends; hold ENTER discards.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 8,
-          "y": 2,
-          "content": "Edit > Network (SSID)"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "0 to 0",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-value",
-          "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
-        },
-        {
-          "id": "saved-label",
-          "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
-        },
-        {
-          "id": "saved-value",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.wifi.ssid",
-          "emphasis": "muted"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-inc",
-          "label": "Increase",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.increment"
-        },
-        {
-          "id": "f-dec",
-          "label": "Decrease",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.decrement"
-        },
-        {
-          "id": "f-commit",
-          "label": "Save and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-wifi-ssid",
-          "actionId": "config.action.value.commit"
-        },
-        {
-          "id": "f-discard",
-          "label": "Discard and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "net-wifi-ssid",
-          "actionId": "config.action.value.discard"
         }
       ]
     },
@@ -5457,7 +5340,7 @@
           "kind": "text",
           "x": 8,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
+          "content": "Set via web portal or RS485",
           "emphasis": "muted"
         },
         {
@@ -5493,17 +5376,6 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-wifi-psk-edit",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
           "id": "f-escape",
           "label": "Exit to main screen",
           "trigger": {
@@ -5513,112 +5385,6 @@
           },
           "targetScreenId": "info-p0-global-status",
           "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-wifi-psk-edit",
-      "name": "W3.V — Edit Passphrase",
-      "description": "Value editor for W3. ENTER commits and ascends; hold ENTER discards.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 8,
-          "y": 2,
-          "content": "Edit > Passphrase"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "0 to 0",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-value",
-          "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
-        },
-        {
-          "id": "saved-label",
-          "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
-        },
-        {
-          "id": "saved-value",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.wifi.psk",
-          "emphasis": "muted"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-inc",
-          "label": "Increase",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.increment"
-        },
-        {
-          "id": "f-dec",
-          "label": "Decrease",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.decrement"
-        },
-        {
-          "id": "f-commit",
-          "label": "Save and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-wifi-psk",
-          "actionId": "config.action.value.commit"
-        },
-        {
-          "id": "f-discard",
-          "label": "Discard and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "net-wifi-psk",
-          "actionId": "config.action.value.discard"
         }
       ]
     },
@@ -6111,7 +5877,7 @@
           "kind": "text",
           "x": 8,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
+          "content": "Set via web portal or RS485",
           "emphasis": "muted"
         },
         {
@@ -6147,17 +5913,6 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-host-edit",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
           "id": "f-escape",
           "label": "Exit to main screen",
           "trigger": {
@@ -6167,112 +5922,6 @@
           },
           "targetScreenId": "info-p0-global-status",
           "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-host-edit",
-      "name": "B1.V — Edit Broker host",
-      "description": "Value editor for B1. ENTER commits and ascends; hold ENTER discards.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 8,
-          "y": 2,
-          "content": "Edit > Broker host"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "0 to 0",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-value",
-          "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
-        },
-        {
-          "id": "saved-label",
-          "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
-        },
-        {
-          "id": "saved-value",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.mqtt.host",
-          "emphasis": "muted"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-inc",
-          "label": "Increase",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.increment"
-        },
-        {
-          "id": "f-dec",
-          "label": "Decrease",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.decrement"
-        },
-        {
-          "id": "f-commit",
-          "label": "Save and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-host",
-          "actionId": "config.action.value.commit"
-        },
-        {
-          "id": "f-discard",
-          "label": "Discard and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "net-mqtt-host",
-          "actionId": "config.action.value.discard"
         }
       ]
     },
@@ -6507,7 +6156,7 @@
           "kind": "text",
           "x": 8,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
+          "content": "Set via web portal or RS485",
           "emphasis": "muted"
         },
         {
@@ -6543,17 +6192,6 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-user-edit",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
           "id": "f-escape",
           "label": "Exit to main screen",
           "trigger": {
@@ -6563,112 +6201,6 @@
           },
           "targetScreenId": "info-p0-global-status",
           "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-user-edit",
-      "name": "B3.V — Edit Username",
-      "description": "Value editor for B3. ENTER commits and ascends; hold ENTER discards.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 8,
-          "y": 2,
-          "content": "Edit > Username"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "0 to 0",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-value",
-          "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
-        },
-        {
-          "id": "saved-label",
-          "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
-        },
-        {
-          "id": "saved-value",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.mqtt.user",
-          "emphasis": "muted"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-inc",
-          "label": "Increase",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.increment"
-        },
-        {
-          "id": "f-dec",
-          "label": "Decrease",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.decrement"
-        },
-        {
-          "id": "f-commit",
-          "label": "Save and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-user",
-          "actionId": "config.action.value.commit"
-        },
-        {
-          "id": "f-discard",
-          "label": "Discard and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "net-mqtt-user",
-          "actionId": "config.action.value.discard"
         }
       ]
     },
@@ -6705,7 +6237,7 @@
           "kind": "text",
           "x": 8,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
+          "content": "Set via web portal or RS485",
           "emphasis": "muted"
         },
         {
@@ -6741,17 +6273,6 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-password-edit",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
           "id": "f-escape",
           "label": "Exit to main screen",
           "trigger": {
@@ -6761,112 +6282,6 @@
           },
           "targetScreenId": "info-p0-global-status",
           "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-password-edit",
-      "name": "B4.V — Edit Password",
-      "description": "Value editor for B4. ENTER commits and ascends; hold ENTER discards.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 8,
-          "y": 2,
-          "content": "Edit > Password"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "0 to 0",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-value",
-          "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
-        },
-        {
-          "id": "saved-label",
-          "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
-        },
-        {
-          "id": "saved-value",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.mqtt.password",
-          "emphasis": "muted"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-inc",
-          "label": "Increase",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.increment"
-        },
-        {
-          "id": "f-dec",
-          "label": "Decrease",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.decrement"
-        },
-        {
-          "id": "f-commit",
-          "label": "Save and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-password",
-          "actionId": "config.action.value.commit"
-        },
-        {
-          "id": "f-discard",
-          "label": "Discard and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "net-mqtt-password",
-          "actionId": "config.action.value.discard"
         }
       ]
     },
@@ -6903,7 +6318,7 @@
           "kind": "text",
           "x": 8,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
+          "content": "Set via web portal or RS485",
           "emphasis": "muted"
         },
         {
@@ -6939,17 +6354,6 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-base-topic-edit",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
           "id": "f-escape",
           "label": "Exit to main screen",
           "trigger": {
@@ -6959,112 +6363,6 @@
           },
           "targetScreenId": "info-p0-global-status",
           "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-base-topic-edit",
-      "name": "B5.V — Edit Base topic",
-      "description": "Value editor for B5. ENTER commits and ascends; hold ENTER discards.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 8,
-          "y": 2,
-          "content": "Edit > Base topic"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "0 to 0",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-value",
-          "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
-        },
-        {
-          "id": "saved-label",
-          "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
-        },
-        {
-          "id": "saved-value",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.mqtt.baseTopic",
-          "emphasis": "muted"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-inc",
-          "label": "Increase",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.increment"
-        },
-        {
-          "id": "f-dec",
-          "label": "Decrease",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.decrement"
-        },
-        {
-          "id": "f-commit",
-          "label": "Save and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-base-topic",
-          "actionId": "config.action.value.commit"
-        },
-        {
-          "id": "f-discard",
-          "label": "Discard and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "net-mqtt-base-topic",
-          "actionId": "config.action.value.discard"
         }
       ]
     },
@@ -7101,7 +6399,7 @@
           "kind": "text",
           "x": 8,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
+          "content": "Set via web portal or RS485",
           "emphasis": "muted"
         },
         {
@@ -7137,17 +6435,6 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-prefix-edit",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
           "id": "f-escape",
           "label": "Exit to main screen",
           "trigger": {
@@ -7157,112 +6444,6 @@
           },
           "targetScreenId": "info-p0-global-status",
           "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-prefix-edit",
-      "name": "B6.V — Edit HA prefix",
-      "description": "Value editor for B6. ENTER commits and ascends; hold ENTER discards.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 8,
-          "y": 2,
-          "content": "Edit > HA prefix"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "0 to 0",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-value",
-          "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
-        },
-        {
-          "id": "saved-label",
-          "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
-        },
-        {
-          "id": "saved-value",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.mqtt.discoveryPrefix",
-          "emphasis": "muted"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-inc",
-          "label": "Increase",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.increment"
-        },
-        {
-          "id": "f-dec",
-          "label": "Decrease",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.decrement"
-        },
-        {
-          "id": "f-commit",
-          "label": "Save and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-prefix",
-          "actionId": "config.action.value.commit"
-        },
-        {
-          "id": "f-discard",
-          "label": "Discard and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "net-mqtt-prefix",
-          "actionId": "config.action.value.discard"
         }
       ]
     },

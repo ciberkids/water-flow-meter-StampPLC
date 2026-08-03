@@ -48,51 +48,10 @@ void UiController::beginEdit(const ui::SettingDescriptor* setting,
   editor_.saved = current;
 }
 
-void UiController::beginTextEdit(const ui::SettingDescriptor* setting,
-                                 uint8_t sensorIndex,
-                                 const char* current) {
-  editor_ = UiEditorState{};
-  if (!setting) {
-    return;
-  }
-  editor_.active = true;
-  editor_.isText = true;
-  editor_.setting = setting;
-  editor_.sensorIndex = sensorIndex;
-  // The masked flag comes from writeOnly, so the passphrase and the MQTT password hide themselves
-  // without the editor needing to know which settings are secret.
-  editor_.text.begin(current, setting->maxLength, setting->writeOnly);
-}
-
-ui::TextEditResult UiController::enterTextShort(uint32_t nowMs) {
-  if (!editingText()) {
-    return ui::TextEditResult::Continue;
-  }
-  const ui::TextEditResult result = editor_.text.enterShort();
-  // Any keystroke invalidates a prompt raised about the previous attempt, exactly as adjustEdit
-  // does for numerics.
-  editor_.nyquistPrompt = false;
-  editor_.commitFailed = false;
-  editor_.lastStepMs = nowMs;
-  notifyInteraction(nowMs);
-  return result;
-}
-
 void UiController::endEdit() { editor_ = UiEditorState{}; }
 
 void UiController::adjustEdit(int32_t delta, uint32_t nowMs) {
   if (!editor_.active || !editor_.setting) {
-    return;
-  }
-  if (editor_.isText) {
-    // Same gesture, different meaning: the wheel moves instead of the number. Routing it here
-    // rather than at the call site means the acceleration tiers, the prompt clearing and the
-    // interaction timestamp below are shared rather than reimplemented for text.
-    editor_.text.scrub(delta);
-    editor_.lastStepMs = nowMs;
-    editor_.nyquistPrompt = false;
-    editor_.commitFailed = false;
-    notifyInteraction(nowMs);
     return;
   }
   editor_.pending = ui::adjustSetting(*editor_.setting, editor_.pending, delta);

@@ -111,13 +111,26 @@ function assertCoversEverySetting(deviceList, sensorList) {
   const declared = new Set([...deviceList, ...sensorList].map((d) => d.binding).filter(Boolean));
   const missing = manifest.values
     .filter((v) => v.category === "setting")
+    // TEXT SETTINGS ARE EXEMPT. There is no on-device text entry: three buttons and a 97-position
+    // character wheel is not a usable way to type a 63-character WPA2 passphrase, and the owner
+    // ruled it out. Text reaches the device by the three surfaces that were always the real ones —
+    // the configuration web portal (§7.6), the RS485 register block (§5.2), and the SD credential
+    // file (Q2).
+    //
+    // This exemption is the ONLY hole in the completeness rule, and it is safe because it is decided
+    // by KIND rather than by a runtime condition: `type === "string"` is statically knowable, so the
+    // gate still proves every setting an operator can change AT THE PANEL has an editor there.
+    // Guarded editors were rejected for exactly the opposite reason (R7.3) — a guard is not
+    // statically decidable. See §6.3.
+    .filter((v) => v.type !== "string")
     .map((v) => v.id)
     .filter((id) => !declared.has(id));
   if (missing.length > 0) {
     throw new Error(
       `the skeleton would violate the completeness rule: no editor screen for ` +
       `${missing.join(", ")}. Add each to DEVICE (device-wide) or SENSOR_SETTINGS ` +
-      `(per-sensor) in tools/skeleton/generate.mjs, with a title a human can read.`
+      `(per-sensor) in tools/skeleton/generate.mjs, with a title a human can read. ` +
+      `(Text settings are exempt — they are set via the portal, RS485 or the SD file.)`
     );
   }
 }
@@ -329,7 +342,7 @@ screens.push({
 // the friendlier order.
 const WIFI_L1 = [
   { page: "W1", id: "net-wifi-enabled", title: "Enabled", binding: "config.wifi.enabled" },
-  { page: "W2", id: "net-wifi-ssid", title: "Network (SSID)", binding: "config.wifi.ssid" },
+  { page: "W2", id: "net-wifi-ssid", title: "Network (SSID)", binding: "config.wifi.ssid" },  // read-only
   { page: "W3", id: "net-wifi-psk", title: "Passphrase", binding: "config.wifi.psk" }
 ];
 const WIFI_RING = [...WIFI_L1.map((w) => w.id), "net-wifi-back"];
@@ -367,6 +380,11 @@ function emitLevel({ items, ring, crumb, backId, backName }) {
     const v = item.binding ? byId.get(item.binding) : null;
     if (item.binding && !v) throw new Error(`catalogue has no value "${item.binding}"`);
     const unit = v?.unit ? ` ${v.unit}` : "";
+    // A text value is DISPLAYED, never edited here — see assertCoversEverySetting. The row still
+    // exists because an operator standing at the device needs to see which network and which broker
+    // it is configured for; that is the diagnostic half of §7.1's information pages, at zero input
+    // cost. Secrets render as "********" via formatSettingText, so the row is safe on a wall panel.
+    const isReadOnly = v?.type === "string";
     screens.push({
       id: item.id,
       name: `${item.page} — ${item.title}`,
@@ -379,18 +397,23 @@ function emitLevel({ items, ring, crumb, backId, backName }) {
           : [text("field-value", L.valueY, "Settings >", { emphasis: "strong" })]),
         text("footer-hint", L.footerY,
           isDescent ? "UP/DN page  ENTER open  hold ENTER exit"
-                    : "UP/DN page  ENTER edit  hold ENTER exit",
+                    : isReadOnly ? "Set via web portal or RS485"
+                                 : "UP/DN page  ENTER edit  hold ENTER exit",
           { emphasis: "muted" }),
         scrollbar()
       ],
       flows: [
         ...ringFlows(ring, i),
-        btn("f-enter", isDescent ? `Open ${item.title}` : "Edit value", "enter", "short",
-            A.descend, isDescent ? item.descendTo : editorId(item.id)),
+        // No ENTER-short on a read-only row: there is nothing below it to descend to, and a flow
+        // pointing at a nonexistent editor is what the export gate would reject.
+        ...(isReadOnly ? [] : [
+          btn("f-enter", isDescent ? `Open ${item.title}` : "Edit value", "enter", "short",
+              A.descend, isDescent ? item.descendTo : editorId(item.id))
+        ]),
         btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
       ]
     });
-    if (item.binding) {
+    if (item.binding && !isReadOnly) {
       screens.push(editorScreen({
         page: item.page, screenId: editorId(item.id), title: item.title,
         binding: item.binding, parentId: item.id
@@ -557,7 +580,13 @@ const RETIRED = new Set([
   // Replaced by confirm screens; enter-config, sensor-save and config-exit are no
   // longer guarded actions at all under the new model.
   "countdown-enter-config", "countdown-reset-session", "countdown-reset-all",
-  "countdown-factory-reset", "countdown-sensor-save", "countdown-config-exit"
+  "countdown-factory-reset", "countdown-sensor-save", "countdown-config-exit",
+  // The seven text-setting editors, retired with on-device text entry itself (§6.3). Listed
+  // explicitly because `kept` retains anything the generator no longer emits — without this they
+  // would survive as orphans: editor screens with a commit flow, bound to config.editor.pending,
+  // that no longer have a parent descending into them and no engine behind them.
+  "net-wifi-ssid-edit", "net-wifi-psk-edit", "net-mqtt-host-edit", "net-mqtt-user-edit",
+  "net-mqtt-password-edit", "net-mqtt-base-topic-edit", "net-mqtt-prefix-edit"
 ]);
 
 const kept = dataset.screens.filter((s) => !generatedIds.has(s.id) && !RETIRED.has(s.id));

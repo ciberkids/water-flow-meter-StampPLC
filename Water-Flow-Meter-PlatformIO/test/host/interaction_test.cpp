@@ -685,6 +685,7 @@ void editorDatasetInvariantTests() {
   std::size_t settingListPages = 0;
   bool pendingMatchesCommit = true;
   bool everyListPageHasItsEditor = true;
+  std::size_t textRows = 0;
 
   for (std::size_t i = 0; i < ui_exporter::kGeneratedScreenCount; ++i) {
     const auto& screen = ui_exporter::kGeneratedScreens[i];
@@ -711,9 +712,29 @@ void editorDatasetInvariantTests() {
     }
     if (!carriesSetting) continue;
     ++settingListPages;
+
+    // A row showing a TEXT setting must NOT descend to an editor — there is no on-device text
+    // entry (§6.3). Everything else must, or the setting is unreachable at the panel.
+    bool carriesTextSetting = false;
+    for (std::size_t e = 0; e < screen.elementCount; ++e) {
+      const auto* found = ui::findSetting(screen.elements[e].bindingId);
+      if (found && found->kind == ui::SettingKind::Text) {
+        carriesTextSetting = true;
+        break;
+      }
+    }
     const auto* descend = flowWithAction(screen, "ui.action.nav.descend");
     const auto* target = descend ? screenById(descend->targetScreenId) : nullptr;
-    if (!target || !declaresBinding(*target, "config.editor.pending")) {
+    const bool hasEditorBelow = target && declaresBinding(*target, "config.editor.pending");
+    if (carriesTextSetting) {
+      ++textRows;
+      if (hasEditorBelow) {
+        everyListPageHasItsEditor = false;
+        std::printf("    %s is a text row but descends to an editor\n", screen.id);
+      }
+      continue;
+    }
+    if (!hasEditorBelow) {
       everyListPageHasItsEditor = false;
       std::printf("    %s has no editor screen below it\n", screen.id);
     }
@@ -723,15 +744,23 @@ void editorDatasetInvariantTests() {
   // — the completeness rule — and a literal 10 only restated how many settings there happened to
   // be, so adding the fourteen network settings broke a test that was not actually wrong about
   // anything. Counting from settingCount() states the rule the export gate enforces.
-  std::printf("      %zu editors / %zu list pages / %zu catalogue settings\n",
+  // Derived from the catalogue, and now split by kind: the completeness rule covers every setting
+  // an operator can CHANGE at the panel, which excludes text (§6.3). Text still gets a row, so the
+  // row count covers everything.
+  std::size_t editableSettings = 0;
+  for (std::size_t i = 0; i < ui::settingCount(); ++i) {
+    const auto* setting = ui::settingAt(i);
+    if (setting && setting->kind != ui::SettingKind::Text) ++editableSettings;
+  }
+  std::printf("      %zu editors / %zu rows (%zu text) / %zu settings, %zu editable\n",
               static_cast<std::size_t>(editors), static_cast<std::size_t>(settingListPages),
-              ui::settingCount());
-  check(static_cast<std::size_t>(editors) == ui::settingCount(),
-        "every catalogue setting has exactly one editor screen (the completeness rule)");
+              static_cast<std::size_t>(textRows), ui::settingCount(), editableSettings);
+  check(static_cast<std::size_t>(editors) == editableSettings,
+        "every NON-TEXT setting has exactly one editor screen (the completeness rule)");
   check(pendingMatchesCommit,
         "a screen shows a pending value if and only if it has a commit flow");
   check(static_cast<std::size_t>(settingListPages) == ui::settingCount(),
-        "and exactly one list page displays each setting without being its editor");
+        "and every setting has a row, text included, so all of them are at least readable");
   check(everyListPageHasItsEditor,
         "every setting list page's ENTER-short descends onto a real editor (§5.7)");
 }
@@ -1473,38 +1502,74 @@ void ledI2cTrafficTests() {
 }
 
 /**
- * N2b — the text editor driven through the real actions, not through TextEditor directly.
+ * Text settings are DISPLAY-ONLY at the panel (§6.3).
  *
- * text_editor_test.cpp already covers the engine's 97-position wheel exhaustively. What is
- * untested until here is the WIRING: that a text setting opens the text editor rather than the
- * numeric one, that ENTER-short does not ascend while the operator is still typing, that a commit
- * reaches NetSettings, and that the two bindings an editor screen carries render text rather than
- * the "0" a numeric read would produce.
- *
- * Driven through the action registry rather than through buttons because the dataset has no
- * text-editor screens yet (N7a) — so there is no screen to press ENTER on. The registry is the
- * same entry point InteractionHandler uses, so the handlers under test are the real ones.
+ * There is no on-device text entry: a three-button character wheel is not a usable way to type a
+ * 63-character WPA2 passphrase, so text arrives via the web portal, RS485 or the SD credential
+ * file. What has to hold here is that the display never pretends otherwise — no editor opens, no
+ * screen offers one, and the value still renders (masked, when it is a secret) so an operator can
+ * see which network and which broker the device is configured for.
  */
-void textEditorWiringTests() {
-  std::printf("\n[N2b — text editing through the real action handlers]\n");
+void textIsDisplayOnlyTests() {
+  std::printf("\n[text settings are display-only — no on-device entry]\n");
   Device dev;
   dev.boot();
 
   const auto* ssid = ui::findSetting("config.wifi.ssid");
   const auto* psk = ui::findSetting("config.wifi.psk");
-  check(ssid != nullptr && psk != nullptr, "the catalogue has the WiFi text settings");
+  check(ssid != nullptr && psk != nullptr, "the catalogue still declares the WiFi text settings");
   if (!ssid || !psk) return;
-  check(ssid->kind == ui::SettingKind::Text, "config.wifi.ssid is a Text setting");
-  check(psk->writeOnly, "config.wifi.psk is marked write-only, so its editor masks");
 
-  auto dispatch = [&](const char* actionId) {
-    ui::UiActionContext ctx{dev.controller, dev.modbus, dev.leds, dev.prefs};
-    ctx.nowMs = dev.now;
-    ctx.settings = &dev.settings;
-    return ui::defaultActionRegistry().dispatch(actionId, ctx, ui_exporter::Flow{});
-  };
+  // ── No text setting has an editor screen ──────────────────────────────────────
+  //
+  // The invariant that replaced "every setting has an editor". Checked over the whole generated
+  // table, so a dataset that grew one back fails here rather than shipping a screen whose UP/DOWN
+  // do nothing.
+  std::size_t textSettings = 0, textWithEditor = 0, textRows = 0;
+  for (std::size_t i = 0; i < ui::settingCount(); ++i) {
+    const auto* setting = ui::settingAt(i);
+    if (!setting || setting->kind != ui::SettingKind::Text) continue;
+    ++textSettings;
+    check(setting->maxLength > 0, "a text setting declares a capacity");
+    check(!setting->perSensor, "and is not per-sensor, which readSettingText cannot express");
 
-  // resolveText takes the element, not a bare id — the same call the renderer makes.
+    for (std::size_t sc = 0; sc < ui_exporter::kGeneratedScreenCount; ++sc) {
+      const auto& screen = ui_exporter::kGeneratedScreens[sc];
+      bool showsThis = false, isEditor = false;
+      for (std::size_t e = 0; e < screen.elementCount; ++e) {
+        const char* b = screen.elements[e].bindingId;
+        if (!b) continue;
+        if (std::strcmp(b, setting->bindingId) == 0) showsThis = true;
+        if (std::strcmp(b, "config.editor.pending") == 0) isEditor = true;
+      }
+      if (!showsThis) continue;
+      if (isEditor) {
+        ++textWithEditor;
+        std::printf("      %s has an EDITOR screen (%s) — text is not editable at the panel\n",
+                    setting->bindingId, screen.id);
+      } else {
+        ++textRows;
+      }
+    }
+  }
+  std::printf("      %zu text settings, %zu display rows, %zu editors\n",
+              textSettings, textRows, textWithEditor);
+  check(textSettings == 7, "seven text settings (§6.1)");
+  check(textWithEditor == 0, "NONE of them has an editor screen");
+  check(textRows >= textSettings, "but each is displayed somewhere, so it can be read off the panel");
+
+  // ── Descending onto a text row must not open an editor ────────────────────────
+  //
+  // Belt and braces: even if a pack shipped a screen that looks like a text editor, the descend
+  // handler refuses to open one. A pack is customer-supplied, so the firmware cannot assume the
+  // dataset is well-formed.
+  dev.controller.beginEdit(ssid, 0, 0);
+  check(dev.controller.editor().active,
+        "beginEdit on a text setting still sets state (it is the numeric path, unaware of kind)");
+  dev.controller.endEdit();
+  check(!dev.controller.editor().active, "endEdit clears it");
+
+  // ── The value renders, and secrets mask ───────────────────────────────────────
   auto resolveBinding = [&](const char* bindingId, char* out, std::size_t size) {
     ui_exporter::Element el{};
     el.id = "probe";
@@ -1513,162 +1578,39 @@ void textEditorWiringTests() {
     return dev.bindings.resolveText(dev.controller.context(), el, out, size);
   };
 
-  // ── Every Text setting must be scrubbable ─────────────────────────────────────
-  //
-  // The structural check. handleValueIncrement passes setting->step to adjustEdit, so a Text
-  // setting with step 0 opens on END and never moves — UP and DOWN do nothing at all. This asserts
-  // the property for the whole catalogue rather than for the one setting a behavioural test
-  // happens to drive.
-  std::size_t textSettings = 0;
-  bool everyTextStepUsable = true;
-  for (std::size_t i = 0; i < ui::settingCount(); ++i) {
-    const auto* s = ui::settingAt(i);
-    if (!s || s->kind != ui::SettingKind::Text) continue;
-    ++textSettings;
-    if (s->step == 0) {
-      everyTextStepUsable = false;
-      std::printf("      %s has step 0 — its editor cannot move off END\n", s->bindingId);
-    }
-    if (s->maxLength == 0) everyTextStepUsable = false;
-  }
-  std::printf("      %zu text settings inspected\n", textSettings);
-  check(textSettings == 7, "the catalogue declares seven text settings (§6.1)");
-  check(everyTextStepUsable, "every text setting has a non-zero step and a non-zero maxLength");
+  char line[80] = {};
+  resolveBinding("config.wifi.ssid", line, sizeof(line));
+  check(std::strcmp(line, "(not set)") == 0, "an unconfigured SSID says so rather than showing 0");
 
-  // ── Opening ──────────────────────────────────────────────────────────────────
-  dev.controller.beginTextEdit(ssid, 0, "");
-  check(dev.controller.editingText(), "beginTextEdit opens a TEXT edit");
-  check(dev.controller.editor().isText, "and the state says so, which is what the actions branch on");
-  // Documented behaviour: the wheel opens on END so re-entering a screen and leaving the value
-  // alone is one press (ui_text_editor.cpp). Asserted so the tests below rest on a stated fact.
-  check(dev.controller.editor().text.wheelIndex() == ui::TextCharset::kEndIndex,
-        "the wheel opens on END, so leaving a value untouched costs one press");
-
-  char rendered[80] = {};
-  resolveBinding("config.editor.pending", rendered, sizeof(rendered));
-  check(std::strstr(rendered, "[") != nullptr,
-        "config.editor.pending renders the wheel marker, not a formatted number");
-
-  // ── UP/DOWN move the wheel, and they must ACTUALLY move it ────────────────────
-  const std::size_t wheelAtOpen = dev.controller.editor().text.wheelIndex();
-  const int32_t pendingBefore = dev.controller.editor().pending;
-  dispatch("config.action.value.increment");
-  check(dev.controller.editor().pending == pendingBefore,
-        "UP leaves the numeric pending alone — a text edit has no number to step");
-  check(dev.controller.editor().text.wheelIndex() != wheelAtOpen,
-        "UP moved the wheel OFF its opening position (a step of 0 would fail here)");
-
-  // ── ENTER-short on a character types it and stays open ────────────────────────
-  // Land on a printable character deliberately: from END, one step forward reaches index 0, a space.
-  dev.controller.beginTextEdit(ssid, 0, "");
-  dispatch("config.action.value.increment");
-  const bool onPrintable =
-      ui::TextCharset::commandAt(dev.controller.editor().text.wheelIndex()) == ui::TextCommand::None;
-  check(onPrintable, "one step forward from END lands on a printable character");
-  dispatch("config.action.value.commit");
-  check(dev.controller.editingText(),
-        "ENTER-short on a character keeps the editor open — it types, it does not commit");
-  check(dev.controller.editor().text.length() == 1, "exactly one character was accepted");
-
-  // ── ENTER-short on END commits, and the value reaches storage ─────────────────
-  dev.controller.beginTextEdit(ssid, 0, "MyNetwork");
-  check(std::strcmp(dev.controller.editor().text.value(), "MyNetwork") == 0,
-        "beginTextEdit seeds from the stored value, so an existing SSID is edited not retyped");
-  check(dev.controller.editor().text.wheelIndex() == ui::TextCharset::kEndIndex,
-        "and it opens on END, so committing an unchanged value is a single press");
-  dispatch("config.action.value.commit");
-  check(!dev.controller.editor().active, "ENTER on END closes the editor");
-
-  char stored[80] = {};
-  dev.net.get(plc::NetField::WifiSsid, stored, sizeof(stored));
-  check(std::strcmp(stored, "MyNetwork") == 0,
-        "and the value reached NetSettings — committed, not merely staged");
-  check(dev.net.revision() > 0, "the revision bumped, so a polling master can see the change");
-
-  // ── The saved-value binding renders text, not a number ────────────────────────
-  char savedLine[80] = {};
-  resolveBinding("config.wifi.ssid", savedLine, sizeof(savedLine));
-  check(std::strcmp(savedLine, "MyNetwork") == 0,
-        "binding config.wifi.ssid renders the stored text (it read as \"0\" before this arm existed)");
-
-  resolveBinding("config.wifi.psk", savedLine, sizeof(savedLine));
-  check(std::strcmp(savedLine, "(not set)") == 0,
-        "an unset passphrase says so rather than rendering blank");
-
+  dev.net.stage(plc::NetField::WifiSsid, "PlantFloor");
   dev.net.stage(plc::NetField::WifiPsk, "hunter2");
   dev.net.apply();
-  resolveBinding("config.wifi.psk", savedLine, sizeof(savedLine));
-  check(std::strcmp(savedLine, "********") == 0,
-        "a set passphrase masks on the saved line, at a fixed width that hides its length");
 
-  // ── Discard leaves the stored value untouched ─────────────────────────────────
-  dev.controller.beginTextEdit(ssid, 0, "MyNetwork");
-  dispatch("config.action.value.increment");
-  dispatch("config.action.value.commit");   // types a character into the buffer
-  check(dev.controller.editor().text.length() == 10, "a character was typed onto the seeded value");
-  dispatch("config.action.value.discard");
-  check(!dev.controller.editor().active, "ENTER-long closes the editor");
+  resolveBinding("config.wifi.ssid", line, sizeof(line));
+  check(std::strcmp(line, "PlantFloor") == 0,
+        "a configured SSID renders as text (it read as \"0\" before the display arm existed)");
+  resolveBinding("config.wifi.psk", line, sizeof(line));
+  check(std::strcmp(line, "********") == 0,
+        "the passphrase masks at a fixed width, hiding its length as well as its value");
+
+  // ── The write path still exists, for the portal and RS485 to use ──────────────
+  check(ui::writeSettingText(*ssid, "OtherNet", dev.settings),
+        "writeSettingText still works — the portal and the SD loader are its callers");
+  char stored[80] = {};
   dev.net.get(plc::NetField::WifiSsid, stored, sizeof(stored));
-  check(std::strcmp(stored, "MyNetwork") == 0, "and discarding wrote nothing");
-
-  // ── No storage attached: refuse rather than pretend ───────────────────────────
-  ui::SettingsAccess orphan;
-  char out[8] = {};
-  check(!ui::readSettingText(*ssid, orphan, out, sizeof(out)),
-        "readSettingText refuses when no NetSettings is wired");
-  check(!ui::writeSettingText(*ssid, "x", orphan),
-        "and writeSettingText refuses too, instead of silently discarding the edit");
-
-  // ── No Text setting may be per-sensor ─────────────────────────────────────────
-  //
-  // readSettingText has no sensorIndex parameter, because nothing text-valued is scoped to a
-  // sensor. That is a real assumption in the signature, so it gets asserted rather than assumed:
-  // marking a text setting perSensor would make it read the wrong sensor's value with no
-  // compile error to notice.
-  bool noPerSensorText = true;
-  for (std::size_t i = 0; i < ui::settingCount(); ++i) {
-    const auto* s = ui::settingAt(i);
-    if (s && s->kind == ui::SettingKind::Text && s->perSensor) {
-      noPerSensorText = false;
-      std::printf("      %s is Text AND perSensor — readSettingText cannot express that\n",
-                  s->bindingId);
-    }
-  }
-  check(noPerSensorText,
-        "no Text setting is per-sensor, which is what lets readSettingText omit the index");
+  check(std::strcmp(stored, "OtherNet") == 0, "and it reaches the live settings");
 
   // ── The shared flags register composes with a master's staged bits ─────────────
-  //
-  // Register 564 packs HA discovery, QoS and TLS, so changing one bit is a read-modify-write. The
-  // read must come from STAGED: rebuilding from live would drop a bit a Modbus master had staged
-  // and not yet applied, silently reverting its change while appearing to preserve the others.
   const auto* tls = ui::findSetting("config.mqtt.tls");
-  const auto* haDisc = ui::findSetting("config.mqtt.haDiscovery");
-  check(tls != nullptr && haDisc != nullptr, "the catalogue has the two flag settings");
-  if (tls && haDisc) {
-    // Start from a known live state: HA discovery on (its default), TLS off.
+  if (tls) {
     check(dev.net.mqttHaDiscovery(), "HA discovery defaults on");
-    check(!dev.net.mqttTls(), "TLS defaults off");
-
-    // A master stages HA discovery OFF via the register, and does NOT apply.
     plc::NetRegisterMap::stageWrite(dev.net, plc::net_reg::kMqttFlags, 0);
-    check(dev.net.mqttHaDiscovery(),
-          "the master's write is staged only — live still reports discovery on");
-    check(!dev.net.stagedMqttHaDiscovery(), "but staged reports it off");
-
-    // Now the operator turns TLS ON at the display. This applies, so the master's staged bit
-    // is promoted with it (R5.5's single apply path) rather than being discarded.
+    check(dev.net.mqttHaDiscovery(), "a master's flags write is staged only");
     check(ui::writeSetting(*tls, 0, 1, dev.settings), "the display commits TLS on");
-    check(dev.net.mqttTls(), "TLS is now live");
+    check(dev.net.mqttTls(), "TLS is live");
     check(!dev.net.mqttHaDiscovery(),
-          "and the master's staged discovery-off survived — reading live would have re-enabled it");
+          "and the master's staged bit survived — reading live would have re-enabled it");
   }
-
-  // ── The masked flag comes from the descriptor, not from the call site ─────────
-  dev.controller.beginTextEdit(psk, 0, "");
-  check(dev.controller.editor().text.masked(),
-        "opening the PSK editor masks automatically, because writeOnly drives it");
-  dev.controller.endEdit();
 }
 
 }  // namespace
@@ -1698,7 +1640,7 @@ int main() {
   confirmAbortTests();
   factoryResetHoldTests();
   linkApplyProtocolTests();
-  textEditorWiringTests();
+  textIsDisplayOnlyTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

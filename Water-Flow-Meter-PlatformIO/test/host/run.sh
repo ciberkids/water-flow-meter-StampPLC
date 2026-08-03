@@ -31,10 +31,6 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/accel_test" \
 g++ "${CXXFLAGS[@]}" -o "$OUT/led_test" \
   test/host/led_test.cpp
 
-g++ "${CXXFLAGS[@]}" -o "$OUT/text_editor_test" \
-  test/host/text_editor_test.cpp \
-  src/ui/core/ui_text_editor.cpp
-
 # The loadable-menu format. Reads the pack the TS emitter produced from the real dataset and
 # compares it against the generated table, so the two implementations of one binary layout are
 # reconciled by execution rather than by review.
@@ -86,7 +82,6 @@ g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/interaction_test" \
   src/ui/core/ui_screen_router.cpp \
   src/ui/core/ui_settings_types.cpp \
   src/ui/core/ui_value_catalogue.cpp \
-  src/ui/core/ui_text_editor.cpp \
   src/ui/core/ui_actions.cpp \
   src/ui/core/ui_bindings.cpp \
   src/ui/core/ui_settings.cpp \
@@ -108,8 +103,6 @@ echo
 "$OUT/accel_test"
 echo
 "$OUT/led_test"
-echo
-"$OUT/text_editor_test"
 echo
 "$OUT/interaction_test"
 echo

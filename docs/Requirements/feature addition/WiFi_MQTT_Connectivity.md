@@ -325,18 +325,22 @@ passphrase and asserts the cost is high, so this table cannot quietly become opt
 | A realistic 14-character passphrase | **381 short presses**, measured by `test/host/text_editor_test.cpp` over `Tr0ub4dor&3-xK` |
 | Extrapolated to 16 characters | **~435 short presses**, or roughly 30–60 s of held-button scrubbing plus 16 commits |
 
-That is not a good experience, and this document is not going to pretend otherwise. It is
-still **required**, because the user asked for display configuration and because it is the
-only path that works with nothing but the device in your hand.
+That is not a good experience, and this document is not going to pretend otherwise. It was
+**required** for a while, on the reasoning that it is the only path needing nothing but the device
+in your hand. That reasoning was wrong twice over: the path is unusable at passphrase length, and it
+is not the only one — enabling the radio is a boolean, and the AP it raises leads to a form.
 
-> **R3.3.1** — The character-wheel editor is required and specified in §6.3.
+> **R3.3.1 — WITHDRAWN 2026-08-03.** The character-wheel editor was required, then built, then
+> removed by the owner: three buttons are not an input method for a passphrase. See §6.3. The row
+> for it is kept in the table below because the honest cost comparison is the reason it was dropped.
 >
-> **R3.3.2** — At least one bulk-entry path must also exist, so that nobody is *forced*
-> through R3.3.1. See **Q2** for which. The candidates, with honest costs:
+> **R3.3.2** — Text entry therefore happens **only** through the bulk paths. Since R3.3.1 is gone
+> this is no longer "so nobody is *forced* through the wheel" — it is the entire input story, and at
+> least one of these must work or the device cannot be provisioned at all. See **Q2**.
 
 | Route | UX | Cost | Security exposure | Fails how |
 | --- | --- | --- | --- | --- |
-| **Character wheel** (R3.3.1) | Poor but universal | Medium — new editor kind, new actions | PSK visible on screen while typing | Mis-typed; user retries |
+| ~~**Character wheel**~~ (R3.3.1, **withdrawn**) | Unusable at passphrase length | Medium — built, then deleted | PSK visible on screen while typing | Mis-typed; user retries |
 | **Modbus write** | Good, if you have a Modbus master | Low — the block already needs to exist | **Plaintext over unauthenticated RS485** | Wrong value; rollback applies |
 | **File on the SD card** | Good | **Low** — the card reader and parser already exist for menu packs | Plaintext on a removable card | File absent or malformed; report and stay disabled |
 | **SoftAP + captive portal** | Best for a non-technical user | High — HTTP server, HTML, and the AP competes with §2.1 | Open AP during provisioning | Timeout, revert to `Disabled` |
@@ -352,7 +356,7 @@ the earlier reasoning was wrong:
   portal needed a web stack we did not have. `WebServer` and `DNSServer` ship **bundled** with
   arduino-esp32 2.0.17 (verified), so the portal costs no dependency at all.
 - It weighed only the WiFi passphrase. MQTT adds five more text fields, and at the measured ~27
-  presses per character the card and the character wheel are both worse than a form by a wide
+  presses per character the card and the (now withdrawn) character wheel are both worse than a form by a wide
   margin.
 - The card path would have put credentials in clear text on removable media — a comparable
   exposure to R7.10's clear-text HTTP, but persistent rather than confined to a ten-minute window.
@@ -846,33 +850,59 @@ Concretely, in the units decision **D2** just made Arduino-free:
    the `int32_t` API would mean every caller has to know which kind it holds. The numeric
    API stays exactly as it is.
 4. `formatSetting` gains a text arm that masks when `writeOnly`.
-5. `adjustSetting` does **not** gain a text arm. Text is not adjusted by a delta; §6.3
-   replaces that model rather than extending it.
+5. `adjustSetting` does **not** gain a text arm. Text is not adjusted by a delta — and since §6.3
+   removed on-device text entry entirely, nothing replaces it either: `min`, `max` and `step` are
+   all zero for a text setting because none of the three means anything for a string.
 6. The generated manifest gains `maxLength` and `writeOnly`, and emits `type: "string"`.
    `tools/manifest_gen` and `shared/schemaDefinitions.ts` follow — and because the manifest
    is now generated (**D2**), the new gate `firmware-manifest-resolvable` will *force* a
    resolver case for every one of these before the export will pass. The gates built
    yesterday will police this feature without further work.
 
-### 6.3. The text editor
+### 6.3. There is no on-device text editor
 
-A new screen kind. It reuses the existing gesture contract's shape without violating it:
+**Decided 2026-08-03 by the owner, reversing R3.3.1.** A character-wheel editor was specified,
+built (a 97-position ring, 47 host checks) and wired into the UI before being removed. The
+judgement that killed it: *three buttons and a wheel is insane to handle and manage.* That is
+correct, and the arithmetic §3.3 already contained says so — a 63-character WPA2 passphrase averages
+around 24 presses per character, so a realistic passphrase is on the order of a thousand button
+presses, performed while standing at a wall-mounted panel, with the characters visible on screen.
 
-| Gesture | In a text editor |
-| --- | --- |
-| UP / DOWN short | Previous / next character in the charset at the cursor |
-| UP / DOWN held | Accelerating scrub through the charset, using the existing tiers |
-| ENTER short | Advance the cursor one position; at the `END` pseudo-character, **commit** |
-| ENTER long | **Discard** and ascend — same meaning as every other editor |
-| UP + DOWN short | Reserved by §3 for display-off. **Not** available as backspace. |
+> **R6.3.1** — Text settings are **never editable at the panel.** No editor screen, no new screen
+> kind, no new actions. The character wheel and its engine are deleted rather than left dormant:
+> dead code that advertises a capability is worse than absent code, because the next person reads it
+> as available.
+>
+> **R6.3.2** — Text settings **are displayed** at the panel, so an operator can read which network
+> and which broker the device is configured for without a laptop. This is the diagnostic half of
+> §7.1's information pages at zero input cost.
+>
+> **R6.3.3** — A `writeOnly` text setting renders as a **fixed run of asterisks** — not one
+> asterisk per character. The length of a passphrase is information too, and a wall-mounted display
+> has no access control. A never-set field renders `(not set)`, which is distinguishable from a
+> field that failed to read.
 
-Backspace is the `DEL` pseudo-character in the charset, not a gesture — the gesture space is
-full, and overloading `UP + DOWN` would break a contract that works from every screen at
-every depth.
+**Where text actually comes from.** All three were already specified; removing the wheel does not
+create a gap, it removes a bad fourth option:
 
-> **R6.3.1** — A `writeOnly` text setting shows `*` for every committed character and the
-> character under the cursor in clear. Typing a passphrase blind on a 3-button device is not
-> reasonable; showing the whole thing on a wall-mounted display is not either.
+| Surface | Requirement | Reaches the device how |
+| --- | --- | --- |
+| Configuration web portal | §7.6 | Join the provisioning AP, fill in a form |
+| RS485 register block | §5.2, R5.5 | A Modbus master writes the fields and applies |
+| SD credential file | Q2 | Drop a file on the card the menu-pack reader already mounts |
+
+**This makes the portal load-bearing rather than a convenience** (§7.6, slice N8a). It is now the
+only way to provision a device that has no Modbus master attached, so it moves up in priority and
+its failure modes matter more. The bootstrap has no chicken-and-egg: `config.wifi.enabled` is a
+**boolean**, so it is settable at the panel; enabling it with no credentials raises the AP; the AP's
+name and password are readable on the AP info page and over RS485 (R5.3).
+
+**Consequence for the completeness rule.** `Loadable_UI_Menu_Packs` §3.0.1 requires every
+`category: "setting"` value to have a reachable editor, and `assertCoversEverySetting` enforces it —
+that rule is what forced the wheel into existence. It now **exempts `type: "string"`**, and the
+exemption is safe for the same reason guarded editors were rejected under R7.3: it is decided by
+**kind**, which is statically knowable, not by a runtime condition. The gate still proves that every
+setting an operator can change at the panel has an editor there.
 
 ---
 
@@ -958,7 +988,7 @@ portal: the AP's SSID, its password (§7.4), and the portal address. Nothing her
 
 **WIFI ▸ WiFi info** — shown when configured. The SSID, the connection state (§3.1's ASCII
 vocabulary), the DHCP-assigned IP, and the RSSI. Read-only: changing the network is done through
-the portal or the text editors, not from a status page.
+the portal, RS485 or the SD file — never from a status page, and never at the panel (§6.3).
 
 > **R7.12** — "Configured" means an SSID is **stored**, not that association ever succeeded (Q13).
 > So this page appears the moment credentials exist, showing `CONN`, `RETRY` or `FAIL` and
@@ -982,7 +1012,7 @@ and the password as `********` when one is set or `(not set)` when not. Never th
 Specified by the project owner on 2026-08-03: MQTT is configured through a web page too, for the
 same reason WiFi is. That is the right call and it generalises further than it first appears —
 MQTT's fields are **worse** to type than a passphrase. A broker host is `homeassistant.local` or
-`192.168.1.50`, a base topic is `watermeter/plant-3/inlet`, and §3.3 measures the character wheel
+`192.168.1.50`, a base topic is `watermeter/plant-3/inlet`, and §3.3 measured the character wheel
 at roughly 27 presses per character. Five such fields on three buttons is not a user interface.
 
 > **R7.14 — The site also serves a read-only status view** (Q15, decided 2026-08-03): live sensor
@@ -1101,6 +1131,18 @@ right default — it makes an unprovisioned device self-service. But an open acc
 on an industrial device that may sit on a wall unattended is an exposure worth closing, and it can
 be closed almost for free:
 
+> **R7.5a — THE AP IS NAMED `water_flow_meter_<n>`** (owner, 2026-08-03), where `<n>` is a
+> per-device number derived from the MAC.
+>
+> Derived rather than freshly random **per boot**, and that distinction is load-bearing: R5.3 has a
+> remote operator read `NET_AP_SSID` over RS485 and read it out to somebody standing on site. If the
+> name changed on every boot, the value they read could be stale by the time it is spoken, and two
+> devices on one wall could swap identities between power cycles. A MAC-derived suffix looks exactly
+> as arbitrary to a human, stays put, and needs no storage.
+>
+> The name is deliberately recognisable rather than opaque: someone scanning for networks on a plant
+> floor should be able to tell which access point is the meter they were sent to configure.
+>
 > **R7.5** — The provisioning AP is **WPA2-protected with a per-device password**, derived from
 > the MAC and displayed on the AP info page. An operator standing at the device reads it off the
 > screen; someone who is not standing there cannot. This costs one line of `softAP()` argument and
@@ -1224,7 +1266,7 @@ Nothing here is satisfied by "it compiles".
 | A5 | Credentials set on the display and over Modbus produce identical stored state | Partly — the staging logic is host-testable |
 | A6 | A text setting round-trips through the register block, including exact-length and empty cases | **Yes** — host test |
 | A7 | Reading a write-only register returns zeros and does not except | **Yes** — host test |
-| A8 | The text editor reaches every character in the charset, and `DEL`/`END` behave | **Yes** — host test |
+| A8 | **No text setting is editable at the panel**: none has an editor screen, each still renders (masked when secret), and the descend handler refuses to open one (§6.3) | **Yes** — host test |
 | A9 | The default menu satisfies the completeness rule with the enlarged catalogue | **Yes** — export gate |
 | A10 | Every new catalogue value resolves in `UiBindingResolver` | **Yes** — `firmware-manifest-resolvable` |
 | A11 | Discovery payloads are not truncated by the client's buffer | **Yes** — host test on the serialiser |
@@ -1272,15 +1314,15 @@ resolved before the expensive work.
 | **N1a** | `SettingKind::Text`, accessor pair, `maxLength`, `writeOnly`, manifest and schema changes | A6, A7 | ✅ |
 | **N1b** | `NetSettings` — nine text fields, staged/apply, revision, secret masking | A6, A7 | ✅ 50 checks |
 | **N1c** | Declare the 14 settings in the catalogue | A6, A7 | ✅ manifest regenerated |
-| **N2a** | Text-editor engine: charset, cursor, masking, 97-position wheel | A8 | ✅ 47 checks |
-| **N2b** | Wire the editor into the UI — no new screen kind or actions were needed | A8 | ✅ 28 checks |
+| ~~**N2a**~~ | Text-editor engine — **built then deleted** (§6.3). Its 47 checks went with it. | A8 | ⊘ withdrawn |
+| **N2b** | Text settings are **display-only** at the panel; the wiring was removed with the engine | A8 | ✅ 16 checks |
 | **N3** | Network register block 500–732, staged apply, revision, error reporting | A5, A6, A7 | ✅ 50 checks |
 | **N4** | WiFi state machine, backoff, NVS persistence, status bindings | A13 | ▶ next — also unblocks the §7.1 info pages |
 | **N5** | MQTT client (`esp-mqtt`, §4.1.1), topic layout, cadence, LWT, queue policy | A11 | unblocked 2026-08-03 |
 | **N6** | Home Assistant discovery payloads (§4.4.a/b) and republish rules | A2, A3, A4 | unblocked 2026-08-03 |
 | **N7a** | Default-pack editors for all 14 settings, regenerated `.uipack` | A9, A12 | ✅ 34 screens, 82 total |
 | **N7b** | Menu screens with flow guards, completeness migration (Q7) | A10 | |
-| **N8a** | Configuration web portal (§7.6) — `WebServer` + `DNSServer`, catalogue-generated form | A9 | |
+| **N8a** | Configuration web portal (§7.6) — `WebServer` + `DNSServer`, catalogue-generated form. **Load-bearing since §6.3**: with no wheel this is the only way to provision a device with no Modbus master. | A9 | ▶ raised in priority |
 | **N8b** | SD-card credential file (Q2) | — | |
 | **N9** | Hardware validation: polling rate, brownout under TX, HA end-to-end, **task-WDT survival with the portal active** | A1–A4, R9.3.1 | ⛔ needs hardware |
 

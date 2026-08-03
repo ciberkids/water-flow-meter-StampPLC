@@ -10,12 +10,15 @@ namespace ui {
 /**
  * Text is deliberately a separate kind rather than a numeric with a wide range.
  *
- * A numeric editor is built from increment/decrement/commit/discard with hold
- * acceleration; a string has no step, so the model does not extend — it is joined by a
- * second one (ui_text_editor.h). Keeping them distinct means the int32_t API below stays
- * exactly as it was, and no existing caller has to learn which kind it is holding.
+ * A numeric editor is built from increment/decrement/commit/discard with hold acceleration; a
+ * string has no step, so the model does not extend. It is NOT extended either: there is no
+ * on-device text editor. A three-button character wheel is not a usable way to type a 63-character
+ * WPA2 passphrase, so text is written from the configuration web portal (§7.6), the RS485 register
+ * block (§5.2) or the SD credential file, and only DISPLAYED at the panel — masked when writeOnly.
  *
- * See WiFi_MQTT_Connectivity.md §2.2 and §6.2.
+ * The kind still has to exist, and this is why: the display and the resolver must know not to reach
+ * for the int32_t accessors, and the export gate must know to exempt these from the completeness
+ * rule. See WiFi_MQTT_Connectivity.md §2.2, §6.2 and §6.3.
  */
 enum class SettingKind : uint8_t { Numeric, Enum, Boolean, Text };
 
