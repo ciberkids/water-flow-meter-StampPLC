@@ -162,7 +162,10 @@ bool writeSetting(const SettingDescriptor& setting,
                                  : (setting.target == SettingTarget::MqttTls)
                                        ? plc::NetRegisterMap::kFlagTls
                                        : plc::NetRegisterMap::kFlagQos1;
-        uint16_t flags = plc::NetRegisterMap::mqttFlags(net);
+        // STAGED, not live. Rebuilding from live would drop any of the other two flags a Modbus
+        // master had staged and not yet applied — so toggling TLS at the display would silently
+        // revert a master's pending HA-discovery change while looking like it preserved it.
+        uint16_t flags = plc::NetRegisterMap::mqttFlagsStaged(net);
         flags = value ? static_cast<uint16_t>(flags | bit)
                       : static_cast<uint16_t>(flags & ~bit);
         staged = plc::NetRegisterMap::stageWrite(net, plc::net_reg::kMqttFlags, flags);

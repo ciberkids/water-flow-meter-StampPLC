@@ -141,6 +141,19 @@ class NetSettings {
   /** Reads back a STAGED value, so an editor can show what is pending. */
   bool getStaged(NetField field, char* out, std::size_t size) const;
 
+  /**
+   * Staged reads for the three booleans that share register 564.
+   *
+   * These exist for one specific reason. Changing one bit of `kMqttFlags` requires a
+   * read-modify-write, and reading the LIVE word would rebuild it without any bits a Modbus master
+   * had staged but not yet applied — silently discarding the master's pending change while
+   * appearing to preserve the other two flags. Reading staged makes the RMW compose with whatever
+   * else is pending, which is the same choice `getStaged` makes for text.
+   */
+  bool stagedMqttHaDiscovery() const { return pending_.mqttHaDiscovery; }
+  uint8_t stagedMqttQos() const { return pending_.mqttQos; }
+  bool stagedMqttTls() const { return pending_.mqttTls; }
+
   /** True when anything staged differs from live — what the UI shows as an unsaved edit. */
   bool dirty() const;
 

@@ -20,6 +20,7 @@
 #include "led/led_controller.h"
 #include "modbus/modbus_manager.h"
 #include "modbus/register_map.h"
+#include "net/net_register_map.h"
 #include "modbus/sensor_types.h"
 #include "ui/core/ui_bindings.h"
 #include "ui/core/ui_controller.h"
@@ -1617,6 +1618,51 @@ void textEditorWiringTests() {
         "readSettingText refuses when no NetSettings is wired");
   check(!ui::writeSettingText(*ssid, "x", orphan),
         "and writeSettingText refuses too, instead of silently discarding the edit");
+
+  // ── No Text setting may be per-sensor ─────────────────────────────────────────
+  //
+  // readSettingText has no sensorIndex parameter, because nothing text-valued is scoped to a
+  // sensor. That is a real assumption in the signature, so it gets asserted rather than assumed:
+  // marking a text setting perSensor would make it read the wrong sensor's value with no
+  // compile error to notice.
+  bool noPerSensorText = true;
+  for (std::size_t i = 0; i < ui::settingCount(); ++i) {
+    const auto* s = ui::settingAt(i);
+    if (s && s->kind == ui::SettingKind::Text && s->perSensor) {
+      noPerSensorText = false;
+      std::printf("      %s is Text AND perSensor — readSettingText cannot express that\n",
+                  s->bindingId);
+    }
+  }
+  check(noPerSensorText,
+        "no Text setting is per-sensor, which is what lets readSettingText omit the index");
+
+  // ── The shared flags register composes with a master's staged bits ─────────────
+  //
+  // Register 564 packs HA discovery, QoS and TLS, so changing one bit is a read-modify-write. The
+  // read must come from STAGED: rebuilding from live would drop a bit a Modbus master had staged
+  // and not yet applied, silently reverting its change while appearing to preserve the others.
+  const auto* tls = ui::findSetting("config.mqtt.tls");
+  const auto* haDisc = ui::findSetting("config.mqtt.haDiscovery");
+  check(tls != nullptr && haDisc != nullptr, "the catalogue has the two flag settings");
+  if (tls && haDisc) {
+    // Start from a known live state: HA discovery on (its default), TLS off.
+    check(dev.net.mqttHaDiscovery(), "HA discovery defaults on");
+    check(!dev.net.mqttTls(), "TLS defaults off");
+
+    // A master stages HA discovery OFF via the register, and does NOT apply.
+    plc::NetRegisterMap::stageWrite(dev.net, plc::net_reg::kMqttFlags, 0);
+    check(dev.net.mqttHaDiscovery(),
+          "the master's write is staged only — live still reports discovery on");
+    check(!dev.net.stagedMqttHaDiscovery(), "but staged reports it off");
+
+    // Now the operator turns TLS ON at the display. This applies, so the master's staged bit
+    // is promoted with it (R5.5's single apply path) rather than being discarded.
+    check(ui::writeSetting(*tls, 0, 1, dev.settings), "the display commits TLS on");
+    check(dev.net.mqttTls(), "TLS is now live");
+    check(!dev.net.mqttHaDiscovery(),
+          "and the master's staged discovery-off survived — reading live would have re-enabled it");
+  }
 
   // ── The masked flag comes from the descriptor, not from the call site ─────────
   dev.controller.beginTextEdit(psk, 0, "");

@@ -207,7 +207,7 @@
       "type": "string",
       "min": 0,
       "max": 0,
-      "step": 0,
+      "step": 1,
       "register": 510,
       "maxLength": 32,
       "description": "WiFi network name"
@@ -218,7 +218,7 @@
       "type": "string",
       "min": 0,
       "max": 0,
-      "step": 0,
+      "step": 1,
       "register": 526,
       "maxLength": 63,
       "writeOnly": true,
@@ -241,7 +241,7 @@
       "type": "string",
       "min": 0,
       "max": 0,
-      "step": 0,
+      "step": 1,
       "register": 570,
       "maxLength": 64,
       "description": "MQTT broker hostname or IP"
@@ -262,7 +262,7 @@
       "type": "string",
       "min": 0,
       "max": 0,
-      "step": 0,
+      "step": 1,
       "register": 602,
       "maxLength": 32,
       "description": "MQTT username"
@@ -273,7 +273,7 @@
       "type": "string",
       "min": 0,
       "max": 0,
-      "step": 0,
+      "step": 1,
       "register": 618,
       "maxLength": 32,
       "writeOnly": true,
@@ -285,7 +285,7 @@
       "type": "string",
       "min": 0,
       "max": 0,
-      "step": 0,
+      "step": 1,
       "register": 634,
       "maxLength": 48,
       "description": "MQTT topic prefix for this device"
@@ -296,7 +296,7 @@
       "type": "string",
       "min": 0,
       "max": 0,
-      "step": 0,
+      "step": 1,
       "register": 658,
       "maxLength": 32,
       "description": "Home Assistant discovery prefix (default homeassistant)"

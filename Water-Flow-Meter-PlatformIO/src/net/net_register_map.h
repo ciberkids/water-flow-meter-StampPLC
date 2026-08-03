@@ -153,9 +153,23 @@ class NetRegisterMap {
    * shared-register bug this method exists to make unlikely.
    */
   static uint16_t mqttFlags(const NetSettings& settings) {
-    return static_cast<uint16_t>((settings.mqttHaDiscovery() ? 0x01u : 0u) |
-                                 (settings.mqttQos() != 0 ? 0x02u : 0u) |
-                                 (settings.mqttTls() ? 0x04u : 0u));
+    return static_cast<uint16_t>((settings.mqttHaDiscovery() ? kFlagHaDiscovery : 0u) |
+                                 (settings.mqttQos() != 0 ? kFlagQos1 : 0u) |
+                                 (settings.mqttTls() ? kFlagTls : 0u));
+  }
+
+  /**
+   * The same word assembled from the STAGED settings — the correct read half of the RMW.
+   *
+   * `mqttFlags` above serves `publish()`, which must report what is in force. A caller about to
+   * modify one bit needs the other bits as they will be after the next apply, not as they are now:
+   * rebuilding from live would drop any flag a Modbus master had staged and not yet committed,
+   * which is the shared-register bug one level up from the one `mqttFlags` prevents.
+   */
+  static uint16_t mqttFlagsStaged(const NetSettings& settings) {
+    return static_cast<uint16_t>((settings.stagedMqttHaDiscovery() ? kFlagHaDiscovery : 0u) |
+                                 (settings.stagedMqttQos() != 0 ? kFlagQos1 : 0u) |
+                                 (settings.stagedMqttTls() ? kFlagTls : 0u));
   }
 
   /** Bit masks within `kMqttFlags`, so no caller writes the literals. */
