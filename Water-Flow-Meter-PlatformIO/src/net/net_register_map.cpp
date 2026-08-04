@@ -110,6 +110,26 @@ NetApplyError NetRegisterMap::applyWrite(NetSettings& settings, uint16_t value) 
     // half-staged configuration — the same reasoning as REG_LINK_APPLY.
     return NetApplyError::BadMagic;
   }
+  // Checked HERE rather than inside NetSettings::apply(), because apply() returns bool and this is a
+  // THIRD outcome. Folding it in made an invalid topic indistinguishable from "nothing was staged",
+  // and ui_settings.cpp deliberately treats NothingStaged as success — so a rejected topic reported
+  // "saved" at the display while nothing applied. NetApplyError already had InvalidValue; the enum
+  // could tell the truth all along.
+  //
+  // stageByte() cannot validate: the register path writes two characters at a time, so a topic is
+  // transiently invalid while it is being written and refusing mid-write would make §5's documented
+  // block-write sequence impossible. apply() is the first moment a WHOLE topic exists.
+  if (!settings.stagedBaseTopicCommittable()) {
+    // Drop just the offending field instead of refusing everything. Refusing the whole apply latched
+    // the fault: with text uneditable at the panel (§6.3), one bad Modbus write blocked configuration
+    // from every surface until a reboot. Reverting the field leaves the device usable and the bad
+    // value discarded, and the caller still learns it was rejected.
+    // Skip that one field; keep its staged bytes. Reverting it instead would discard a master's
+    // partially written topic whenever another surface applied mid-write, and refusing the whole
+    // apply would latch the fault. See NetSettings::applyExcept.
+    settings.applyExcept(NetField::MqttBaseTopic);
+    return NetApplyError::InvalidValue;
+  }
   return settings.apply() ? NetApplyError::None : NetApplyError::NothingStaged;
 }
 

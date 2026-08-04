@@ -234,6 +234,37 @@ class NetSettings {
   void revert();
 
   /**
+   * Discards ONE staged field, restoring it from live.
+   *
+   * Exists so the register layer can reject an invalid base topic without refusing the whole apply.
+   * The alternative shipped briefly and was a wedge: validation inside apply() meant a single bad
+   * byte written over RS485 made every subsequent apply fail — from the display and the portal too —
+   * with no way to clear it, because revert() has no call site anywhere in src/. Dropping the one
+   * offending field keeps the other surfaces working and leaves nothing latched.
+   */
+  void revertField(NetField field);
+
+  /**
+   * Promotes everything staged EXCEPT `field`, whose staged bytes are left untouched.
+   *
+   * The resolution of a three-way problem the register path creates. An invalid base topic must not
+   * become live, but the two obvious responses are both wrong:
+   *
+   *   - refuse the whole apply -> LATCHES. One bad byte over RS485 blocked configuration from every
+   *     surface, permanently, because revert() has no call site and §6.3 makes text uneditable at
+   *     the panel.
+   *   - revert the field -> DESTRUCTIVE. A block write is many registers; an apply from another
+   *     surface arriving mid-write would throw away the master's partial field and force it to start
+   *     the topic again.
+   *
+   * Skipping just that field does neither. The other fields land, the master's bytes survive in
+   * pending so finishing the write still works, and the caller is told InvalidValue. `dirty()`
+   * deliberately stays true while the staged topic remains invalid — there IS still an uncommitted
+   * change, and saying otherwise would be a lie a polling master could act on.
+   */
+  bool applyExcept(NetField field);
+
+  /**
    * Restores the portal login to `admin`/`admin` (R8.2a).
    *
    * Writes LIVE and PENDING together and bumps the revision, because this is a command rather than

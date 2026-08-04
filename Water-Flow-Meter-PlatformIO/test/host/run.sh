@@ -89,6 +89,17 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/wifi_manager_test" \
   src/net/wifi_manager.cpp \
   src/net/net_settings.cpp
 
+# 3B — the MQTT reconnect ladder. Not gated when it landed, which is the same defect as last round:
+# 44 checks sat inert on disk while the suite reported green.
+g++ "${CXXFLAGS[@]}" -o "$OUT/mqtt_reconnect_test" \
+  test/host/mqtt_reconnect_test.cpp \
+  src/net/mqtt_reconnect.cpp
+
+# The esp_http_server task-placement policy: priority 5 / tskNO_AFFINITY by default would outrank the
+# priority-2 sampler on whichever core it landed on.
+g++ "${CXXFLAGS[@]}" -o "$OUT/httpd_task_policy_test" \
+  test/host/httpd_task_policy_test.cpp
+
 # N5 — the MQTT publish policy: cadence, the drop order, topic construction.
 g++ "${CXXFLAGS[@]}" -o "$OUT/mqtt_publisher_test" \
   test/host/mqtt_publisher_test.cpp \
@@ -161,6 +172,10 @@ echo
 "$OUT/wifi_manager_test"
 echo
 "$OUT/mqtt_publisher_test"
+echo
+"$OUT/mqtt_reconnect_test"
+echo
+"$OUT/httpd_task_policy_test"
 echo
 "$OUT/ha_discovery_test"
 echo

@@ -377,7 +377,11 @@ void baseTopicRegisterTests() {
            "the intermediate state really is the invalid one, so the check above means something");
   check(!s.stagedBaseTopicCommittable(),
         "an apply landing HERE is refused rather than committing half a topic");
-  check(!s.apply() && liveOf(s, NetField::MqttBaseTopic).empty(), "and it is refused");
+  // apply() itself no longer validates — that gate was the wedge. The refusal now lives in
+  // applyWrite(), which is the only caller that can express the third outcome (InvalidValue).
+  check(NetRegisterMap::applyWrite(s, plc::net_reg::kApplyMagic) == NetApplyError::InvalidValue &&
+            liveOf(s, NetField::MqttBaseTopic).empty(),
+        "and applyWrite refuses it, reporting InvalidValue rather than promoting half a topic");
   check(NetRegisterMap::stageWrite(s, static_cast<uint16_t>(base + 2),
                                    NetRegisterMap::packChars('p', 'l')) &&
             NetRegisterMap::stageWrite(s, static_cast<uint16_t>(base + 3),
@@ -428,18 +432,35 @@ void baseTopicRegisterTests() {
   const NetApplyError result = NetRegisterMap::applyWrite(viaBus, plc::net_reg::kApplyMagic);
   check(liveOf(viaBus, NetField::MqttBaseTopic).empty(),
         "a trailing-slash topic written over RS485 does not become live");
-  check(liveOf(viaBus, NetField::WifiSsid).empty() && viaBus.revision() == 0,
-        "and NOTHING else in the block does either — a partial apply is the silent failure this "
-        "validator exists to remove");
-  check(viaBus.dirty(), "pending is kept, so correcting the topic alone is enough to re-apply");
-  // The error code reported to the master is WRONG today, and net_register_map.cpp is not this
-  // slice's to edit: apply() returns false, and applyWrite() reads that as NothingStaged. Pinned as
-  // it actually behaves so the wiring fix — return the already-defined, currently-unused
-  // NetApplyError::InvalidValue — flips a named check rather than passing silently.
-  check(result == NetApplyError::NothingStaged,
-        "TODO(net_register_map): the master is told NothingStaged; this must become InvalidValue");
+  // ── The contract changed, deliberately, after review ────────────────────────────
+  //
+  // This block originally asserted that NOTHING in the apply landed — atomic refusal. That shipped
+  // and was a wedge: validation lived inside NetSettings::apply(), so one bad byte over RS485 made
+  // EVERY subsequent apply fail, from the display and the portal too, with no way to clear it.
+  // revert() has no call site anywhere in src/, and §6.3 makes text uneditable at the panel, so the
+  // operator had no route back short of a reboot.
+  //
+  // The rule now matches what stage() already did for whole-value writes: refuse the OFFENDING FIELD,
+  // leave the others alone. stageByte() cannot refuse mid-write — a topic is transiently invalid while
+  // its registers arrive — so applyWrite() does it at the first moment a whole topic exists.
+  //
+  // This is not the silent partial apply the original comment feared, because the caller is TOLD:
+  // InvalidValue reaches a master through NET_LAST_ERROR, and ui_settings.cpp fails the edit on it.
+  // The portal never reaches here at all — it validates in pass 1, so R7.11 still holds.
+  check(liveOf(viaBus, NetField::WifiSsid) == "PlantFloor",
+        "but the rest of the block DOES apply — one bad field must not latch a wedge that blocks "
+        "every other surface");
+  check(viaBus.dirty(),
+        "and its staged bytes SURVIVE — reverting them would discard a master's partial block write "
+        "whenever another surface applied mid-write");
+  check(result == NetApplyError::InvalidValue,
+        "and the master is told InvalidValue — the enum could tell the truth all along, whereas "
+        "folding this into apply()'s bool reported NothingStaged, which ui_settings.cpp treats as "
+        "SUCCESS");
 
-  // Correcting the one offending byte is enough: '/' sits at index 13, the low byte of register 6.
+  // Because the bytes survive, correcting the ONE offending register is enough — the property the
+  // atomic-refusal design had and the revert design would have lost. '/' sits at index 13, the low
+  // byte of register 6.
   NetRegisterMap::stageWrite(viaBus, static_cast<uint16_t>(base + 6),
                              NetRegisterMap::packChars('1', '\0'));
   check(NetRegisterMap::applyWrite(viaBus, plc::net_reg::kApplyMagic) == NetApplyError::None,

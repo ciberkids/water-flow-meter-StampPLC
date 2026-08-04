@@ -174,25 +174,35 @@ bool NetSettings::apply() {
     // whether its write took effect or whether it wrote the values that were already live.
     return false;
   }
-  // The backstop for stageByte(), which cannot validate anything. That path writes ONE BYTE at a
-  // time, so a topic is transiently invalid while it is being written: an in-order block write of
-  // "wfm/plant3" leaves the field reading "wfm/" the moment register 635 lands, and refusing there
-  // would make the documented §5 write sequence impossible. apply() is the only moment at which a
-  // WHOLE topic exists, so it is the only place the rule can be enforced for that surface.
-  //
-  // Refuses the ENTIRE apply rather than promoting the other fields and dropping this one. A partial
-  // apply is precisely the silent failure this validator exists to remove: the operator would watch
-  // the SSID take effect and reasonably conclude the topic had too. Pending is left intact, so
-  // correcting the topic and re-applying costs nothing else.
-  if (!stagedBaseTopicCommittable()) {
-    return false;
-  }
   live_ = pending_;
   ++revision_;
   return true;
 }
 
 void NetSettings::revert() { pending_ = live_; }
+
+bool NetSettings::applyExcept(NetField field) {
+  const std::size_t skip = indexOf(field);
+  if (skip >= kFieldCount) {
+    return apply();
+  }
+  char keep[kMaxValueBytes + 1] = {};
+  std::memcpy(keep, pending_.text[skip], sizeof(keep));
+  // Make the excluded field a no-op for this promotion by matching live, apply, then put the
+  // caller's bytes back so an in-progress block write is not lost.
+  std::memcpy(pending_.text[skip], live_.text[skip], sizeof(keep));
+  const bool promoted = apply();
+  std::memcpy(pending_.text[skip], keep, sizeof(keep));
+  return promoted;
+}
+
+void NetSettings::revertField(NetField field) {
+  const std::size_t i = indexOf(field);
+  if (i >= kFieldCount) {
+    return;
+  }
+  std::memcpy(pending_.text[i], live_.text[i], kMaxValueBytes + 1);
+}
 
 void NetSettings::resetPortalCredentials() {
   const std::size_t user = indexOf(NetField::PortalUser);
