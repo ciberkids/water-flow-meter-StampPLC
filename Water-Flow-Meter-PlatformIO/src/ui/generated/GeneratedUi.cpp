@@ -1625,7 +1625,7 @@ static constexpr ui_exporter::Element kNetMqttHaDiscoveryElements[] = {
 
 
 static constexpr ui_exporter::Flow kNetMqttHaDiscoveryFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-tls", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-next", "Next entry", "net-mqtt-qos", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "net-mqtt-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-enter", "Edit value", "net-mqtt-ha-discovery-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
@@ -1657,53 +1657,6 @@ static constexpr ui_exporter::Flow kNetMqttHaDiscoveryEditFlows[] = {
     { "f-discard", "Discard and go back", "net-mqtt-ha-discovery", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttTls_NetMqttTlsHdrTitle_Text = { "MQTT Broker > TLS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttTls_NetMqttTlsFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttTls_NetMqttTlsFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttTls_NetMqttTlsFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttTlsElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttTls_NetMqttTlsHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttTls_NetMqttTlsFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttTls_NetMqttTlsFieldValue_Text, nullptr, "config.mqtt.tls" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttTls_NetMqttTlsFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttTlsFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-qos", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-ha-discovery", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "net-mqtt-tls-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttTlsEdit_NetMqttTlsEditHdrTitle_Text = { "Edit > TLS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttTlsEdit_NetMqttTlsEditRangeHint_Text = { "Off / On", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttTlsEdit_NetMqttTlsEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttTlsEdit_NetMqttTlsEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttTlsEdit_NetMqttTlsEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttTlsEdit_NetMqttTlsEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttTlsEdit_NetMqttTlsEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttTlsEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttTlsEdit_NetMqttTlsEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttTlsEdit_NetMqttTlsEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttTlsEdit_NetMqttTlsEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttTlsEdit_NetMqttTlsEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttTlsEdit_NetMqttTlsEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttTlsEdit_NetMqttTlsEditSavedValue_Text, nullptr, "config.mqtt.tls" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttTlsEdit_NetMqttTlsEditFooterHint_Text, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttTlsEditFlows[] = {
-    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
-    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
-    { "f-commit", "Save and go back", "net-mqtt-tls", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
-    { "f-discard", "Discard and go back", "net-mqtt-tls", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
-};
-
 static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosHdrTitle_Text = { "MQTT Broker > QoS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -1720,7 +1673,7 @@ static constexpr ui_exporter::Element kNetMqttQosElements[] = {
 
 static constexpr ui_exporter::Flow kNetMqttQosFlows[] = {
     { "f-next", "Next entry", "net-mqtt-setup-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-tls", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-ha-discovery", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-enter", "Edit value", "net-mqtt-qos-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
@@ -1985,10 +1938,8 @@ const ui_exporter::Screen kGeneratedScreens[] = {
     { "net-mqtt-period-edit", "B7.V — Edit Publish period", kNetMqttPeriodEditElements, sizeof(kNetMqttPeriodEditElements) / sizeof(kNetMqttPeriodEditElements[0]), kNetMqttPeriodEditFlows, sizeof(kNetMqttPeriodEditFlows) / sizeof(kNetMqttPeriodEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-ha-discovery", "B8 — HA discovery", kNetMqttHaDiscoveryElements, sizeof(kNetMqttHaDiscoveryElements) / sizeof(kNetMqttHaDiscoveryElements[0]), kNetMqttHaDiscoveryFlows, sizeof(kNetMqttHaDiscoveryFlows) / sizeof(kNetMqttHaDiscoveryFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-ha-discovery-edit", "B8.V — Edit HA discovery", kNetMqttHaDiscoveryEditElements, sizeof(kNetMqttHaDiscoveryEditElements) / sizeof(kNetMqttHaDiscoveryEditElements[0]), kNetMqttHaDiscoveryEditFlows, sizeof(kNetMqttHaDiscoveryEditFlows) / sizeof(kNetMqttHaDiscoveryEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-tls", "B9 — TLS", kNetMqttTlsElements, sizeof(kNetMqttTlsElements) / sizeof(kNetMqttTlsElements[0]), kNetMqttTlsFlows, sizeof(kNetMqttTlsFlows) / sizeof(kNetMqttTlsFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-tls-edit", "B9.V — Edit TLS", kNetMqttTlsEditElements, sizeof(kNetMqttTlsEditElements) / sizeof(kNetMqttTlsEditElements[0]), kNetMqttTlsEditFlows, sizeof(kNetMqttTlsEditFlows) / sizeof(kNetMqttTlsEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-qos", "B10 — QoS", kNetMqttQosElements, sizeof(kNetMqttQosElements) / sizeof(kNetMqttQosElements[0]), kNetMqttQosFlows, sizeof(kNetMqttQosFlows) / sizeof(kNetMqttQosFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-qos-edit", "B10.V — Edit QoS", kNetMqttQosEditElements, sizeof(kNetMqttQosEditElements) / sizeof(kNetMqttQosEditElements[0]), kNetMqttQosEditFlows, sizeof(kNetMqttQosEditFlows) / sizeof(kNetMqttQosEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-qos", "B9 — QoS", kNetMqttQosElements, sizeof(kNetMqttQosElements) / sizeof(kNetMqttQosElements[0]), kNetMqttQosFlows, sizeof(kNetMqttQosFlows) / sizeof(kNetMqttQosFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-qos-edit", "B9.V — Edit QoS", kNetMqttQosEditElements, sizeof(kNetMqttQosEditElements) / sizeof(kNetMqttQosEditElements[0]), kNetMqttQosEditFlows, sizeof(kNetMqttQosEditFlows) / sizeof(kNetMqttQosEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-setup-back", "B.BACK — Back", kNetMqttSetupBackElements, sizeof(kNetMqttSetupBackElements) / sizeof(kNetMqttSetupBackElements[0]), kNetMqttSetupBackFlows, sizeof(kNetMqttSetupBackFlows) / sizeof(kNetMqttSetupBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "info-p8-factory-reset", "P8 — Factory Reset", kInfoP8FactoryResetElements, sizeof(kInfoP8FactoryResetElements) / sizeof(kInfoP8FactoryResetElements[0]), kInfoP8FactoryResetFlows, sizeof(kInfoP8FactoryResetFlows) / sizeof(kInfoP8FactoryResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-reset-totals", "Reset totals?", kConfirmResetTotalsElements, sizeof(kConfirmResetTotalsElements) / sizeof(kConfirmResetTotalsElements[0]), kConfirmResetTotalsFlows, sizeof(kConfirmResetTotalsFlows) / sizeof(kConfirmResetTotalsFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
@@ -2021,7 +1972,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-03T20:09:08.339Z", 78, 538
+    "2026-08-04T07:36:30.010Z", 76, 526
 };
 
 }  // namespace ui_exporter

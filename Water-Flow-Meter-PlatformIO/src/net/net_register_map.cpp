@@ -84,7 +84,6 @@ bool NetRegisterMap::stageWrite(NetSettings& settings, uint16_t address, uint16_
       return true;
     case net_reg::kMqttFlags:
       settings.stageMqttHaDiscovery((value & NetRegisterMap::kFlagHaDiscovery) != 0);
-      settings.stageMqttTls((value & NetRegisterMap::kFlagTls) != 0);
       return settings.stageMqttQos((value & NetRegisterMap::kFlagQos1) != 0 ? 1 : 0);
     default:
       break;

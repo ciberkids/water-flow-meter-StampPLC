@@ -51,7 +51,6 @@ enum class SettingTarget : uint8_t {
   MqttDiscoveryPrefix,
   MqttPublishPeriod,
   MqttHaDiscovery,
-  MqttTls,
   MqttQos
 };
 

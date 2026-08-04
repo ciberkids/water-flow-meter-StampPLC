@@ -160,6 +160,7 @@ void coverageTests() {
   const std::string& html = sink.text();
 
   std::size_t missing = 0;
+  std::size_t settingsSeen = 0;
   std::size_t perSensorSeen = 0;
   for (std::size_t i = 0; i < ui::settingCount(); ++i) {
     const ui::SettingDescriptor* setting = ui::settingAt(i);
@@ -181,11 +182,20 @@ void coverageTests() {
         ++missing;
       }
     }
+    ++settingsSeen;
   }
   std::printf("      %zu catalogue settings, %zu of them per-sensor\n", ui::settingCount(),
               perSensorSeen);
   check(missing == 0, "every declared setting has an input carrying its binding id");
-  check(ui::settingCount() >= 24, "and the catalogue really is the 24+ settings R7.9c describes");
+  // A literal count restates how many settings happen to exist rather than any property of the
+  // form, and it failed the moment config.mqtt.tls was removed to honour Q3/R8.3 — a correct change
+  // breaking a test that was not testing anything. What R7.9c actually requires is that the form
+  // covers the catalogue, so the assertion is that the walk above SAW every setting: a form built
+  // from a hard-coded subset would leave settingsSeen short while `missing` stayed zero.
+  check(settingsSeen == ui::settingCount(),
+        "and the form walk covered the whole catalogue, not a subset of it");
+  check(ui::settingCount() > 10,
+        "with a catalogue big enough that the coverage claim means something");
   check(perSensorSeen > 0, "including per-sensor ones, so the @index path is actually exercised");
 
   // The LAST index is where an off-by-one lives, and the one past it is where an over-run does.

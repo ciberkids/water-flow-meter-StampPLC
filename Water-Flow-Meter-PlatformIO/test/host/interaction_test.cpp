@@ -1657,13 +1657,13 @@ void textIsDisplayOnlyTests() {
   check(std::strcmp(stored, "OtherNet") == 0, "and it reaches the live settings");
 
   // ── The shared flags register composes with a master's staged bits ─────────────
-  const auto* tls = ui::findSetting("config.mqtt.tls");
-  if (tls) {
+  const auto* qos = ui::findSetting("config.mqtt.qos");
+  if (qos) {
     check(dev.net.mqttHaDiscovery(), "HA discovery defaults on");
     plc::NetRegisterMap::stageWrite(dev.net, plc::net_reg::kMqttFlags, 0);
     check(dev.net.mqttHaDiscovery(), "a master's flags write is staged only");
-    check(ui::writeSetting(*tls, 0, 1, dev.settings), "the display commits TLS on");
-    check(dev.net.mqttTls(), "TLS is live");
+    check(ui::writeSetting(*qos, 0, 1, dev.settings), "the display commits QoS 1");
+    check(dev.net.mqttQos() == 1, "QoS 1 is live");
     check(!dev.net.mqttHaDiscovery(),
           "and the master's staged bit survived — reading live would have re-enabled it");
   }

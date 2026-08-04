@@ -181,7 +181,6 @@ Storage storageFor(ui::SettingTarget target) {
     case ui::SettingTarget::MqttPort:
     case ui::SettingTarget::MqttPublishPeriod:
     case ui::SettingTarget::MqttHaDiscovery:
-    case ui::SettingTarget::MqttTls:
     case ui::SettingTarget::MqttQos:
       return Storage{Storage::Kind::NetScalar, NetField::Count};
 
@@ -208,7 +207,6 @@ bool readNetScalar(const NetSettings& net, ui::SettingTarget target, int32_t& ou
     case ui::SettingTarget::MqttPort:          out = net.mqttPort(); return true;
     case ui::SettingTarget::MqttPublishPeriod: out = net.mqttPublishPeriodS(); return true;
     case ui::SettingTarget::MqttHaDiscovery:   out = net.mqttHaDiscovery() ? 1 : 0; return true;
-    case ui::SettingTarget::MqttTls:           out = net.mqttTls() ? 1 : 0; return true;
     case ui::SettingTarget::MqttQos:           out = net.mqttQos(); return true;
 
     case ui::SettingTarget::WifiSsid:
@@ -242,7 +240,6 @@ bool stageNetScalar(NetSettings& net, ui::SettingTarget target, int32_t value) {
     case ui::SettingTarget::MqttPublishPeriod:
       return net.stageMqttPublishPeriodS(static_cast<uint16_t>(value));
     case ui::SettingTarget::MqttHaDiscovery: return net.stageMqttHaDiscovery(value != 0);
-    case ui::SettingTarget::MqttTls:         return net.stageMqttTls(value != 0);
     case ui::SettingTarget::MqttQos:         return net.stageMqttQos(static_cast<uint8_t>(value));
 
     case ui::SettingTarget::WifiSsid:

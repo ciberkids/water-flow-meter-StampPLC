@@ -56,7 +56,9 @@ class EspMqttTransport : public MqttSink {
   static constexpr int kInBufferBytes = 1024;
 
   struct Options {
-    /** Full broker URI, e.g. `mqtt://192.168.1.10:1883` or `mqtts://...` when NetSettings::mqttTls
+    /** Full broker URI, e.g. `mqtt://192.168.1.10:1883`. Always plain `mqtt://` — TLS is out of
+     *  scope per Q3/R8.3, and the setting that used to select it has been removed rather than left
+     *  as a toggle implying protection that is not there. (NetSettings::mqttTls
      *  is on. Built by the caller because the scheme/host/port split lives in NetSettings. */
     const char* uri = nullptr;
     const char* username = nullptr;  /**< nullptr or empty for an anonymous broker. */

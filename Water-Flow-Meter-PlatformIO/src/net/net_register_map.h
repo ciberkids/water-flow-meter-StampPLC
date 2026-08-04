@@ -36,13 +36,16 @@ inline constexpr uint16_t kMqttEnabled       = 560;
 inline constexpr uint16_t kMqttState         = 561;  // read-only
 inline constexpr uint16_t kMqttPort          = 562;
 inline constexpr uint16_t kMqttPeriodS       = 563;
-// bit 0 HA discovery, bit 1 QoS, bit 2 TLS.
+// bit 0 HA discovery, bit 1 QoS. Bit 2 is RESERVED — it briefly carried a TLS toggle before
+// Q3/R8.3 was honoured (TLS is out of scope; a toggle that does nothing implies protection that is
+// not there). Left unused rather than reassigned, so a master written against the interim build
+// cannot silently mean something new.
 //
-// Three booleans in one register rather than three registers, because a master that wants to turn
-// the whole MQTT client on in one shot should not need three round trips. The cost is that a
-// read-modify-write is mandatory: writing this register sets ALL THREE flags, so a caller changing
-// one bit must preserve the others. `NetRegisterMap::mqttFlags()` exists so the UI has one place to
-// get the current word from rather than reconstructing the bit layout at each call site.
+// Booleans packed into one register rather than one register each, because a master that wants to
+// turn the whole MQTT client on in one shot should not need a round trip per flag. The cost is that
+// a read-modify-write is mandatory: writing this register sets EVERY flag, so a caller changing one
+// bit must preserve the rest. `NetRegisterMap::mqttFlags()` exists so the UI has one place to get
+// the current word from rather than reconstructing the bit layout at each call site.
 inline constexpr uint16_t kMqttFlags         = 564;
 inline constexpr uint16_t kMqttLastCmdResult = 565;  // read-only, R4.4.2d
 inline constexpr uint16_t kMqttHost          = 570;  // 32 registers, 64 bytes
@@ -165,8 +168,7 @@ class NetRegisterMap {
    */
   static uint16_t mqttFlags(const NetSettings& settings) {
     return static_cast<uint16_t>((settings.mqttHaDiscovery() ? kFlagHaDiscovery : 0u) |
-                                 (settings.mqttQos() != 0 ? kFlagQos1 : 0u) |
-                                 (settings.mqttTls() ? kFlagTls : 0u));
+                                 (settings.mqttQos() != 0 ? kFlagQos1 : 0u));
   }
 
   /**
@@ -179,14 +181,14 @@ class NetRegisterMap {
    */
   static uint16_t mqttFlagsStaged(const NetSettings& settings) {
     return static_cast<uint16_t>((settings.stagedMqttHaDiscovery() ? kFlagHaDiscovery : 0u) |
-                                 (settings.stagedMqttQos() != 0 ? kFlagQos1 : 0u) |
-                                 (settings.stagedMqttTls() ? kFlagTls : 0u));
+                                 (settings.stagedMqttQos() != 0 ? kFlagQos1 : 0u));
   }
 
   /** Bit masks within `kMqttFlags`, so no caller writes the literals. */
   static constexpr uint16_t kFlagHaDiscovery = 0x01u;
   static constexpr uint16_t kFlagQos1        = 0x02u;
-  static constexpr uint16_t kFlagTls         = 0x04u;
+  /** Reserved, formerly TLS. See the note on kMqttFlags — deliberately not reused. */
+  static constexpr uint16_t kFlagReservedBit2 = 0x04u;
 
   /** Two characters per register, high byte first. */
   static uint16_t packChars(char high, char low) {

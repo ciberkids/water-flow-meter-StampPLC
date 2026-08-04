@@ -135,10 +135,6 @@ bool NetSettings::stageMqttQos(uint8_t qos) {
   return true;
 }
 
-bool NetSettings::stageMqttTls(bool on) {
-  pending_.mqttTls = on;
-  return true;
-}
 
 bool NetSettings::dirty() const {
   if (std::memcmp(&live_, &pending_, sizeof(Block)) != 0) {

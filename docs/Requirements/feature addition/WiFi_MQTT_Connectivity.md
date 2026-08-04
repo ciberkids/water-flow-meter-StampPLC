@@ -839,7 +839,15 @@ not a consideration, and it buys full remote configurability.
 
 ### 6.1. New settings
 
-Fourteen, of which seven are text:
+**Thirteen**, of which seven are text.
+
+> **Corrected 2026-08-04.** This table listed fourteen, including `config.mqtt.tls` — which
+> **Q3/R8.3 had already ruled out**, in the same document, on the grounds that "a toggle that does
+> nothing implies protection that is not there". I implemented the table without noticing it
+> contradicted the decision, so the setting reached the catalogue, bit 2 of register 564, the menu
+> and the portal before the contradiction was caught in review. The decision wins; the setting is
+> removed. Bit 2 of 564 is left **reserved rather than reused**, so a master written against the
+> interim build cannot silently come to mean something else.
 
 | Binding | Kind | Range / length | Default |
 | --- | --- | --- | --- |
@@ -855,7 +863,6 @@ Fourteen, of which seven are text:
 | `config.mqtt.discoveryPrefix` | **Text** | 32 | *per §4.4* |
 | `config.mqtt.publishPeriod` | Numeric | 1–3600 s | 10 |
 | `config.mqtt.haDiscovery` | Boolean | — | on |
-| `config.mqtt.tls` | Boolean | — | off |
 | `config.mqtt.qos` | Enum | 0, 1 | 0 |
 
 ### 6.2. What must change to support text settings
@@ -1350,6 +1357,7 @@ Nothing here is satisfied by "it compiles".
 | A4 | Entities go *unavailable* within the keep-alive window of unplugging the device | **No** |
 | A5 | Credentials set over Modbus, from the portal and from the SD file produce identical stored state. (**Was** "on the display and over Modbus" — the display no longer sets credentials at all, §6.3, so that comparison no longer exists) | Partly — the staging logic is host-testable |
 | A6 | A text setting round-trips through the register block, including exact-length and empty cases | **Yes** — host test |
+| A6b | The catalogue contains no setting the requirement has ruled out — checked by the portal form's coverage walk, which compares against `settingCount()` rather than a literal | **Yes** — host test |
 | A7 | Reading a write-only register returns zeros and does not except | **Yes** — host test |
 | A8 | **No text setting is editable at the panel**: none has an editor screen, each still renders (masked when secret), and the descend handler refuses to open one (§6.3) | **Yes** — host test |
 | A9 | The default menu satisfies the completeness rule with the enlarged catalogue | **Yes** — export gate |

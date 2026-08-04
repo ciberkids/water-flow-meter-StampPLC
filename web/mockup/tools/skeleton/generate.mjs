@@ -370,8 +370,7 @@ const MQTT_SETUP = [
   { page: "B6", id: "net-mqtt-prefix", title: "HA prefix", binding: "config.mqtt.discoveryPrefix" },
   { page: "B7", id: "net-mqtt-period", title: "Publish period", binding: "config.mqtt.publishPeriod" },
   { page: "B8", id: "net-mqtt-ha-discovery", title: "HA discovery", binding: "config.mqtt.haDiscovery" },
-  { page: "B9", id: "net-mqtt-tls", title: "TLS", binding: "config.mqtt.tls" },
-  { page: "B10", id: "net-mqtt-qos", title: "QoS", binding: "config.mqtt.qos" }
+  { page: "B9", id: "net-mqtt-qos", title: "QoS", binding: "config.mqtt.qos" }
 ];
 const MQTT_SETUP_RING = [...MQTT_SETUP.map((b) => b.id), "net-mqtt-setup-back"];
 
@@ -605,7 +604,12 @@ const RETIRED = new Set([
   // would survive as orphans: editor screens with a commit flow, bound to config.editor.pending,
   // that no longer have a parent descending into them and no engine behind them.
   "net-wifi-ssid-edit", "net-wifi-psk-edit", "net-mqtt-host-edit", "net-mqtt-user-edit",
-  "net-mqtt-password-edit", "net-mqtt-base-topic-edit", "net-mqtt-prefix-edit"
+  "net-mqtt-password-edit", "net-mqtt-base-topic-edit", "net-mqtt-prefix-edit",
+  // config.mqtt.tls, removed to honour Q3/R8.3: TLS is out of scope for this version, and a toggle
+  // that does nothing implies protection that is not there. §6.1 had listed it, contradicting the
+  // decision; the decision wins. Retired explicitly because `kept` preserves anything the generator
+  // stops emitting, and these would otherwise survive bound to a catalogue id that no longer exists.
+  "net-mqtt-tls", "net-mqtt-tls-edit"
 ]);
 
 const kept = dataset.screens.filter((s) => !generatedIds.has(s.id) && !RETIRED.has(s.id));

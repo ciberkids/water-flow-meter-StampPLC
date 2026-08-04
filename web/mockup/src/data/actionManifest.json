@@ -329,17 +329,6 @@
       "description": "Publish Home Assistant discovery messages (bit 0 of 564)"
     },
     {
-      "id": "config.mqtt.tls",
-      "category": "setting",
-      "type": "boolean",
-      "min": 0,
-      "max": 1,
-      "step": 1,
-      "options": [{"label": "Off", "value": 0}, {"label": "On", "value": 1}],
-      "register": 564,
-      "description": "Connect with TLS (bit 2 of 564)"
-    },
-    {
       "id": "config.mqtt.qos",
       "category": "setting",
       "type": "number",

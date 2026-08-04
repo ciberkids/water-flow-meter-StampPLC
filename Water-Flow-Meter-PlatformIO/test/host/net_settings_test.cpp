@@ -253,7 +253,6 @@ void portalResetTests() {
   net.stage(plc::NetField::WifiSsid, "PlantFloor");
   net.stage(plc::NetField::MqttHost, "192.168.1.10");
   net.stageMqttPort(8883);
-  net.stageMqttTls(true);
   check(net.apply(), "a configured device applies");
   check(!net.portalPasswordIsDefault(), "and its portal password is no longer the shipped default");
   const uint16_t revisionBefore = net.revision();
@@ -274,7 +273,6 @@ void portalResetTests() {
   net.get(plc::NetField::MqttHost, buf, sizeof(buf));
   check(std::strcmp(buf, "192.168.1.10") == 0, "the broker is untouched");
   check(net.mqttPort() == 8883, "the port is untouched");
-  check(net.mqttTls(), "the TLS flag is untouched");
 
   // Live AND pending together — a recovery step must not need a follow-up apply.
   check(!net.dirty(), "nothing is left staged, so no apply is required to finish");

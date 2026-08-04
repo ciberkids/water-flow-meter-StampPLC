@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-03T20:09:08.339Z",
-  "screenCount": 78,
-  "elementCount": 538,
+  "generatedAt": "2026-08-04T07:36:30.010Z",
+  "screenCount": 76,
+  "elementCount": 526,
   "dataset": [
     {
       "id": "info-p0-global-status",
@@ -10694,7 +10694,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "net-mqtt-tls",
+          "targetScreenId": "net-mqtt-qos",
           "actionId": "ui.action.page.next"
         },
         {
@@ -10898,307 +10898,9 @@
       "submenus": []
     },
     {
-      "id": "net-mqtt-tls",
-      "name": "B9 — TLS",
-      "description": "MQTT Broker entry B9. ENTER edits; UP/DOWN move within the level.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "position": {
-            "x": 8,
-            "y": 2
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "MQTT Broker > TLS",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "field-label",
-          "position": {
-            "x": 8,
-            "y": 30
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Current",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "field-value",
-          "position": {
-            "x": 8,
-            "y": 50
-          },
-          "kind": {
-            "type": "value",
-            "payload": {
-              "text": "",
-              "emphasis": "strong",
-              "align": "left"
-            }
-          },
-          "binding": "config.mqtt.tls"
-        },
-        {
-          "id": "footer-hint",
-          "position": {
-            "x": 8,
-            "y": 124
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "UP/DN page  ENTER edit  hold ENTER exit",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "level-position",
-          "position": {
-            "x": 232,
-            "y": 14
-          },
-          "kind": {
-            "type": "scrollbar",
-            "payload": {
-              "width": 5,
-              "height": 104
-            }
-          },
-          "size": {
-            "width": 5,
-            "height": 104
-          }
-        }
-      ],
-      "events": [],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-qos",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-ha-discovery",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-tls-edit",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ],
-      "assets": [],
-      "animations": [],
-      "submenus": []
-    },
-    {
-      "id": "net-mqtt-tls-edit",
-      "name": "B9.V — Edit TLS",
-      "description": "Value editor for B9. ENTER commits and ascends; hold ENTER discards.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "position": {
-            "x": 8,
-            "y": 2
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Edit > TLS",
-              "emphasis": "normal",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "range-hint",
-          "position": {
-            "x": 8,
-            "y": 16
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Off / On",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "pending-label",
-          "position": {
-            "x": 8,
-            "y": 30
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "New value",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "pending-value",
-          "position": {
-            "x": 8,
-            "y": 50
-          },
-          "kind": {
-            "type": "value",
-            "payload": {
-              "text": "",
-              "emphasis": "strong",
-              "align": "left"
-            }
-          },
-          "binding": "config.editor.pending"
-        },
-        {
-          "id": "saved-label",
-          "position": {
-            "x": 8,
-            "y": 78
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "Saved",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        },
-        {
-          "id": "saved-value",
-          "position": {
-            "x": 8,
-            "y": 92
-          },
-          "kind": {
-            "type": "value",
-            "payload": {
-              "text": "",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          },
-          "binding": "config.mqtt.tls"
-        },
-        {
-          "id": "footer-hint",
-          "position": {
-            "x": 8,
-            "y": 124
-          },
-          "kind": {
-            "type": "text",
-            "payload": {
-              "text": "UP/DN adjust  ENTER save  hold ENTER discard",
-              "emphasis": "muted",
-              "align": "left"
-            }
-          }
-        }
-      ],
-      "events": [],
-      "flows": [
-        {
-          "id": "f-inc",
-          "label": "Increase",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.increment"
-        },
-        {
-          "id": "f-dec",
-          "label": "Decrease",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.decrement"
-        },
-        {
-          "id": "f-commit",
-          "label": "Save and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-tls",
-          "actionId": "config.action.value.commit"
-        },
-        {
-          "id": "f-discard",
-          "label": "Discard and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "net-mqtt-tls",
-          "actionId": "config.action.value.discard"
-        }
-      ],
-      "assets": [],
-      "animations": [],
-      "submenus": []
-    },
-    {
       "id": "net-mqtt-qos",
-      "name": "B10 — QoS",
-      "description": "MQTT Broker entry B10. ENTER edits; UP/DOWN move within the level.",
+      "name": "B9 — QoS",
+      "description": "MQTT Broker entry B9. ENTER edits; UP/DOWN move within the level.",
       "elements": [
         {
           "id": "hdr-title",
@@ -11301,7 +11003,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "net-mqtt-tls",
+          "targetScreenId": "net-mqtt-ha-discovery",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -11333,8 +11035,8 @@
     },
     {
       "id": "net-mqtt-qos-edit",
-      "name": "B10.V — Edit QoS",
-      "description": "Value editor for B10. ENTER commits and ascends; hold ENTER discards.",
+      "name": "B9.V — Edit QoS",
+      "description": "Value editor for B9. ENTER commits and ascends; hold ENTER discards.",
       "elements": [
         {
           "id": "hdr-title",

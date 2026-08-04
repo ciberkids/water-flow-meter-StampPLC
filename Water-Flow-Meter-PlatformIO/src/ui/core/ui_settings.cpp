@@ -32,7 +32,6 @@ bool isNetworkTarget(SettingTarget target) {
     case SettingTarget::MqttDiscoveryPrefix:
     case SettingTarget::MqttPublishPeriod:
     case SettingTarget::MqttHaDiscovery:
-    case SettingTarget::MqttTls:
     case SettingTarget::MqttQos:
       return true;
     case SettingTarget::LinkSlaveId:
@@ -97,8 +96,6 @@ int32_t readSetting(const SettingDescriptor& setting,
       // Defaults to 1 with no storage attached, matching NetSettings' own default: the discovery
       // toggle being ON is what makes the feature work out of the box.
       return !access.net || access.net->mqttHaDiscovery() ? 1 : 0;
-    case SettingTarget::MqttTls:
-      return access.net && access.net->mqttTls() ? 1 : 0;
     case SettingTarget::MqttQos:
       return access.net ? access.net->mqttQos() : 0;
 
@@ -149,22 +146,19 @@ bool writeSetting(const SettingDescriptor& setting,
     plc::NetSettings& net = *access.net;
     const uint16_t word = static_cast<uint16_t>(value & 0xFFFF);
 
-    // Registers 564's three flags share one word, so changing one is a READ-MODIFY-WRITE. Writing
-    // the bare value here would clear the other two — turn on HA discovery and TLS would silently
-    // switch off. NetRegisterMap::mqttFlags() supplies the current word.
+    // Register 564's flags share one word, so changing one is a READ-MODIFY-WRITE. Writing the bare
+    // value here would clear the other — turning on HA discovery would silently reset QoS.
+    // NetRegisterMap::mqttFlagsStaged() supplies the current word.
     bool staged = false;
     switch (setting.target) {
       case SettingTarget::MqttHaDiscovery:
-      case SettingTarget::MqttTls:
       case SettingTarget::MqttQos: {
         const uint16_t bit = (setting.target == SettingTarget::MqttHaDiscovery)
                                  ? plc::NetRegisterMap::kFlagHaDiscovery
-                                 : (setting.target == SettingTarget::MqttTls)
-                                       ? plc::NetRegisterMap::kFlagTls
-                                       : plc::NetRegisterMap::kFlagQos1;
-        // STAGED, not live. Rebuilding from live would drop any of the other two flags a Modbus
-        // master had staged and not yet applied — so toggling TLS at the display would silently
-        // revert a master's pending HA-discovery change while looking like it preserved it.
+                                 : plc::NetRegisterMap::kFlagQos1;
+        // STAGED, not live. Rebuilding from live would drop the other flag a Modbus master had
+        // staged and not yet applied — so changing QoS at the display would silently revert a
+        // master's pending HA-discovery change while looking like it preserved it.
         uint16_t flags = plc::NetRegisterMap::mqttFlagsStaged(net);
         flags = value ? static_cast<uint16_t>(flags | bit)
                       : static_cast<uint16_t>(flags & ~bit);
