@@ -106,6 +106,12 @@ void UiRenderer::update(uint32_t nowMs, const UiRenderContext& context) {
   }
 
   if (context.mode == UiMode::Idle) {
+    // Once. Blanking the panel is idempotent and nothing changes while the display is off, so
+    // repeating it only burns the sampler's I²C bus and the SPI bus. See idlePainted_.
+    if (idlePainted_) {
+      return;
+    }
+    idlePainted_ = true;
     M5StamPLC.setBacklight(false);
     auto& display = M5StamPLC.Display;
     display.startWrite();
@@ -145,6 +151,8 @@ void UiRenderer::update(uint32_t nowMs, const UiRenderContext& context) {
   lastRenderMs_ = nowMs;
   lastScreen_ = screen;
   lastCountdownActive_ = context.countdownActive;
+  // Waking re-arms the idle path, so the next descent into Idle paints its blank frame again.
+  idlePainted_ = false;
   M5StamPLC.setBacklight(true);
 
   if (!screen) {

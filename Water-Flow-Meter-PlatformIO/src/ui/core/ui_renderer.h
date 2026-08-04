@@ -107,6 +107,21 @@ class UiRenderer {
    * up to a second, which reads as "the countdown is still running".
    */
   bool lastCountdownActive_ = false;
+  /**
+   * The blank idle frame has already been painted, so stop repainting it.
+   *
+   * The idle branch in update() runs BEFORE the throttle — deliberately, because going dark must not
+   * wait for an interval boundary. But it had no completion flag, so it repainted on EVERY LogicTask
+   * pass, and that task yields with vTaskDelay(1). While the display was off the device was
+   * therefore issuing hundreds of setBacklight(false) writes per second on the AW9523's I²C bus —
+   * the bus the pulse sampler reads — plus a full 240x135 fillScreen each time.
+   *
+   * That is the same defect already fixed once for the status LED (a dirty check, after it was
+   * measured writing the sensor bus 1000x/s). Idle is the state the device spends most of its life
+   * in, so this was the most expensive instance of it and the least likely to be noticed: the panel
+   * is dark, so there is nothing to see.
+   */
+  bool idlePainted_ = false;
   const ui::UiScreenRouter* screenRouter_ = nullptr;
   const ui::UiBindingResolver* bindingResolver_ = nullptr;
   plc::SpiArbiter* spiArbiter_ = nullptr;

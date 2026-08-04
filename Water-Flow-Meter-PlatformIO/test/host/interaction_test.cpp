@@ -536,6 +536,45 @@ void repaintCadenceTests() {
   check(paintedAt > 0 && paintedAt <= 100,
         "a button press is acknowledged on screen within 100 ms of release (§7)");
 
+  // ── Idle must go dark ONCE, not a thousand times a second ────────────────────
+  //
+  // The idle branch runs before the throttle, which is correct — going dark must not wait for an
+  // interval boundary — but it had no completion flag. LogicTask yields with vTaskDelay(1) at
+  // CONFIG_FREERTOS_HZ=1000, so the device was issuing ~1000 setBacklight(false) writes per second
+  // on the AW9523's I²C bus (the one the pulse sampler reads) plus ~1000 full fillScreens, for as
+  // long as the display stayed off. Idle is where the device spends most of its life, and the panel
+  // is dark, so there was nothing to see.
+  //
+  // Same defect already fixed once for the status LED after it was measured writing the sensor bus
+  // 1000x/s. This is the check that stops the third instance.
+  Device idle;
+  idle.boot();
+  idle.controller.enterIdle(idle.now);
+  idle.tick(10);
+  check(idle.controller.mode() == UiMode::Idle, "the device is idle");
+  auto& idlePanel = m5stamplc_stub::board();
+  idle.resetFrames();
+  const uint32_t backlightBefore = idlePanel.setBacklightCalls;
+  // A full second of idle, sampled the way LogicTask actually runs it.
+  for (int i = 0; i < 100; ++i) idle.tick(10);
+  const uint32_t idleFrames = idlePanel.Display.fillScreens;
+  const uint32_t backlightWrites = idlePanel.setBacklightCalls - backlightBefore;
+  std::printf("      1 s of idle: %u fillScreen, %u setBacklight\n", idleFrames, backlightWrites);
+  check(idleFrames == 0,
+        "a second of idle paints NOTHING further — the blank frame was already drawn");
+  check(backlightWrites == 0,
+        "and writes the backlight expander zero times, keeping the sampler's I2C bus quiet");
+
+  // Waking must re-arm it, or a second sleep would leave the panel lit.
+  idle.tap(ButtonInputManager::Button::Down);
+  check(idle.controller.mode() != UiMode::Idle, "a tap wakes the device");
+  idle.controller.enterIdle(idle.now);
+  idle.resetFrames();
+  const uint32_t wakeBacklight = idlePanel.setBacklightCalls;
+  idle.tick(10);
+  check(idlePanel.Display.fillScreens >= 1, "going idle again DOES paint the blank frame");
+  check(idlePanel.setBacklightCalls > wakeBacklight, "and does turn the backlight off");
+
   // ── Per-frame WORK, which is the half a host cannot time ─────────────────────
   //
   // What this suite genuinely cannot check: whether the work in one repaint fits inside 100 ms on
