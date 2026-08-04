@@ -742,7 +742,8 @@ Strings are packed two characters per register, high byte first, `NUL`-padded, n
 | 618–633 | `NET_MQTT_PASSWORD` | text, 32 bytes, **write-only** |
 | 634–657 | `NET_MQTT_BASE_TOPIC` | text, 48 bytes |
 | 658–673 | `NET_MQTT_DISCOVERY_PREFIX` | text, 32 bytes |
-| 674 | `NET_PORTAL_ENABLED` | bool — the STA-side config page (R7.9) |
+| 674 | `NET_PORTAL_ENABLED` | bool — the STA-side config page ONLY (R7.9). Never touches the radio. |
+| 711 | `NET_AP_REQUEST` | bool — raise or drop the provisioning AP (R5.4a) |
 | 675 | `NET_PORTAL_REMAINING_S` | uint16, read-only — seconds left on the AP/portal timer |
 | 676–691 | `NET_AP_SSID` | text, 32 bytes, read-only (§5.2) |
 | 692–707 | `NET_AP_PASSWORD` | text, 32 bytes, read-only (§5.2) |
@@ -786,6 +787,27 @@ someone standing at a device you cannot see — which is precisely why the AP pa
 > **R5.4** — `NET_PORTAL_ENABLED` is writable over RS485, so the sequence "provision the network
 > remotely, then open the config page and browse to it" is available without ever touching the
 > device. Combined with `NET_PORTAL_REMAINING_S` a supervisory system can see the window closing.
+>
+> **R5.4a — THE AP WINDOW GETS ITS OWN REGISTER, `NET_AP_REQUEST` AT 711** (owner, decision 6B,
+> 2026-08-04).
+>
+> Two different intentions were sharing register 674, and the code had picked the wrong one. §5's
+> table defines 674 as the **STA-side config page** — the form you browse to once the device is
+> already on your network (R7.9). §5.2's remote-assisted flow needs something else entirely: "write
+> `NET_WIFI_ENABLED` = 1 with no credentials, the device raises its AP", so a remote operator can read
+> `NET_AP_SSID`/`NET_AP_PASSWORD` and read them out to somebody standing on site.
+>
+> `WifiManager::requestApPortal()` cited R5.4 and treated a write to 674 as "raise the AP". The
+> consequence, found in review: **a write to 674 dropped a working link** — a supervisory system
+> opening the config page on a happily-associated device would knock it off its network to raise an
+> access point nobody asked for.
+>
+> One register per intention. 674 toggles the config page and is inert with respect to the radio; 711
+> raises and drops the AP. 711 was chosen because it is free and sits beside `NET_PORTAL_RESET` at
+> 710 in the portal section — verified against the block map rather than assumed.
+>
+> Writing 0 to 711 drops the AP early, which is the manual counterpart to R7.6's ten-minute timeout:
+> a remote operator who realises they raised it by mistake should not have to wait the window out.
 
 > **R5.5a — ONE APPLY PATH, ACCEPTED WITH ITS CONSEQUENCE** (owner, 2026-08-03). R5.5's single
 > apply path means an apply promotes **every** pending field, not only the one the caller touched.
