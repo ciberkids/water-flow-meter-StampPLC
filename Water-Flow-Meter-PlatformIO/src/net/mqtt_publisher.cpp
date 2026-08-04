@@ -54,6 +54,31 @@ bool mqttClassIsDroppable(MqttClass cls) {
   return false;
 }
 
+uint8_t mqttClassQos(MqttClass cls, uint8_t configuredQos) {
+  switch (cls) {
+    // Owner decision 8A, and it is the SAME asymmetry R4.1.3 draws for the queue rather than a
+    // second unrelated rule. The queue refuses to evict these two because losing one is not
+    // self-correcting; the wire refuses to send them best-effort for exactly that reason. Having
+    // won the argument at the queue's door and then handed the message to a QoS-0 publish would
+    // leave R4.1.3 protecting a message from us and not from the network.
+    case MqttClass::Availability:
+    case MqttClass::Discovery:
+      // QoS 1 ALWAYS, regardless of the setting — `configuredQos` is deliberately not read on this
+      // path, in either direction. Making it a floor (`max(configuredQos, 1)`) instead would be a
+      // quieter version of the same defect: it would leave these two classes' QoS a function of a
+      // setting that speaks only for telemetry, so a future change to that setting's range would
+      // silently move discovery too.
+      return kMqttReliableQos;
+
+    // A reading lost in flight is superseded by the next one within one publishPeriod (R4.3.1), and
+    // by R4.3.2's heartbeat within 60 s at the outside — so best-effort really is correct here, and
+    // §6.1 lets the operator say so. This is the one class the setting speaks for.
+    case MqttClass::Telemetry:
+      return configuredQos;
+  }
+  return configuredQos;
+}
+
 bool mqttMacSuffix(const uint8_t mac[6], char* out, std::size_t size) {
   return writeSuffix(mac, out, size);
 }
@@ -260,7 +285,11 @@ bool MqttPublisher::enqueue(MqttClass cls, const char* topic, const char* payloa
   Message& slot = queue_[at];
   slot.cls = cls;
   slot.retain = retain;
-  slot.qos = qos_;
+  // Owner decision 8A: the class decides, not `qos_` and not the caller. This used to be a flat
+  // `slot.qos = qos_`, which published discovery at whatever the operator had chosen for readings —
+  // so §6.1's default of 0 meant a discovery message lost on a lossy link was an entity that never
+  // appeared, with nothing logged (§4.4.7).
+  slot.qos = qosFor(cls);
   std::snprintf(slot.topic, sizeof(slot.topic), "%s", topic);
   std::snprintf(slot.payload, sizeof(slot.payload), "%s", payload);
   ++count_;

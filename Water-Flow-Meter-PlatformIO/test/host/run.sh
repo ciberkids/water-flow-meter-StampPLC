@@ -77,6 +77,12 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/pack_loader_test" \
 # which is the exact shape of "a check that isn't checking" this project keeps rediscovering, so
 # they are wired the moment they exist rather than when the firmware wiring is finished.
 
+# The measurement core: rising-edge detection. Previously untested — it lived in firmware.cpp, which
+# is in no link set here, so the logic producing every litre this product reports was the only
+# subsystem without coverage. Header-only, so the test needs no companion .cpp.
+g++ "${CXXFLAGS[@]}" -o "$OUT/pulse_counter_test" \
+  test/host/pulse_counter_test.cpp
+
 # N4 — the WiFi state machine: backoff ladder, AP window, and the provisioning hand-off.
 g++ "${CXXFLAGS[@]}" -o "$OUT/wifi_manager_test" \
   test/host/wifi_manager_test.cpp \
@@ -149,6 +155,8 @@ echo
 "$OUT/pack_selector_test"
 echo
 "$OUT/net_settings_test"
+echo
+"$OUT/pulse_counter_test"
 echo
 "$OUT/wifi_manager_test"
 echo

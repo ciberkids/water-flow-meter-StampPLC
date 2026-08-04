@@ -74,9 +74,34 @@ bool NetSettings::portalPasswordIsDefault() const {
   return std::strcmp(live_.text[i], kDefaultPortalPassword) == 0;
 }
 
+bool NetSettings::stagedBaseTopicCommittable() const {
+  const std::size_t i = indexOf(NetField::MqttBaseTopic);
+  // The buffer is kMaxValueBytes + 1 and zero-initialised, and stageByte() never writes at or past
+  // the capacity, so the tail terminator is always present and reading this as a C string is safe
+  // however partially a master has written it.
+  return pending_.text[i][0] == '\0' || isValidBaseTopic(pending_.text[i]);
+}
+
 bool NetSettings::stage(NetField field, const char* value) {
   const std::size_t i = indexOf(field);
   if (i >= kFieldCount) {
+    return false;
+  }
+  // The base topic is the one field a whole-value write must not truncate, and the one it must not
+  // repair. Truncation is right for the others because the damage is visible: a shortened SSID
+  // fails to associate and the WiFi page says so. A shortened TOPIC is still a well-formed topic —
+  // the device would publish contentedly to "watermeter/plant-3/inl" while Home Assistant watches
+  // "watermeter/plant-3/inlet", with nothing logged at either end. Refusing is the only outcome the
+  // operator can see.
+  //
+  // Empty falls through to copyInto, which clears the field: "not configured" is a legitimate
+  // request, and it is where §4.2's MAC-derived default takes over.
+  //
+  // Both whole-value callers already act on this return — ui_settings.cpp's writeSettingText fails
+  // the edit, and portal_form.cpp reports PortalFieldError::Refused — so the refusal reaches the
+  // operator rather than vanishing.
+  if (field == NetField::MqttBaseTopic && value != nullptr && value[0] != '\0' &&
+      !isValidBaseTopic(value)) {
     return false;
   }
   // Truncates rather than rejecting: a master writing a full 16-register SSID block sends trailing
@@ -147,6 +172,19 @@ bool NetSettings::apply() {
   if (!dirty()) {
     // Distinguishable from a successful apply on purpose: a master polling the revision can tell
     // whether its write took effect or whether it wrote the values that were already live.
+    return false;
+  }
+  // The backstop for stageByte(), which cannot validate anything. That path writes ONE BYTE at a
+  // time, so a topic is transiently invalid while it is being written: an in-order block write of
+  // "wfm/plant3" leaves the field reading "wfm/" the moment register 635 lands, and refusing there
+  // would make the documented §5 write sequence impossible. apply() is the only moment at which a
+  // WHOLE topic exists, so it is the only place the rule can be enforced for that surface.
+  //
+  // Refuses the ENTIRE apply rather than promoting the other fields and dropping this one. A partial
+  // apply is precisely the silent failure this validator exists to remove: the operator would watch
+  // the SSID take effect and reasonably conclude the topic had too. Pending is left intact, so
+  // correcting the topic and re-applying costs nothing else.
+  if (!stagedBaseTopicCommittable()) {
     return false;
   }
   live_ = pending_;

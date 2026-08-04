@@ -34,6 +34,7 @@ static_assert(WIFI_TASK_CORE_ID == 1,
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
 #include "net/net_settings.h"
+#include "sensors/pulse_counter.h"
 #include "sensors/sensor_state_engine.h"
 #include "ui/core/ui_actions.h"
 #include "ui/core/ui_bindings.h"
@@ -342,12 +343,51 @@ namespace {
 //
 // PERFORMANCE WARNING: this lowers the achievable pollingRate_kHz roughly
 // 8-fold, and pollingRate_kHz is what the Nyquist check in
-// ModbusManager::meetsNyquistLimit() budgets against
-// (pollingRate_kHz * 1000 >= 2 * f_theoretical). Measure the real rate on
-// hardware before trusting the sensor configuration limits. Recovering the
-// single-transaction read needs a bulk register read on the PI4IOE5V6408
-// expander, which M5StamPLC keeps private.
-uint8_t readDigitalInputBitmap() {
+// ── Reading the eight digital inputs ─────────────────────────────────────────────────
+//
+// ModbusManager::meetsNyquistLimit() budgets against (pollingRate_kHz * 1000 >= 2 * f_theoretical),
+// so this function's cost sets the highest flow the device can measure. Measure the real rate on
+// hardware before trusting the sensor configuration limits.
+//
+// THE COST IS I²C TRANSACTIONS, NOT CPU. At 400 kHz (aw9523.h:36) one readRegister8 is about 40 bit
+// periods — roughly 100 µs on the wire, plus IDF driver overhead. The per-channel loop this replaced
+// issued EIGHT of them per sample, because AW9523_Class::digitalRead() reads a whole 8-bit port
+// register and then masks one bit (aw9523.cpp:120-122) — so it had already fetched the answer for up
+// to eight channels and threw seven away. Two reads cover all sixteen pins.
+//
+// The inputs are AW9523 pins {4,5,6,7,12,13,14,15} (M5StamPLC.cpp:113), which straddle both ports:
+// channels 0-3 are bits 4-7 of INPUT0, channels 4-7 are bits 4-7 of INPUT1. Both happen to sit in the
+// high nibble, which makes the unpacking symmetric.
+//
+// A previous version of this comment said the bulk read needed the PI4IOE5V6408 expander. That was
+// wrong: PI4IOE5V6408 drives the backlight and status LED, and the digital inputs are on the AW9523
+// at 0x59 (`_io_expander_b`, M5StamPLC.cpp:118). The bulk read is reachable through m5::In_I2C
+// directly, on the same bus and the same driver mutex, so no library change is needed.
+constexpr uint8_t kAw9523Address = 0x59;
+constexpr uint32_t kAw9523FreqHz = 400000;
+constexpr uint8_t kAw9523InputPort0 = 0x00;
+constexpr uint8_t kAw9523InputPort1 = 0x01;
+
+/**
+ * Whether the two-transaction path is trusted.
+ *
+ * Verified once at boot against the per-channel path (see verifyBulkInputRead). The pin map above is
+ * hard-coded from the library's private `_in_pin_list`, so a library update that renumbers it would
+ * silently transpose channels — and a transposed channel on a meter is wrong data attributed to the
+ * wrong sensor, which is worse than no data. If the two paths disagree the device keeps the slower
+ * path it can prove correct.
+ */
+bool bulkInputReadTrusted = false;
+
+/** Two I²C transactions for all eight channels. */
+uint8_t readDigitalInputBitmapBulk() {
+  const uint8_t port0 = m5::In_I2C.readRegister8(kAw9523Address, kAw9523InputPort0, kAw9523FreqHz);
+  const uint8_t port1 = m5::In_I2C.readRegister8(kAw9523Address, kAw9523InputPort1, kAw9523FreqHz);
+  return static_cast<uint8_t>(((port0 >> 4) & 0x0Fu) | (((port1 >> 4) & 0x0Fu) << 4));
+}
+
+/** Eight I²C transactions, via the library's public per-channel accessor. Kept as the reference. */
+uint8_t readDigitalInputBitmapPerChannel() {
   uint8_t bitmap = 0;
   for (uint8_t channel = 0; channel < kNumSensors; ++channel) {
     if (M5StamPLC.readPlcInput(channel)) {
@@ -355,6 +395,36 @@ uint8_t readDigitalInputBitmap() {
     }
   }
   return bitmap;
+}
+
+uint8_t readDigitalInputBitmap() {
+  return bulkInputReadTrusted ? readDigitalInputBitmapBulk() : readDigitalInputBitmapPerChannel();
+}
+
+/**
+ * Proves the bulk unpacking against the library before trusting it.
+ *
+ * Reads both ways several times and requires every pair to agree. Several rather than once because a
+ * single agreement is cheap to get by luck when every input happens to be low, which is the state an
+ * unwired bench device is in — so the check would pass for the wrong reason exactly when it is least
+ * informative. Disagreement is not treated as a fault to report: the slow path is correct, so the
+ * device simply keeps it and says so on the console.
+ */
+void verifyBulkInputRead() {
+  for (int attempt = 0; attempt < 4; ++attempt) {
+    const uint8_t viaLibrary = readDigitalInputBitmapPerChannel();
+    const uint8_t viaBulk = readDigitalInputBitmapBulk();
+    if (viaLibrary != viaBulk) {
+      Serial.printf(
+          "[poll] bulk input read disagrees with the library (lib=0x%02X bulk=0x%02X); keeping the "
+          "8-transaction path. Check M5StamPLC's _in_pin_list against firmware.cpp's pin map.\n",
+          viaLibrary, viaBulk);
+      bulkInputReadTrusted = false;
+      return;
+    }
+  }
+  bulkInputReadTrusted = true;
+  Serial.println("[poll] bulk input read verified: 2 I2C transactions per sample instead of 8");
 }
 
 }  // namespace
@@ -368,14 +438,20 @@ void pollingTaskCode(void * pvParameters) {
   unsigned long lastRateCalcTime = millis();
 
   for (;;) {
-    uint8_t currentPinStates = readDigitalInputBitmap();
-    for (std::size_t i = 0; i < kNumSensors; ++i) {
-      if (sensors[i].inUse) {
-        if ((currentPinStates & (1 << i)) && !(lastPinStates & (1 << i))) {
-          sensors[i].pulseCount++;
-        }
-      }
-    }
+    const uint8_t currentPinStates = readDigitalInputBitmap();
+
+    // The enabled mask is rebuilt from the connected-sensors bitmap rather than by testing
+    // sensors[i].inUse once per channel per sample. Cheap either way, but it keeps the per-sample
+    // cost independent of how many sensors are configured, so sample spacing does not change when
+    // the operator enables one.
+    const uint8_t enabledMask = plc::enabledMaskFromBitmap(connectedSensorsBitmap, kNumSensors);
+
+    // `lastPinStates` tracks the FULL bitmap, including disabled channels — see the phantom-edge
+    // note in pulse_counter.h. Masking it too would manufacture a pulse the first time a channel is
+    // enabled while its input happens to be high.
+    uint8_t rising = plc::risingEdges(lastPinStates, currentPinStates, enabledMask);
+    plc::forEachRisingChannel(rising, [](std::size_t channel) { sensors[channel].pulseCount++; });
+
     lastPinStates = currentPinStates;
     loopCounter++;
 
@@ -701,6 +777,10 @@ void setup() {
   uiRenderer.bindBindingResolver(&uiBindingResolver);
   uiRenderer.applyTheme(kUiAssets.palette);
   uiRenderer.begin();
+
+  // Before the polling task exists, so the verification has the bus to itself and cannot race the
+  // sampler it is about to hand the bus to.
+  verifyBulkInputRead();
 
   xTaskCreatePinnedToCore(pollingTaskCode, "PollingTask", 4096, NULL, 2, &PollingTask, 0);
   xTaskCreatePinnedToCore(logicTaskCode, "LogicTask", 10000, NULL, 1, &LogicTask, 1);

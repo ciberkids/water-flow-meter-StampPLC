@@ -102,10 +102,85 @@ class NetSettings {
   bool mqttHaDiscovery() const { return live_.mqttHaDiscovery; }
   uint8_t mqttQos() const { return live_.mqttQos; }
 
+  // ── The one base-topic rule ───────────────────────────────────────────────────
+  /**
+   * The ONE definition of a base topic this device may publish under (§4.2).
+   *
+   * It lives here because the field lives here, and it exists because two modules had a rule each
+   * and the rules disagreed. `HaDiscovery::configure` refused a leading '/', a trailing '/' and a
+   * space, but allowed every byte above 0x7e; `MqttPublisher::configure` silently STRIPPED trailing
+   * slashes, ignored a leading one, allowed 0x20, and refused the bytes discovery allowed. A topic
+   * one accepts and the other refuses produces ZERO Home Assistant entities while the MQTT state
+   * register still reads connected — nothing is logged at either end, and it presents to the
+   * operator as a broker fault. So this is the strict INTERSECTION of the two rules, and both
+   * modules must defer to it instead of keeping their own.
+   *
+   * Refused:
+   *  - null, and empty. Empty is not a topic. NetSettings treats an empty FIELD as "not
+   *    configured" and lets §4.2's `watermeter/<mac-suffix>` default apply, which is a different
+   *    statement and a different code path — see stagedBaseTopicCommittable().
+   *  - `+` and `#`: subscription wildcards, illegal in a topic a client PUBLISHES to
+   *    (MQTT 3.1.1 §4.7.1).
+   *  - a leading '/', a trailing '/', and any `//`. Each leaves an empty topic level — legal MQTT
+   *    that publishes without complaint and matches nothing the operator configured in HA. Refused
+   *    rather than normalised on purpose: one module normalising what the other refused is exactly
+   *    how the divergence above arose.
+   *  - anything outside 0x21-0x7e. §4.6 binds display-bound text to printable 7-bit ASCII and the
+   *    base topic is display-bound (screen `net-mqtt-base-topic`), so a byte that survived here
+   *    would be unreadable on the one surface that could tell the operator what went wrong. Space
+   *    goes with the other non-graphic bytes: MQTT permits it, nothing else in the toolchain does.
+   *  - longer than the field can hold. NOT truncated — see stage() for why this field is the
+   *    exception to that rule.
+   *
+   * A NUL cannot appear: the argument is a C string, and the register path's byte buffer is read as
+   * one, so a NUL simply ends the topic rather than sitting inside it.
+   *
+   * Defined inline so a consumer gains an `#include` rather than a link-time dependency on
+   * net_settings.cpp. A shared validator that costs a build-system change is a validator somebody
+   * reimplements locally, which is how this ended up with two of them.
+   */
+  static bool isValidBaseTopic(const char* topic) {
+    if (topic == nullptr || topic[0] == '\0') {
+      return false;
+    }
+    std::size_t length = 0;
+    while (topic[length] != '\0') {
+      const unsigned char c = static_cast<unsigned char>(topic[length]);
+      if (c < 0x21 || c > 0x7e) {
+        return false;  // control bytes, space, DEL, and everything non-ASCII
+      }
+      if (c == '+' || c == '#') {
+        return false;
+      }
+      if (c == '/' && length > 0 && topic[length - 1] == '/') {
+        return false;  // an empty level, which subscribes to nothing the operator wrote
+      }
+      ++length;
+      if (length > netFieldCapacity(NetField::MqttBaseTopic)) {
+        return false;  // bail here rather than scanning a caller's whole buffer
+      }
+    }
+    return topic[0] != '/' && topic[length - 1] != '/';
+  }
+
+  /**
+   * True when the STAGED base topic may be committed — deliberately NOT the same as valid.
+   *
+   * Empty is committable and is not valid. An empty field means "not configured", and §4.2's
+   * default is `watermeter/<mac-suffix>`, which NetSettings cannot spell because it has no MAC. Gate
+   * apply() on isValidBaseTopic() alone and a factory-fresh device could never apply anything at
+   * all — not its SSID, not its broker.
+   *
+   * Public so a UI can ask before committing rather than discovering it from a false return.
+   */
+  bool stagedBaseTopicCommittable() const;
+
   // ── Staging ───────────────────────────────────────────────────────────────────
   /**
    * Stages a text value. Truncates at the field's capacity rather than rejecting, so a master
    * writing a full register block does not fail on trailing padding.
+   *
+   * MqttBaseTopic is the one exception: it is validated and REFUSED. See the body.
    */
   bool stage(NetField field, const char* value);
 

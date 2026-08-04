@@ -45,6 +45,32 @@ const char* mqttClassName(MqttClass cls);
 bool mqttClassIsDroppable(MqttClass cls);
 
 /**
+ * The QoS discovery and availability are published at, whatever the operator chose (owner decision
+ * 8A, 2026-08-04). `config.mqtt.qos` is a 0/1 enum per §6.1 and defaults to 0.
+ */
+inline constexpr uint8_t kMqttReliableQos = 1;
+
+/**
+ * Owner decision 8A — the message CLASS fixes the QoS; no caller gets to guess.
+ *
+ * `configuredQos` (R4.3.1's neighbour in §6.1, `config.mqtt.qos`) applies to TELEMETRY only. A lost
+ * reading is superseded by the next one within one `publishPeriod`, so best-effort is the correct
+ * setting for it and the operator is entitled to choose it.
+ *
+ * Discovery and availability are QoS 1 unconditionally, because neither loss is self-correcting: a
+ * dropped discovery message is an entity that never appears in Home Assistant, and a dropped
+ * availability message leaves HA showing values from a device that is gone. Neither gets to inherit
+ * a best-effort setting the operator chose for readings — that is the same asymmetry
+ * `mqttClassIsDroppable` draws for the queue, applied to the wire.
+ *
+ * `configuredQos` is not consulted at all on the discovery/availability path — not even as a floor
+ * it could raise. A floor would read as harmless and still leave those two classes' QoS a function
+ * of a setting that speaks only for telemetry, so widening that setting's range later would move
+ * them without anyone deciding to.
+ */
+uint8_t mqttClassQos(MqttClass cls, uint8_t configuredQos);
+
+/**
  * Where published messages go.
  *
  * `publish` mirrors `esp_mqtt_client_publish`/`_enqueue`: **a non-negative return is success** and
@@ -177,10 +203,45 @@ class MqttPublisher {
    */
   static constexpr int kOutBufferBytes = static_cast<int>(kMqttOutBufferSize);
 
-  /** A payload this queue would accept but the client could never send is a silent loss by
-   *  construction (§4.4.7), so the two bounds are reconciled at compile time rather than by review. */
-  static_assert(kMaxPayloadBytes <= static_cast<std::size_t>(kOutBufferBytes),
-                "queue slots must fit inside out_buffer_size");
+  // ── What actually has to fit out_buffer_size: the PACKET, not the payload ────────────
+  //
+  // `out_buffer_size` sizes ONE buffer that esp-mqtt assembles the whole PUBLISH packet into, so
+  // bounding the payload alone — which this used to do — was not the real bound. Read out of
+  // esp-mqtt's own serialiser (esp-mqtt/lib/mqtt_msg.c, IDF 4.4 layout unchanged in 5.x):
+  //
+  //   `set_message_header_size` reserves MQTT_MAX_FIXED_HEADER_SIZE = 5 bytes up front, always,
+  //   whether or not the remaining-length varint needs all four;
+  //   `append_string` writes a 2-byte length prefix then the topic, and REFUSES at
+  //   `length + len + 2 > buffer_length`;
+  //   `append_message_id` adds 2 more bytes, but only when `qos > 0`;
+  //   then the payload is copied in behind all of that.
+  //
+  // Which is why owner decision 8A and this bound are one change rather than two. The largest
+  // message this device sends is a discovery payload, and 8A makes discovery QoS 1 unconditionally
+  // — so the 2-byte packet identifier is no longer optional on the worst-case path. Before 8A, a
+  // device left at §6.1's default `config.mqtt.qos = 0` never paid it.
+  //
+  // Deliberately two bytes pessimistic: these two are BUFFER sizes and `enqueue` refuses at
+  // `strlen >= cap`, so the longest strings that can actually reach the sink are one byte shorter
+  // each. The slack is left in so the expression reads as the packet layout above rather than as an
+  // arithmetic puzzle.
+  static constexpr std::size_t kPublishFixedHeaderBytes = 5;   // MQTT_MAX_FIXED_HEADER_SIZE
+  static constexpr std::size_t kPublishTopicLengthBytes = 2;   // the topic's length prefix
+  // Present only at QoS >= 1 — telemetry at §6.1's default of 0 pays none. It is part of the WORST
+  // case because the worst case is a discovery message, and 8A puts every one of those at QoS 1.
+  static constexpr std::size_t kPublishPacketIdBytes = 2;
+
+  /** 5 + 2 + 128 + 2 + 1152 = 1289 bytes, against a 2048-byte out_buffer_size. */
+  static constexpr std::size_t kWorstCasePublishBytes = kPublishFixedHeaderBytes +
+                                                        kPublishTopicLengthBytes + kMaxTopicBytes +
+                                                        kPublishPacketIdBytes + kMaxPayloadBytes;
+
+  /** A message this queue would accept but the client could never send is a silent loss by
+   *  construction (§4.4.7), so the bounds are reconciled at compile time rather than by review.
+   *  A long topic is the half that used to escape: 128 + 1152 clears the old payload-only assert
+   *  and can still overrun a buffer sized for the payload alone. */
+  static_assert(kWorstCasePublishBytes <= static_cast<std::size_t>(kOutBufferBytes),
+                "a queue slot's topic AND payload must fit one out_buffer_size PUBLISH packet");
   static_assert(kMaxTelemetryPayloadBytes <= kMaxPayloadBytes,
                 "a telemetry payload must fit a queue slot");
 
@@ -211,7 +272,15 @@ class MqttPublisher {
   bool configured() const { return baseTopic_[0] != '\0'; }
   const char* baseTopic() const { return baseTopic_; }
   uint16_t publishPeriodS() const { return publishPeriodS_; }
+
+  /** `config.mqtt.qos` as configured. This is TELEMETRY's QoS, not the publisher's — use
+   *  `qosFor()` to ask what a given class of message actually goes out at (owner decision 8A). */
   uint8_t qos() const { return qos_; }
+
+  /** Owner decision 8A: what `cls` is published at. Exposed so the MQTT info page and the logs can
+   *  report the real per-class figure rather than repeating `config.mqtt.qos` and being wrong about
+   *  two thirds of the traffic. */
+  uint8_t qosFor(MqttClass cls) const { return mqttClassQos(cls, qos_); }
 
   /**
    * `<base>/status` (§4.2), owned as a member because the transport hands this pointer to
@@ -255,6 +324,11 @@ class MqttPublisher {
    * whatever the incoming class. If the queue holds no telemetry to evict — all availability and
    * discovery — the incoming message is REJECTED instead, because evicting a discovery message
    * would lose an entity permanently while dropping a reading loses one sample.
+   *
+   * There is deliberately NO `qos` parameter (owner decision 8A). `cls` already carries everything
+   * needed to decide it, so the QoS is looked up via `mqttClassQos` rather than passed in: a caller
+   * able to publish discovery at the telemetry QoS is a caller able to lose an entity, and no call
+   * site has information this class lacks.
    *
    * False on rejection, an overlong topic or payload, or an unconfigured publisher.
    */

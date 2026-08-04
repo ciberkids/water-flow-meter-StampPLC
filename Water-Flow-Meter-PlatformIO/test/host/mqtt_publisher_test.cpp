@@ -92,6 +92,22 @@ std::size_t countTopic(const FakeSink& sink, const char* topic) {
   return n;
 }
 
+/**
+ * The QoS the sink saw for `topic`, or **-1** when no publish on that topic happened at all.
+ *
+ * -1 rather than 0, and by topic rather than by index, both for the same reason: a QoS check whose
+ * "not found" answer is 0 silently passes when the message it names VANISHES, and QoS 0 is exactly
+ * the value the telemetry checks below assert. `at(sink, i)` returns a default `Capture{}` with
+ * `qos = 0` past the end, so using it here would turn "the sensor never published" into "the sensor
+ * published at QoS 0, as expected".
+ */
+int qosOf(const FakeSink& sink, const char* topic) {
+  for (const Capture& c : sink.calls) {
+    if (c.topic == topic) return c.qos;
+  }
+  return -1;
+}
+
 std::string lastPayloadFor(const FakeSink& sink, const char* topic) {
   std::string found;
   for (const Capture& c : sink.calls) {
@@ -543,7 +559,10 @@ void payloadTests() {
   check(countTopic(sink, "wm/sensor/8/state") == 1, "the eighth sensor publishes when present");
   check(countTopic(sink, "wm/sensor/2/state") == 0,
         "an absent sensor gets NO topic — zeros would be indistinguishable from no flow");
-  check(at(sink, 0).qos == 2, "the configured QoS reaches the sink");
+  // Qualified deliberately. Since owner decision 8A the setting speaks for TELEMETRY only, and an
+  // unqualified "the configured QoS reaches the sink" would read as a claim about all three classes
+  // — which is now false, and is checked in qosByClassTests().
+  check(qosOf(sink, "wm/sensor/1/state") == 2, "the configured QoS reaches the sink for TELEMETRY");
 
   const std::string sensorPayload = lastPayloadFor(sink, "wm/sensor/1/state");
   check(sensorPayload.size() < MqttPublisher::kMaxTelemetryPayloadBytes,
@@ -584,6 +603,211 @@ void classTests() {
   checkStr(plc::mqttClassName(MqttClass::Telemetry), "telemetry", "and telemetry");
 }
 
+// ── Owner decision 8A — per-message-class QoS ───────────────────────────────────────
+//
+// The whole point of this block is a DISTINCTION, so it is asserted as one: a single publisher, a
+// single queue holding all three classes, drained in a single pump, with `config.mqtt.qos` at
+// §6.1's default of 0. Two separate tests each run at their own configured QoS would not
+// discriminate — one would pass against a publisher that returned 0 for everything and the other
+// against one that returned 1 for everything.
+//
+// And "telemetry is 0 when the setting is 0" is a check at rest on its own: it passes if the split
+// is deleted and `slot.qos = qos_` comes back. So it is paired with the same publisher reconfigured
+// to 1, where telemetry must MOVE and discovery must NOT.
+void qosByClassTests() {
+  std::printf("\n[QoS — owner decision 8A, the class decides, not the caller and not one setting]\n");
+
+  FakeSink sink;
+  sink.up = false;  // pump is a no-op while down, so all three classes queue up together
+  MqttPublisher p(sink);
+  check(p.configure("wm", 10, 0), "configured at §6.1's default config.mqtt.qos = 0");
+  check(p.qos() == 0, "and the setting really is 0 — this is the value the other two must NOT take");
+
+  const char* discoveryTopic = "homeassistant/sensor/wfm_a1b2c3/s1_flow/config";
+  p.onConnected();
+  check(p.enqueue(MqttClass::Discovery, discoveryTopic, "{\"unique_id\":\"wfm_a1b2c3_s1_flow\"}",
+                  true),
+        "an availability and a discovery message are queued alongside telemetry");
+  const MqttSnapshot snap = oneSensorSnapshot();
+  p.tick(0, snap);
+
+  sink.up = true;
+  p.pump();
+
+  // THE three checks, from one drain of one queue.
+  check(qosOf(sink, "wm/sensor/1/state") == 0,
+        "telemetry goes out at the operator's QoS: 0, because a superseded reading is worthless");
+  check(qosOf(sink, discoveryTopic) == 1,
+        "discovery goes out at QoS 1 ANYWAY — a lost one is an entity that never appears");
+  check(qosOf(sink, "wm/status") == 1,
+        "and so does availability — a lost one leaves HA trusting a dead device's last reading");
+
+  // The half that cannot be faked by a constant. Same publisher, setting raised: telemetry has to
+  // follow it and the other two have to stay put.
+  sink.calls.clear();
+  check(p.configure("wm", 10, 1), "the operator raises config.mqtt.qos to 1");
+  p.onConnected();
+  check(p.enqueue(MqttClass::Discovery, discoveryTopic, "{\"unique_id\":\"wfm_a1b2c3_s1_flow\"}",
+                  true),
+        "and the same three classes are queued again");
+  p.tick(20000, snap);
+  p.pump();
+
+  check(qosOf(sink, "wm/sensor/1/state") == 1,
+        "telemetry FOLLOWS the setting — it is 1 now, so the 0 above was not a hardcoded 0");
+  check(qosOf(sink, discoveryTopic) == 1, "discovery is still 1, having never depended on the setting");
+  check(qosOf(sink, "wm/status") == 1, "as is availability");
+
+  // The policy on its own, so a regression names the class rather than the topic. Read as a table:
+  // one row moves with the setting, four do not.
+  std::printf("\n[QoS — the class-to-QoS table itself]\n");
+  check(plc::mqttClassQos(MqttClass::Telemetry, 0) == 0, "telemetry at setting 0 is 0");
+  check(plc::mqttClassQos(MqttClass::Telemetry, 1) == 1, "telemetry at setting 1 is 1");
+  check(plc::mqttClassQos(MqttClass::Discovery, 0) == 1, "discovery at setting 0 is still 1");
+  check(plc::mqttClassQos(MqttClass::Discovery, 1) == 1, "and at setting 1 is 1");
+  check(plc::mqttClassQos(MqttClass::Availability, 0) == 1, "availability at setting 0 is still 1");
+  check(plc::mqttClassQos(MqttClass::Availability, 1) == 1, "and at setting 1 is 1");
+
+  // "QoS 1 ALWAYS, regardless of the setting" means regardless in BOTH directions, so the setting is
+  // not a floor either. Reachable only because MqttPublisher::configure clamps at 2 while §6.1's
+  // enum and NetSettings::stageMqttQos both stop at 1 — but a `max(configuredQos, 1)` would pass
+  // every other check in this block, so the case that distinguishes it is asserted rather than left
+  // to whoever next widens the setting's range.
+  check(plc::mqttClassQos(MqttClass::Discovery, 2) == 1,
+        "a setting of 2 does not raise discovery either — the setting has no say here at all");
+  check(plc::mqttClassQos(MqttClass::Availability, 2) == 1, "nor availability");
+  check(plc::kMqttReliableQos == 1, "and the QoS they take is 1 — at-least-once, which is the point");
+
+  // Through the publisher too, because the table being right does not prove enqueue() consults it.
+  FakeSink viaMember;
+  MqttPublisher m(viaMember);
+  m.configure("wm", 10, 0);
+  check(m.qosFor(MqttClass::Telemetry) == 0 && m.qosFor(MqttClass::Discovery) == 1 &&
+            m.qosFor(MqttClass::Availability) == 1,
+        "qosFor() reports the per-class figure, so a log line need not repeat the setting and lie");
+
+  // ── The two halves of R4.1.3 and 8A, asserted together ─────────────────────────────
+  //
+  // They are one argument: a message the queue refuses to evict is a message the wire must not send
+  // best-effort. Protecting discovery from our own overflow and then handing it to a QoS-0 publish
+  // would be R4.1.3 defending it from us and not from the network.
+  std::printf("\n[QoS — the never-dropped classes are also the never-best-effort ones]\n");
+  FakeSink flooded;
+  flooded.up = false;
+  MqttPublisher q(flooded);
+  q.configure("wm", 1, 0);
+  q.onConnected();
+  q.enqueue(MqttClass::Discovery, discoveryTopic, "{\"unique_id\":\"x\"}", true);
+
+  // The snapshot must MOVE every tick or change detection suppresses it and the queue never fills.
+  MqttSnapshot moving = oneSensorSnapshot();
+  for (int i = 0; i < 40; ++i) {
+    moving.sensors[0].pulses = static_cast<uint32_t>(i + 1);
+    q.tick(static_cast<uint32_t>(1000 * (i + 1)), moving);
+  }
+  check(q.droppedTelemetry() > 0, "the queue really did overflow and evict telemetry (R4.1.3)");
+
+  flooded.up = true;
+  q.pump(MqttPublisher::kQueueCapacity);
+  check(qosOf(flooded, "wm/status") == 1,
+        "the availability message survived the flood AND went out at QoS 1");
+  check(qosOf(flooded, discoveryTopic) == 1, "so did the discovery message behind it");
+  check(qosOf(flooded, "wm/sensor/1/state") == 0,
+        "while the telemetry that survived is still best-effort, as configured");
+}
+
+// ── R4.1.6 / §4.4.7 — what has to fit out_buffer_size is the PACKET ─────────────────
+//
+// esp-mqtt assembles the whole PUBLISH into one buffer sized by `out_buffer_size`
+// (esp-mqtt/lib/mqtt_msg.c: `set_message_header_size` reserves MQTT_MAX_FIXED_HEADER_SIZE = 5
+// unconditionally, `append_string` writes a 2-byte length prefix and refuses at
+// `length + len + 2 > buffer_length`, `append_message_id` adds 2 more when `qos > 0`). Bounding the
+// payload alone — which mqtt_publisher.h used to do — leaves 135 bytes of topic and framing
+// uncounted, and going over is §4.4.7's silent failure.
+//
+// The compile-time guarantee is the widened static_assert in mqtt_publisher.h. Restating its
+// arithmetic here would be worthless — the assert fires before the binary exists — and a first
+// attempt at this test did exactly that in a way that looked like measurement: it sized the packet
+// from the SAME `kPublish*Bytes` constants the header derives its bound from, so zeroing
+// `kPublishFixedHeaderBytes` moved both sides equally and the suite stayed green. Recorded because it
+// is the failure mode this file keeps rediscovering.
+//
+// So the framing numbers below are LITERALS, read out of esp-mqtt's serialiser rather than out of
+// our own header, and the header's constants are checked against them. That is the only version that
+// can be red while the compile is green.
+void packetBoundTests() {
+  std::printf("\n[buffer — the worst-case PUBLISH packet against out_buffer_size (R4.1.6)]\n");
+
+  // Straight from esp-mqtt/lib/mqtt_msg.c (IDF 4.4 layout, unchanged in 5.x). If a future IDF
+  // changes any of these three, that is the moment somebody needs to know — and it is a silent
+  // truncation at the client if nobody does (§4.4.7).
+  const std::size_t kIdfFixedHeader = 5;   // MQTT_MAX_FIXED_HEADER_SIZE, mqtt_msg.c:37; reserved
+                                           // unconditionally by set_message_header_size()
+  const std::size_t kIdfTopicPrefix = 2;   // append_string(): two length bytes, refuses at
+                                           // `length + len + 2 > buffer_length`
+  const std::size_t kIdfPacketId = 2;      // append_message_id(): two bytes, and only when qos > 0
+  check(MqttPublisher::kPublishFixedHeaderBytes == kIdfFixedHeader,
+        "the header's fixed-header constant is esp-mqtt's MQTT_MAX_FIXED_HEADER_SIZE of 5");
+  check(MqttPublisher::kPublishTopicLengthBytes == kIdfTopicPrefix,
+        "and its topic prefix is append_string()'s two length bytes");
+  check(MqttPublisher::kPublishPacketIdBytes == kIdfPacketId,
+        "and its packet identifier is append_message_id()'s two");
+
+  // One byte under each cap: enqueue() refuses at `strlen >= cap`, so these are the longest strings
+  // that can reach the sink at all.
+  const std::string maxTopic(MqttPublisher::kMaxTopicBytes - 1, 't');
+  const std::string maxPayload(MqttPublisher::kMaxPayloadBytes - 1, 'p');
+
+  FakeSink sink;
+  MqttPublisher p(sink);
+  p.configure("wm", 10, 0);  // the operator's telemetry QoS at its default, deliberately
+  check(p.enqueue(MqttClass::Discovery, maxTopic.c_str(), maxPayload.c_str(), true),
+        "a message one byte under each cap is accepted — the caps are reachable, not decorative");
+  check(p.pump() == 1, "and reaches the sink");
+
+  const Capture largest = at(sink, 0);
+  check(largest.topic.size() == MqttPublisher::kMaxTopicBytes - 1 &&
+            largest.payload.size() == MqttPublisher::kMaxPayloadBytes - 1,
+        "whole, at both caps — nothing was truncated on the way through the queue");
+
+  // 8A is what makes the packet identifier unconditional on this path: the largest message this
+  // device sends is a discovery payload, and discovery is now always QoS >= 1. At the old
+  // `slot.qos = qos_` a device left at the default published it at QoS 0 and paid no packet id, so
+  // these two bytes are part of the worst case only BECAUSE of the decision above.
+  check(largest.qos >= 1, "the largest message is discovery, so 8A puts it at QoS 1");
+
+  // Sized from the LITERALS above and from what the sink actually received — no `kPublish*Bytes` on
+  // this side of the comparison, which is the whole point.
+  const std::size_t packetIdBytes = largest.qos > 0 ? kIdfPacketId : 0;
+  const std::size_t measured =
+      kIdfFixedHeader + kIdfTopicPrefix + largest.topic.size() + packetIdBytes +
+      largest.payload.size();
+
+  std::printf("      measured worst-case packet %zu bytes = 5 + 2 + %zu topic + %zu id + %zu payload"
+              "; header's bound %zu, out_buffer_size %d\n",
+              measured, largest.topic.size(), packetIdBytes, largest.payload.size(),
+              MqttPublisher::kWorstCasePublishBytes, MqttPublisher::kOutBufferBytes);
+  // Printed, not asserted, and deliberately: "the packet is bigger than the payload" is arithmetic
+  // that cannot be false, and a check that cannot fail is worse than a number nobody asserted.
+  std::printf("      the payload-only bound it replaces counted %zu of those %zu bytes\n",
+              MqttPublisher::kMaxPayloadBytes, measured);
+
+  // The direction that matters, and the one the static_assert cannot cover: UNDERSTATING
+  // kWorstCasePublishBytes — dropping a term while "simplifying" the formula — makes the
+  // compile-time bound more permissive, so the assert stays green while the constant stops
+  // describing the packet. Only a measurement taken independently of that constant catches it.
+  check(measured <= MqttPublisher::kWorstCasePublishBytes,
+        "the header's constant really is an upper bound on the real packet, not an understatement");
+
+  // This one CANNOT be red while the compile is green — the static_assert fires first. Kept because
+  // it is the sentence the requirement is written in, and it costs one comparison to state it.
+  check(measured <= static_cast<std::size_t>(MqttPublisher::kOutBufferBytes),
+        "the largest message the queue accepts, serialised as esp-mqtt serialises it, fits");
+
+  check(MqttPublisher::kOutBufferBytes == static_cast<int>(plc::kMqttOutBufferSize),
+        "measured against mqtt_limits.h's ONE definition of out_buffer_size (R4.4.8)");
+}
+
 void unconfiguredTests() {
   std::printf("\n[unconfigured — a device nobody set up must be silent]\n");
 
@@ -610,6 +834,8 @@ int main() {
   publishFailureTests();
   payloadTests();
   classTests();
+  qosByClassTests();
+  packetBoundTests();
   unconfiguredTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
