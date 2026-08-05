@@ -431,7 +431,7 @@ cfg.out_buffer_size = 2048;          // R4.1.6
 cfg.lwt_topic       = "<base>/status";   // R4.5 availability, for free
 cfg.lwt_msg         = "offline";
 cfg.lwt_retain      = 1;
-cfg.reconnect_timeout_ms = ...;      // R4.1.2 backoff, for free
+cfg.disable_auto_reconnect = true;   // R4.1.2 — see the correction below; WE own retry timing
 ```
 
 > ⚠️ **This is the IDF 4.4 flat config struct.** Every ESP-IDF 5.x example on the internet writes
@@ -439,8 +439,19 @@ cfg.reconnect_timeout_ms = ...;      // R4.1.2 backoff, for free
 > **not exist** in IDF v4.4.7 and will not compile here. Fields are flat: `.uri`, `.host`, `.port`,
 > `.username`, `.password`, `.keepalive`, `.lwt_topic`. Confirmed by reading the installed header.
 
-LWT and reconnect backoff being library features rather than our code is the real prize: R4.1.2
-and R4.5 are satisfied by configuration instead of by a state machine we would have to test.
+LWT being a library feature rather than our code is the real prize: R4.5 is satisfied by
+configuration instead of by a state machine we would have to test.
+
+> **CORRECTION 2026-08-05 — reconnect backoff is NOT free, and this section claimed it was.** I wrote
+> that `reconnect_timeout_ms` satisfied R4.1.2. It does not: it is a **fixed interval**, and R4.1.2
+> requires §3.1.2's **exponential** ladder. A fixed 10 s retry against a broker that is down is
+> exactly the reconnect storm R4.1.2 exists to prevent.
+>
+> The defect was in this document, not in the code — the reviewer who found it was right to say so.
+> Owner decision 3B: implement the ladder ourselves. `disable_auto_reconnect = true` so the library
+> stops its own fixed-interval retry, and `src/net/mqtt_reconnect.h` drives
+> `esp_mqtt_client_reconnect()` on the same ladder shape `WifiManager` already uses — one backoff
+> behaviour on the device rather than two that drift.
 
 ### 4.2. Topic layout
 
@@ -508,16 +519,36 @@ The intent is fixed even where the spelling is not:
 > single most valuable integration detail in the feature and the most likely to be got
 > subtly wrong.
 >
-> **R4.4.5** — Discovery messages are **retained**, so HA re-discovers after its own restart
-> without the device republishing.
+> **R4.4.5 — CORRECTED 2026-08-05.** Discovery messages are retained, but this requirement had the
+> justification backwards and the priority with it.
 >
-> **R4.4.6** — Discovery is republished on every reconnect, and whenever the connected-sensor
-> bitmap changes, so enabling a sensor makes its entity appear.
+> It read: "so HA re-discovers after its own restart without the device republishing", presenting
+> retain as the mechanism and R4.4.7's birth-message republish as a backstop for the cases retain
+> misses. Home Assistant's own MQTT-discovery documentation says close to the opposite — it presents
+> **birth-triggered republish as the primary and better approach**, and retained discovery as an
+> alternative carrying an explicit warning that it **can create ghost entities**: an entity the device
+> no longer publishes survives in HA because the retained config outlives it.
 >
+> So retain is a CHOICE WITH A COST, not the mechanism. It is kept, because it makes a device that is
+> asleep or off at the moment HA restarts still discoverable — but it is no longer the thing being
+> relied on.
+>
+> **R4.4.7 is therefore the PRIMARY mechanism**, not the backstop: the device subscribes to
+> `homeassistant/status` and republishes discovery on `online`. That is the path HA documents, it
+> cannot produce a ghost entity, and it is the one that must be correct.
+>
+> The cost of retain that we accept: an entity removed from the firmware's catalogue keeps appearing
+> in HA until somebody clears the retained topic. Worth knowing before a sensor is renamed.
+
 > **R4.4.7** — The device **subscribes to `homeassistant/status`** and republishes discovery on
-> receiving `online`. R4.4.5's retained messages cover an HA restart that reconnects to the same
-> broker; the birth message covers the case they do not — a broker restart that dropped retained
-> state, or an HA database migration. Both were confirmed present on the live instance.
+> receiving `online`. This is the primary mechanism (see the correction on R4.4.5). It also covers the
+> case retain cannot: a broker restart that dropped retained state, or an HA database migration.
+
+> **R4.4.9 — TWO DIAGNOSTICS ARE PUBLISHED WITH NO ENTITY** (found 2026-08-05). `uptimeS` and
+> `baselineKhz` appear in the diagnostics JSON payload but have no `HaEntity`, so no discovery message
+> ever announces them and they will never appear in Home Assistant. Either give them entities or stop
+> publishing them — a value on the wire that nothing consumes is bytes and airtime for nobody, and it
+> reads to the next person as though the integration is broken.
 
 #### 4.4.a. The exact strings
 
@@ -871,8 +902,8 @@ not a consideration, and it buys full remote configurability.
 > removed. Bit 2 of 564 is left **reserved rather than reused**, so a master written against the
 > interim build cannot silently come to mean something else.
 
-| Binding | Kind | Range / length | Default |
-| --- | --- | --- | --- |
+| Binding | Kind | Range / length | Default | Note |
+| --- | --- | --- | --- | --- |
 | `config.wifi.enabled` | Boolean | — | off |
 | `config.wifi.ssid` | **Text** | 32 | empty |
 | `config.wifi.psk` | **Text**, write-only | 63 | empty |
@@ -885,7 +916,7 @@ not a consideration, and it buys full remote configurability.
 | `config.mqtt.discoveryPrefix` | **Text** | 32 | *per §4.4* |
 | `config.mqtt.publishPeriod` | Numeric | 1–3600 s | 10 |
 | `config.mqtt.haDiscovery` | Boolean | — | on |
-| `config.mqtt.qos` | Enum | 0, 1 | 0 |
+| `config.mqtt.qos` | Enum | 0, 1 | 0 | **TELEMETRY only** (8A). Discovery and availability are always QoS 1 regardless — a lost reading is superseded by the next one within `publishPeriod`, whereas a lost discovery or availability message is not self-correcting and must not inherit a best-effort setting chosen for telemetry. |
 
 ### 6.2. What must change to support text settings
 
