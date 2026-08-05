@@ -39,6 +39,7 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "core_layout.h"
 #include "net/net_settings.h"
 #include "net/net_settings_nvs.h"
+#include "net/ha_discovery.h"
 #include "net/mqtt_publisher.h"
 #include "net/mqtt_reconnect.h"
 #include "net/mqtt_transport_esp.h"
@@ -194,6 +195,18 @@ const uint8_t* factoryMac() {
 plc::EspMqttTransport mqttTransport;
 plc::MqttPublisher mqttPublisher(mqttTransport);
 plc::MqttReconnect mqttReconnect(factoryMac());
+plc::HaDiscovery haDiscovery;
+/**
+ * When and why to republish (R4.4.6, R4.4.7).
+ *
+ * A separate object from HaDiscovery, and the separation earns its keep: it owns the three triggers —
+ * reconnect, Home Assistant's birth message, and the connected-sensor bitmap moving — and it records
+ * the published bitmap only AFTER a publish succeeded, so a failed one leaves it still asking rather
+ * than believing the entities exist.
+ */
+plc::HaRepublishPolicy haRepublish;
+/** The birth message, latched on esp-mqtt's task and consumed on the logic task. */
+volatile bool haBirthLatched = false;
 /** True once begin() has created a client, so start/stop is idempotent. */
 bool mqttClientUp = false;
 /** Settings revision the client was configured against, so a change reconfigures it. */
@@ -224,11 +237,61 @@ void onMqttState(void*, bool connected) {
   }
 }
 
-void onMqttData(void*, const char* topic, std::size_t topicLength, const char*, std::size_t) {
-  // §4.4.7's birth message is the only subscription so far. Recognised here, acted on when discovery
-  // publishing lands — noted rather than silently dropped so the wiring is visible.
-  (void)topic;
-  (void)topicLength;
+void onMqttData(void*, const char* topic, std::size_t topicLength, const char* data,
+                std::size_t dataLength) {
+  // esp-mqtt does not NUL-terminate either buffer, hence the copies. Bounded and small; this runs on
+  // esp-mqtt's task so it does the minimum and latches.
+  char t[plc::MqttPublisher::kMaxTopicBytes] = {};
+  char d[16] = {};
+  const std::size_t tn = topicLength < sizeof(t) - 1 ? topicLength : sizeof(t) - 1;
+  const std::size_t dn = dataLength < sizeof(d) - 1 ? dataLength : sizeof(d) - 1;
+  std::memcpy(t, topic, tn);
+  std::memcpy(d, data, dn);
+  if (haRepublish.onStatusMessage(haDiscovery, t, d) != plc::HaRepublishReason::None) {
+    // R4.4.7 — and now the PRIMARY discovery mechanism rather than the backstop, since Home
+    // Assistant's own docs prefer birth-triggered republish over relying on retained configs.
+    haBirthLatched = true;
+  }
+}
+
+/** Publishes every discovery config for the currently connected sensors (§4.4.b). */
+void publishDiscovery() {
+  if (!netSettings.mqttHaDiscovery() || !haDiscovery.configured()) {
+    return;
+  }
+  plc::HaEntityRef refs[plc::kHaMaxEntities] = {};
+  const std::size_t count =
+      haDiscovery.enumerateEntities(connectedSensorsBitmap, refs, plc::kHaMaxEntities);
+  std::size_t accepted = 0;
+  for (std::size_t i = 0; i < count; ++i) {
+    char topic[plc::MqttPublisher::kMaxTopicBytes] = {};
+    char payload[plc::MqttPublisher::kMaxPayloadBytes] = {};
+    const auto t = haDiscovery.discoveryTopic(refs[i], topic, sizeof(topic));
+    const auto p = haDiscovery.discoveryPayload(refs[i], payload, sizeof(payload));
+    if (!t.complete || !p.complete) {
+      // Truncation is REPORTED, never published. A truncated topic publishes successfully to the
+      // wrong place and a truncated payload is malformed JSON — either way HA shows nothing and the
+      // broker reports success (§4.4.7). R4.4.8's host test exists to make this unreachable; this is
+      // the belt to its braces.
+      Serial.printf("[mqtt] discovery %u would truncate (topic %u/%u payload %u/%u); NOT sent\n",
+                    static_cast<unsigned>(i), static_cast<unsigned>(t.required),
+                    static_cast<unsigned>(sizeof(topic)), static_cast<unsigned>(p.required),
+                    static_cast<unsigned>(sizeof(payload)));
+      continue;
+    }
+    // Retained (R4.4.5), and MqttClass::Discovery so R4.1.3 never evicts it.
+    if (mqttPublisher.enqueue(plc::MqttClass::Discovery, topic, payload, true)) {
+      ++accepted;
+    }
+  }
+  // Recorded only when the WHOLE set was accepted. A partial publish that claimed success would
+  // leave HA missing an entity with the policy convinced it exists — the failure R4.4.6's republish
+  // is meant to recover from.
+  if (accepted == count && count > 0) {
+    haRepublish.notePublished(connectedSensorsBitmap);
+  }
+  Serial.printf("[mqtt] discovery: %u of %u entities queued\n", static_cast<unsigned>(accepted),
+                static_cast<unsigned>(count));
 }
 
 SensorStateEngine::Dependencies sensorEngineDeps{
@@ -733,10 +796,32 @@ void logicTaskCode(void * pvParameters) {
     if (mqttConnectLatched) {
       mqttConnectLatched = false;
       mqttReconnect.noteConnected();
+      mqttPublisher.onConnected();
+
+      // R4.4.7 — subscribe BEFORE announcing ourselves, so a birth message that arrives in the same
+      // instant is not missed.
+      char statusTopic[plc::MqttPublisher::kMaxTopicBytes] = {};
+      if (haDiscovery.haStatusTopic(statusTopic, sizeof(statusTopic)).complete) {
+        mqttTransport.subscribe(statusTopic, 1);
+      }
+
+      // R4.5.1 — availability, retained, so a subscriber that joins later still learns we are up.
+      // MqttClass::Availability, so R4.1.3 never evicts it.
+      mqttPublisher.enqueue(plc::MqttClass::Availability, mqttPublisher.availabilityTopic(),
+                            "online", true);
+
+      const plc::HaRepublishReason why = haRepublish.onConnected();
+      if (why != plc::HaRepublishReason::None) {
+        Serial.printf("[mqtt] connected; republishing discovery (%s)\n",
+                      plc::haRepublishReasonText(why));
+        publishDiscovery();
+      }
     }
     if (mqttDisconnectLatched) {
       mqttDisconnectLatched = false;
       mqttReconnect.noteDisconnected();
+      mqttPublisher.onDisconnected();
+      haRepublish.noteDisconnected();
     }
     if (mqttWanted) {
       mqttReconnect.update(now);
@@ -784,6 +869,26 @@ void logicTaskCode(void * pvParameters) {
 
       mqttPublisher.configure(topic, netSettings.mqttPublishPeriodS(), netSettings.mqttQos());
 
+      // Discovery is configured from the SAME base topic the publisher got, so the topic HA is told
+      // to read and the topic we publish to come from one value. §4.4.b's state_topic is built by
+      // HaDiscovery::stateTopic for exactly that reason.
+      char prefix[plc::NetSettings::kMaxValueBytes + 1] = {};
+      netSettings.get(plc::NetField::MqttDiscoveryPrefix, prefix, sizeof(prefix));
+      char nodeId[24] = {};
+      std::snprintf(nodeId, sizeof(nodeId), "wfm_%02x%02x%02x", mac[3], mac[4], mac[5]);
+      plc::HaDeviceIdentity identity;
+      identity.nodeId = nodeId;
+      identity.name = "Water Flow Meter";
+      // Reported to HA as sw_version so a fleet's firmware level is visible from the dashboard.
+      // A literal because this project has no version constant yet; when one exists, use it.
+      identity.swVersion = "0.3-dev";
+      if (!haDiscovery.configure(identity, prefix, topic)) {
+        // Refused means the prefix or base topic is invalid. It cannot normally get this far —
+        // NetSettings::stage() and applyWrite() both refuse them at entry now — so reaching here
+        // means something upstream let one through, and saying so beats silently publishing nothing.
+        Serial.println("[mqtt] discovery refused the prefix/base topic; entities will not appear");
+      }
+
       plc::EspMqttTransport::Options options;
       options.uri = uri;
       options.username = user[0] != '\0' ? user : nullptr;
@@ -807,6 +912,47 @@ void logicTaskCode(void * pvParameters) {
       // Step 4: a CONNECTED that crossed the tick boundary. Answer the due edge with success rather
       // than tearing down a working session because the policy asked first.
       mqttReconnect.noteConnected();
+    }
+
+    if (mqttTransport.connected()) {
+      if (haBirthLatched) {
+        haBirthLatched = false;
+        Serial.println("[mqtt] Home Assistant restarted; republishing discovery (R4.4.7)");
+        publishDiscovery();
+      }
+      // R4.4.6 — enabling a sensor must make its entity appear. The policy answers None unless the
+      // bitmap actually differs from the published one, so this is not a per-pass republish.
+      if (haRepublish.onSensorBitmap(connectedSensorsBitmap) != plc::HaRepublishReason::None) {
+        Serial.println("[mqtt] connected sensors changed; republishing discovery (R4.4.6)");
+        publishDiscovery();
+      }
+
+      // Telemetry. tick() owns the cadence — publish-on-change rate-limited to publishPeriod, plus
+      // §4.3.2's full set at least every 60 s — so this hands it the state and lets it decide.
+      plc::MqttSnapshot snapshot;
+      for (std::size_t i = 0; i < kNumSensors; ++i) {
+        auto& out = snapshot.sensors[i];
+        out.present = sensors[i].inUse;
+        if (!out.present) {
+          continue;  // a disconnected sensor publishes nothing at all — see task #1
+        }
+        out.flowLPerMin = sensors[i].instantFlow_L_s * 60.0f;
+        out.sessionLiters = sensors[i].sessionLiters;
+        out.totalCubicMeters = sensors[i].cumulativeLiters / 1000.0;
+        out.maxFlowLPerMin = sensors[i].maxFlowSinceReset * 60.0f;
+        out.pulses = sensors[i].pulseCount;
+      }
+      snapshot.total.flowLPerMin = static_cast<float>(aggregateFlowLpsCache * 60.0);
+      snapshot.total.sessionLiters = static_cast<float>(totalSessionLitersCache);
+      snapshot.diagnostics.pollingRateKhz = pollingRate_kHz;
+      snapshot.diagnostics.undersamplingFlags = undersamplingFlags;
+      snapshot.diagnostics.uptimeSeconds = now / 1000;
+      snapshot.diagnostics.wifiRssiDbm = static_cast<int8_t>(wifiManager.rssiDbm());
+      mqttPublisher.tick(now, snapshot);
+
+      // Drain a bounded number per pass. Unbounded would let a full queue monopolise a logic pass
+      // that also owns the display's 100 ms acknowledgement budget (§7).
+      mqttPublisher.pump(4);
     }
 
     // The WiFi state machine (N4). On core 1 with the logic task, at priority 1 — it must never be
