@@ -431,13 +431,7 @@ bool HaDiscovery::configure(const HaDeviceIdentity& device, const char* discover
 
   copyInto(nodeId_, device.nodeId);
   copyInto(prefix_, discoveryPrefix);
-  // MUTATION 5 — agree on the verdict, then truncate
-  {
-    char m5[kHaMaxBaseTopicBytes + 1] = {};
-    const std::size_t n = std::strlen(baseTopic);
-    std::memcpy(m5, baseTopic, n > 0 ? n - 1 : 0);
-    copyInto(base_, m5);
-  }
+  copyInto(base_, baseTopic);
   copyInto(deviceName_, name);
   copyInto(swVersion_, device.swVersion);
   copyInto(configUrl_, device.configurationUrl);
