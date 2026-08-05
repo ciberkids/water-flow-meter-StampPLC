@@ -237,8 +237,14 @@ static_assert(layoutAdmitsAnyPriority(core_layout::kPollingTaskPriority),
               "No priority is admissible under this core layout: the band between the idle priority "
               "and the polling priority is empty.");
 static_assert(priorityIsAdmissible(kTaskPriority), "kTaskPriority must satisfy its own band.");
-static_assert(!violatesCoreDedication(kTaskCore),
-              "The HTTP task must be pinned off the polling core (R2.1.0).");
+// There was a static_assert(!violatesCoreDedication(kTaskCore)) here. It is GONE because it could
+// not fail: kTaskCore is defined as otherCoreThan(kPollingTaskCore), so by construction it is never
+// the polling core and never kNoAffinity, for any value of either. A check that is structurally
+// satisfied reads as protection and provides none — the shape this project has now found six times.
+//
+// The dependency that genuinely needed guarding was different, and it is guarded elsewhere:
+// firmware.cpp now CONSUMES core_layout::kPollingTaskCore rather than repeating the literal 0, so the
+// layout and the running system cannot disagree. core_layout.h's own asserts do the rest.
 
 // The STATUS block above claims that on the planned Arduino `WebServer` stack the portal inherits the
 // logic task's placement and is therefore compliant "by construction". That is a conclusion drawn

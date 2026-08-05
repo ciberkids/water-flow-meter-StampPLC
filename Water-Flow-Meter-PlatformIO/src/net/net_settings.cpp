@@ -74,12 +74,37 @@ bool NetSettings::portalPasswordIsDefault() const {
   return std::strcmp(live_.text[i], kDefaultPortalPassword) == 0;
 }
 
-bool NetSettings::stagedBaseTopicCommittable() const {
-  const std::size_t i = indexOf(NetField::MqttBaseTopic);
+bool NetSettings::fieldIsTopicShaped(NetField field) {
+  // Both become published topics AND, for the prefix, a SUBSCRIBED one (`<prefix>/status`, R4.4.7),
+  // so both must satisfy the same rule. The prefix was validated only inside HaDiscovery::configure,
+  // which meant an invalid one staged cleanly, went live, and was then refused deep in a module the
+  // operator cannot see — no entity ever appeared and nothing said why. 5A's principle is that a
+  // refusal must be REPORTABLE, and a refusal is only reportable where the value is entered.
+  return field == NetField::MqttBaseTopic || field == NetField::MqttDiscoveryPrefix;
+}
+
+bool NetSettings::stagedTopicFieldsCommittable() const {
+  for (std::size_t f = 0; f < kFieldCount; ++f) {
+    const auto field = static_cast<NetField>(f);
+    if (!fieldIsTopicShaped(field)) continue;
+    if (!stagedFieldCommittable(field)) return false;
+  }
+  return true;
+}
+
+bool NetSettings::stagedFieldCommittable(NetField field) const {
+  const std::size_t i = indexOf(field);
+  if (i >= kFieldCount || !fieldIsTopicShaped(field)) {
+    return true;
+  }
   // The buffer is kMaxValueBytes + 1 and zero-initialised, and stageByte() never writes at or past
   // the capacity, so the tail terminator is always present and reading this as a C string is safe
   // however partially a master has written it.
   return pending_.text[i][0] == '\0' || isValidBaseTopic(pending_.text[i]);
+}
+
+bool NetSettings::stagedBaseTopicCommittable() const {
+  return stagedFieldCommittable(NetField::MqttBaseTopic);
 }
 
 bool NetSettings::stage(NetField field, const char* value) {
@@ -100,7 +125,11 @@ bool NetSettings::stage(NetField field, const char* value) {
   // Both whole-value callers already act on this return — ui_settings.cpp's writeSettingText fails
   // the edit, and portal_form.cpp reports PortalFieldError::Refused — so the refusal reaches the
   // operator rather than vanishing.
-  if (field == NetField::MqttBaseTopic && value != nullptr && value[0] != '\0' &&
+  // Both topic-shaped fields, not just the base topic. Refusing HERE is what makes the refusal
+  // visible: ui_settings.cpp fails the edit, portal_form.cpp reports PortalFieldError::Refused, and a
+  // master gets false. Refusing only later, inside HaDiscovery, produced a device with no Home
+  // Assistant entities and no explanation anywhere.
+  if (fieldIsTopicShaped(field) && value != nullptr && value[0] != '\0' &&
       !isValidBaseTopic(value)) {
     return false;
   }

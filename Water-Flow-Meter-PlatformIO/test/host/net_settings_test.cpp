@@ -552,6 +552,73 @@ void portalResetTests() {
         "a zero-fill of all 233 registers does not reset the login either");
 }
 
+/**
+ * The discovery prefix is topic-shaped too, and its refusal must be REPORTABLE.
+ *
+ * It was validated only inside HaDiscovery::configure. So an invalid prefix staged cleanly, went
+ * live, and was then refused deep in a module the operator cannot see: no Home Assistant entity ever
+ * appeared, `<base>/...` telemetry kept flowing, the MQTT state register read connected, and nothing
+ * anywhere said why. That presents as a broker fault.
+ *
+ * Breaks if: stage() stops covering the prefix, or applyWrite stops checking both topic fields.
+ */
+void discoveryPrefixTests() {
+  std::printf("\n[the discovery prefix is validated where it is ENTERED]\n");
+
+  NetSettings net;
+  // The case that matters: an interior `//`. `homeassistant//status` is a legal MQTT topic that Home
+  // Assistant's birth message never lands on, so R4.4.7's republish would silently never fire.
+  check(!net.stage(NetField::MqttDiscoveryPrefix, "homeassistant//status"),
+        "an interior // is refused at the point of entry, not deep inside HaDiscovery");
+  check(!net.stage(NetField::MqttDiscoveryPrefix, "homeassistant/"),
+        "so is a trailing slash");
+  check(!net.stage(NetField::MqttDiscoveryPrefix, "/homeassistant"), "and a leading one");
+  check(!net.stage(NetField::MqttDiscoveryPrefix, "home assistant"), "and a space");
+  check(!net.stage(NetField::MqttDiscoveryPrefix, "home+assistant"),
+        "and a wildcard, which would subscribe to more than intended");
+
+  // The default, and a legitimate nested prefix, must both still pass.
+  check(net.stage(NetField::MqttDiscoveryPrefix, "homeassistant"), "the HA default is accepted");
+  check(net.stage(NetField::MqttDiscoveryPrefix, "ha/plant3"), "as is a nested prefix");
+  check(net.stage(NetField::MqttDiscoveryPrefix, ""),
+        "and empty is accepted — 'not configured' is a legitimate request, §4.4's default takes over");
+
+  // ── The register path: transiently invalid is fine, committing invalid is not ────
+  const uint16_t base = plc::net_reg::kMqttPrefix;
+  NetSettings viaBus;
+  // "ha/" mid-write: a legal intermediate state that a byte-level validator would wrongly refuse.
+  NetRegisterMap::stageWrite(viaBus, base, NetRegisterMap::packChars('h', 'a'));
+  NetRegisterMap::stageWrite(viaBus, static_cast<uint16_t>(base + 1),
+                             NetRegisterMap::packChars('/', '\0'));
+  check(!viaBus.stagedFieldCommittable(NetField::MqttDiscoveryPrefix),
+        "a half-written prefix ending in / is not committable");
+  check(!viaBus.stagedTopicFieldsCommittable(),
+        "so the whole-block check refuses it too");
+  check(NetRegisterMap::applyWrite(viaBus, plc::net_reg::kApplyMagic) ==
+            NetApplyError::InvalidValue,
+        "and the master is told InvalidValue rather than NothingStaged");
+
+  // Finishing the field lets it land — the bytes survived, as applyExcept guarantees.
+  NetRegisterMap::stageWrite(viaBus, static_cast<uint16_t>(base + 1),
+                             NetRegisterMap::packChars('/', 'p'));
+  NetRegisterMap::stageWrite(viaBus, static_cast<uint16_t>(base + 2),
+                             NetRegisterMap::packChars('3', '\0'));
+  check(NetRegisterMap::applyWrite(viaBus, plc::net_reg::kApplyMagic) == NetApplyError::None,
+        "completing the prefix applies cleanly");
+  checkStr(liveOf(viaBus, NetField::MqttDiscoveryPrefix).c_str(), "ha/p3",
+           "with the finished prefix live");
+
+  // ── A bad prefix must not latch, exactly as a bad base topic does not ──────────
+  NetSettings mixed;
+  NetRegisterMap::stageWrite(mixed, plc::net_reg::kMqttPort, 8883);
+  NetRegisterMap::stageWrite(mixed, base, NetRegisterMap::packChars('/', 'x'));
+  check(NetRegisterMap::applyWrite(mixed, plc::net_reg::kApplyMagic) ==
+            NetApplyError::InvalidValue,
+        "a bad prefix in a block write is reported");
+  check(mixed.mqttPort() == 8883,
+        "but the rest of the block still applied — one bad field must not block every surface");
+}
+
 int main() {
   std::printf("plc::NetSettings — text settings storage and register packing\n\n");
   defaultsTests();
@@ -565,6 +632,7 @@ int main() {
   baseTopicStageTests();
   baseTopicRegisterTests();
   portalResetTests();
+  discoveryPrefixTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

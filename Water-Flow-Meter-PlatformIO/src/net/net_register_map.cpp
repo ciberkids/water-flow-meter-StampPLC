@@ -119,7 +119,7 @@ NetApplyError NetRegisterMap::applyWrite(NetSettings& settings, uint16_t value) 
   // stageByte() cannot validate: the register path writes two characters at a time, so a topic is
   // transiently invalid while it is being written and refusing mid-write would make §5's documented
   // block-write sequence impossible. apply() is the first moment a WHOLE topic exists.
-  if (!settings.stagedBaseTopicCommittable()) {
+  if (!settings.stagedTopicFieldsCommittable()) {
     // Drop just the offending field instead of refusing everything. Refusing the whole apply latched
     // the fault: with text uneditable at the panel (§6.3), one bad Modbus write blocked configuration
     // from every surface until a reboot. Reverting the field leaves the device usable and the bad
@@ -127,7 +127,11 @@ NetApplyError NetRegisterMap::applyWrite(NetSettings& settings, uint16_t value) 
     // Skip that one field; keep its staged bytes. Reverting it instead would discard a master's
     // partially written topic whenever another surface applied mid-write, and refusing the whole
     // apply would latch the fault. See NetSettings::applyExcept.
-    settings.applyExcept(NetField::MqttBaseTopic);
+    // Skip whichever topic-shaped field is invalid — there are two now, and refusing the whole apply
+    // would latch the fault exactly as it did before.
+    settings.applyExcept(settings.stagedFieldCommittable(NetField::MqttBaseTopic)
+                             ? NetField::MqttDiscoveryPrefix
+                             : NetField::MqttBaseTopic);
     return NetApplyError::InvalidValue;
   }
   return settings.apply() ? NetApplyError::None : NetApplyError::NothingStaged;

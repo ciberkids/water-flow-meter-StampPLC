@@ -175,6 +175,23 @@ class NetSettings {
    */
   bool stagedBaseTopicCommittable() const;
 
+  /** True for a field whose value becomes an MQTT topic and must satisfy isValidBaseTopic. */
+  static bool fieldIsTopicShaped(NetField field);
+
+  /** Whether ONE topic-shaped field's staged value could be committed. Non-topic fields: always. */
+  bool stagedFieldCommittable(NetField field) const;
+
+  /**
+   * Whether EVERY topic-shaped field could be committed.
+   *
+   * The register path cannot validate mid-write — a topic is transiently invalid while its registers
+   * arrive — so applyWrite() checks this at the first moment whole values exist. Covers the discovery
+   * prefix as well as the base topic: the prefix is published to AND subscribed to (R4.4.7), and an
+   * interior `//` makes `homeassistant//status` a legal topic Home Assistant's birth message never
+   * lands on, so the republish would silently never fire.
+   */
+  bool stagedTopicFieldsCommittable() const;
+
   // ── Staging ───────────────────────────────────────────────────────────────────
   /**
    * Stages a text value. Truncates at the field's capacity rather than rejecting, so a master

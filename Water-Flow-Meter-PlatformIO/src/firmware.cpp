@@ -4,6 +4,8 @@
 #include <esp_system.h>
 #include <esp_wifi.h>
 
+#include "core_layout.h"
+
 #include <cstdint>
 #include <cstdio>
 
@@ -19,7 +21,7 @@
 // flag and the firmware still compiles, still runs, still associates — and quietly starts stealing
 // cycles from the measurement that is the reason this product exists. This project has been bitten
 // repeatedly by checks that did not check; a build-time failure is the cheapest possible check.
-static_assert(WIFI_TASK_CORE_ID == 1,
+static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
               "The WiFi task must not run on core 0, which is reserved for pulse polling. "
               "Restore -DCONFIG_ESP32_WIFI_TASK_PINNED_TO_CORE_1=1 in platformio.ini "
               "(see WiFi_MQTT_Connectivity.md §2.1.3).");
@@ -34,6 +36,7 @@ static_assert(WIFI_TASK_CORE_ID == 1,
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
 #include "net/net_register_map.h"
+#include "core_layout.h"
 #include "net/net_settings.h"
 #include "net/net_settings_nvs.h"
 #include "net/net_status.h"
@@ -567,7 +570,7 @@ void logicTaskCode(void * pvParameters) {
   //
   // Priority 8 also means Modbus still preempts this task (priority 1) on core 1,
   // so a slow UI redraw cannot delay a Modbus response.
-  constexpr int kModbusCoreId = 1;
+  constexpr int kModbusCoreId = plc::core_layout::kModbusServerCore;
   modbus.begin(RS485_SERIAL_PORT, kModbusCoreId);
 
   for (;;) {
@@ -842,8 +845,17 @@ void setup() {
   // sampler it is about to hand the bus to.
   verifyBulkInputRead();
 
-  xTaskCreatePinnedToCore(pollingTaskCode, "PollingTask", 4096, NULL, 2, &PollingTask, 0);
-  xTaskCreatePinnedToCore(logicTaskCode, "LogicTask", 10000, NULL, 1, &LogicTask, 1);
+  // Core and priority come from core_layout.h, which is where the reasoning lives. They used to be
+  // literals here AND constants there — two copies of one fact, so core_layout's static_asserts were
+  // reasoning about numbers this file was free to contradict. Consuming them is what makes those
+  // assertions mean something; duplicating them made httpd_task_policy's core guard a tautology,
+  // because it derived the HTTP core from a value nothing tied to reality.
+  xTaskCreatePinnedToCore(pollingTaskCode, "PollingTask", 4096, NULL,
+                          plc::core_layout::kPollingTaskPriority, &PollingTask,
+                          plc::core_layout::kPollingTaskCore);
+  xTaskCreatePinnedToCore(logicTaskCode, "LogicTask", 10000, NULL,
+                          plc::core_layout::kLogicTaskPriority, &LogicTask,
+                          plc::core_layout::kLogicTaskCore);
 }
 
 void loop() {
