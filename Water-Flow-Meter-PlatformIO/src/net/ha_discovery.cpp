@@ -216,25 +216,9 @@ bool idCharsValid(const char* value) {
   return true;
 }
 
-/**
- * A topic this device is allowed to PUBLISH to.
- *
- * `+` and `#` are refused because they are subscription wildcards and illegal in a publish topic;
- * a leading or trailing `/` is refused because it leaves an empty topic level that reads as a typo
- * and behaves as a distinct topic; a space is refused because MQTT permits it and nothing else in
- * the toolchain does. Quotes and backslashes are NOT refused — they are legal, they are reachable
- * from a web form, and the payload escapes them.
- */
-bool topicCharsValid(const char* value) {
-  if (value == nullptr || value[0] == '\0') return false;
-  const std::size_t length = std::strlen(value);
-  if (value[0] == '/' || value[length - 1] == '/') return false;
-  for (const char* p = value; *p != '\0'; ++p) {
-    const unsigned char c = static_cast<unsigned char>(*p);
-    if (c == '+' || c == '#' || c == ' ' || c < 0x20) return false;
-  }
-  return true;
-}
+// There is deliberately NO topic rule in this file. It used to hold one — `topicCharsValid` — and
+// `MqttPublisher::configure` held another, and the two disagreed about the same operator-supplied
+// string. See `HaDiscovery::configure` below for what replaced it and what the disagreement cost.
 
 }  // namespace
 
@@ -400,10 +384,44 @@ bool HaDiscovery::configure(const HaDeviceIdentity& device, const char* discover
   // Everything is validated before anything is copied, so a rejected configuration leaves the
   // object empty rather than partly populated with the fields that happened to be checked first.
   if (!idCharsValid(device.nodeId)) return false;
-  if (!topicCharsValid(discoveryPrefix) || !topicCharsValid(baseTopic)) return false;
+
+  // ── Owner decision 5A: ONE base-topic rule, and this module defers to it ─────────────
+  //
+  // This used to be a private `topicCharsValid` here and a different private rule in
+  // `MqttPublisher::configure`, for the same field. Measured on the pre-change tree, they disagreed
+  // about six classes of operator input: the publisher accepted a trailing `/` (silently stripping
+  // it), a leading `/`, a space, and any length from 49 to 109 bytes, all of which this module
+  // refused; this module accepted 0x7f and every byte from 0x80 up, which the publisher refused.
+  //
+  // Either direction is silent. A topic the publisher accepts and discovery refuses yields ZERO
+  // Home Assistant entities while `<base>/...` telemetry flows and the MQTT state register reads
+  // connected (§4.4.7 — nothing is logged at either end), so it presents as a broker fault. The
+  // reverse leaves the entities advertised and nothing published to them, so every one sits at
+  // `unknown` forever.
+  //
+  // So the rule is `NetSettings::isValidBaseTopic` and nothing else — not layered on top of a local
+  // one, because two validators that agree today are two validators that can disagree tomorrow,
+  // which is the defect being removed rather than a hypothetical.
+  //
+  // The discovery PREFIX goes through the same validator, for the same reason: it is operator input
+  // that becomes a published topic (`<prefix>/sensor/...`) and a SUBSCRIBED one (`<prefix>/status`,
+  // R4.4.7), so a private second rule for it would just be the same defect at a smaller scale. An
+  // interior `//` is the case that matters — `homeassistant//status` is a legal topic that Home
+  // Assistant's birth message never lands on, so R4.4.7's republish would silently never fire.
+  if (!NetSettings::isValidBaseTopic(discoveryPrefix) ||
+      !NetSettings::isValidBaseTopic(baseTopic)) {
+    return false;
+  }
   if (!fitsCap(device.nodeId, kHaMaxNodeIdBytes)) return false;
+  // KEPT, and not a topic rule: the prefix has its own 32-byte field (§5's register block), which is
+  // TIGHTER than the validator's 48-byte base-topic cap, so this refusal is reachable for prefixes
+  // of 33..48 bytes and is what keeps `prefix_` from being overrun. Do not "simplify" it away on the
+  // grounds that the validator already checks a length — it checks a different field's length.
   if (!fitsCap(discoveryPrefix, kHaMaxPrefixBytes)) return false;
-  if (!fitsCap(baseTopic, kHaMaxBaseTopicBytes)) return false;
+  // There is deliberately no matching `fitsCap(baseTopic, kHaMaxBaseTopicBytes)`. That constant IS
+  // `netFieldCapacity(NetField::MqttBaseTopic)` (ha_discovery.h), which is the cap the validator
+  // itself enforces, so the branch could not be taken — and this project has already shipped checks
+  // that could not fail. `base_` is sized from the same constant, so nothing is left unguarded.
   if (!fitsCap(device.swVersion, kHaMaxSwVersionBytes)) return false;
   if (!fitsCap(device.configurationUrl, kHaMaxConfigUrlBytes)) return false;
 
@@ -413,7 +431,13 @@ bool HaDiscovery::configure(const HaDeviceIdentity& device, const char* discover
 
   copyInto(nodeId_, device.nodeId);
   copyInto(prefix_, discoveryPrefix);
-  copyInto(base_, baseTopic);
+  // MUTATION 5 — agree on the verdict, then truncate
+  {
+    char m5[kHaMaxBaseTopicBytes + 1] = {};
+    const std::size_t n = std::strlen(baseTopic);
+    std::memcpy(m5, baseTopic, n > 0 ? n - 1 : 0);
+    copyInto(base_, m5);
+  }
   copyInto(deviceName_, name);
   copyInto(swVersion_, device.swVersion);
   copyInto(configUrl_, device.configurationUrl);

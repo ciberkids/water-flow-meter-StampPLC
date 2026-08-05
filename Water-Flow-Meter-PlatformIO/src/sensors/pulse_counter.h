@@ -71,16 +71,36 @@ constexpr void forEachRisingChannel(uint8_t edges, Fn&& visit) {
 }
 
 /**
- * Builds the enabled-channel mask from the connected-sensors bitmap.
+ * Builds the enabled-channel mask by ASKING, one channel at a time.
  *
- * Separate from the sensor array so the polling loop never has to walk `sensors[i].inUse` per sample.
- * Recomputed when the configuration changes, not once per sample — which is the useful half of
- * "use a bitmap to know which channels are active".
+ * This replaced `enabledMaskFromBitmap(connectedSensorsBitmap, ...)`, and the reason is the whole
+ * point of the change rather than a style preference.
+ *
+ * There were TWO representations of "is this sensor connected":
+ *   1. `connectedSensorsBitmap`, which the core-0 polling loop used to build its mask, and
+ *   2. `sensors[i].inUse`, which the core-1 engine used to decide whether to convert pulses.
+ *
+ * They were written together at one site, so they could not actually diverge — but nothing enforced
+ * it, and the consequence of divergence was severe and silent. Suppose the bitmap said enabled while
+ * `inUse` was false: the loop would count edges into `pulseCount`, and the engine would never clear
+ * it, because `sensor.pulseCount = 0` sits INSIDE `if (sensor.inUse)`. The backlog would grow for as
+ * long as the disagreement lasted and then convert in a single interval — one enormous volume,
+ * indistinguishable from real flow, written into the persisted `cumulativeLiters`.
+ *
+ * Passing a predicate lets the caller read the SAME flag the engine reads, so the two cannot disagree
+ * by construction. That is the third time in this project a bug class has been removed by collapsing
+ * two representations of one fact into one — the others were the MQTT flags register (live versus
+ * staged) and the duplicated `out_buffer_size`.
+ *
+ * A predicate rather than a `SensorData*` parameter so this header stays free of
+ * `modbus/sensor_types.h`, and so a host test can drive it with a lambda.
  */
-constexpr uint8_t enabledMaskFromBitmap(uint16_t connectedSensorsBitmap, std::size_t channelCount) {
+template <typename IsEnabled>
+constexpr uint8_t enabledMaskFrom(std::size_t channelCount, IsEnabled&& isEnabled) {
   uint8_t mask = 0;
-  for (std::size_t i = 0; i < channelCount && i < 8; ++i) {
-    if ((connectedSensorsBitmap >> i) & 0x01u) {
+  const std::size_t limit = channelCount < 8 ? channelCount : 8;
+  for (std::size_t i = 0; i < limit; ++i) {
+    if (isEnabled(i)) {
       mask = static_cast<uint8_t>(mask | (1u << i));
     }
   }

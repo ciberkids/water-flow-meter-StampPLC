@@ -14,19 +14,8 @@ bool writeSuffix(const uint8_t mac[6], char* out, std::size_t size) {
   return true;
 }
 
-/**
- * True for a byte a PUBLISH topic may contain.
- *
- * `+` and `#` are wildcards and are illegal in a publish topic (MQTT 3.1.1 §4.7.1); anything
- * outside printable ASCII is refused because brokers disagree about it and §4.6 already binds the
- * device's own text to 7-bit ASCII, so a byte that survives here would still be unreadable on the
- * one display that could tell the operator what went wrong.
- */
-bool topicByteIsLegal(char c) {
-  if (c == '+' || c == '#') return false;
-  const unsigned char u = static_cast<unsigned char>(c);
-  return u >= 0x20 && u <= 0x7e;
-}
+// There is deliberately NO per-byte topic rule in this file. It used to hold `topicByteIsLegal`
+// while ha_discovery.cpp held `topicCharsValid`, and the two disagreed. See `configure` below.
 
 }  // namespace
 
@@ -115,27 +104,46 @@ bool MqttPublisher::configure(const char* baseTopic, uint16_t publishPeriodS, ui
   baseTopic_[0] = '\0';
   availabilityTopic_[0] = '\0';
 
-  if (baseTopic == nullptr) return false;
+  // ── Owner decision 5A: ONE base-topic rule, and this module defers to it ─────────────
+  //
+  // Everything this used to do itself is gone: the null check, the trailing-slash strip, the length
+  // bound and the per-byte `topicByteIsLegal` scan. `NetSettings::isValidBaseTopic` decides, and
+  // nothing is layered on top of it — two validators that agree today are two validators that can
+  // disagree tomorrow, which is exactly what happened here.
+  //
+  // What the disagreement was, measured on the pre-change tree with `HaDiscovery::configure` given
+  // the same string: this accepted a trailing `/` (and stripped it), a leading `/`, a space, and any
+  // length up to 109 bytes; discovery refused all four. Discovery accepted 0x7f and every byte from
+  // 0x80 up; this refused both. Neither direction says anything to the operator — §4.4.7's failure
+  // mode is silence — and the first direction is the one that shipped: `watermeter/plant-3/` was
+  // accepted here, published telemetry happily, and produced NO Home Assistant entities at all,
+  // because discovery had refused the identical string. The MQTT state register still read connected.
+  //
+  // Three behaviour changes follow, and each replaces a silent outcome with a reportable one:
+  //
+  //  - a trailing `/` is now REFUSED rather than repaired. Repair was the defect: it made this
+  //    module's accepted set differ from discovery's while looking helpful. A refusal reaches the
+  //    operator — ui_settings.cpp fails the edit, portal_form.cpp reports Refused — and
+  //    `NetSettings::stage()` has refused the same string at the field's own door since 5A landed,
+  //    so nothing an operator could previously store becomes unusable here;
+  //  - a leading `/`, a space, and an interior `//` are refused. Each leaves an empty topic level or
+  //    a byte §4.6 cannot render on the one screen that could explain the fault;
+  //  - the length cap is now the FIELD's 48 bytes rather than this buffer's 109. A base topic can
+  //    only arrive from `NetField::MqttBaseTopic` (48) or `mqttDefaultBaseTopic` (17), so 49..109 was
+  //    unreachable from either real source and was refused by discovery anyway.
+  //
+  // The interior `//` case is the one where BOTH modules tighten: both used to accept it.
+  if (!NetSettings::isValidBaseTopic(baseTopic)) return false;
 
-  // Trailing slashes are stripped so that the operator typing "watermeter/" and "watermeter" get
-  // the same topics. Left alone, "<base>/status" would become "watermeter//status" — a legal MQTT
-  // topic with an empty level, which subscribes and publishes fine and matches nothing the user
-  // configured in HA.
-  std::size_t length = std::strlen(baseTopic);
-  while (length > 0 && baseTopic[length - 1] == '/') --length;
-  if (length == 0) return false;
-
-  // The longest suffix appended below is "/diagnostics/state" at 18 bytes.
-  if (length + 19 > kMaxTopicBytes) return false;
-
-  for (std::size_t i = 0; i < length; ++i) {
-    if (!topicByteIsLegal(baseTopic[i])) return false;
-  }
-
+  // No length branch of its own: the validator caps this at netFieldCapacity(MqttBaseTopic), and the
+  // static_assert in the header proves that cap plus "/diagnostics/state" fits kMaxTopicBytes. That
+  // moved the old `length + 19 > kMaxTopicBytes` refusal from a branch that can no longer be taken
+  // to a build failure that fires if either constant moves.
+  const std::size_t length = std::strlen(baseTopic);
   std::memcpy(baseTopic_, baseTopic, length);
   baseTopic_[length] = '\0';
 
-  // memcpy rather than snprintf: the length check above already proves this fits, but -Werror's
+  // memcpy rather than snprintf: the bound above already proves this fits, but -Werror's
   // format-truncation analysis cannot see that through a member array, and silencing it with a
   // pragma would also silence a future real truncation here.
   static const char kStatusSuffix[] = "/status";

@@ -218,6 +218,15 @@ class HaDiscovery {
    * Rejects rather than truncates. A truncated base topic is still a *valid* topic, so the device
    * would publish happily to the wrong place and the operator would see nothing in Home Assistant
    * and nothing wrong on the panel. A refusal is reportable.
+   *
+   * The base topic AND the discovery prefix are judged by `NetSettings::isValidBaseTopic` — the one
+   * canonical rule (owner decision 5A) — and by no local rule of this module's own. `MqttPublisher`
+   * defers to the same function, so a topic this accepts is a topic that publishes. That was not
+   * true before: see the deferral comment in `configure`'s body for the six classes of input the two
+   * modules used to judge differently, and for why every one of them failed silently.
+   *
+   * The prefix additionally has to fit its own 32-byte field, which is a tighter bound than the
+   * validator's and therefore still checked here.
    */
   bool configure(const HaDeviceIdentity& device, const char* discoveryPrefix, const char* baseTopic);
 

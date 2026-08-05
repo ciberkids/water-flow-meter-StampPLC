@@ -10,6 +10,11 @@
 // needed.
 #include "net/ha_discovery.h"
 
+// The ONE base-topic rule (owner decision 5A). Named explicitly rather than leaned on through
+// ha_discovery.h, because the agreement checks below call it directly and must not depend on
+// another header's include list to keep compiling.
+#include "net/net_settings.h"
+
 #include <cctype>
 #include <cstdio>
 #include <cstring>
@@ -854,6 +859,140 @@ void configValidationTests() {
         "letters, digits, underscore and dash are accepted, which is all a MAC suffix needs");
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// Owner decision 5A — ONE definition of a base topic, and this module defers to it
+// ═══════════════════════════════════════════════════════════════════════════════════════
+//
+// The divergence this exists for, measured on the pre-change tree by handing the same string to
+// HaDiscovery::configure and MqttPublisher::configure. Six classes disagreed:
+//
+//   input                     HaDiscovery     MqttPublisher
+//   "watermeter/a1b2c3/"      reject          accept (silently stripped)
+//   "watermeter/a1b2c3///"    reject          accept (silently stripped)
+//   "/watermeter/a1b2c3"      reject          accept
+//   "water meter/a1"          reject          accept
+//   49..109 bytes             reject          accept
+//   0x7f, or any byte >= 0x80 accept          reject
+//
+// plus "watermeter//a1", which both accepted and the canonical rule refuses.
+//
+// The first five are the ones that shipped a symptom: the publisher took the topic, published
+// telemetry to it, and this module refused the identical string — so NOT ONE entity was created
+// while the MQTT state register read connected and nothing was logged at either end (§4.4.7). It
+// presents as a broker fault. The sixth is the mirror image: entities advertised on a base topic
+// nothing ever publishes to, so every one sits at `unknown` forever.
+//
+// The assertion is agreement with the NAMED canonical rule — plc::NetSettings::isValidBaseTopic —
+// rather than with the other module, and the expectation is obtained by CALLING it, never by
+// restating a bool. The publisher half of this corpus is in mqtt_publisher_test.cpp; agreement with
+// one canonical rule on both sides is transitive and needs no cross-link between two leaf tests
+// (run.sh keeps them dependency-free on purpose).
+//
+// What would break this test: reinstating a private topic rule in ha_discovery.cpp — the old
+// `topicCharsValid` accepted three of the rows below that the canonical rule refuses.
+void baseTopicAgreementTests() {
+  std::printf("\n[owner decision 5A — configure() accepts exactly isValidBaseTopic's set]\n");
+
+  struct Case {
+    const char* topic;
+    const char* what;
+  };
+
+  const std::string atCap(plc::kHaMaxBaseTopicBytes, 'x');
+  const std::string overCap(plc::kHaMaxBaseTopicBytes + 1, 'x');
+
+  const Case cases[] = {
+      {"watermeter/a1b2c3", "a plain topic"},
+      {"watermeter/a1b2c3/", "DIVERGED: trailing '/' — refused here, accepted and stripped there"},
+      {"watermeter/a1b2c3///", "DIVERGED: three trailing '/'"},
+      {"/watermeter/a1b2c3", "DIVERGED: leading '/' — refused here, accepted there"},
+      {"water meter/a1", "DIVERGED: a space — refused here, accepted there"},
+      {"watermeter//a1", "an interior '//' — both modules used to accept it"},
+      {"watermeter/a1\x7f", "DIVERGED: DEL 0x7f — accepted here, refused there"},
+      {"watermeter/caf\xC3\xA9", "DIVERGED: a UTF-8 byte >= 0x80 — accepted here, refused there"},
+      {"watermeter/a1\x01", "a control byte, which both always refused"},
+      {"watermeter/+/a", "a '+' wildcard"},
+      {"watermeter/#", "a '#' wildcard"},
+      {"water\"meter/a1", "a double quote, which is legal and must stay accepted"},
+      {"", "the empty string"},
+      {"///", "a topic made only of slashes"},
+      {nullptr, "a null pointer"},
+      {atCap.c_str(), "a topic exactly filling the field"},
+      {overCap.c_str(), "DIVERGED: one byte over the field — refused here, accepted there"},
+  };
+
+  HaDeviceIdentity device;
+  device.nodeId = "wfm_a1b2c3";
+
+  for (const Case& c : cases) {
+    HaDiscovery ha;
+    const bool accepted = ha.configure(device, "homeassistant", c.topic);
+    const bool canonical = plc::NetSettings::isValidBaseTopic(c.topic);
+    check(accepted == canonical, c.what);
+    char scratch[plc::kHaStateTopicBytes] = {};
+    if (accepted) {
+      // Accepted VERBATIM. A module that agreed about the verdict and then repaired the string would
+      // advertise a topic the publisher does not publish to, which is the same defect wearing
+      // agreement as a disguise.
+      ha.availabilityTopic(scratch, sizeof(scratch));
+      check(std::string(scratch) == std::string(c.topic) + "/status",
+            "  and <base>/status is built from it unrepaired");
+    } else {
+      // The silent failure, stated as a mechanism: a refusal produces no entities at all, which is
+      // exactly what the operator saw while MQTT reported connected.
+      HaEntityRef entities[plc::kHaMaxEntities];
+      check(!ha.configured() && ha.enumerateEntities(0xFFFF, entities, plc::kHaMaxEntities) == 0,
+            "  and a refusal yields ZERO entities — the symptom 5A exists to remove");
+    }
+  }
+
+  // ── The discovery prefix goes through the same rule, plus its OWN tighter cap ─────────
+  //
+  // 32 bytes (its register field) against the validator's 48, so the cap is reachable and is the one
+  // check ha_discovery.cpp still makes for itself. The expectation is the conjunction of the two
+  // rules, written as the conjunction rather than as a verdict per row.
+  const std::string prefixAtCap(plc::kHaMaxPrefixBytes, 'P');
+  const std::string prefixOverCap(plc::kHaMaxPrefixBytes + 1, 'P');
+  const Case prefixCases[] = {
+      {"homeassistant", "the default prefix"},
+      {"ha-test", "a renamed prefix"},
+      {"home//assistant", "an interior '//' — <prefix>//status is never HA's birth topic (R4.4.7)"},
+      {"homeassistant/", "a trailing '/'"},
+      {"/homeassistant", "a leading '/'"},
+      {"home assistant", "a space"},
+      // Split for the reason ha_discovery.cpp splits its degree sign: "\x7fa" would parse as one
+      // out-of-range hex escape, which -Werror refuses.
+      {"home\x7f" "assistant", "DEL 0x7f, which the old private rule let through"},
+      {"homeassistant\xC3\xA9", "a UTF-8 byte >= 0x80, likewise"},
+      {"home+assistant", "a '+' wildcard"},
+      {"", "the empty string"},
+      {nullptr, "a null pointer"},
+      {prefixAtCap.c_str(), "a prefix exactly filling its 32-byte field"},
+      {prefixOverCap.c_str(), "one byte over it — refused by the module's own cap, not the rule"},
+  };
+
+  for (const Case& c : prefixCases) {
+    HaDiscovery ha;
+    const bool accepted = ha.configure(device, c.topic, "watermeter/a1b2c3");
+    const bool canonical = plc::NetSettings::isValidBaseTopic(c.topic) &&
+                           std::strlen(c.topic == nullptr ? "" : c.topic) <= plc::kHaMaxPrefixBytes;
+    check(accepted == canonical, c.what);
+  }
+
+  // The floor under both loops. If isValidBaseTopic degenerated to "return true", every row above
+  // would still pass as long as configure() degenerated with it — so the three verdicts this module
+  // actually CHANGED are pinned absolutely, and the ones it must not have changed with them.
+  HaDiscovery ha;
+  check(!ha.configure(device, "homeassistant", "watermeter/a1\x7f") &&
+            !ha.configure(device, "homeassistant", "watermeter/caf\xC3\xA9") &&
+            !ha.configure(device, "homeassistant", "watermeter//a1"),
+        "absolutely: 0x7f, a byte >= 0x80 and an interior '//' are refused — all three USED to pass");
+  check(ha.configure(device, "homeassistant", "water\"meter/a1"),
+        "while a quote is still accepted, because the payload escapes it rather than refusing it");
+  check(ha.configure(device, "homeassistant", std::string(plc::kHaMaxBaseTopicBytes, 'x').c_str()),
+        "and a topic filling the whole field still configures — R4.4.8's worst case needs it");
+}
+
 }  // namespace
 
 int main() {
@@ -869,6 +1008,7 @@ int main() {
   republishPolicyTests();
   enumerationTests();
   configValidationTests();
+  baseTopicAgreementTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

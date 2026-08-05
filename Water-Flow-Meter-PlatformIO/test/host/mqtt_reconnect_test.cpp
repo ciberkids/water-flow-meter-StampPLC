@@ -5,6 +5,18 @@
 // jitter that R4.1.2 asks for is invisible to a single device. Here the clock is a parameter and
 // the whole ladder runs in a few milliseconds of simulated hours.
 //
+// ── The blocker these tests were extended to catch ────────────────────────────────
+//
+// The first version of this policy armed its ladder from a CONNECTED → DISCONNECTED edge and sat
+// in an `Idle` phase until one arrived. A broker that is unreachable from boot never produces that
+// edge, so on the one device R4.1.2 is written for the ladder stayed at rest — and because
+// `disable_auto_reconnect = true` had already switched esp-mqtt's own retry off, nothing retried at
+// all. The old suite PASSED, because it asserted that resting behaviour on purpose
+// ("the policy never starts a session of its own").
+//
+// So the sections below now begin from a cold start, which is the production path, and the
+// never-connected case is measured as a ladder rather than asserted as silence.
+//
 // Two rules this file follows deliberately, both because this project has shipped checks that
 // passed for the wrong reason:
 //
@@ -53,6 +65,12 @@ constexpr int kRungs = 12;
 constexpr uint32_t kLadderMs[kRungs] = {1000,  2000,   4000,   8000,   16000,  32000,
                                         64000, 128000, 256000, 300000, 300000, 300000};
 
+/** The rung an attempt following `failures` consecutive failures must use. Literal beyond the
+ *  table's end, because §3.1.2's ceiling holds for every rung after the tenth. */
+uint32_t rungFor(int consecutiveFailures) {
+  return consecutiveFailures < kRungs ? kLadderMs[consecutiveFailures] : 300000u;
+}
+
 /** The bottom of the subtractive jitter band for a rung: `base - base/8`. Literal divisor. */
 uint32_t bandFloor(uint32_t base) { return base - base / 8; }
 
@@ -96,34 +114,139 @@ void climb(MqttReconnect& policy, uint32_t& nowMs, int count) {
   }
 }
 
-// ── At rest ───────────────────────────────────────────────────────────────────────
+/** How an unreachable broker's refusal reaches the policy. Both happen on a real device. */
+enum class Refusal {
+  Disconnected, /**< esp-mqtt raised MQTT_EVENT_DISCONNECTED, as it does from a failed CONNECT. */
+  Silent        /**< Nothing was reported at all — the case `kAttemptTimeoutMs` exists for. */
+};
 
-void restTests() {
-  std::printf("[at rest — nothing reconnects a client nobody reported down]\n");
+/**
+ * Drives the whole production loop against a broker that never accepts: tick, answer the due edge,
+ * refuse, repeat. Fills `gaps` with the interval between consecutive attempts and returns how many
+ * attempts were actually asked for — a policy that stalls returns fewer than `count`.
+ */
+int collectGaps(MqttReconnect& policy, uint32_t& nowMs, uint32_t* gaps, int count, Refusal how) {
+  int seen = 0;
+  uint32_t previous = nowMs;
+  for (int i = 0; i < count; ++i) {
+    const uint32_t took = msUntilAttempt(policy, nowMs, previous);
+    if (took == 0) return seen;  // it stopped asking
+    gaps[seen++] = took;
+    previous = nowMs;
+    if (how == Refusal::Disconnected) policy.noteDisconnected();
+  }
+  return seen;
+}
+
+// ── Cold start ────────────────────────────────────────────────────────────────────
+
+void coldStartTests() {
+  std::printf("[cold start — a broker unreachable from boot is a rung, not a resting place]\n");
 
   MqttReconnect policy(kMacA);
   uint32_t now = 1000;
 
   check(policy.attempts() == 0 && policy.retryDelayMs() == 0,
         "a fresh policy has no failures and no wait");
-  policy.update(now);
-  check(!policy.shouldAttemptNow(), "and one tick asks for no reconnect");
-  // Paired with the check above on purpose: "false at rest" is true of a do-nothing stub. What this
-  // one adds is that ten minutes of ticking does not arm the ladder by itself — the client's own
-  // first connect belongs to whoever called begin(), the same rule §7 states for the radio.
-  check(!anyAttemptWithin(policy, now, 600000, 1000),
-        "nor does ten minutes of them: the policy never starts a session of its own");
 
-  // noteAttemptFailed() is the CLIMBING edge and means "the attempt I asked for failed". With no
-  // attempt outstanding there is nothing it could truthfully be about, so it must not arm anything.
-  MqttReconnect stray(kMacA);
-  uint32_t strayNow = 1000;
-  stray.update(strayNow);
-  stray.noteAttemptFailed();
-  check(stray.attempts() == 0 && stray.retryDelayMs() == 0,
-        "noteAttemptFailed() with no attempt outstanding is ignored");
-  check(!anyAttemptWithin(stray, strayNow, 600000, 1000),
-        "and does not arm the ladder — only a disconnect does that");
+  const uint32_t bootedAt = now;
+  now += kTickMs;
+  policy.update(now);
+  check(policy.shouldAttemptNow(), "the FIRST tick asks for an attempt: nothing waits to be armed");
+  // The check the blocker turns on. A ladder that armed on a disconnect NOTIFICATION could not
+  // start here at all — `connected_` is false at boot and stays false, so there is no edge to
+  // notify — and with `disable_auto_reconnect = true` the library will not retry either.
+  check(now - bootedAt <= kTickMs && now - bootedAt < 875u,
+        "and it is NOT delayed by the ladder: R4.1.2 rations retries, not the first try");
+
+  policy.noteDisconnected();  // MQTT_EVENT_DISCONNECTED — esp-mqtt reports a failed CONNECT this way
+  check(policy.attempts() == 1, "a broker that refuses the first attempt puts it on the counter");
+  check(policy.retryDelayMs() >= 875u && policy.retryDelayMs() <= 1000u,
+        "and the next attempt is scheduled one second out (§3.1.2's first rung)");
+
+  // Twenty-two attempts of the real loop, from a boot that never once succeeds. This is the
+  // scenario R4.1.2 is about, and the one the old contract could not reach.
+  constexpr int kAttempts = 22;
+  uint32_t gaps[kAttempts] = {};
+  MqttReconnect cold(kMacA);
+  uint32_t coldNow = 1000;
+  const int seen = collectGaps(cold, coldNow, gaps, kAttempts, Refusal::Disconnected);
+
+  bool everyGapIsItsRung = true;
+  bool ceilingNeverExceeded = true;
+  for (int i = 1; i < seen; ++i) {
+    const uint32_t expected = rungFor(i - 1);
+    if (gaps[i] < bandFloor(expected) || gaps[i] > expected + kTickMs) everyGapIsItsRung = false;
+    if (gaps[i] > 300000u + kTickMs) ceilingNeverExceeded = false;
+  }
+  std::printf("      first gaps (ms): ");
+  for (int i = 0; i < 6 && i < seen; ++i) std::printf("%u ", static_cast<unsigned>(gaps[i]));
+  std::printf("...\n");
+
+  check(seen == kAttempts,
+        "it keeps asking for the whole run — §9 forbids giving up on an unreachable broker");
+  check(seen > 0 && gaps[0] <= kTickMs, "the first of them is immediate");
+  check(everyGapIsItsRung,
+        "and each later one waits its own rung: 1,2,4,8,16,32,64,128,256 s then 300 s");
+  check(ceilingNeverExceeded, "never longer than five minutes, however long the broker stays down");
+  // One refusal was reported per attempt, including the last, so the counter is the number of
+  // refusals and not, say, the number of rungs the ladder happens to have.
+  check(cold.attempts() == kAttempts,
+        "every refusal counted, so the ladder's position is the failure count, not a guess");
+}
+
+// ── A working broker ──────────────────────────────────────────────────────────────
+
+void promptConnectTests() {
+  std::printf("\n[a working broker — the ladder must not stand between a boot and a CONNACK]\n");
+
+  MqttReconnect policy(kMacA);
+  uint32_t now = 1000;
+  const uint32_t bootedAt = now;
+
+  const uint32_t waited = msUntilAttempt(policy, now, bootedAt);
+  check(waited > 0 && waited <= kTickMs,
+        "the attempt is due on the first tick after boot, not one second later");
+
+  policy.noteConnected();  // MQTT_EVENT_CONNECTED
+  check(policy.attempts() == 0 && policy.retryDelayMs() == 0,
+        "a session that comes up leaves no ladder behind it");
+  check(!anyAttemptWithin(policy, now, 600000, 1000),
+        "and ten minutes with the session up asks for no reconnect at all");
+}
+
+// ── The client that says nothing ──────────────────────────────────────────────────
+
+void silentClientTests() {
+  std::printf("\n[a silent client — with the library's own retry disabled, WE are the only retry]\n");
+
+  // Not one notification, ever: no CONNECTED, no DISCONNECTED, no ERROR. A broker that accepts the
+  // TCP connection and black-holes the CONNECT looks like this, and so does a firmware whose event
+  // wiring is wrong. With `disable_auto_reconnect = true` there is nothing else to fall back on, so
+  // a policy that waits for a verdict here leaves MQTT down forever and reports nothing.
+  constexpr int kAttempts = 16;
+  uint32_t gaps[kAttempts] = {};
+  MqttReconnect policy(kMacA);
+  uint32_t now = 1000;
+  const int seen = collectGaps(policy, now, gaps, kAttempts, Refusal::Silent);
+
+  bool everyGapAllowsTheDeadline = true;
+  bool everyGapIsDeadlinePlusRung = true;
+  for (int i = 1; i < seen; ++i) {
+    const uint32_t expected = 20000u + rungFor(i - 1);  // literal 20 s, then §3.1.2's rung
+    if (gaps[i] < 20000u) everyGapAllowsTheDeadline = false;
+    if (gaps[i] < bandFloor(expected) || gaps[i] > expected + kTickMs) {
+      everyGapIsDeadlinePlusRung = false;
+    }
+  }
+
+  check(seen == kAttempts, "the ladder runs anyway: an unanswered attempt is a failed attempt");
+  check(everyGapAllowsTheDeadline,
+        "no attempt is abandoned before its 20 s deadline, so nothing storms the broker");
+  check(everyGapIsDeadlinePlusRung,
+        "and the interval is that deadline plus the rung — the same ladder, one deadline slower");
+  check(policy.attempts() == kAttempts - 1,
+        "the failure count climbs without a single event, so §9 can still report the fault");
 }
 
 // ── The ladder ────────────────────────────────────────────────────────────────────
@@ -133,11 +256,12 @@ void ladderTests() {
 
   MqttReconnect policy(kMacA);
   uint32_t now = 5000;
-  policy.update(now);
+  policy.update(now);  // cold: this is the first attempt, and the caller answers it
+  check(policy.shouldAttemptNow(), "the cold policy asks for its own first attempt");
 
   const uint32_t armedAt = now;
   policy.noteDisconnected();  // esp-mqtt's MQTT_EVENT_DISCONNECTED: the production failure edge.
-  check(policy.attempts() == 1, "the first disconnect puts one failure on the counter");
+  check(policy.attempts() == 1, "the first refusal puts one failure on the counter");
   check(policy.retryDelayMs() >= 875u && policy.retryDelayMs() <= 1000u,
         "and schedules the first rung inside 1 s's jitter band (§3.1.2)");
 
@@ -193,11 +317,11 @@ void edgeTests() {
   MqttReconnect policy(kMacA);
   uint32_t now = 1000;
   policy.update(now);
-  const uint32_t armedAt = now;
   policy.noteDisconnected();
+  const uint32_t armedAt = now;
 
   const uint32_t waited = msUntilAttempt(policy, now, armedAt);
-  check(waited >= 875u && waited <= 1000u + kTickMs, "the first attempt comes due after ~1 s");
+  check(waited >= 875u && waited <= 1000u + kTickMs, "the second attempt comes due after ~1 s");
   check(policy.shouldAttemptNow(), "and the policy says so on the tick it came due");
   check(policy.retryDelayMs() == 0, "the wait is over, so no wait is reported any more");
 
@@ -232,7 +356,7 @@ void edgeTests() {
         "and it resumes at the SECOND rung, 2 s, rather than starting the climb over");
 }
 
-// ── Duplicated events ─────────────────────────────────────────────────────────────
+// ── Duplicated and paired events ──────────────────────────────────────────────────
 
 void duplicateEventTests() {
   std::printf("\n[duplicate events — esp-mqtt's task repeats itself; the ladder must not]\n");
@@ -242,10 +366,9 @@ void duplicateEventTests() {
   policy.update(now);
   const uint32_t armedAt = now;
   policy.noteDisconnected();
-  check(policy.attempts() == 1, "the first disconnect arms the ladder at one failure");
+  check(policy.attempts() == 1, "the first refusal arms the ladder at one failure");
 
-  // ERROR-then-DISCONNECTED pairs and repeats are normal from the library, and they arrive from
-  // another task. One rung per EVENT would put a flaky minute at the five-minute ceiling.
+  // Repeats arrive from another task. One rung per EVENT would put a flaky minute at the ceiling.
   policy.noteDisconnected();
   policy.update(now += kTickMs);
   policy.noteDisconnected();
@@ -256,6 +379,18 @@ void duplicateEventTests() {
   const uint32_t waited = msUntilAttempt(policy, now, armedAt);
   check(waited >= 875u && waited <= 1000u + kTickMs,
         "so the wait is still the FIRST rung's second, measured from the first event");
+
+  // MQTT_EVENT_ERROR then MQTT_EVENT_DISCONNECTED is the ORDINARY pair for a transport fault and
+  // for a refused CONNACK alike. A handler that decodes `connect_return_code` may report the first
+  // as noteAttemptFailed(); the DISCONNECTED that follows must not cost a second rung.
+  MqttReconnect paired(kMacA);
+  uint32_t pairedNow = 1000;
+  paired.update(pairedNow);  // the cold attempt, now outstanding
+  paired.noteAttemptFailed();
+  paired.noteDisconnected();
+  check(paired.attempts() == 1, "ERROR then DISCONNECTED for one failure is ONE rung, not two");
+  const uint32_t pairWait = msUntilAttempt(paired, pairedNow, pairedNow);
+  check(pairWait >= 875u && pairWait <= 1000u + kTickMs, "and the retry is 1 s out, not 2 s");
 }
 
 // ── Recovery ──────────────────────────────────────────────────────────────────────
@@ -302,14 +437,60 @@ void resetTests() {
 
   policy.reset();
   check(policy.attempts() == 0 && policy.retryDelayMs() == 0, "reset() forgets all of it");
-  check(!anyAttemptWithin(policy, now, 600000, 1000),
-        "and asks for nothing until the next disconnect — begin() owns the first connect");
 
-  const uint32_t armedAt = now;
+  // Not "asks for nothing until the next disconnect", which is what this used to assert and what
+  // made the boot case unreachable. reset() puts the policy back where a fresh one starts, and a
+  // fresh one attempts at once — otherwise the five-minute hole reset() exists to close is still
+  // there, just now measured from the WiFi edge.
+  const uint32_t resetAt = now;
+  const uint32_t waited = msUntilAttempt(policy, now, resetAt);
+  check(waited > 0 && waited <= kTickMs,
+        "and attempts on the very next tick: WiFi came back, the broker owes us nothing");
+
   policy.noteDisconnected();
-  const uint32_t waited = msUntilAttempt(policy, now, armedAt);
-  check(waited >= 875u && waited <= 1000u + kTickMs,
+  const uint32_t next = msUntilAttempt(policy, now, now);
+  check(next >= 875u && next <= 1000u + kTickMs,
         "so the next real failure starts the ladder again at one second");
+
+  // A late DISCONNECTED from the session reset() abandoned arrives in another task's time, i.e.
+  // after the reset. It describes a client this policy no longer owns and must not delay the fresh
+  // attempt by a rung.
+  MqttReconnect stale(kMacA);
+  uint32_t staleNow = 1000;
+  stale.update(staleNow);
+  stale.noteDisconnected();
+  climb(stale, staleNow, 4);
+  stale.reset();
+  stale.noteDisconnected();
+  check(stale.attempts() == 0, "a stale disconnect landing after reset() is not a new failure");
+  const uint32_t afterStale = msUntilAttempt(stale, staleNow, staleNow);
+  check(afterStale > 0 && afterStale <= kTickMs, "and does not stand in the way of the next try");
+}
+
+// ── Notifications nobody asked for ────────────────────────────────────────────────
+
+void strayNotificationTests() {
+  std::printf("\n[stray notifications — a claim about an attempt that was never made]\n");
+
+  // noteAttemptFailed() means "the attempt I asked for failed". With no attempt outstanding there
+  // is nothing it could truthfully be about, so it must neither count nor delay anything.
+  MqttReconnect stray(kMacA);
+  uint32_t now = 1000;
+  stray.noteAttemptFailed();
+  check(stray.attempts() == 0, "noteAttemptFailed() before any attempt is ignored");
+  const uint32_t waited = msUntilAttempt(stray, now, now);
+  check(waited > 0 && waited <= kTickMs, "and the first attempt is still immediate");
+
+  // The same claim from a connected policy: the publisher's view of the session and this one's must
+  // not be allowed to disagree because a caller invented a failure.
+  MqttReconnect live(kMacA);
+  uint32_t liveNow = 1000;
+  live.update(liveNow);
+  live.noteConnected();
+  live.noteAttemptFailed();
+  check(live.attempts() == 0, "and from a live session it is ignored too");
+  check(!anyAttemptWithin(live, liveNow, 600000, 1000),
+        "so an invented failure cannot reconnect a client that is up");
 }
 
 // ── The figures themselves ────────────────────────────────────────────────────────
@@ -402,12 +583,15 @@ void rolloverTests() {
 
 int main() {
   std::printf("plc::MqttReconnect — R4.1.2's exponential backoff, measured\n\n");
-  restTests();
+  coldStartTests();
+  promptConnectTests();
+  silentClientTests();
   ladderTests();
   edgeTests();
   duplicateEventTests();
   recoveryTests();
   resetTests();
+  strayNotificationTests();
   figureTests();
   jitterTests();
   rolloverTests();

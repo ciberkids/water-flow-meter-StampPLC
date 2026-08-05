@@ -5,6 +5,10 @@
 
 #include "modbus/register_map.h"
 #include "net/mqtt_limits.h"
+// The ONE base-topic rule (owner decision 5A). `isValidBaseTopic` and `netFieldCapacity` are inline
+// and constexpr, so this include costs a header dependency and NOT a link-time one — which is what
+// lets `configure()` use the shared validator without net_settings.cpp joining this test's link set.
+#include "net/net_settings.h"
 
 namespace plc {
 
@@ -245,6 +249,26 @@ class MqttPublisher {
   static_assert(kMaxTelemetryPayloadBytes <= kMaxPayloadBytes,
                 "a telemetry payload must fit a queue slot");
 
+  /**
+   * The base topic's fit, reconciled at COMPILE time instead of re-checked at run time.
+   *
+   * `configure()` accepts exactly what `NetSettings::isValidBaseTopic` accepts (owner decision 5A),
+   * and that validator caps a topic at `netFieldCapacity(NetField::MqttBaseTopic)`. The longest
+   * suffix appended to it here is `/diagnostics/state`, so a base topic within the cap plus that
+   * suffix has to fit `kMaxTopicBytes` — otherwise `buildTopic` would refuse that state topic at
+   * RUN time, every time, and the entity would simply never update with nothing logged (§4.4.7).
+   *
+   * Note this does NOT size `kMaxTopicBytes`: discovery still does, per the comment on that
+   * constant. This only reconciles the base topic against it.
+   *
+   * It replaces a runtime `length + 19 > kMaxTopicBytes` refusal in `configure`. Once the validator
+   * caps the length at the field capacity, that branch could never be taken; an assert on the two
+   * constants CAN fail, and fails the build the moment either the capacity or this buffer moves.
+   */
+  static_assert(netFieldCapacity(NetField::MqttBaseTopic) + sizeof("/diagnostics/state") <=
+                    kMaxTopicBytes,
+                "a validator-legal base topic plus '/diagnostics/state' must fit a topic buffer");
+
   /** R4.3.2. */
   static constexpr uint32_t kHeartbeatMs = 60000;
 
@@ -259,9 +283,16 @@ class MqttPublisher {
    * Sets the base topic (§4.2) and the cadence (R4.3.1). Returns false — leaving the publisher
    * unconfigured and silent — when the base topic cannot be used.
    *
+   * What "cannot be used" means is `NetSettings::isValidBaseTopic` and nothing else (owner decision
+   * 5A). This module used to judge the field itself and disagreed with `HaDiscovery::configure`
+   * about six classes of input; a topic one accepted and the other refused produced ZERO Home
+   * Assistant entities with MQTT reporting connected. See the body for what that cost.
+   *
    * Refusal rather than repair, because a base topic is operator input that reaches a broker: `+`
    * and `#` are illegal in a PUBLISH topic per MQTT 3.1.1, and silently stripping them would
-   * publish to a topic the operator did not type and cannot find.
+   * publish to a topic the operator did not type and cannot find. A trailing `/` was the one
+   * exception and is no longer — it USED to be stripped here, which is precisely the repair that
+   * left discovery refusing what this accepted.
    *
    * `publishPeriodS` and `qos` are CLAMPED rather than refused. They arrive from a Modbus register
    * where any 16-bit value is writable, and refusing the whole configuration because a master

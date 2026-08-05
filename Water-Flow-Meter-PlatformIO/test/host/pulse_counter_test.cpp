@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <cstddef>
 #include <cstdint>
+#include <algorithm>
 #include <vector>
 
 namespace {
@@ -112,18 +113,104 @@ void iterationTests() {
 }
 
 void enabledMaskTests() {
-  std::printf("\n[enabledMaskFromBitmap — computed on configuration change, not per sample]\n");
+  std::printf("\n[enabledMaskFrom — one source of truth, asked per channel]\n");
 
-  check(plc::enabledMaskFromBitmap(0x0000, 8) == 0x00, "no sensors connected -> empty mask");
-  check(plc::enabledMaskFromBitmap(0x00FF, 8) == 0xFF, "all eight connected -> full mask");
-  check(plc::enabledMaskFromBitmap(0b0000'0001, 8) == 0b0000'0001, "sensor 1 only");
-  check(plc::enabledMaskFromBitmap(0b1000'0001, 8) == 0b1000'0001, "first and last");
+  // A bitmap-shaped predicate, so the old cases still apply.
+  auto fromBits = [](uint16_t bits) {
+    return [bits](std::size_t i) { return ((bits >> i) & 0x01u) != 0; };
+  };
 
-  // The bitmap is 16-bit and the mask is 8-bit: bits above the channel count must not leak in.
-  check(plc::enabledMaskFromBitmap(0xFF00, 8) == 0x00,
-        "bits above the channel count are ignored rather than truncated into the mask");
-  check(plc::enabledMaskFromBitmap(0xFFFF, 8) == 0xFF, "and the low eight still come through");
-  check(plc::enabledMaskFromBitmap(0xFFFF, 4) == 0x0F, "a smaller channel count narrows the mask");
+  check(plc::enabledMaskFrom(8, fromBits(0x0000)) == 0x00, "nothing enabled -> empty mask");
+  check(plc::enabledMaskFrom(8, fromBits(0x00FF)) == 0xFF, "all eight -> full mask");
+  check(plc::enabledMaskFrom(8, fromBits(0b0000'0001)) == 0b0000'0001, "channel 0 only");
+  check(plc::enabledMaskFrom(8, fromBits(0b1000'0001)) == 0b1000'0001, "first and last");
+  check(plc::enabledMaskFrom(8, fromBits(0xFF00)) == 0x00,
+        "channels above the count are never asked about, so they cannot leak in");
+  check(plc::enabledMaskFrom(4, fromBits(0xFFFF)) == 0x0F, "a smaller count narrows the mask");
+  check(plc::enabledMaskFrom(99, fromBits(0xFFFF)) == 0xFF,
+        "and a count beyond the mask's width clamps at eight rather than overflowing");
+
+  // ── The property that matters: the predicate is the ONLY source ────────────────
+  //
+  // The bug this replaced needed two facts to disagree. With a predicate there is one fact, read at
+  // the moment the mask is built, so "the loop counted a channel the engine will ignore" is not a
+  // reachable state — it is not expressible.
+  std::size_t asked = 0;
+  plc::enabledMaskFrom(8, [&](std::size_t) {
+    ++asked;
+    return false;
+  });
+  check(asked == 8, "every channel is asked exactly once — no cached second copy to drift");
+
+  // Reading the engine's own flag is what makes them agree. Simulated here with a shared array,
+  // because that is precisely the relationship firmware.cpp now has with sensors[].inUse.
+  bool inUse[8] = {true, false, true, false, false, false, false, true};
+  const uint8_t mask = plc::enabledMaskFrom(8, [&](std::size_t i) { return inUse[i]; });
+  check(mask == 0b1000'0101, "the mask mirrors the engine's flags exactly");
+  inUse[1] = true;
+  check(plc::enabledMaskFrom(8, [&](std::size_t i) { return inUse[i]; }) == 0b1000'0111,
+        "and follows them the moment they change, with nothing to re-sync");
+}
+
+/**
+ * The backlog the old two-source design could produce.
+ *
+ * Not a test of current behaviour — it is a demonstration of WHY the mask now comes from the engine's
+ * own flag, kept because the failure is severe, silent, and easy to reintroduce by "optimising" the
+ * mask back into a cached bitmap.
+ */
+void backlogTests() {
+  std::printf("\n[why one source: the backlog a disagreement used to allow]\n");
+
+  // Model the engine: it clears pulseCount only for channels it considers in use.
+  bool inUse[8] = {};
+  uint32_t pulseCount[8] = {};
+  auto engineTick = [&](double* volumeOut) {
+    for (std::size_t i = 0; i < 8; ++i) {
+      if (!inUse[i]) continue;      // <- the clear lives inside this guard, which is the whole trap
+      volumeOut[i] += pulseCount[i];
+      pulseCount[i] = 0;
+    }
+  };
+
+  // THE OLD SHAPE: the mask came from a bitmap that said "enabled" while inUse said otherwise.
+  const uint8_t staleBitmapMask = 0b0000'0001;  // channel 0 "enabled" per the bitmap
+  inUse[0] = false;                             // but not per the engine
+  uint8_t previous = 0;
+  for (int i = 0; i < 50; ++i) {
+    const uint8_t levels = (i % 2 == 0) ? 0b0000'0001 : 0x00;
+    const uint8_t edges = plc::risingEdges(previous, levels, staleBitmapMask);
+    plc::forEachRisingChannel(edges, [&](std::size_t c) { ++pulseCount[c]; });
+    previous = levels;
+  }
+  std::printf("      with the stale mask, channel 0 accumulated %u unconverted pulses\n",
+              pulseCount[0]);
+  check(pulseCount[0] == 25, "the loop counted 25 edges the engine was never going to convert");
+
+  double volume[8] = {};
+  engineTick(volume);
+  check(volume[0] == 0.0, "and the engine converted none of them while the channel was disabled");
+
+  // Now the operator enables it. The entire backlog converts in ONE interval.
+  inUse[0] = true;
+  engineTick(volume);
+  std::printf("      one interval after enabling, %0.0f pulses converted at once\n", volume[0]);
+  check(volume[0] == 25.0,
+        "the whole backlog lands in a single interval — a volume spike indistinguishable from flow");
+
+  // THE NEW SHAPE: the mask is derived from the same flag, so the backlog cannot form.
+  std::fill(std::begin(pulseCount), std::end(pulseCount), 0u);
+  inUse[0] = false;
+  previous = 0;
+  for (int i = 0; i < 50; ++i) {
+    const uint8_t levels = (i % 2 == 0) ? 0b0000'0001 : 0x00;
+    const uint8_t mask = plc::enabledMaskFrom(8, [&](std::size_t c) { return inUse[c]; });
+    const uint8_t edges = plc::risingEdges(previous, levels, mask);
+    plc::forEachRisingChannel(edges, [&](std::size_t c) { ++pulseCount[c]; });
+    previous = levels;
+  }
+  check(pulseCount[0] == 0,
+        "deriving the mask from the engine's own flag makes the backlog unreachable, not merely rare");
 }
 
 void integrationTests() {
@@ -184,6 +271,7 @@ int main() {
   phantomEdgeTests();
   iterationTests();
   enabledMaskTests();
+  backlogTests();
   integrationTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);

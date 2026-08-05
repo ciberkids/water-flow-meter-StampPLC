@@ -467,11 +467,14 @@ void pollingTaskCode(void * pvParameters) {
   for (;;) {
     const uint8_t currentPinStates = readDigitalInputBitmap();
 
-    // The enabled mask is rebuilt from the connected-sensors bitmap rather than by testing
-    // sensors[i].inUse once per channel per sample. Cheap either way, but it keeps the per-sample
-    // cost independent of how many sensors are configured, so sample spacing does not change when
-    // the operator enables one.
-    const uint8_t enabledMask = plc::enabledMaskFromBitmap(connectedSensorsBitmap, kNumSensors);
+    // The mask is built from sensors[i].inUse — THE SAME FLAG THE ENGINE GATES ON — rather than from
+    // connectedSensorsBitmap. Those were two representations of one fact, and a disagreement between
+    // them was silently catastrophic: the loop would count edges the engine never converts, and the
+    // engine's `pulseCount = 0` sits inside its own `if (sensor.inUse)`, so the backlog would grow
+    // and then land as one enormous volume in the persisted cumulativeLiters. Reading one flag makes
+    // that unexpressible rather than merely unlikely. See pulse_counter.h.
+    const uint8_t enabledMask =
+        plc::enabledMaskFrom(kNumSensors, [](std::size_t i) { return sensors[i].inUse; });
 
     // `lastPinStates` tracks the FULL bitmap, including disabled channels — see the phantom-edge
     // note in pulse_counter.h. Masking it too would manufacture a pulse the first time a channel is

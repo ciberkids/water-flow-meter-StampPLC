@@ -66,10 +66,14 @@ void MqttReconnect::update(uint32_t nowMs) {
   attemptDue_ = false;
 
   switch (phase_) {
-    case Phase::Idle:
-      // Nothing to do, forever, until somebody reports a disconnect. §7's rule for the radio —
-      // nothing switches itself on — applies to the broker connection too: the client's first
-      // connect belongs to whoever called begin().
+    case Phase::Cold:
+      // The first attempt, undelayed, and the fix for the blocker the header describes: a broker
+      // that is unreachable from boot never produces a CONNECTED → DISCONNECTED edge, so a policy
+      // that waited here for one would never retry at all — and with `disable_auto_reconnect =
+      // true` nothing else would either. Issuing it here also means the ladder never delays the
+      // first CONNECT of a device sitting next to a working broker (R4.1.2 rations retries, not
+      // the first try).
+      beginAttempt();
       return;
     case Phase::Connected:
       return;
@@ -125,12 +129,26 @@ void MqttReconnect::noteConnected() {
 }
 
 void MqttReconnect::noteDisconnected() {
-  if (phase_ == Phase::Waiting) {
-    // Already sitting out a rung. See the header: repeats and ERROR/DISCONNECTED pairs are normal,
-    // and one rung per event would put a flaky minute at the five-minute ceiling.
-    return;
+  // A switch rather than two ifs because the two phases that ignore this do so for different
+  // reasons, and because -Werror then keeps the answer explicit if a phase is ever added.
+  switch (phase_) {
+    case Phase::Waiting:
+      // Already sitting out a rung. Repeats and ERROR-then-DISCONNECTED pairs are normal from
+      // esp-mqtt's task, and one rung per event would put a flaky minute at the 5 min ceiling.
+      return;
+    case Phase::Cold:
+      // Not ours: no attempt outstanding and no session to lose. Typically a late DISCONNECTED
+      // from the client reset() just abandoned. Climbing here would put the fresh first attempt a
+      // rung late, which is the opposite of what reset() is for — and it costs nothing to ignore,
+      // because the next tick attempts anyway.
+      return;
+    case Phase::Attempting:
+    case Phase::Connected:
+      // The two real failures: the attempt we asked for did not come up, and the live session went
+      // away. Both are one rung.
+      failOnce();
+      return;
   }
-  failOnce();
 }
 
 void MqttReconnect::noteAttemptFailed() {
@@ -141,7 +159,10 @@ void MqttReconnect::noteAttemptFailed() {
 }
 
 void MqttReconnect::reset() {
-  phase_ = Phase::Idle;
+  // Cold, not "at rest": the next tick asks for an attempt. See the header — the alternative is a
+  // client that comes back with WiFi and then sits out a rung it earned against a broker that was
+  // never the problem.
+  phase_ = Phase::Cold;
   attempts_ = 0;
   retryDelayMs_ = 0;
   attemptDue_ = false;

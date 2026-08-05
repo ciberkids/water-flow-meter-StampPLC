@@ -11,6 +11,11 @@
 // and classify every real steady-state publish on hardware as a failure.
 #include "net/mqtt_publisher.h"
 
+// The ONE base-topic rule (owner decision 5A). Named explicitly rather than leaned on through
+// mqtt_publisher.h, because the agreement checks below call it directly and must not depend on
+// another header's include list to keep compiling.
+#include "net/net_settings.h"
+
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -171,19 +176,24 @@ void topicTests() {
             std::strcmp(buffer, "watermeter/a1b2c3/diagnostics/state") == 0,
         "<base>/diagnostics/state");
 
-  // The mandated trailing-slash case. Without the strip, "<base>/status" becomes
-  // "watermeter/a1b2c3//status" — a legal topic with an empty level that matches nothing the
-  // operator configured in Home Assistant, and no error anywhere.
+  // ── The trailing slash: this block used to assert the opposite ─────────────────────
+  //
+  // Until owner decision 5A was carried through, these three checks asserted that a trailing '/'
+  // was ACCEPTED and STRIPPED. That normalisation is the defect, not a convenience: HaDiscovery
+  // refused the identical string, so an operator who typed "watermeter/a1b2c3/" got telemetry on
+  // "watermeter/a1b2c3/..." and NOT ONE Home Assistant entity, with the MQTT state register reading
+  // connected and nothing logged at either end (§4.4.7). Refusal is reportable — ui_settings.cpp
+  // fails the edit and portal_form.cpp reports Refused — and it is what NetSettings::stage() has
+  // done with the same string all along.
   MqttPublisher slashed(sink);
-  check(slashed.configure("watermeter/a1b2c3/", 10, 0), "a trailing slash is accepted");
-  checkStr(slashed.availabilityTopic(), "watermeter/a1b2c3/status",
-           "and stripped, so a trailing slash gives the SAME status topic");
-  checkStr(topicOf(slashed, 0).c_str(), "watermeter/a1b2c3/sensor/1/state",
-           "and the same sensor topic — no doubled separator");
+  check(!slashed.configure("watermeter/a1b2c3/", 10, 0),
+        "a trailing slash is REFUSED, not stripped — the strip is what produced zero HA entities");
+  checkStr(slashed.availabilityTopic(), "",
+           "and the refusal leaves no availability topic for the transport to use as LWT");
+  check(!slashed.configured(), "so the publisher stays unconfigured and silent");
 
   MqttPublisher manySlashes(sink);
-  check(manySlashes.configure("watermeter/a1b2c3///", 10, 0), "several trailing slashes too");
-  checkStr(manySlashes.availabilityTopic(), "watermeter/a1b2c3/status", "all of them stripped");
+  check(!manySlashes.configure("watermeter/a1b2c3///", 10, 0), "several trailing slashes too");
 
   // Refusal, not truncation. A truncated topic publishes successfully to the wrong place, which is
   // strictly worse than not publishing: the broker accepts it and nothing anywhere reports a fault.
@@ -192,10 +202,120 @@ void topicTests() {
         "a topic that will not fit the caller's buffer is REFUSED");
   check(tiny[0] == '\0', "and the buffer is left empty, never half-written");
 
+  // The length boundary is now the FIELD's capacity, not this buffer's. It moved when configure()
+  // started deferring to NetSettings::isValidBaseTopic: 49..109 bytes used to be accepted here and
+  // refused by discovery, and no real source can produce them anyway (the field holds 48,
+  // mqttDefaultBaseTopic writes 17). Stated as the field capacity rather than as 48 so the pair
+  // tracks a change to it instead of pinning today's number.
+  const std::size_t cap = plc::netFieldCapacity(plc::NetField::MqttBaseTopic);
+  MqttPublisher atCap(sink);
+  check(atCap.configure(std::string(cap, 'x').c_str(), 10, 0),
+        "a base topic exactly filling the MqttBaseTopic field is accepted");
+  MqttPublisher overCap(sink);
+  check(!overCap.configure(std::string(cap + 1, 'x').c_str(), 10, 0),
+        "and one byte more is refused — the cap is the field's, not the topic buffer's");
   const std::string overlong(MqttPublisher::kMaxTopicBytes, 'x');
   MqttPublisher tooLong(sink);
   check(!tooLong.configure(overlong.c_str(), 10, 0),
-        "a base topic with no room for '/diagnostics/state' is refused at configure time");
+        "a base topic the length of the whole topic buffer is refused at configure time");
+}
+
+// ── Owner decision 5A: ONE definition of a base topic ────────────────────────────────
+//
+// The divergence this exists for, measured on the pre-change tree by handing the same string to
+// MqttPublisher::configure and HaDiscovery::configure. Six classes disagreed:
+//
+//   input                     MqttPublisher   HaDiscovery
+//   "watermeter/a1b2c3/"      accept (strip)  reject
+//   "watermeter/a1b2c3///"    accept (strip)  reject
+//   "/watermeter/a1b2c3"      accept          reject
+//   "water meter/a1"          accept          reject
+//   49..109 bytes             accept          reject
+//   0x7f, or any byte >= 0x80 reject          accept
+//
+// plus "watermeter//a1", which both accepted and the canonical rule refuses.
+//
+// The first five yield ZERO Home Assistant entities while telemetry flows and the MQTT state
+// register reads connected; the sixth advertises entities nothing ever publishes to. Neither is
+// logged (§4.4.7), and both look like a broker fault.
+//
+// The assertion is agreement with the NAMED canonical rule rather than with the other module: the
+// expectation is obtained by CALLING plc::NetSettings::isValidBaseTopic, never by restating a bool,
+// so a rule change moves both sides together and cannot be satisfied by a stale literal. The
+// discovery half of the same corpus is in ha_discovery_test.cpp — agreement with one canonical rule
+// on both sides is transitive, and it needs no cross-link between two leaf tests.
+//
+// What would break this test: reinstating any private rule in MqttPublisher::configure — a strip, a
+// per-byte scan, its own length bound.
+void baseTopicAgreementTests() {
+  std::printf("\n[owner decision 5A — configure() accepts exactly isValidBaseTopic's set]\n");
+
+  struct Case {
+    const char* topic;
+    const char* what;
+  };
+
+  const std::string atCap(plc::netFieldCapacity(plc::NetField::MqttBaseTopic), 'x');
+  const std::string overCap(plc::netFieldCapacity(plc::NetField::MqttBaseTopic) + 1, 'x');
+  const std::string bufferLength(MqttPublisher::kMaxTopicBytes - 19, 'x');
+
+  const Case cases[] = {
+      {"watermeter/a1b2c3", "a plain topic"},
+      {"watermeter/a1b2c3/", "DIVERGED: trailing '/' — accepted and stripped here, refused there"},
+      {"watermeter/a1b2c3///", "DIVERGED: three trailing '/'"},
+      {"/watermeter/a1b2c3", "DIVERGED: leading '/' — accepted here, refused there"},
+      {"water meter/a1", "DIVERGED: a space — accepted here, refused there"},
+      {"watermeter//a1", "an interior '//' — both modules used to accept it"},
+      {"watermeter/a1\x7f", "DIVERGED: DEL 0x7f — refused here, accepted there"},
+      {"watermeter/caf\xC3\xA9", "DIVERGED: a UTF-8 byte >= 0x80 — refused here, accepted there"},
+      {"watermeter/a1\x01", "a control byte, which both always refused"},
+      {"watermeter/+/a", "a '+' wildcard"},
+      {"watermeter/#", "a '#' wildcard"},
+      {"water\"meter/a1", "a double quote, which is legal and must stay accepted"},
+      {"", "the empty string"},
+      {"///", "a topic made only of slashes"},
+      {nullptr, "a null pointer"},
+      {atCap.c_str(), "a topic exactly filling the field"},
+      {overCap.c_str(), "DIVERGED: one byte over the field — accepted here, refused there"},
+      {bufferLength.c_str(), "DIVERGED: a topic sized to this buffer rather than to the field"},
+  };
+
+  FakeSink sink;
+  for (const Case& c : cases) {
+    MqttPublisher p(sink);
+    const bool accepted = p.configure(c.topic, 10, 0);
+    const bool canonical = plc::NetSettings::isValidBaseTopic(c.topic);
+    check(accepted == canonical, c.what);
+    // Acceptance must be VERBATIM. A module that agreed about the verdict and then repaired the
+    // string would publish to a topic the operator did not type, which is the trailing-slash defect
+    // wearing agreement as a disguise.
+    if (accepted) {
+      check(std::string(p.baseTopic()) == c.topic, "  and the accepted topic is stored verbatim");
+      check(std::string(p.availabilityTopic()) == std::string(c.topic) + "/status",
+            "  with <base>/status built from it unrepaired");
+    } else {
+      check(!p.configured() && p.baseTopic()[0] == '\0',
+            "  and a refusal leaves the publisher unconfigured");
+    }
+  }
+
+  // The floor under the agreement loop. If isValidBaseTopic degenerated to "return true", every row
+  // above would still pass as long as configure() degenerated with it, so the verdicts that motivated
+  // 5A are also pinned absolutely here.
+  MqttPublisher p(sink);
+  check(!p.configure("watermeter/a1b2c3/", 10, 0) && !p.configure("/watermeter", 10, 0) &&
+            !p.configure("water meter/a1", 10, 0) && !p.configure("watermeter//a1", 10, 0),
+        "absolutely: trailing '/', leading '/', a space and an interior '//' are all refused");
+  check(p.configure("watermeter/a1b2c3", 10, 0) && p.configure("water\"meter/a1", 10, 0),
+        "and a plain topic — or one with a quote in it — is still accepted");
+
+  // The consequence a refusal must have, since §4.4.7's failure mode is silence: nothing is
+  // published at all, rather than published somewhere nobody is subscribed.
+  MqttPublisher refused(sink);
+  refused.configure("watermeter/a1b2c3/", 10, 0);
+  refused.onConnected();
+  refused.tick(0, oneSensorSnapshot());
+  check(refused.queued() == 0, "a refused base topic queues nothing — not even '/status'");
 }
 
 // ── R4.1.4 identity ─────────────────────────────────────────────────────────────────
@@ -826,6 +946,7 @@ void unconfiguredTests() {
 int main() {
   std::printf("plc::MqttPublisher — MQTT publish policy (WiFi §4.1-§4.5)\n\n");
   topicTests();
+  baseTopicAgreementTests();
   identityTests();
   rateLimitTests();
   heartbeatTests();

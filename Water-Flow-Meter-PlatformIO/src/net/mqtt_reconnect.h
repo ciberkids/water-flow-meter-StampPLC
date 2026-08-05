@@ -19,9 +19,97 @@ namespace plc {
  * matters most (no tight-loop storm against an unreachable broker), but it is NOT the exponential
  * 1 s → 5 min ramp with jitter that §3.1.2 specifies, so R4.1.2 was unimplemented for as long as
  * the transport relied on it. This class is that ramp, and the transport must therefore set
- * `disable_auto_reconnect = true` — otherwise the library's fixed retry races this policy and wins,
- * and the ladder becomes a number we print rather than a rate the broker observes. That is the same
- * hazard `WifiManager::failBackoff()` calls `radio_.disconnect()` to close.
+ * `disable_auto_reconnect = true` (§4.1's code block, owner decision 3B) — otherwise the library's
+ * fixed retry races this policy and wins, and the ladder becomes a number we print rather than a
+ * rate the broker observes. That is the same hazard `WifiManager::failBackoff()` calls
+ * `radio_.disconnect()` to close.
+ *
+ * ── "Never connected" is a rung, not a resting place ─────────────────────────────
+ *
+ * An earlier version of this class armed the ladder from a CONNECTED → DISCONNECTED *edge*, and
+ * sat in an `Idle` phase until one arrived. That contract could not survive the one case R4.1.2 is
+ * actually written for. A broker that is unreachable from boot never produces that edge — the
+ * transport's `connected_` flag starts false and stays false — so the ladder never armed; and
+ * because `disable_auto_reconnect = true` had already switched the library's own retry off,
+ * NOTHING retried. MQTT would have been permanently down on precisely the devices the requirement
+ * exists for, with the ladder reporting that it was at rest.
+ *
+ * So the policy now owns every attempt, including the first:
+ *
+ *   - `Phase::Cold` — the state a fresh policy and a `reset()` policy are in — asks for its
+ *     attempt on the FIRST `update()`, with NO delay. A device booting next to a working broker
+ *     connects as fast as the loop can call it, not one rung later;
+ *   - a failed attempt (reported, or timed out — see `kAttemptTimeoutMs`) climbs one rung and
+ *     schedules the next attempt. Backing off from "never connected" is therefore the ordinary
+ *     path through this class rather than a special case;
+ *   - a successful connection forgets the climb.
+ *
+ * Nothing here reads the library's retry state, and nothing waits for the library to retry on its
+ * own: every attempt this device makes is one `update()` asked for.
+ *
+ * ── The integration contract the firmware must honour ────────────────────────────
+ *
+ * Ticking, and the one task that may do it (see the ownership note below):
+ *
+ *   1. call `update(millis())` once per pass of the priority-1 logic task, but ONLY while WiFi is
+ *      associated and MQTT is enabled. Call `reset()` when either goes away — the policy has no
+ *      view of the radio, and asking a client to connect with no IP just climbs the ladder for a
+ *      failure that was never the broker's;
+ *   2. if `shouldAttemptNow()` is true, make ONE attempt and nothing else. With no client yet
+ *      (boot, or after `reset()` tore one down) that means `EspMqttTransport::begin()`; with a
+ *      client parked after a failure it means `esp_mqtt_client_reconnect()`. The firmware must not
+ *      start the client anywhere else: a `begin()` on the side is an attempt the ladder did not
+ *      ration, and R4.1.2 is a claim about the rate the broker sees;
+ *   3. `esp_mqtt_client_reconnect()` returns ESP_FAIL unless the client is parked waiting to
+ *      reconnect ("ESP_FAIL if client is in invalid state", installed header), and a refusal must
+ *      NOT simply be reported as a failed attempt — that would ration a call that can never
+ *      succeed and reproduce this class's own blocker one level up, in the wiring. Split it by
+ *      whether the client has reported a DISCONNECTED since it was last started:
+ *        - it has → the client is not parked where `reconnect()` can act (on some esp-mqtt
+ *          versions the task ends instead of parking when auto-reconnect is off), so RECREATE it:
+ *          `end()` then `begin()`. That is this attempt;
+ *        - it has not → a connect is genuinely still in flight. Do nothing at all and let the
+ *          `kAttemptTimeoutMs` deadline below decide;
+ *      and if the attempt could not be issued for a reason that will not change — no URI
+ *      configured, `begin()` refused — call `noteAttemptFailed()` at once. It costs nothing and it
+ *      saves the 20 s the deadline would otherwise take to reach the same conclusion;
+ *   4. if the transport already reports `connected()` when a due edge arrives (a CONNECTED that
+ *      crossed the tick boundary), answer it with `noteConnected()` and make no attempt. Never
+ *      `noteAttemptFailed()`: tearing down a working session because the policy asked first is a
+ *      worse outcome than the one rung it would cost to ignore.
+ *
+ * The event mapping, which is where the bug above was born, so it is spelled out:
+ *
+ *   - MQTT_EVENT_CONNECTED    → `noteConnected()`.
+ *   - MQTT_EVENT_DISCONNECTED → `noteDisconnected()`. This is THE failure notification: esp-mqtt
+ *     dispatches it from `esp_mqtt_abort_connection()`, which is what the client's INIT state calls
+ *     when the transport connect or the CONNECT itself fails — so a first connect that never
+ *     succeeded reports the same event as a live session that was torn down, and this policy needs
+ *     no other.
+ *
+ *     PROVENANCE, because it decides the shape of the wiring: that reading is from
+ *     `~/.platformio/packages/framework-espidf/components/mqtt/esp-mqtt/mqtt_client.c` at **IDF
+ *     5.3.1**, which is NOT the IDF 4.4.7 esp-mqtt this firmware links — 4.4.7 ships as a
+ *     precompiled `libmqtt.a` with no source on disk. The consistency evidence is that the archive
+ *     names `MQTT_STATE_WAIT_RECONNECT` (and no `MQTT_STATE_WAIT_TIMEOUT`), i.e. the same state
+ *     machine as the source read. It is an inference, not a verified fact, which is exactly why
+ *     step 3 above recreates the client rather than trusting `reconnect()` to be accepted.
+ *
+ *     Every DISCONNECTED must be delivered: a firmware that instead compares
+ *     `connected()` against its previous value sees no change at boot and drops it, which is the
+ *     blocker this header used to prescribe. The transport must LATCH the event (a `volatile bool`
+ *     the callback sets and the logic task reads and clears) and the logic task must pass it on.
+ *   - MQTT_EVENT_ERROR        → nothing is required, and treating it as a disconnect on its own is
+ *     wrong: esp-mqtt raises it for a transport fault and for a refused CONNACK alike, and in both
+ *     cases DISCONNECTED follows. A handler that decodes `connect_return_code` (§9 wants a refused
+ *     credential distinguishable) may call `noteAttemptFailed()` from it; the ladder cannot
+ *     double-count, because the DISCONNECTED that follows arrives while the rung is already being
+ *     waited out and is ignored.
+ *   - everything else (SUBSCRIBED / UNSUBSCRIBED / PUBLISHED / DATA / BEFORE_CONNECT / DELETED) is
+ *     not this policy's business.
+ *
+ * At construction the client must NOT be running: `Phase::Cold` means "nobody is connecting", and
+ * the first due edge is what creates and starts it. Construct with the factory MAC (see below).
  *
  * ── Arduino-free and esp-mqtt-free, on purpose ───────────────────────────────────
  *
@@ -34,16 +122,15 @@ namespace plc {
  *
  * ── Ownership: not thread-safe, and one caller is not enough to say so ───────────
  *
- * Nothing here locks and nothing here is atomic. `update()` and the three notifications must all
- * be called from the ONE task that owns the client — the priority-1 logic task (R4.1.5).
+ * Nothing here locks and nothing here is atomic. `update()` and the notifications must all be
+ * called from the ONE task that owns the client — the priority-1 logic task (R4.1.5).
  *
  * This is sharper than the equivalent note on `WifiManager`, because that class raises its own
  * edges internally whereas ours arrive from a different task by construction: esp-mqtt's event
  * callback runs in esp-mqtt's own task. The callback must therefore NOT call `noteConnected()` /
- * `noteDisconnected()` directly. It sets a flag (the transport's `connected_` is already
- * `volatile` for exactly this), the logic task derives the edge from it once per tick, and fans
- * that one edge out to both `MqttPublisher::onConnected()/onDisconnected()` and to this policy.
- * One edge, one task, two consumers.
+ * `noteDisconnected()` directly. It latches, the logic task drains the latch once per tick, and
+ * fans each notification out to both `MqttPublisher::onConnected()/onDisconnected()` and to this
+ * policy. One notification, one task, two consumers.
  */
 class MqttReconnect {
  public:
@@ -85,17 +172,18 @@ class MqttReconnect {
    * How long an attempt may stay outstanding before it counts as failed. A DESIGN CHOICE, not a
    * requirement figure — no clause in the document names it.
    *
-   * Two failures it exists to prevent, in order of likelihood:
+   * Three failures it exists to prevent, in order of severity:
    *
-   *   - the client that answers nothing. `esp_mqtt_client_reconnect()` returns immediately and the
-   *     verdict arrives later as an event. A broker that accepts the TCP connection and then
-   *     black-holes the CONNECT produces no event at all until some timeout fires somewhere, and
-   *     without a deadline of our own the ladder stops dead — an MQTT link that is silently never
-   *     retried again, which is worse than a storm because nothing reports it;
+   *   - the notification that never comes. With `disable_auto_reconnect = true` the library will
+   *     not retry on its own, so an attempt whose verdict is never delivered — a firmware that
+   *     wires CONNECTED but forgets DISCONNECTED, a client that accepts the TCP connection and
+   *     then black-holes the CONNECT — would leave MQTT down forever. This deadline is what makes
+   *     the ladder run on a device whose event plumbing is broken: every attempt has an end;
    *   - the dropped edge. `shouldAttemptNow()` is true for one tick (see below). A caller that
    *     misses it would otherwise wait forever; with this, the missed attempt is counted as a
    *     failure and the ladder keeps running, one rung slower. Degrading toward LONGER delays is
-   *     the safe direction for R4.1.2.
+   *     the safe direction for R4.1.2;
+   *   - the attempt that outlives its rung, once the ladder is near the bottom.
    *
    * 20 s is double the transport's `network_timeout_ms` (10 s), so the library's own DISCONNECTED
    * normally arrives first and this only fires when nothing was reported at all. It also matches
@@ -113,12 +201,15 @@ class MqttReconnect {
   explicit MqttReconnect(const uint8_t mac[6]);
 
   /**
-   * One tick. The ONLY place a deadline is evaluated, and the only place `shouldAttemptNow()`
-   * changes.
+   * One tick. The ONLY place a deadline is evaluated, the only place an attempt is issued, and the
+   * only place `shouldAttemptNow()` changes.
    *
    * Call it once per pass of the owning loop and test `shouldAttemptNow()` immediately after:
    * the edge is cleared at the top of the NEXT `update()`, so a caller that ticks twice before
    * looking will drop it (recoverably — see `kAttemptTimeoutMs`).
+   *
+   * The FIRST call on a cold policy always asks for an attempt, which is why a caller must not
+   * tick this while WiFi is down (see the contract above).
    *
    * `nowMs` is a free-running millisecond counter and is allowed to wrap: every deadline is
    * compared as a signed difference, so the 49.7-day rollover is a non-event rather than a
@@ -132,14 +223,21 @@ class MqttReconnect {
   /**
    * The session is not up: esp-mqtt raised MQTT_EVENT_DISCONNECTED.
    *
-   * This is the ARMING edge, and with `disable_auto_reconnect = true` it is the one production
-   * actually uses — the library reports both "the initial connect failed" and "the live session
-   * was torn down" this way, and it is the only notification the transport can raise honestly.
+   * The library reports both "the connect attempt failed" and "the live session was torn down"
+   * this way, and with `disable_auto_reconnect = true` it is the only failure notification the
+   * transport can raise honestly. Both climb one rung.
    *
-   * Ignored while already waiting out a rung. That guard is not defensive tidiness: the event
-   * arrives from esp-mqtt's task, ERROR-then-DISCONNECTED pairs and repeats are normal, and a
-   * policy that advanced a rung per event would double its delay per duplicate and leave the
-   * device at the 5 min ceiling after one flaky minute.
+   * Ignored in two phases, for two different reasons:
+   *
+   *   - while already waiting out a rung. That guard is not defensive tidiness: the event arrives
+   *     from esp-mqtt's task, ERROR-then-DISCONNECTED pairs and repeats are normal, and a policy
+   *     that advanced a rung per event would double its delay per duplicate and leave the device
+   *     at the 5 min ceiling after one flaky minute;
+   *   - while cold. Before the first tick there is no attempt of ours outstanding and no session
+   *     of ours to lose, so the event describes a client this policy did not ask for — a late
+   *     DISCONNECTED from the session `reset()` just abandoned, typically. Honouring it would put
+   *     the fresh first attempt one rung late, and `reset()` exists to do the opposite. Nothing is
+   *     lost by ignoring it: the attempt follows on the very next tick anyway.
    *
    * A disconnect from a LIVE session therefore always starts again at 1 s, because
    * `noteConnected()` has already zeroed the counter. That is deliberate and it mirrors R3.1.3's
@@ -149,32 +247,34 @@ class MqttReconnect {
   void noteDisconnected();
 
   /**
-   * The attempt this policy asked for did not connect. The CLIMBING edge.
+   * The attempt this policy asked for did not connect. The same climbing edge, from a caller that
+   * knows the attempt failed without the library having said DISCONNECTED yet.
    *
-   * Acted on only while an attempt is outstanding — "the attempt failed" is meaningless when no
+   * Two callers: a transport whose `begin()` / `esp_mqtt_client_reconnect()` refused outright
+   * (contract step 3 above), and a handler that reads MQTT_EVENT_ERROR's `connect_return_code` and
+   * can tell a refused CONNACK — bad credentials, a fault that will not fix itself and the one §9
+   * wants distinguishable — from a transport hiccup.
+   *
+   * Acted on only while an attempt is outstanding: "the attempt failed" is meaningless when no
    * attempt was made, and honouring it from `Connected` would let a caller invent a disconnect
    * that the publisher's own view of the session does not share.
-   *
-   * Distinct from `noteDisconnected()` so a caller that CAN tell a refused CONNACK (bad
-   * credentials — a fault that will not fix itself, and the one §9 wants distinguishable) from a
-   * session teardown has somewhere to say so without also asserting that the session was ever up.
-   * esp-mqtt does not give the transport that distinction today, so on the device the failure path
-   * runs through `noteDisconnected()`; this is exercised by the host tests and by any future
-   * caller that reads MQTT_EVENT_ERROR's `connect_return_code`.
    */
   void noteAttemptFailed();
 
   /**
-   * Forget everything: no ladder, nothing due, waiting for the next disconnect.
+   * Back to cold: no ladder, and the next tick attempts immediately.
    *
    * For the case that would otherwise be a five-minute hole in the availability of a device that
    * is working perfectly: WiFi drops, MQTT cannot reach the broker and climbs to the ceiling, WiFi
-   * comes back — and the client, restarted by the firmware, sits out a rung it earned for a
-   * failure that was never the broker's. The alternative is a firmware that simply stops ticking
-   * this policy while WiFi is down, which gets an immediate attempt on the first tick after the
-   * link returns; that works too, but it hides the intent, and it breaks the moment somebody adds
-   * an unconditional `update()` to the loop. Call this from the WiFi association edge
-   * (`WifiManager::consumeJustConnected()`), next to the client's own `begin()`.
+   * comes back — and the client sits out a rung it earned for a failure that was never the
+   * broker's. Call this from the WiFi association edge (`WifiManager::consumeJustConnected()`) and
+   * from the far side of the settings change that tore the client down; the first tick afterwards
+   * asks for the attempt, so there is no `begin()` for the firmware to make on its own.
+   *
+   * PRECONDITION: no client is running — call `EspMqttTransport::end()` first if one is. `Cold`
+   * asserts "nobody is connecting", and the tick after this one issues an attempt; issuing it at a
+   * client that is connected or mid-connect is how a live session gets torn down by its own
+   * reconnection policy. Losing WiFi already satisfies this, because the session is gone with it.
    *
    * Leaves the jitter stream where it is, so a device that resets repeatedly does not replay one
    * jitter sequence and re-synchronise with its neighbours.
@@ -182,18 +282,19 @@ class MqttReconnect {
   void reset();
 
   /**
-   * True on the ONE tick when a reconnect is due. The caller answers it by calling
-   * `esp_mqtt_client_reconnect()`.
+   * True on the ONE tick when an attempt is due. The caller answers it by starting the client, or
+   * by calling `esp_mqtt_client_reconnect()` if one is already parked after a failure.
    *
-   * One tick rather than "true until satisfied", because `esp_mqtt_client_reconnect()` is exactly
-   * the call R4.1.2 is rationing: a sticky flag would have the owner issue it on every pass of the
-   * loop for as long as the attempt took to fail, which is the storm this class exists to prevent
-   * wearing the costume of a fix for it.
+   * One tick rather than "true until satisfied", because that call is exactly what R4.1.2 is
+   * rationing: a sticky flag would have the owner issue it on every pass of the loop for as long
+   * as the attempt took to fail, which is the storm this class exists to prevent wearing the
+   * costume of a fix for it.
    */
   bool shouldAttemptNow() const { return attemptDue_; }
 
   /**
-   * The delay chosen for the wait now in progress, in ms; 0 when not waiting.
+   * The delay chosen for the wait now in progress, in ms; 0 when not waiting — which includes the
+   * cold state, where the wait before the first attempt is zero by design.
    *
    * Exposed — same reasoning as `WifiManager::retryDelayMs()` — so the ceiling can be asserted
    * exactly rather than inferred from a ticked measurement, whose resolution is the tick. The
@@ -211,9 +312,9 @@ class MqttReconnect {
    * `attempts()`. Contrast `WifiState`, which IS register 501 and must never be renumbered.
    */
   enum class Phase : uint8_t {
-    Idle,       /**< At rest. The client's own first connect is not this policy's business. */
+    Cold,       /**< Nothing connecting and nothing scheduled. The next tick attempts, undelayed. */
     Waiting,    /**< Sitting out a rung. */
-    Attempting, /**< A reconnect has been asked for and no verdict has arrived. */
+    Attempting, /**< An attempt has been asked for and no verdict has arrived. */
     Connected   /**< The session is up; no ladder runs. */
   };
 
@@ -226,7 +327,7 @@ class MqttReconnect {
   void failOnce();
   uint32_t nextRandom();
 
-  Phase phase_ = Phase::Idle;
+  Phase phase_ = Phase::Cold;
 
   uint32_t nowMs_ = 0;
   uint32_t retryDeadlineMs_ = 0;
