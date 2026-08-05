@@ -28,6 +28,12 @@ class UiBindingResolver {
                    std::size_t bufferSize) const;
 
  private:
+  /** The `net.*` values — read from the context's snapshot, never from WifiManager directly. */
+  bool resolveNetworkBinding(const UiRenderContext& context,
+                             const char* bindingId,
+                             char* buffer,
+                             std::size_t bufferSize) const;
+
   bool resolvePageBinding(const UiRenderContext& context,
                           const char* bindingId,
                           char* buffer,

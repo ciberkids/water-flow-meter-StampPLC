@@ -124,7 +124,8 @@ void UiController::update(uint32_t nowMs,
                           double aggregateFlowLps,
                           float pollingRateKhz,
                           const LedController& ledController,
-                          const UiCountdownState& countdown) {
+                          const UiCountdownState& countdown,
+                          const plc::NetStatusSnapshot& netStatus) {
   // configs is unused today: the render context carries only what the resolver reads, and
   // per-sensor calibration is reached through SettingsAccess instead. Kept in the signature
   // because the caller passes the pair everywhere and dropping one would be gratuitous churn.
@@ -145,6 +146,7 @@ void UiController::update(uint32_t nowMs,
   context_.countdownSeconds = countdown.secondsRemaining;
   context_.countdownLabel = countdown.label;
   context_.countdownScreenId = countdown.screenId;
+  context_.net = netStatus;
   // The two things that change between telemetry ticks, and so the two things that decide
   // the repaint cadence. See UiRenderContext::interactive.
   context_.interactive = editor_.active || countdown.active;

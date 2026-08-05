@@ -23,6 +23,7 @@
 #include "net/net_register_map.h"
 #include "modbus/sensor_types.h"
 #include "ui/core/ui_bindings.h"
+#include "ui/core/ui_value_catalogue.h"
 #include "ui/core/ui_controller.h"
 #include "ui/core/ui_actions.h"
 #include "ui/core/ui_module.h"
@@ -132,6 +133,13 @@ struct Device {
   ui::UiAssets assets = ui::loadGeneratedAssets();
   plc::LinkSettingsManager link;
   plc::NetSettings net;
+  /**
+   * The network snapshot the display sees.
+   *
+   * Test-settable, which is the whole point: the real one is built from a live WifiManager, and a
+   * harness that could only ever show "disabled" would leave every net.* binding unexercised.
+   */
+  plc::NetStatusSnapshot netStatus{};
   ui::SettingsAccess settings;
   uint16_t connectedBitmap = 0xFF;
   /** What the last tick()'s InteractionHandler::update() returned. */
@@ -240,7 +248,8 @@ struct Device {
     // — including how much I2C traffic it generates — passed for the wrong reason.
     leds.setSuspended(result.ledsSuspended);
     leds.update(now, 0.0, 0.0, true, false);
-    controller.update(now, sensors, configs, 0, 0xFF, 0.0, 0.0, 0.0f, leds, result.countdown);
+    controller.update(now, sensors, configs, 0, 0xFF, 0.0, 0.0, 0.0f, leds, result.countdown,
+                      netStatus);
     // firmware.cpp:446 — the renderer runs on every pass of the logic loop and decides for
     // itself whether to paint. That decision is what the cadence tests below measure.
     renderer.update(now, controller.context());
@@ -1802,6 +1811,109 @@ void portalLoginResetMenuTests() {
   }
 }
 
+/**
+ * The display's network path (§3.4, §7.3).
+ *
+ * The owner's first request was "the display should be able to display whether or not the wifi is
+ * connected (main display) and whether or not the mqtt is connected". Until now the render context
+ * had no network fields at all, so none of it could be shown.
+ */
+void checkStr(const char* actual, const char* expected, const char* what) {
+  const bool ok = actual != nullptr && std::strcmp(actual, expected) == 0;
+  check(ok, what);
+  if (!ok) std::printf("        got \"%s\" want \"%s\"\n", actual ? actual : "(null)", expected);
+}
+
+void networkBindingTests() {
+  std::printf("\n[the display's network bindings]\n");
+  Device dev;
+  dev.boot();
+
+  auto render = [&](const char* bindingId) {
+    ui_exporter::Element el{};
+    el.id = "probe";
+    el.type = ui_exporter::ElementType::Value;
+    el.bindingId = bindingId;
+    static char out[80];
+    out[0] = '\0';
+    dev.bindings.resolveText(dev.controller.context(), el, out, sizeof(out));
+    return out;
+  };
+
+  // ── Disabled: everything says so, and nothing pretends ────────────────────────
+  dev.tick(10);
+  checkStr(render("net.wifi.state"), "OFF", "a disabled radio renders OFF");
+  checkStr(render("net.wifi.ip"), "---",
+           "and no address renders --- rather than 0.0.0.0, which would read as configured");
+  checkStr(render("net.wifi.rssi"), "--", "RSSI is withheld when not associated, not shown as 0");
+  checkStr(render("net.mqtt.state"), "OFF", "MQTT off says OFF");
+  checkStr(render("net.status"), "WiFi OFF  MQTT OFF", "the main-screen summary carries both halves");
+
+  // ── Associated ────────────────────────────────────────────────────────────────
+  dev.netStatus.wifiState = plc::WifiState::Connected;
+  dev.netStatus.ipAddress = (192u << 24) | (168u << 16) | (1u << 8) | 50u;
+  dev.netStatus.rssiDbm = -57;
+  std::snprintf(dev.netStatus.ssid, sizeof(dev.netStatus.ssid), "%s", "PlantFloor");
+  dev.tick(10);
+  checkStr(render("net.wifi.ssid"), "PlantFloor", "the SSID renders");
+  // The octet order is the hazard: a cast of IPAddress' raw word would print 50.1.168.192.
+  checkStr(render("net.wifi.ip"), "192.168.1.50", "and the address in the right octet order");
+  checkStr(render("net.wifi.rssi"), "-57", "RSSI appears once associated");
+
+  // ── MQTT: three distinguishable states, not two ────────────────────────────────
+  dev.netStatus.mqttEnabled = true;
+  dev.tick(10);
+  checkStr(render("net.mqtt.state"), "UNSET",
+           "enabled with no broker configured says UNSET — 'finish setting it up'");
+  dev.netStatus.mqttConfigured = true;
+  dev.tick(10);
+  checkStr(render("net.mqtt.state"), "DOWN",
+           "configured but not connected says DOWN — 'go look at the broker'");
+  dev.netStatus.mqttConnected = true;
+  dev.tick(10);
+  checkStr(render("net.mqtt.state"), "OK", "and connected says OK");
+  checkStr(render("net.status"), "WiFi OK  MQTT OK", "the summary tracks both");
+
+  // ── The AP, and R5.3's deliberate asymmetry ───────────────────────────────────
+  dev.netStatus.apIpAddress = (192u << 24) | (168u << 16) | (4u << 8) | 1u;
+  std::snprintf(dev.netStatus.apSsid, sizeof(dev.netStatus.apSsid), "%s", "water_flow_meter_309245");
+  std::snprintf(dev.netStatus.apPassword, sizeof(dev.netStatus.apPassword), "%s", "KU67QJ4DRPDP");
+  dev.netStatus.portalRemainingS = 540;
+  dev.tick(10);
+  checkStr(render("net.ap.ssid"), "water_flow_meter_309245", "the AP name follows R7.5a's shape");
+  // NOT masked, and that is the requirement rather than an oversight: the device is broadcasting this
+  // network, so anyone in range already sees it, and an operator at the panel must read the key off.
+  checkStr(render("net.ap.password"), "KU67QJ4DRPDP",
+           "the AP key renders in CLEAR — R5.3, unlike the operator's own passphrase");
+  checkStr(render("net.ap.ip"), "192.168.4.1", "and the address to browse to");
+  checkStr(render("net.portal.remaining"), "540", "with the R7.6 window counting down");
+
+  // ── Every declared net.* value must actually resolve ──────────────────────────
+  //
+  // The catalogue header used to claim -Werror=switch made an unresolvable value a build failure. It
+  // does not: nothing switches on ValueSource, and the resolver dispatches on the binding string. The
+  // export gate catches it, but that runs at export time — this catches it in the suite.
+  std::size_t netValues = 0;
+  bool allResolve = true;
+  for (std::size_t i = 0; i < ui::simpleValueCount(); ++i) {
+    const auto* v = ui::simpleValueAt(i);
+    if (!v || v->source != ui::ValueSource::Network) continue;
+    ++netValues;
+    char out[80] = {};
+    ui_exporter::Element el{};
+    el.id = "probe";
+    el.type = ui_exporter::ElementType::Value;
+    el.bindingId = v->id;
+    if (!dev.bindings.resolveText(dev.controller.context(), el, out, sizeof(out))) {
+      allResolve = false;
+      std::printf("      UNRESOLVED %s\n", v->id);
+    }
+  }
+  std::printf("      %zu network values declared\n", netValues);
+  check(netValues == 10, "ten network values are declared");
+  check(allResolve, "and every one of them resolves — no declared value renders blank");
+}
+
 }  // namespace
 
 int main() {
@@ -1831,6 +1943,7 @@ int main() {
   linkApplyProtocolTests();
   textIsDisplayOnlyTests();
   portalLoginResetMenuTests();
+  networkBindingTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

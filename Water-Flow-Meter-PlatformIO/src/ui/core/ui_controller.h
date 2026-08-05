@@ -8,6 +8,7 @@
 #include "ui/core/ui_navigator.h"
 #include "ui/core/ui_pages.h"
 #include "ui/pack/ui_pack_selector.h"
+#include "net/net_status.h"
 #include "ui/core/ui_settings.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
@@ -84,6 +85,14 @@ struct UiRenderContext {
    * full-panel clear per frame.
    */
   bool interactive = false;
+  /**
+   * Network state, copied once per pass.
+   *
+   * A COPY, not a pointer to WifiManager: the renderer reads this context without locking while the
+   * logic task owns the manager, so exposing the live object would be a data race on every string it
+   * reads. Copying ~130 bytes per pass is the cheap side of that trade.
+   */
+  plc::NetStatusSnapshot net{};
   bool hasWarnings = false;
   uint8_t warningCount = 0;
   std::string warningSummary;
@@ -149,7 +158,8 @@ class UiController {
               double aggregateFlowLps,
               float pollingRateKhz,
               const LedController& ledController,
-              const UiCountdownState& countdown);
+              const UiCountdownState& countdown,
+              const plc::NetStatusSnapshot& netStatus);
 
   const UiRenderContext& context() const { return context_; }
   UiMode mode() const { return mode_; }

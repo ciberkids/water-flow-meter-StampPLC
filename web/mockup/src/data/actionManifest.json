@@ -836,6 +836,86 @@
       "description": "Sensor 8 peak flow since last session reset"
     },
     {
+      "id": "net.status",
+      "category": "derived",
+      "type": "string",
+      "readOnly": true,
+      "description": "One-line WiFi + MQTT summary for the main screen"
+    },
+    {
+      "id": "net.wifi.state",
+      "category": "derived",
+      "type": "string",
+      "register": 501,
+      "readOnly": true,
+      "description": "WiFi state as ASCII (§3.1)"
+    },
+    {
+      "id": "net.wifi.ssid",
+      "category": "derived",
+      "type": "string",
+      "readOnly": true,
+      "description": "Network the radio is on, or (not set)"
+    },
+    {
+      "id": "net.wifi.ip",
+      "category": "derived",
+      "type": "string",
+      "register": 503,
+      "readOnly": true,
+      "description": "DHCP address, or --- before one is assigned"
+    },
+    {
+      "id": "net.wifi.rssi",
+      "category": "derived",
+      "type": "number",
+      "unit": "dBm",
+      "register": 502,
+      "readOnly": true,
+      "description": "Signal strength while associated"
+    },
+    {
+      "id": "net.mqtt.state",
+      "category": "derived",
+      "type": "string",
+      "register": 561,
+      "readOnly": true,
+      "description": "MQTT broker connection state"
+    },
+    {
+      "id": "net.ap.ssid",
+      "category": "derived",
+      "type": "string",
+      "register": 676,
+      "readOnly": true,
+      "description": "Provisioning AP name, water_flow_meter_<n> (R7.5a)"
+    },
+    {
+      "id": "net.ap.password",
+      "category": "derived",
+      "type": "string",
+      "register": 692,
+      "readOnly": true,
+      "description": "Provisioning AP WPA2 key — shown in clear by R5.3, unlike the operator's own passphrase"
+    },
+    {
+      "id": "net.ap.ip",
+      "category": "derived",
+      "type": "string",
+      "register": 708,
+      "readOnly": true,
+      "description": "Address to browse to while the portal is up"
+    },
+    {
+      "id": "net.portal.remaining",
+      "category": "derived",
+      "type": "number",
+      "unit": "s",
+      "register": 675,
+      "readOnly": true,
+      "description": "Seconds left on the AP window before R7.6 closes it"
+    },
+    {
       "id": "telemetry.totalFlowLps",
       "category": "system",
       "type": "number",

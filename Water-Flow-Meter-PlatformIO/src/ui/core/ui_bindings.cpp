@@ -93,6 +93,9 @@ bool UiBindingResolver::resolveText(const UiRenderContext& context,
     return false;
   }
 
+  if (resolveNetworkBinding(context, element.bindingId, buffer, bufferSize)) {
+    return true;
+  }
   if (resolvePageBinding(context, element.bindingId, buffer, bufferSize)) {
     return true;
   }
@@ -112,6 +115,88 @@ bool UiBindingResolver::resolveText(const UiRenderContext& context,
     return true;
   }
   if (resolveCountdownBinding(context, element.bindingId, buffer, bufferSize)) {
+    return true;
+  }
+  return false;
+}
+
+namespace {
+
+/** `a.b.c.d`, or "---" when no address has been assigned. */
+void formatIpv4(uint32_t packed, char* out, std::size_t size) {
+  if (packed == 0) {
+    // NOT "0.0.0.0": that reads as a configured address and would send somebody looking for a
+    // routing problem. "---" says the device has not been given one yet.
+    std::snprintf(out, size, "---");
+    return;
+  }
+  std::snprintf(out, size, "%u.%u.%u.%u", static_cast<unsigned>((packed >> 24) & 0xFF),
+                static_cast<unsigned>((packed >> 16) & 0xFF),
+                static_cast<unsigned>((packed >> 8) & 0xFF), static_cast<unsigned>(packed & 0xFF));
+}
+
+/** The MQTT half of the summary, kept honest about the three states it can be in. */
+const char* mqttStateText(const plc::NetStatusSnapshot& net) {
+  if (!net.mqttEnabled) return "OFF";
+  if (net.mqttConnected) return "OK";
+  // Enabled but not connected. Distinguishing "no broker configured" from "configured and down" is
+  // the difference between "finish setting it up" and "go look at the broker".
+  return net.mqttConfigured ? "DOWN" : "UNSET";
+}
+
+}  // namespace
+
+bool UiBindingResolver::resolveNetworkBinding(const UiRenderContext& context,
+                                              const char* bindingId,
+                                              char* buffer,
+                                              std::size_t bufferSize) const {
+  const std::string_view binding(bindingId);
+  const plc::NetStatusSnapshot& net = context.net;
+
+  if (binding == "net.status") {
+    // The main-screen indicator the owner asked for first. One line because P0 has one row to spare,
+    // and both halves matter: a device with WiFi up and MQTT down looks identical to a working one
+    // from the WiFi indicator alone.
+    std::snprintf(buffer, bufferSize, "WiFi %s  MQTT %s", plc::wifiStateText(net.wifiState),
+                  mqttStateText(net));
+    return true;
+  }
+  if (binding == "net.wifi.state") {
+    return copyLiteral(plc::wifiStateText(net.wifiState), buffer, bufferSize);
+  }
+  if (binding == "net.wifi.ssid") {
+    return copyLiteral(net.ssid[0] != '\0' ? net.ssid : "(not set)", buffer, bufferSize);
+  }
+  if (binding == "net.wifi.ip") {
+    formatIpv4(net.ipAddress, buffer, bufferSize);
+    return true;
+  }
+  if (binding == "net.wifi.rssi") {
+    // Only meaningful while associated; anything else would present stale noise as a measurement.
+    if (net.wifiState != plc::WifiState::Connected) {
+      return copyLiteral("--", buffer, bufferSize);
+    }
+    std::snprintf(buffer, bufferSize, "%d", static_cast<int>(net.rssiDbm));
+    return true;
+  }
+  if (binding == "net.mqtt.state") {
+    return copyLiteral(mqttStateText(net), buffer, bufferSize);
+  }
+  if (binding == "net.ap.ssid") {
+    return copyLiteral(net.apSsid[0] != '\0' ? net.apSsid : "(inactive)", buffer, bufferSize);
+  }
+  if (binding == "net.ap.password") {
+    // Deliberately NOT masked. R5.3: this describes an access point the device is broadcasting, which
+    // anyone in range already sees, and an operator standing at the panel needs to read it off. The
+    // passphrase the operator GAVE us is a different thing and never renders.
+    return copyLiteral(net.apPassword[0] != '\0' ? net.apPassword : "(inactive)", buffer, bufferSize);
+  }
+  if (binding == "net.ap.ip") {
+    formatIpv4(net.apIpAddress, buffer, bufferSize);
+    return true;
+  }
+  if (binding == "net.portal.remaining") {
+    std::snprintf(buffer, bufferSize, "%u", static_cast<unsigned>(net.portalRemainingS));
     return true;
   }
   return false;

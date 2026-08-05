@@ -1,6 +1,7 @@
 #include "ui/core/ui_value_catalogue.h"
 
 #include "modbus/register_map.h"
+#include "net/net_register_map.h"
 
 namespace ui {
 
@@ -29,6 +30,38 @@ constexpr SensorMetric kSensorMetrics[] = {
      "peak flow since last session reset"}};
 
 constexpr SimpleValue kSimpleValues[] = {
+    // ── Network status (WiFi_MQTT_Connectivity.md §3.4, §7.3) ─────────────────────────
+    //
+    // Read-only DERIVED values, not settings: the settings live in NetSettings and already appear in
+    // the catalogue. These are what the radio and the broker are actually doing, which is the half the
+    // owner asked for first — "the display should be able to display whether or not the wifi is
+    // connected (main display) and whether or not the mqtt is connected".
+    //
+    // Registers are given where §5's block already publishes the same fact, so the manifest tells a
+    // Modbus master where to read it rather than implying it is display-only.
+    {"net.status", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
+     ValueSource::Network, false, "One-line WiFi + MQTT summary for the main screen"},
+    {"net.wifi.state", ValueCategory::Derived, ValueType::String, nullptr,
+     plc::net_reg::kWifiState, ValueSource::Network, false, "WiFi state as ASCII (§3.1)"},
+    {"net.wifi.ssid", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
+     ValueSource::Network, false, "Network the radio is on, or (not set)"},
+    {"net.wifi.ip", ValueCategory::Derived, ValueType::String, nullptr, plc::net_reg::kWifiIp,
+     ValueSource::Network, false, "DHCP address, or --- before one is assigned"},
+    {"net.wifi.rssi", ValueCategory::Derived, ValueType::Number, "dBm", plc::net_reg::kWifiRssi,
+     ValueSource::Network, false, "Signal strength while associated"},
+    {"net.mqtt.state", ValueCategory::Derived, ValueType::String, nullptr,
+     plc::net_reg::kMqttState, ValueSource::Network, false, "MQTT broker connection state"},
+    {"net.ap.ssid", ValueCategory::Derived, ValueType::String, nullptr, plc::net_reg::kApSsid,
+     ValueSource::Network, false, "Provisioning AP name, water_flow_meter_<n> (R7.5a)"},
+    {"net.ap.password", ValueCategory::Derived, ValueType::String, nullptr,
+     plc::net_reg::kApPassword, ValueSource::Network, false,
+     "Provisioning AP WPA2 key — shown in clear by R5.3, unlike the operator's own passphrase"},
+    {"net.ap.ip", ValueCategory::Derived, ValueType::String, nullptr, plc::net_reg::kApIp,
+     ValueSource::Network, false, "Address to browse to while the portal is up"},
+    {"net.portal.remaining", ValueCategory::Derived, ValueType::Number, "s",
+     plc::net_reg::kPortalRemainingS, ValueSource::Network, false,
+     "Seconds left on the AP window before R7.6 closes it"},
+
     {"telemetry.totalFlowLps", ValueCategory::System, ValueType::Number, "L/s", kNoRegister,
      ValueSource::Telemetry, false, "Aggregate instantaneous flow across ready sensors"},
     {"telemetry.totalVolumeLiters", ValueCategory::System, ValueType::Number, "L", kNoRegister,

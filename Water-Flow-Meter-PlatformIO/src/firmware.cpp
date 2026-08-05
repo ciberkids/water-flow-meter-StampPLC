@@ -36,6 +36,7 @@ static_assert(WIFI_TASK_CORE_ID == 1,
 #include "net/net_register_map.h"
 #include "net/net_settings.h"
 #include "net/net_settings_nvs.h"
+#include "net/net_status.h"
 #include "net/wifi_manager.h"
 #include "net/wifi_radio_arduino.h"
 #include "sensors/pulse_counter.h"
@@ -641,7 +642,8 @@ void logicTaskCode(void * pvParameters) {
                         aggregateFlowLpsCache,
                         pollingRate_kHz,
                         ledController,
-                        interactions.countdown);
+                        interactions.countdown,
+                       plc::netStatusFrom(wifiManager, netSettings));
 
     // The WiFi state machine (N4). On core 1 with the logic task, at priority 1 — it must never be
     // the reason the sampler waits, and everything it does is either a cheap state comparison or a

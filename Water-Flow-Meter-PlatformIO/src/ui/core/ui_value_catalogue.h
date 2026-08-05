@@ -46,12 +46,19 @@ enum class ValueType : uint8_t { Number, String, Boolean };
 /**
  * Which resolver arm serves a value.
  *
- * `UiBindingResolver` switches on this with no `default:` label, so introducing a source
- * without teaching the resolver about it is a build failure rather than a binding that
- * silently renders as blank — the failure mode that produced an empty display twice in
- * this project's history.
+ * **This does NOT produce a build failure, despite what this comment used to claim.** Nothing
+ * switches on ValueSource: `UiBindingResolver` dispatches on the binding STRING, so adding a source
+ * without teaching the resolver about it compiles fine and renders blank — the failure mode that
+ * produced an empty display twice in this project's history, which the old comment asserted was
+ * impossible.
+ *
+ * The guarantee that does exist is the exporter's `firmware-manifest-resolvable` gate: it asks the
+ * firmware to resolve every value the manifest advertises and fails the export when one cannot be.
+ * That is a stronger check than a switch arm, because it exercises real resolution rather than the
+ * presence of a case label — but it fires at export time, not at compile time. Adding a value here
+ * without a resolver arm therefore fails the gate, not the build.
  */
-enum class ValueSource : uint8_t { SensorMetric, Setting, Telemetry, Diagnostics, UiState };
+enum class ValueSource : uint8_t { SensorMetric, Setting, Telemetry, Diagnostics, UiState, Network };
 
 /** One metric within a sensor's register block, instantiated once per sensor. */
 struct SensorMetric {
