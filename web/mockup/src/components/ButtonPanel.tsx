@@ -61,15 +61,19 @@ export function ButtonPanel({ pressed, comboActive, onPressStart, onPressEnd }: 
         <div style={{
           marginTop: 8,
           padding: "6px 10px",
-          background: "rgba(239, 68, 68, 0.15)",
-          border: "1px solid #ef4444",
+          // Informational, not a danger warning. It used to be red and read "hold for factory
+          // reset" — a gesture Display_UI_Requirements §3.3 RETIRED and interaction_handler.cpp:226
+          // confirms is gone ("The blind UP+DOWN 30 s arming combo is GONE"). The panel was telling
+          // the operator the device was about to wipe itself. UP+DOWN is display-off.
+          background: "rgba(148, 163, 184, 0.15)",
+          border: "1px solid #94a3b8",
           borderRadius: 6,
-          color: "#ef4444",
+          color: "#94a3b8",
           fontSize: 11,
           fontWeight: 600,
           textAlign: "center"
         }}>
-          ⚠ UP+DOWN combo active — hold for factory reset
+          UP+DOWN held — display off (§3.3)
         </div>
       )}
     </section>

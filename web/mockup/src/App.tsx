@@ -1569,7 +1569,13 @@ export function App() {
                       showGrid={showGrid}
                       valueOverrides={selectedScreenOverrides}
                       globalValues={firmwareLoopValues}
-                      pendingTransition={transitionPreview}
+                      // The transition overlay is OFF. It faded a miniature of the incoming screen
+                      // over the panel on every UP/DOWN, which on a device whose whole navigation IS
+                      // UP/DOWN meant an animation over almost every press — and it obscured the
+                      // thing the viewport exists to show. The firmware draws no such transition; it
+                      // clears and repaints. Keeping a preview the device cannot produce made the
+                      // panel less faithful, not more.
+                      pendingTransition={undefined}
                       scrollIndicator={scrollIndicator}
                       firmwareValues={firmwareManifest.values ?? []}
                     />
@@ -1688,20 +1694,25 @@ export function App() {
                   <div className="labelled-control">
                     <label>Orientation</label>
                     <div className="orientation-group">
-                      <button
-                        type="button"
-                        className={orientation === "landscape" ? "active" : ""}
-                        onClick={() => setOrientation("landscape")}
-                      >
-                        Landscape
+                      {/*
+                        Landscape only. Decision D3 fixed the panel at 240x135 and every screen in the
+                        dataset is laid out for it; the Portrait button that used to sit here produced
+                        a 135x240 canvas the device cannot produce, so any layout judged in it was
+                        judged against a shape that does not exist. It also silently reported
+                        out-of-bounds elements as fitting, which is how a portrait-clamped dataset
+                        once mutated 49 of 375 elements.
+
+                        Kept as a disabled control rather than deleted so the constraint is visible:
+                        an absent button invites someone to add one back.
+                      */}
+                      <button type="button" className="active" disabled>
+                        Landscape 240x135
                       </button>
-                      <button
-                        type="button"
-                        className={orientation === "portrait" ? "active" : ""}
-                        onClick={() => setOrientation("portrait")}
+                      <span
+                        style={{ marginLeft: 8, fontSize: 11, color: "#94a3b8", alignSelf: "center" }}
                       >
-                        Portrait
-                      </button>
+                        fixed by decision D3
+                      </span>
                     </div>
                   </div>
                 </section>

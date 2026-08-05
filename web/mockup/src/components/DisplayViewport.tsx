@@ -1,4 +1,5 @@
 import { CSSProperties, useCallback, useMemo } from "react";
+import { sampleValueFor } from "../utils/sampleValues";
 import { ScreenElement } from "../types";
 import { LayoutReport } from "../utils/layout";
 import { useTheme } from "../theme/ThemeProvider";
@@ -14,6 +15,18 @@ interface DisplayViewportProps {
   pendingTransition?: TransitionPreviewState | null;
   scrollIndicator?: string;
   firmwareValues?: import("../types/firmwareActions").FirmwareValueDefinition[];
+  /**
+   * What a bound value renders as.
+   *
+   * `sample` shows plausible device output — the mode for judging layout and legibility, and the
+   * default because that is the question the viewport exists to answer. `id` shows the short binding
+   * id in braces, which is what the design tab needs: there, knowing WHICH value is bound matters
+   * more than how it looks.
+   *
+   * Neither shows the catalogue DESCRIPTION any more. Rendering `{{Sensor 3 instantaneous flow}}`
+   * across 137 value elements is what made the panel unreadable.
+   */
+  bindingDisplay?: "sample" | "id";
 }
 
 const FRAME_PADDING = 8;
@@ -28,7 +41,8 @@ export function DisplayViewport({
   globalValues,
   pendingTransition,
   scrollIndicator,
-  firmwareValues
+  firmwareValues,
+  bindingDisplay = "sample"
 }: DisplayViewportProps) {
   const { theme } = useTheme();
   const orientation = layout.bounds.orientation;
@@ -136,11 +150,11 @@ export function DisplayViewport({
         const overrideValue = overrides ? overrides[element.id] : undefined;
         let displayContent = element.content;
 
-        if (element.binding && firmwareValues) {
-          const boundValue = firmwareValues.find((v) => v.id === element.binding);
-          if (boundValue) {
-            displayContent = `{{${boundValue.description ?? boundValue.id}}}`;
-          }
+        if (element.binding) {
+          // Sample text, not `{{<description>}}`. Rendering the catalogue's English description made
+          // the panel unreadable — see sampleValues.ts. A per-element override still wins below.
+          const boundValue = firmwareValues?.find((v) => v.id === element.binding);
+          displayContent = sampleValueFor(element.binding, boundValue, bindingDisplay);
         }
 
         if (element.kind === "value" && overrideValue !== undefined) {
