@@ -33,7 +33,11 @@ static_assert(WIFI_TASK_CORE_ID == 1,
 #include "modbus/register_bank.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
+#include "net/net_register_map.h"
 #include "net/net_settings.h"
+#include "net/net_settings_nvs.h"
+#include "net/wifi_manager.h"
+#include "net/wifi_radio_arduino.h"
 #include "sensors/pulse_counter.h"
 #include "sensors/sensor_state_engine.h"
 #include "ui/core/ui_actions.h"
@@ -138,6 +142,26 @@ ui::SettingsAccess uiSettingsAccess;
  * yet exist cannot be exercised by the pack-completeness rule.
  */
 plc::NetSettings netSettings;
+
+/**
+ * The radio and its state machine (N4).
+ *
+ * ArduinoWifiRadio is the only part of the WiFi feature that cannot be host-tested — it is pure SDK
+ * contact. WifiManager holds a reference to it and to netSettings, so both must outlive the manager,
+ * which is why all three are file-scope rather than locals in setup().
+ */
+plc::ArduinoWifiRadio wifiRadio;
+plc::WifiManager wifiManager(netSettings, wifiRadio);
+
+/**
+ * The revision last written to NVS.
+ *
+ * Persisting on a REVISION CHANGE rather than on every pass is the whole trick: NVS is flash, and a
+ * flash write suspends the other core's scheduler with cache off (§2.1.3), which stops the pulse
+ * sampler outright. NetSettings bumps its revision once per committed apply, so this writes once per
+ * operator decision instead of once per millisecond.
+ */
+uint16_t netSettingsSavedRevision = 0;
 
 SensorStateEngine::Dependencies sensorEngineDeps{
     .sensors = sensors,
@@ -617,6 +641,26 @@ void logicTaskCode(void * pvParameters) {
                         ledController,
                         interactions.countdown);
 
+    // The WiFi state machine (N4). On core 1 with the logic task, at priority 1 — it must never be
+    // the reason the sampler waits, and everything it does is either a cheap state comparison or a
+    // driver call that blocks this task rather than the other core.
+    wifiManager.update(now);
+
+    // Persist ONLY when a change was actually committed. NetSettings bumps its revision once per
+    // successful apply, so this is once per operator decision — not once per pass. That matters more
+    // than it looks: a flash write suspends the other core's scheduler with cache disabled (§2.1.3),
+    // which stops the pulse sampler outright, so every avoidable write is avoidable sampler downtime.
+    if (netSettings.revision() != netSettingsSavedRevision) {
+      plc::saveNetSettings(preferences, netSettings);
+      netSettingsSavedRevision = netSettings.revision();
+      // Tell the radio the credentials moved. It self-guards on a credential fingerprint, so calling
+      // it after an unrelated apply (an MQTT port, say) costs a comparison and does not bounce a
+      // working link.
+      wifiManager.noteProvisioningComplete(now);
+      Serial.printf("[net] settings saved (revision %u)\n",
+                    static_cast<unsigned>(netSettings.revision()));
+    }
+
     uiRenderer.update(now, uiController.context());
 
     // §3.6 step 11 — clear the attempt counter only after a card pack has actually DRAWN.
@@ -777,6 +821,15 @@ void setup() {
   uiRenderer.bindBindingResolver(&uiBindingResolver);
   uiRenderer.applyTheme(kUiAssets.palette);
   uiRenderer.begin();
+
+  // Restore the network configuration BEFORE the logic task can tick WifiManager, so the radio is
+  // never asked to associate with a half-restored SSID.
+  plc::loadNetSettings(preferences, netSettings);
+  netSettingsSavedRevision = netSettings.revision();
+  Serial.printf("[net] settings restored (revision %u), wifi=%s mqtt=%s\n",
+                static_cast<unsigned>(netSettings.revision()),
+                netSettings.wifiEnabled() ? "on" : "off",
+                netSettings.mqttEnabled() ? "on" : "off");
 
   // Before the polling task exists, so the verification has the bus to itself and cannot race the
   // sampler it is about to hand the bus to.
