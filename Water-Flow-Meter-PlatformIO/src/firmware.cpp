@@ -44,6 +44,8 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "net/mqtt_reconnect.h"
 #include "net/mqtt_transport_esp.h"
 #include "net/net_status.h"
+#include "net/portal_form.h"
+#include "net/portal_server_arduino.h"
 #include "net/wifi_manager.h"
 #include "net/wifi_radio_arduino.h"
 #include "sensors/pulse_counter.h"
@@ -205,6 +207,17 @@ plc::HaDiscovery haDiscovery;
  * than believing the entities exist.
  */
 plc::HaRepublishPolicy haRepublish;
+
+// ── The configuration portal (N8a, §7.6) ─────────────────────────────────────────────
+//
+// LOAD-BEARING since §6.3: with on-device text entry removed, this is the only way to provision a
+// device that has no Modbus master attached.
+//
+// No PortalSettingStore is injected. Only NetSettings-backed fields are reachable through the portal
+// for now; the store exists so non-network settings (a slave id, a sensor calibration) can be
+// offered later, and passing nullptr is the supported "not yet" rather than an oversight.
+plc::PortalForm portalForm(netSettings, nullptr, kNumSensors);
+plc::ArduinoPortalServer portalServer(portalForm);
 /** The birth message, latched on esp-mqtt's task and consumed on the logic task. */
 volatile bool haBirthLatched = false;
 /** True once begin() has created a client, so start/stop is idempotent. */
