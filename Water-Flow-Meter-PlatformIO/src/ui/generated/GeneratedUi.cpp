@@ -7,6 +7,7 @@ static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatus
 static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusFooterHint_Text = { "UP/DN pages   UP+DN display off", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusLegendLed_Text = { "LED: Red=Pulse Grn=Ready Blu=Flow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusNetStatus_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP0GlobalStatusElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusHdrTitle_Text, nullptr, nullptr },
@@ -15,7 +16,8 @@ static constexpr ui_exporter::Element kInfoP0GlobalStatusElements[] = {
     { "flow-dots", ui_exporter::ElementType::Icon, 40, 70, 55, 55, nullptr, "flow-dots", nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusFooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr },
-    { "legend-led", ui_exporter::ElementType::Text, 8, 112, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusLegendLed_Text, nullptr, "legend.led" }
+    { "legend-led", ui_exporter::ElementType::Text, 8, 112, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusLegendLed_Text, nullptr, "legend.led" },
+    { "net-status", ui_exporter::ElementType::Value, 8, 98, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusNetStatus_Text, nullptr, "net.status" }
 };
 
 
@@ -1304,7 +1306,7 @@ static constexpr ui_exporter::Element kNetWifiPortalResetElements[] = {
 
 
 static constexpr ui_exporter::Flow kNetWifiPortalResetFlows[] = {
-    { "f-next", "Next entry", "net-wifi-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-next", "Next entry", "net-wifi-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "net-wifi-psk", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-enter", "Open Reset portal login", "confirm-reset-portal-login", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
@@ -1324,7 +1326,7 @@ static constexpr ui_exporter::Element kNetWifiBackElements[] = {
 
 static constexpr ui_exporter::Flow kNetWifiBackFlows[] = {
     { "f-next", "Next entry", "net-wifi-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-wifi-portal-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-wifi-ap-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
@@ -1391,7 +1393,7 @@ static constexpr ui_exporter::Element kNetMqttSetupElements[] = {
 
 
 static constexpr ui_exporter::Flow kNetMqttSetupFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-next", "Next entry", "net-mqtt-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "net-mqtt-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-enter", "Open Broker", "net-mqtt-host", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
@@ -1411,8 +1413,104 @@ static constexpr ui_exporter::Element kNetMqttBackElements[] = {
 
 static constexpr ui_exporter::Flow kNetMqttBackFlows[] = {
     { "f-next", "Next entry", "net-mqtt-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-setup", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoHdrTitle_Text = { "WiFi > WiFi info", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow0Label_Text = { "State", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow0Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow1Label_Text = { "Network", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow2Label_Text = { "Address", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow3Label_Text = { "Signal (dBm)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoFooterHint_Text = { "UP/DN page  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetWifiInfoElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiInfo_NetWifiInfoHdrTitle_Text, nullptr, nullptr },
+    { "row0-label", ui_exporter::ElementType::Text, 8, 24, 0, 0, &kNetWifiInfo_NetWifiInfoRow0Label_Text, nullptr, nullptr },
+    { "row0-value", ui_exporter::ElementType::Value, 8, 34, 0, 0, &kNetWifiInfo_NetWifiInfoRow0Value_Text, nullptr, "net.wifi.state" },
+    { "row1-label", ui_exporter::ElementType::Text, 8, 46, 0, 0, &kNetWifiInfo_NetWifiInfoRow1Label_Text, nullptr, nullptr },
+    { "row1-value", ui_exporter::ElementType::Value, 8, 56, 0, 0, &kNetWifiInfo_NetWifiInfoRow1Value_Text, nullptr, "net.wifi.ssid" },
+    { "row2-label", ui_exporter::ElementType::Text, 8, 68, 0, 0, &kNetWifiInfo_NetWifiInfoRow2Label_Text, nullptr, nullptr },
+    { "row2-value", ui_exporter::ElementType::Value, 8, 78, 0, 0, &kNetWifiInfo_NetWifiInfoRow2Value_Text, nullptr, "net.wifi.ip" },
+    { "row3-label", ui_exporter::ElementType::Text, 8, 90, 0, 0, &kNetWifiInfo_NetWifiInfoRow3Label_Text, nullptr, nullptr },
+    { "row3-value", ui_exporter::ElementType::Value, 8, 100, 0, 0, &kNetWifiInfo_NetWifiInfoRow3Value_Text, nullptr, "net.wifi.rssi" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiInfo_NetWifiInfoFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetWifiInfoFlows[] = {
+    { "f-next", "Next entry", "net-wifi-ap-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-wifi-portal-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoHdrTitle_Text = { "WiFi > AP info", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow0Label_Text = { "AP network", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow0Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow1Label_Text = { "AP key", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow2Label_Text = { "Browse to", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow3Label_Text = { "Closes in (s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoFooterHint_Text = { "Join the AP and browse to the address", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetWifiApInfoElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiApInfo_NetWifiApInfoHdrTitle_Text, nullptr, nullptr },
+    { "row0-label", ui_exporter::ElementType::Text, 8, 24, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow0Label_Text, nullptr, nullptr },
+    { "row0-value", ui_exporter::ElementType::Value, 8, 34, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow0Value_Text, nullptr, "net.ap.ssid" },
+    { "row1-label", ui_exporter::ElementType::Text, 8, 46, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow1Label_Text, nullptr, nullptr },
+    { "row1-value", ui_exporter::ElementType::Value, 8, 56, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow1Value_Text, nullptr, "net.ap.password" },
+    { "row2-label", ui_exporter::ElementType::Text, 8, 68, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow2Label_Text, nullptr, nullptr },
+    { "row2-value", ui_exporter::ElementType::Value, 8, 78, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow2Value_Text, nullptr, "net.ap.ip" },
+    { "row3-label", ui_exporter::ElementType::Text, 8, 90, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow3Label_Text, nullptr, nullptr },
+    { "row3-value", ui_exporter::ElementType::Value, 8, 100, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow3Value_Text, nullptr, "net.portal.remaining" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiApInfo_NetWifiApInfoFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetWifiApInfoFlows[] = {
+    { "f-next", "Next entry", "net-wifi-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-wifi-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoHdrTitle_Text = { "MQTT > MQTT info", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow0Label_Text = { "State", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow0Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow1Label_Text = { "Broker", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow2Label_Text = { "Port", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow3Label_Text = { "Topic", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoFooterHint_Text = { "UP/DN page  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttInfoElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttInfo_NetMqttInfoHdrTitle_Text, nullptr, nullptr },
+    { "row0-label", ui_exporter::ElementType::Text, 8, 24, 0, 0, &kNetMqttInfo_NetMqttInfoRow0Label_Text, nullptr, nullptr },
+    { "row0-value", ui_exporter::ElementType::Value, 8, 34, 0, 0, &kNetMqttInfo_NetMqttInfoRow0Value_Text, nullptr, "net.mqtt.state" },
+    { "row1-label", ui_exporter::ElementType::Text, 8, 46, 0, 0, &kNetMqttInfo_NetMqttInfoRow1Label_Text, nullptr, nullptr },
+    { "row1-value", ui_exporter::ElementType::Value, 8, 56, 0, 0, &kNetMqttInfo_NetMqttInfoRow1Value_Text, nullptr, "config.mqtt.host" },
+    { "row2-label", ui_exporter::ElementType::Text, 8, 68, 0, 0, &kNetMqttInfo_NetMqttInfoRow2Label_Text, nullptr, nullptr },
+    { "row2-value", ui_exporter::ElementType::Value, 8, 78, 0, 0, &kNetMqttInfo_NetMqttInfoRow2Value_Text, nullptr, "config.mqtt.port" },
+    { "row3-label", ui_exporter::ElementType::Text, 8, 90, 0, 0, &kNetMqttInfo_NetMqttInfoRow3Label_Text, nullptr, nullptr },
+    { "row3-value", ui_exporter::ElementType::Value, 8, 100, 0, 0, &kNetMqttInfo_NetMqttInfoRow3Value_Text, nullptr, "config.mqtt.baseTopic" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttInfo_NetMqttInfoFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttInfoFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-setup", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
@@ -1927,6 +2025,9 @@ const ui_exporter::Screen kGeneratedScreens[] = {
     { "net-mqtt-enabled-edit", "M1.V — Edit Enabled", kNetMqttEnabledEditElements, sizeof(kNetMqttEnabledEditElements) / sizeof(kNetMqttEnabledEditElements[0]), kNetMqttEnabledEditFlows, sizeof(kNetMqttEnabledEditFlows) / sizeof(kNetMqttEnabledEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-setup", "M2 — Broker", kNetMqttSetupElements, sizeof(kNetMqttSetupElements) / sizeof(kNetMqttSetupElements[0]), kNetMqttSetupFlows, sizeof(kNetMqttSetupFlows) / sizeof(kNetMqttSetupFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-back", "M.BACK — Back", kNetMqttBackElements, sizeof(kNetMqttBackElements) / sizeof(kNetMqttBackElements[0]), kNetMqttBackFlows, sizeof(kNetMqttBackFlows) / sizeof(kNetMqttBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-info", "W5 — WiFi info", kNetWifiInfoElements, sizeof(kNetWifiInfoElements) / sizeof(kNetWifiInfoElements[0]), kNetWifiInfoFlows, sizeof(kNetWifiInfoFlows) / sizeof(kNetWifiInfoFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-ap-info", "W6 — AP info", kNetWifiApInfoElements, sizeof(kNetWifiApInfoElements) / sizeof(kNetWifiApInfoElements[0]), kNetWifiApInfoFlows, sizeof(kNetWifiApInfoFlows) / sizeof(kNetWifiApInfoFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-info", "M3 — MQTT info", kNetMqttInfoElements, sizeof(kNetMqttInfoElements) / sizeof(kNetMqttInfoElements[0]), kNetMqttInfoFlows, sizeof(kNetMqttInfoFlows) / sizeof(kNetMqttInfoFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-host", "B1 — Broker host", kNetMqttHostElements, sizeof(kNetMqttHostElements) / sizeof(kNetMqttHostElements[0]), kNetMqttHostFlows, sizeof(kNetMqttHostFlows) / sizeof(kNetMqttHostFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-port", "B2 — Port", kNetMqttPortElements, sizeof(kNetMqttPortElements) / sizeof(kNetMqttPortElements[0]), kNetMqttPortFlows, sizeof(kNetMqttPortFlows) / sizeof(kNetMqttPortFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-port-edit", "B2.V — Edit Port", kNetMqttPortEditElements, sizeof(kNetMqttPortEditElements) / sizeof(kNetMqttPortEditElements[0]), kNetMqttPortEditFlows, sizeof(kNetMqttPortEditFlows) / sizeof(kNetMqttPortEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
@@ -1972,7 +2073,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-05T07:01:04.674Z", 76, 526
+    "2026-08-05T08:29:24.521Z", 79, 560
 };
 
 }  // namespace ui_exporter

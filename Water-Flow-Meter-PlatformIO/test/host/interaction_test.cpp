@@ -863,8 +863,35 @@ void editorDatasetInvariantTests() {
         "every NON-TEXT setting has exactly one editor screen (the completeness rule)");
   check(pendingMatchesCommit,
         "a screen shows a pending value if and only if it has a commit flow");
-  check(static_cast<std::size_t>(settingListPages) == ui::settingCount(),
-        "and every setting has a row, text included, so all of them are at least readable");
+  // DISTINCT settings with a row, not a row count. The two were the same number until the §7.1
+  // information pages landed: net-mqtt-info displays config.mqtt.host, .port and .baseTopic read-only
+  // alongside the editors those settings already have, so a setting can legitimately appear on two
+  // screens. "Exactly one row each" was never the requirement — it was an artifact of the generator
+  // emitting one row per setting, and asserting it made a correct addition fail.
+  //
+  // What R7.9c actually needs is COVERAGE: every setting readable somewhere.
+  std::size_t settingsWithARow = 0;
+  for (std::size_t i = 0; i < ui::settingCount(); ++i) {
+    const auto* setting = ui::settingAt(i);
+    if (!setting) continue;
+    bool shown = false;
+    for (std::size_t sc = 0; sc < ui_exporter::kGeneratedScreenCount && !shown; ++sc) {
+      const auto& screen = ui_exporter::kGeneratedScreens[sc];
+      bool isEditor = false;
+      bool carries = false;
+      for (std::size_t e = 0; e < screen.elementCount; ++e) {
+        const char* b = screen.elements[e].bindingId;
+        if (!b) continue;
+        if (std::strcmp(b, "config.editor.pending") == 0) isEditor = true;
+        if (std::strcmp(b, setting->bindingId) == 0) carries = true;
+      }
+      if (carries && !isEditor) shown = true;
+    }
+    if (shown) ++settingsWithARow;
+    else std::printf("      %s appears on no non-editor screen\n", setting->bindingId);
+  }
+  check(settingsWithARow == ui::settingCount(),
+        "and every setting is readable on at least one non-editor screen, text included");
   check(everyListPageHasItsEditor,
         "every setting list page's ENTER-short descends onto a real editor (§5.7)");
 }

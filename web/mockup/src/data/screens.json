@@ -64,6 +64,14 @@
           "content": "LED: Red=Pulse Grn=Ready Blu=Flow",
           "emphasis": "muted",
           "binding": "legend.led"
+        },
+        {
+          "id": "net-status",
+          "kind": "value",
+          "x": 8,
+          "y": 98,
+          "binding": "net.status",
+          "emphasis": "muted"
         }
       ],
       "flows": [
@@ -5442,7 +5450,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "net-wifi-back",
+          "targetScreenId": "net-wifi-info",
           "actionId": "ui.action.page.next"
         },
         {
@@ -5537,7 +5545,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "net-wifi-portal-reset",
+          "targetScreenId": "net-wifi-ap-info",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -5815,7 +5823,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "net-mqtt-back",
+          "targetScreenId": "net-mqtt-info",
           "actionId": "ui.action.page.next"
         },
         {
@@ -5910,7 +5918,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "net-mqtt-setup",
+          "targetScreenId": "net-mqtt-info",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -5922,6 +5930,393 @@
             "gesture": "short"
           },
           "actionId": "ui.action.nav.back"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ]
+    },
+    {
+      "id": "net-wifi-info",
+      "name": "W5 — WiFi info",
+      "description": "WiFi information page. Read-only; the values come from the live radio and broker.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 8,
+          "y": 2,
+          "content": "WiFi > WiFi info"
+        },
+        {
+          "id": "row0-label",
+          "kind": "text",
+          "x": 8,
+          "y": 24,
+          "content": "State",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row0-value",
+          "kind": "value",
+          "x": 8,
+          "y": 34,
+          "binding": "net.wifi.state",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row1-label",
+          "kind": "text",
+          "x": 8,
+          "y": 46,
+          "content": "Network",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row1-value",
+          "kind": "value",
+          "x": 8,
+          "y": 56,
+          "binding": "net.wifi.ssid",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row2-label",
+          "kind": "text",
+          "x": 8,
+          "y": 68,
+          "content": "Address",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row2-value",
+          "kind": "value",
+          "x": 8,
+          "y": 78,
+          "binding": "net.wifi.ip",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row3-label",
+          "kind": "text",
+          "x": 8,
+          "y": 90,
+          "content": "Signal (dBm)",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row3-value",
+          "kind": "value",
+          "x": 8,
+          "y": 100,
+          "binding": "net.wifi.rssi",
+          "emphasis": "strong"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 8,
+          "y": 124,
+          "content": "UP/DN page  hold ENTER exit",
+          "emphasis": "muted"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 104
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-wifi-ap-info",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-wifi-portal-reset",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ]
+    },
+    {
+      "id": "net-wifi-ap-info",
+      "name": "W6 — AP info",
+      "description": "WiFi information page. Read-only; the values come from the live radio and broker.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 8,
+          "y": 2,
+          "content": "WiFi > AP info"
+        },
+        {
+          "id": "row0-label",
+          "kind": "text",
+          "x": 8,
+          "y": 24,
+          "content": "AP network",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row0-value",
+          "kind": "value",
+          "x": 8,
+          "y": 34,
+          "binding": "net.ap.ssid",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row1-label",
+          "kind": "text",
+          "x": 8,
+          "y": 46,
+          "content": "AP key",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row1-value",
+          "kind": "value",
+          "x": 8,
+          "y": 56,
+          "binding": "net.ap.password",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row2-label",
+          "kind": "text",
+          "x": 8,
+          "y": 68,
+          "content": "Browse to",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row2-value",
+          "kind": "value",
+          "x": 8,
+          "y": 78,
+          "binding": "net.ap.ip",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row3-label",
+          "kind": "text",
+          "x": 8,
+          "y": 90,
+          "content": "Closes in (s)",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row3-value",
+          "kind": "value",
+          "x": 8,
+          "y": 100,
+          "binding": "net.portal.remaining",
+          "emphasis": "strong"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 8,
+          "y": 124,
+          "content": "Join the AP and browse to the address",
+          "emphasis": "muted"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 104
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-wifi-back",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-wifi-info",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ]
+    },
+    {
+      "id": "net-mqtt-info",
+      "name": "M3 — MQTT info",
+      "description": "MQTT information page. Read-only; the values come from the live radio and broker.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 8,
+          "y": 2,
+          "content": "MQTT > MQTT info"
+        },
+        {
+          "id": "row0-label",
+          "kind": "text",
+          "x": 8,
+          "y": 24,
+          "content": "State",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row0-value",
+          "kind": "value",
+          "x": 8,
+          "y": 34,
+          "binding": "net.mqtt.state",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row1-label",
+          "kind": "text",
+          "x": 8,
+          "y": 46,
+          "content": "Broker",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row1-value",
+          "kind": "value",
+          "x": 8,
+          "y": 56,
+          "binding": "config.mqtt.host",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row2-label",
+          "kind": "text",
+          "x": 8,
+          "y": 68,
+          "content": "Port",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row2-value",
+          "kind": "value",
+          "x": 8,
+          "y": 78,
+          "binding": "config.mqtt.port",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row3-label",
+          "kind": "text",
+          "x": 8,
+          "y": 90,
+          "content": "Topic",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row3-value",
+          "kind": "value",
+          "x": 8,
+          "y": 100,
+          "binding": "config.mqtt.baseTopic",
+          "emphasis": "strong"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 8,
+          "y": 124,
+          "content": "UP/DN page  hold ENTER exit",
+          "emphasis": "muted"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 104
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-mqtt-back",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-mqtt-setup",
+          "actionId": "ui.action.page.previous"
         },
         {
           "id": "f-escape",

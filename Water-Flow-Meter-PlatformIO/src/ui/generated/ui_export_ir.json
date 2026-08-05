@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-05T07:01:04.674Z",
-  "screenCount": 76,
-  "elementCount": 526,
+  "generatedAt": "2026-08-05T08:29:24.521Z",
+  "screenCount": 79,
+  "elementCount": 560,
   "dataset": [
     {
       "id": "info-p0-global-status",
@@ -119,6 +119,22 @@
             }
           },
           "binding": "legend.led"
+        },
+        {
+          "id": "net-status",
+          "position": {
+            "x": 8,
+            "y": 98
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "net.status"
         }
       ],
       "events": [],
@@ -8666,7 +8682,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "net-wifi-back",
+          "targetScreenId": "net-wifi-info",
           "actionId": "ui.action.page.next"
         },
         {
@@ -8797,7 +8813,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "net-wifi-portal-reset",
+          "targetScreenId": "net-wifi-ap-info",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -9218,7 +9234,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "net-mqtt-back",
+          "targetScreenId": "net-mqtt-info",
           "actionId": "ui.action.page.next"
         },
         {
@@ -9349,7 +9365,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "net-mqtt-setup",
+          "targetScreenId": "net-mqtt-info",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -9361,6 +9377,660 @@
             "gesture": "short"
           },
           "actionId": "ui.action.nav.back"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "net-wifi-info",
+      "name": "W5 — WiFi info",
+      "description": "WiFi information page. Read-only; the values come from the live radio and broker.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "WiFi > WiFi info",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row0-label",
+          "position": {
+            "x": 8,
+            "y": 24
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "State",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row0-value",
+          "position": {
+            "x": 8,
+            "y": 34
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "net.wifi.state"
+        },
+        {
+          "id": "row1-label",
+          "position": {
+            "x": 8,
+            "y": 46
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Network",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row1-value",
+          "position": {
+            "x": 8,
+            "y": 56
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "net.wifi.ssid"
+        },
+        {
+          "id": "row2-label",
+          "position": {
+            "x": 8,
+            "y": 68
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Address",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row2-value",
+          "position": {
+            "x": 8,
+            "y": 78
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "net.wifi.ip"
+        },
+        {
+          "id": "row3-label",
+          "position": {
+            "x": 8,
+            "y": 90
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Signal (dBm)",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row3-value",
+          "position": {
+            "x": 8,
+            "y": 100
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "net.wifi.rssi"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN page  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-wifi-ap-info",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-wifi-portal-reset",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "net-wifi-ap-info",
+      "name": "W6 — AP info",
+      "description": "WiFi information page. Read-only; the values come from the live radio and broker.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "WiFi > AP info",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row0-label",
+          "position": {
+            "x": 8,
+            "y": 24
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "AP network",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row0-value",
+          "position": {
+            "x": 8,
+            "y": 34
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "net.ap.ssid"
+        },
+        {
+          "id": "row1-label",
+          "position": {
+            "x": 8,
+            "y": 46
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "AP key",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row1-value",
+          "position": {
+            "x": 8,
+            "y": 56
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "net.ap.password"
+        },
+        {
+          "id": "row2-label",
+          "position": {
+            "x": 8,
+            "y": 68
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Browse to",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row2-value",
+          "position": {
+            "x": 8,
+            "y": 78
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "net.ap.ip"
+        },
+        {
+          "id": "row3-label",
+          "position": {
+            "x": 8,
+            "y": 90
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Closes in (s)",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row3-value",
+          "position": {
+            "x": 8,
+            "y": 100
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "net.portal.remaining"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Join the AP and browse to the address",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-wifi-back",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-wifi-info",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "net-mqtt-info",
+      "name": "M3 — MQTT info",
+      "description": "MQTT information page. Read-only; the values come from the live radio and broker.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "MQTT > MQTT info",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row0-label",
+          "position": {
+            "x": 8,
+            "y": 24
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "State",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row0-value",
+          "position": {
+            "x": 8,
+            "y": 34
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "net.mqtt.state"
+        },
+        {
+          "id": "row1-label",
+          "position": {
+            "x": 8,
+            "y": 46
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Broker",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row1-value",
+          "position": {
+            "x": 8,
+            "y": 56
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.mqtt.host"
+        },
+        {
+          "id": "row2-label",
+          "position": {
+            "x": 8,
+            "y": 68
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Port",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row2-value",
+          "position": {
+            "x": 8,
+            "y": 78
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.mqtt.port"
+        },
+        {
+          "id": "row3-label",
+          "position": {
+            "x": 8,
+            "y": 90
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Topic",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row3-value",
+          "position": {
+            "x": 8,
+            "y": 100
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.mqtt.baseTopic"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN page  hold ENTER exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-mqtt-back",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-mqtt-setup",
+          "actionId": "ui.action.page.previous"
         },
         {
           "id": "f-escape",

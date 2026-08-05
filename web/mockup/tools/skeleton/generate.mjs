@@ -349,7 +349,8 @@ const WIFI_L1 = [
   { page: "W4", id: "net-wifi-portal-reset", title: "Reset portal login", binding: null,
     descendTo: "confirm-reset-portal-login" }
 ];
-const WIFI_RING = [...WIFI_L1.map((w) => w.id), "net-wifi-back"];
+const WIFI_RING = [...WIFI_L1.map((w) => w.id), "net-wifi-info", "net-wifi-ap-info",
+                   "net-wifi-back"];
 
 const MQTT_L1 = [
   { page: "M1", id: "net-mqtt-enabled", title: "Enabled", binding: "config.mqtt.enabled" },
@@ -359,7 +360,7 @@ const MQTT_L1 = [
   // say where to change them.
   { page: "M2", id: "net-mqtt-setup", title: "Broker", binding: null, descendTo: "net-mqtt-host" }
 ];
-const MQTT_RING = [...MQTT_L1.map((m) => m.id), "net-mqtt-back"];
+const MQTT_RING = [...MQTT_L1.map((m) => m.id), "net-mqtt-info", "net-mqtt-back"];
 
 const MQTT_SETUP = [
   { page: "B1", id: "net-mqtt-host", title: "Broker host", binding: "config.mqtt.host" },
@@ -381,6 +382,39 @@ const MQTT_SETUP_RING = [...MQTT_SETUP.map((b) => b.id), "net-mqtt-setup-back"];
  * Factored rather than copied because there are now five levels with identical structure, and the
  * ring wiring is exactly the part that is silently wrong when hand-repeated.
  */
+
+/**
+ * An INFORMATION page: several read-only rows, no ENTER, no editor below it.
+ *
+ * Emitted directly rather than through emitLevel() because that builds a single label/value pair for
+ * one setting, and these show four derived values at once. §7.1 always described them as their own
+ * shape; they were deferred until N4 because none of the values they bind existed yet.
+ *
+ * No ENTER-short flow at all — there is nothing below to descend to, and a flow pointing at a
+ * nonexistent screen is what the export gate rejects.
+ */
+function emitInfoPage({ id, page, title, crumb, ring, index, rows, footer }) {
+  const y = [24, 46, 68, 90];
+  const elements = [text("hdr-title", L.headerY, `${crumb} > ${title}`)];
+  rows.forEach((row, i) => {
+    elements.push(text(`row${i}-label`, y[i], row.label, { emphasis: "muted" }));
+    elements.push(value(`row${i}-value`, y[i] + 10, row.binding, { emphasis: "strong" }));
+  });
+  elements.push(text("footer-hint", L.footerY, footer ?? "UP/DN page  hold ENTER exit",
+                     { emphasis: "muted" }));
+  elements.push(scrollbar());
+  screens.push({
+    id,
+    name: `${page} — ${title}`,
+    description: `${crumb} information page. Read-only; the values come from the live radio and broker.`,
+    elements,
+    flows: [
+      ...ringFlows(ring, index),
+      btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+    ]
+  });
+}
+
 function emitLevel({ items, ring, crumb, backId, backName }) {
   items.forEach((item, i) => {
     const isDescent = item.binding === null;
@@ -484,6 +518,43 @@ emitLevel({ items: WIFI_L1, ring: WIFI_RING, crumb: "WiFi",
             backId: "net-wifi-back", backName: "W.BACK — Back" });
 emitLevel({ items: MQTT_L1, ring: MQTT_RING, crumb: "MQTT",
             backId: "net-mqtt-back", backName: "M.BACK — Back" });
+// The §7.1 information pages, now that N4 produces the values they bind. Unguarded, like everything
+// else in these levels: R7.2's guards are still unimplemented, and leaving them unconditional keeps
+// the completeness rule statically decidable (see the note above assertCoversEverySetting).
+emitInfoPage({
+  id: "net-wifi-info", page: "W5", title: "WiFi info", crumb: "WiFi",
+  ring: WIFI_RING, index: WIFI_L1.length,
+  rows: [
+    { label: "State", binding: "net.wifi.state" },
+    { label: "Network", binding: "net.wifi.ssid" },
+    { label: "Address", binding: "net.wifi.ip" },
+    { label: "Signal (dBm)", binding: "net.wifi.rssi" }
+  ]
+});
+emitInfoPage({
+  id: "net-wifi-ap-info", page: "W6", title: "AP info", crumb: "WiFi",
+  ring: WIFI_RING, index: WIFI_L1.length + 1,
+  rows: [
+    { label: "AP network", binding: "net.ap.ssid" },
+    // Shown in clear on purpose — R5.3. The device is broadcasting this network, so anyone in range
+    // already sees it, and an operator at the panel has to read the key off to join.
+    { label: "AP key", binding: "net.ap.password" },
+    { label: "Browse to", binding: "net.ap.ip" },
+    { label: "Closes in (s)", binding: "net.portal.remaining" }
+  ],
+  footer: "Join the AP and browse to the address"
+});
+emitInfoPage({
+  id: "net-mqtt-info", page: "M3", title: "MQTT info", crumb: "MQTT",
+  ring: MQTT_RING, index: MQTT_L1.length,
+  rows: [
+    { label: "State", binding: "net.mqtt.state" },
+    { label: "Broker", binding: "config.mqtt.host" },
+    { label: "Port", binding: "config.mqtt.port" },
+    { label: "Topic", binding: "config.mqtt.baseTopic" }
+  ]
+});
+
 emitLevel({ items: MQTT_SETUP, ring: MQTT_SETUP_RING, crumb: "MQTT Broker",
             backId: "net-mqtt-setup-back", backName: "B.BACK — Back" });
 
@@ -786,6 +857,12 @@ for (const s of kept) {
     }
   }
   if (s.id === "info-p0-global-status") {
+    // The main-screen connection indicator, which was the owner's very first request for this
+    // feature. y=98 is the free row between the flow icon (70) and the LED legend (112), so it groups
+    // with the other status lines rather than displacing telemetry.
+    if (!s.elements.some((e) => e.id === "net-status")) {
+      s.elements.push(value("net-status", 98, "net.status", { emphasis: "muted" }));
+    }
     for (const f of s.flows) {
       // The root ring now ends with the two network entries, so UP from P0 reaches MQTT, not P8.
       if (f.id === "f-prev") f.targetScreenId = "net-mqtt-root";
