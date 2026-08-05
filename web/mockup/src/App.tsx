@@ -1242,6 +1242,50 @@ export function App() {
     [selectById]
   );
 
+  /**
+   * The navigation stack, mirroring firmware `UiNavigator`.
+   *
+   * The simulator used to follow `flow.targetScreenId` and nothing else, which cannot express
+   * "back": the firmware POPS a level, so 14 of the dataset's 68 back/escape flows deliberately
+   * carry no static target at all — `nyquist-warning`'s were removed with the note "Static targets
+   * cannot express 'the editor we came from'". Pressing ENTER on any BACK page therefore did
+   * nothing, which is what the owner reported.
+   *
+   * Holds the PARENT ids; the currently selected screen is the top of the level. Depth is capped at
+   * `UiNavigator::kMaxDepth` (5) so the simulator refuses a descent the device would refuse too —
+   * otherwise a pack could look navigable here and dead-end on hardware.
+   */
+  const kMaxNavDepth = 5;
+  const kRootScreenId = "info-p0-global-status";
+  const [navParents, setNavParents] = useState<string[]>([]);
+  /**
+   * The stack, readable from inside handleButtonEvent without being a dependency.
+   *
+   * handleButtonEvent is memoised, and adding `navParents` to its dependency array would rebuild it
+   * on every navigation. Leaving it OUT while reading the state directly is worse: the callback would
+   * capture the array from the render that created it, so a second descent would push the parent from
+   * before the first — losing a level while looking like it worked. A ref is read at call time, so
+   * neither happens.
+   */
+  const navParentsRef = useRef<string[]>([]);
+  const pushNavParent = useCallback((parent: string) => {
+    navParentsRef.current = [...navParentsRef.current, parent];
+    setNavParents(navParentsRef.current);
+  }, []);
+  const popNavParent = useCallback((): string | undefined => {
+    const parent = navParentsRef.current[navParentsRef.current.length - 1];
+    if (parent === undefined) {
+      return undefined;
+    }
+    navParentsRef.current = navParentsRef.current.slice(0, -1);
+    setNavParents(navParentsRef.current);
+    return parent;
+  }, []);
+  const clearNavParents = useCallback(() => {
+    navParentsRef.current = [];
+    setNavParents([]);
+  }, []);
+
   const handleButtonEvent = useCallback(
     (event: SimulatedButtonEvent) => {
       const triggerLabel = formatTriggerLabel(event);
@@ -1251,7 +1295,71 @@ export function App() {
       if (resolvedFlows.length > 0) {
         resolvedFlows.forEach((flow) => {
           const actionDefinition = flow.actionId ? actionCatalog.get(flow.actionId) : undefined;
-          if (flow.targetScreenId) {
+          const action = flow.actionId ?? "";
+          const from = selectedScreen?.id;
+
+          // Dispatch on the ACTION first. Following targetScreenId alone is what made BACK dead: the
+          // firmware resolves "one level up" from its stack, so the dataset has no target to follow.
+          if (action === "ui.action.nav.back") {
+            // ascend(): pop one level. A no-op at the root, exactly as UiNavigator::ascend returns
+            // false there rather than underflowing.
+            const parent = popNavParent();
+            if (parent !== undefined) {
+              const resolvedId = selectById(parent);
+              if (resolvedId) {
+                activeScreenId = resolvedId;
+              }
+            }
+          } else if (action === "ui.action.nav.escape") {
+            // escape(): clear the stack and land on P0, whatever the depth.
+            clearNavParents();
+            const resolvedId = selectById(flow.targetScreenId ?? kRootScreenId);
+            if (resolvedId) {
+              activeScreenId = resolvedId;
+            }
+          } else if (action === "config.action.value.commit" ||
+                     action === "config.action.value.discard") {
+            // Both ascend in the firmware. The dataset also names the parent, so following either
+            // lands in the same place — popping keeps the DEPTH right, which following would not.
+            const parent = popNavParent();
+            if (parent !== undefined) {
+              const resolvedId = selectById(flow.targetScreenId ?? parent);
+              if (resolvedId) {
+                activeScreenId = resolvedId;
+              }
+            } else if (flow.targetScreenId) {
+              const resolvedId = selectById(flow.targetScreenId);
+              if (resolvedId) {
+                activeScreenId = resolvedId;
+              }
+            }
+          } else if (action === "ui.action.nav.descend" && flow.targetScreenId) {
+            // descend(): push, and REFUSE past the cap rather than silently going deeper than the
+            // device can.
+            if (navParentsRef.current.length + 1 >= kMaxNavDepth) {
+              recordTraceEntry({
+                id: "ui.action.nav.descend",
+                label: `refused: depth ${kMaxNavDepth} reached (UiNavigator::kMaxDepth)`,
+                functionName: actionDefinition?.label,
+                trigger: `${event.button}.${event.kind}`,
+                screenId: from ?? "unknown",
+                screenName: selectedScreen?.name,
+                actionParams: flow.actionParams ?? null,
+                targetScreenId: flow.targetScreenId
+              });
+              return;
+            }
+            if (from) {
+              pushNavParent(from);
+            }
+            const resolvedId = selectById(flow.targetScreenId);
+            if (resolvedId) {
+              activeScreenId = resolvedId;
+            }
+          } else if (flow.targetScreenId) {
+            // Everything else — paging with UP/DOWN above all — is a SIBLING move: the level is
+            // unchanged, so the stack must not move either. Treating paging as a descent was the
+            // other half of why depth never made sense here.
             const resolvedId = selectById(flow.targetScreenId);
             if (resolvedId) {
               activeScreenId = resolvedId;
@@ -1338,7 +1446,7 @@ export function App() {
         `[${new Date(event.timestamp).toLocaleTimeString()}] ${triggerLabel} → ${activeScreenId}`
       );
     },
-    [actionCatalog, appendLog, previewTransition, recordTraceEntry, selectById, selectByOffset, selectedScreen, screens]
+    [actionCatalog, appendLog, previewTransition, recordTraceEntry, selectById, selectByOffset, selectedScreen, screens, pushNavParent, popNavParent, clearNavParents]
   );
 
   const { pressed, comboActive, press, release, cancelAll } = useSimulatedButtons(handleButtonEvent);
