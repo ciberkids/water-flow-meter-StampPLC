@@ -39,6 +39,9 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "core_layout.h"
 #include "net/net_settings.h"
 #include "net/net_settings_nvs.h"
+#include "net/mqtt_publisher.h"
+#include "net/mqtt_reconnect.h"
+#include "net/mqtt_transport_esp.h"
 #include "net/net_status.h"
 #include "net/wifi_manager.h"
 #include "net/wifi_radio_arduino.h"
@@ -168,6 +171,65 @@ plc::WifiManager wifiManager(netSettings, wifiRadio);
  * operator decision instead of once per millisecond.
  */
 uint16_t netSettingsSavedRevision = 0;
+
+// ── MQTT (N5) ────────────────────────────────────────────────────────────────────────
+/**
+ * The factory MAC, read once on first use.
+ *
+ * A function-local static rather than a read during another global's constructor: static
+ * initialisation order across globals is a hazard, and esp_read_mac() reads eFuse so it is valid at
+ * any time — including before the scheduler starts. Seeds both the MQTT client id (R4.1.4) and the
+ * reconnect ladder's jitter (so a fleet diverges without an entropy source).
+ */
+const uint8_t* factoryMac() {
+  static uint8_t mac[6] = {};
+  static bool read = false;
+  if (!read) {
+    esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP);
+    read = true;
+  }
+  return mac;
+}
+
+plc::EspMqttTransport mqttTransport;
+plc::MqttPublisher mqttPublisher(mqttTransport);
+plc::MqttReconnect mqttReconnect(factoryMac());
+/** True once begin() has created a client, so start/stop is idempotent. */
+bool mqttClientUp = false;
+/** Settings revision the client was configured against, so a change reconfigures it. */
+uint16_t mqttConfiguredRevision = 0;
+
+/**
+ * A DISCONNECTED event, LATCHED.
+ *
+ * The contract in mqtt_reconnect.h is emphatic about this and it is the blocker that slice was fixed
+ * for: every DISCONNECTED must reach noteDisconnected(). A firmware that instead compares
+ * transport.connected() against its previous value sees no CHANGE at boot — false was already false —
+ * and drops the event, so the ladder never arms and a broker unreachable from power-on is never
+ * retried. Latching in the callback and consuming it on the logic task is what makes the boot-time
+ * failure indistinguishable from a mid-session one, which is what the policy needs.
+ *
+ * volatile because esp-mqtt's task writes it and the logic task reads and clears it.
+ */
+volatile bool mqttDisconnectLatched = false;
+volatile bool mqttConnectLatched = false;
+
+void onMqttState(void*, bool connected) {
+  // Called from esp-mqtt's own task (priority 1, R4.1.5). Set a flag and return — anything more here
+  // runs on a task that must never be the reason the sampler or Modbus waits.
+  if (connected) {
+    mqttConnectLatched = true;
+  } else {
+    mqttDisconnectLatched = true;
+  }
+}
+
+void onMqttData(void*, const char* topic, std::size_t topicLength, const char*, std::size_t) {
+  // §4.4.7's birth message is the only subscription so far. Recognised here, acted on when discovery
+  // publishing lands — noted rather than silently dropped so the wiring is visible.
+  (void)topic;
+  (void)topicLength;
+}
 
 SensorStateEngine::Dependencies sensorEngineDeps{
     .sensors = sensors,
@@ -649,7 +711,103 @@ void logicTaskCode(void * pvParameters) {
                         pollingRate_kHz,
                         ledController,
                         interactions.countdown,
-                       plc::netStatusFrom(wifiManager, netSettings));
+                       [&] {
+                         auto snapshot = plc::netStatusFrom(wifiManager, netSettings);
+                         // The display's MQTT indicator stops being hard-wired false here.
+                         snapshot.mqttConnected = mqttTransport.connected();
+                         return snapshot;
+                       }());
+
+    // ── MQTT (N5) ────────────────────────────────────────────────────────────────
+    //
+    // The client exists only while WiFi is associated AND MQTT is enabled AND a broker is known.
+    // Computed BEFORE the ladder is touched, because mqtt_reconnect.h's contract is explicit that a
+    // caller "must not tick this while WiFi is down": the first tick on a cold policy always asks for
+    // an attempt, so ticking with the radio off would spend the whole ladder on a dead interface and
+    // arrive at the real opportunity already saturated at five minutes.
+    const bool mqttWanted = netSettings.mqttEnabled() && netSettings.mqttConfigured() &&
+                            wifiManager.state() == plc::WifiState::Connected;
+
+    // Ordered deliberately: consume the latched events FIRST, then tick the ladder, then act on its
+    // edge. Ticking before consuming would let the ladder judge a rung against state one pass stale.
+    if (mqttConnectLatched) {
+      mqttConnectLatched = false;
+      mqttReconnect.noteConnected();
+    }
+    if (mqttDisconnectLatched) {
+      mqttDisconnectLatched = false;
+      mqttReconnect.noteDisconnected();
+    }
+    if (mqttWanted) {
+      mqttReconnect.update(now);
+    }
+
+    if (!mqttWanted && mqttClientUp) {
+      mqttTransport.end();
+      mqttClientUp = false;
+      mqttReconnect.reset();
+      Serial.println("[mqtt] client stopped");
+    }
+
+    if (mqttWanted && mqttClientUp && mqttConfiguredRevision != netSettings.revision()) {
+      // A settings change while connected: tear down rather than mutate a live client. esp-mqtt's
+      // config is read at start, so a broker or credential change cannot take effect in place.
+      mqttTransport.end();
+      mqttClientUp = false;
+      mqttReconnect.reset();
+      Serial.println("[mqtt] settings changed; client will be recreated");
+    }
+
+    // Step 3 of the contract: RECREATE the client rather than calling esp_mqtt_client_reconnect().
+    // The header is explicit that reconnect() being accepted rests on an inference from IDF 5.3.1
+    // source against a 4.4.7 binary — recreating needs no such assumption.
+    if (mqttWanted && !mqttClientUp && mqttReconnect.shouldAttemptNow()) {
+      char host[plc::NetSettings::kMaxValueBytes + 1] = {};
+      char user[plc::NetSettings::kMaxValueBytes + 1] = {};
+      char pass[plc::NetSettings::kMaxValueBytes + 1] = {};
+      char topic[plc::NetSettings::kMaxValueBytes + 1] = {};
+      netSettings.get(plc::NetField::MqttHost, host, sizeof(host));
+      netSettings.get(plc::NetField::MqttUser, user, sizeof(user));
+      netSettings.get(plc::NetField::MqttPassword, pass, sizeof(pass));
+      netSettings.get(plc::NetField::MqttBaseTopic, topic, sizeof(topic));
+
+      char uri[plc::NetSettings::kMaxValueBytes + 24] = {};
+      // Always plain mqtt:// — TLS is out of scope (Q3/R8.3), and the toggle that used to select it
+      // was removed rather than left implying protection that is not there.
+      std::snprintf(uri, sizeof(uri), "mqtt://%s:%u", host,
+                    static_cast<unsigned>(netSettings.mqttPort()));
+
+      uint8_t mac[6] = {};
+      wifiRadio.macAddress(mac);
+      char clientId[40] = {};
+      plc::mqttClientId(mac, clientId, sizeof(clientId));
+
+      mqttPublisher.configure(topic, netSettings.mqttPublishPeriodS(), netSettings.mqttQos());
+
+      plc::EspMqttTransport::Options options;
+      options.uri = uri;
+      options.username = user[0] != '\0' ? user : nullptr;
+      options.password = pass[0] != '\0' ? pass : nullptr;
+      options.clientId = clientId;
+      options.lwtTopic = mqttPublisher.availabilityTopic();
+      mqttTransport.setListener(nullptr, onMqttState, onMqttData);
+
+      if (mqttTransport.begin(options)) {
+        mqttClientUp = true;
+        mqttConfiguredRevision = netSettings.revision();
+        Serial.printf("[mqtt] connecting to %s as %s\n", uri, clientId);
+      } else {
+        // The library refused outright. Count it as a failed attempt so the ladder backs off rather
+        // than retrying every pass against a configuration it cannot use.
+        mqttReconnect.noteAttemptFailed();
+        Serial.println("[mqtt] client could not be created; backing off");
+      }
+    } else if (mqttWanted && mqttClientUp && mqttReconnect.shouldAttemptNow() &&
+               mqttTransport.connected()) {
+      // Step 4: a CONNECTED that crossed the tick boundary. Answer the due edge with success rather
+      // than tearing down a working session because the policy asked first.
+      mqttReconnect.noteConnected();
+    }
 
     // The WiFi state machine (N4). On core 1 with the logic task, at priority 1 — it must never be
     // the reason the sampler waits, and everything it does is either a cheap state comparison or a
