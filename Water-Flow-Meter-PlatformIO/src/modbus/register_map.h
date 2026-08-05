@@ -20,6 +20,19 @@ inline constexpr uint16_t REG_LED_RED_PULSE_PERIOD = 32;
 
 // Serial link configuration block — Project_document.md §4.1.1.
 // Writes to 40-43 are staged; register 44 commits them.
+/**
+ * One past the highest holding register the device serves.
+ *
+ * Must cover the network block at 500-732 (WiFi_MQTT_Connectivity.md §5), not just the sensor blocks
+ * that end at 419. RegisterBank sized itself from the sensor blocks alone, so every address in the
+ * network block failed isRangeValid() and a master reading NET_WIFI_STATE got ILLEGAL_DATA_ADDRESS —
+ * honest, but it made §5's entire remote-setup story unreachable.
+ *
+ * net_register_map.h static_asserts its own kEnd against this, so growing the network block without
+ * growing the bank is a build failure rather than a range that silently stops answering.
+ */
+inline constexpr uint16_t kHoldingRegisterSpace = 733;
+
 inline constexpr uint16_t REG_LINK_SLAVE_ID = 40;
 inline constexpr uint16_t REG_LINK_BAUD_INDEX = 41;
 inline constexpr uint16_t REG_LINK_PARITY = 42;

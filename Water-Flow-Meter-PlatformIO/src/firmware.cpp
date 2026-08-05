@@ -92,10 +92,21 @@ double totalSessionLitersCache = 0.0;
 double aggregateFlowLpsCache = 0.0;
 bool allSensorsReadyCache = true;
 
+/**
+ * WiFi, MQTT and portal configuration (WiFi_MQTT_Connectivity.md §6.1).
+ *
+ * Declared here, above modbusDeps, because the Modbus manager now serves the network register block
+ * at 500-732 and holds a pointer to this. Static-initialisation order within a translation unit is
+ * declaration order, so the pointee must come first — otherwise .net would capture an object that has
+ * not been constructed.
+ */
+plc::NetSettings netSettings;
+
 ModbusDependencies modbusDeps{.sensors = sensors,
                               .configs = configs,
                               .preferences = &preferences,
                               .registers = &registerBank,
+                              .net = &netSettings,
                               .ledController = &ledController,
                               .connectedBitmap = &connectedSensorsBitmap,
                               .undersamplingFlags = &undersamplingFlags,
@@ -133,15 +144,6 @@ UiRenderer uiRenderer;
 UiController uiController;
 ui::SettingsAccess uiSettingsAccess;
 
-/**
- * WiFi, MQTT and portal configuration (WiFi_MQTT_Connectivity.md §6.1).
- *
- * Present from N1c so the fourteen settings have live storage the moment the menu can reach them.
- * The radio itself arrives in N4; until then these values are editable, persisted and readable over
- * RS485 but act on nothing — which is the correct order, because a setting whose storage does not
- * yet exist cannot be exercised by the pack-completeness rule.
- */
-plc::NetSettings netSettings;
 
 /**
  * The radio and its state machine (N4).

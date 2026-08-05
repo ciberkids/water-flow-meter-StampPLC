@@ -12,6 +12,7 @@ class Preferences;
 #include "led/led_controller.h"
 #include "modbus/link_settings.h"
 #include "modbus/register_bank.h"
+#include "net/net_register_map.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
 
@@ -20,6 +21,14 @@ struct ModbusDependencies {
   SensorCharacteristics* configs = nullptr;
   Preferences* preferences = nullptr;
   plc::RegisterBank* registers = nullptr;
+  /**
+   * The network block at 500-732 (WiFi_MQTT_Connectivity.md §5). May be null.
+   *
+   * Reached from here rather than intercepted in firmware.cpp's thin worker wrappers, because §5.5
+   * requires ONE apply path shared by the display, a master and the portal — and this is where the
+   * master's writes already land. Splitting it would give the register convention two owners.
+   */
+  plc::NetSettings* net = nullptr;
   LedController* ledController = nullptr;
   uint16_t* connectedBitmap = nullptr;
   uint16_t* undersamplingFlags = nullptr;

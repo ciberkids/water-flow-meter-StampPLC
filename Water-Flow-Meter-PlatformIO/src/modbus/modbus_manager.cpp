@@ -67,6 +67,26 @@ bool ModbusManager::isWritableAddress(uint16_t address) const {
 bool ModbusManager::applyHoldingWrite(uint16_t address,
                                       uint16_t value,
                                       plc::WriteOrigin origin) {
+  // The network block first, before isWritableAddress() — that predicate only knows the sensor and
+  // link registers, so every network address would be refused before reaching NetRegisterMap.
+  if (plc::NetRegisterMap::contains(address)) {
+    if (deps_.net == nullptr) {
+      return false;
+    }
+    if (address == plc::net_reg::kApply) {
+      const plc::NetApplyError error = plc::NetRegisterMap::applyWrite(*deps_.net, value);
+      // §5.1 requires a block write across the region to SUCCEED rather than except, so a refusal is
+      // reported through NET_LAST_ERROR rather than as a Modbus exception. NothingStaged is not a
+      // failure — a master that wrote the values already live gets to see that in the revision.
+      deps_.registers->setUint16(plc::net_reg::kLastError, static_cast<uint16_t>(error));
+      return error == plc::NetApplyError::None || error == plc::NetApplyError::NothingStaged;
+    }
+    // A read-only address inside the block is IGNORED, not an error — §5.1 again. Returning false
+    // here would make a legitimate block write across the region fail on its first read-only word.
+    plc::NetRegisterMap::stageWrite(*deps_.net, address, value);
+    return true;
+  }
+
   if (!isWritableAddress(address)) {
     return false;
   }
@@ -338,6 +358,20 @@ void ModbusManager::syncSensorToHolding(std::size_t sensorIndex) {
 void ModbusManager::syncGlobalRegisters() {
   if (deps_.link) {
     deps_.link->publish(*deps_.registers);
+  }
+  if (deps_.net) {
+    // The whole network block, republished each sync. NetRegisterMap::publish owns the packing —
+    // including R5.1's rule that secret fields read back as ZEROS rather than as stored text — so
+    // the bank never holds a plaintext passphrase for a master to read.
+    //
+    // Republished wholesale rather than diffed: the block is 233 registers, the sync already runs at
+    // the logic task's cadence, and a diff would be a second implementation of the packing
+    // convention. That convention having exactly one implementation is the point of NetRegisterMap.
+    uint16_t block[plc::net_reg::kEnd - plc::net_reg::kBase] = {};
+    plc::NetRegisterMap::publish(*deps_.net, block, sizeof(block) / sizeof(block[0]));
+    for (uint16_t i = 0; i < sizeof(block) / sizeof(block[0]); ++i) {
+      deps_.registers->setUint16(static_cast<uint16_t>(plc::net_reg::kBase + i), block[i]);
+    }
   }
   deps_.registers->setFloat(REG_POLLING_RATE_KHZ, *deps_.pollingRateKhz);
   deps_.registers->setUint16(REG_CONNECTED_SENSORS_BITMAP, *deps_.connectedBitmap);

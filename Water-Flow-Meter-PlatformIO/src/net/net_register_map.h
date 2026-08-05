@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "modbus/register_map.h"  // kHoldingRegisterSpace — the bank must cover this block
 #include "net/net_settings.h"
 
 namespace plc {
@@ -78,6 +79,12 @@ inline constexpr uint16_t kApply      = 730;
 inline constexpr uint16_t kRevision   = 731;  // read-only
 inline constexpr uint16_t kLastError  = 732;  // read-only
 inline constexpr uint16_t kEnd        = 733;  // one past the last register
+
+// A master can only read what RegisterBank will answer for. Extending this block past the bank would
+// make the new registers return ILLEGAL_DATA_ADDRESS — the exact silent-unreachability that left the
+// whole block dead until now — so the two are reconciled at compile time.
+static_assert(kEnd <= plc::kHoldingRegisterSpace,
+              "the network block must fit inside the holding-register space RegisterBank serves");
 
 /** The magic that commits a staged block — the same value REG_LINK_APPLY uses. */
 inline constexpr uint16_t kApplyMagic = 0x5AA5;
