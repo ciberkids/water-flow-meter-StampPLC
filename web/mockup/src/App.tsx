@@ -287,7 +287,10 @@ export function App() {
     return map;
   }, [firmwareManifest]);
   const [zoom, setZoom] = useState<number>(200);
-  const [showGrid, setShowGrid] = useState<boolean>(true);
+  // OFF by default. The grid draws minor lines at 28% and major at 55% opacity across the whole
+  // panel, so every text row sits on a crosshatch — which is exactly what made the default screen
+  // "not very readable". It is a measuring tool for the design tab, not a viewing default.
+  const [showGrid, setShowGrid] = useState<boolean>(false);
   const [orientation, setOrientation] = useState<DisplayOrientation>("landscape");
   const orientationBounds: DisplayBounds = useMemo(
     () =>

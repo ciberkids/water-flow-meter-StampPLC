@@ -19,6 +19,28 @@ interface ButtonPanelProps {
   onPressEnd: (button: PhysicalButton) => void;
 }
 
+/**
+ * The three real gestures that need TWO buttons at once.
+ *
+ * They were unreachable with a mouse and nothing said so. `onPointerDown` gives one pointer, so no
+ * amount of clicking can hold UP and DOWN together — the keyboard could (arrows are mapped) but that
+ * was undocumented, so in practice these gestures could not be exercised at all.
+ */
+const COMBOS: { id: string; label: string; hint: string; buttons: PhysicalButton[] }[] = [
+  {
+    id: "display-off",
+    label: "UP + DOWN",
+    hint: "Display off (§3.3). Hold both; release to wake.",
+    buttons: ["up", "down"]
+  },
+  {
+    id: "selector",
+    label: "UP + DOWN + hold",
+    hint: "Select Menu recovery page (§3.4.1) — firmware-drawn, so the panel cannot show it.",
+    buttons: ["up", "down"]
+  }
+];
+
 export function ButtonPanel({ pressed, comboActive, onPressStart, onPressEnd }: ButtonPanelProps) {
   return (
     <section className="button-panel">
@@ -57,6 +79,31 @@ export function ButtonPanel({ pressed, comboActive, onPressStart, onPressEnd }: 
           </button>
         );
       })}
+      <div className="button-panel__combos">
+        <p className="button-panel__combos-title">Combinations</p>
+        {COMBOS.map((combo) => (
+          <button
+            key={combo.id}
+            type="button"
+            title={combo.hint}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              combo.buttons.forEach((button) => onPressStart(button));
+            }}
+            onPointerUp={(event) => {
+              event.preventDefault();
+              combo.buttons.forEach((button) => onPressEnd(button));
+            }}
+            onPointerLeave={() => combo.buttons.forEach((button) => onPressEnd(button))}
+          >
+            {combo.label}
+          </button>
+        ))}
+        <p className="button-panel__combos-hint">
+          A mouse can only hold one button, so combinations need these — or hold ↑ and ↓ on the
+          keyboard.
+        </p>
+      </div>
       {comboActive && (
         <div style={{
           marginTop: 8,

@@ -33,6 +33,24 @@ const FRAME_PADDING = 8;
 const MINI_PREVIEW_SCALE = 0.45;
 const DEVICE_FONT = "\"StampPLC-Pixel\", \"Press Start 2P\", monospace";
 
+/**
+ * Where the thumb sits, from a `"index / count"` indicator.
+ *
+ * Falls back to a full-height thumb when the position is unknown, because a scrollbar with no thumb
+ * looks broken while a full one reads as "one level, no scrolling" — which is the truth at depth 0.
+ */
+function scrollThumbStyle(indicator: string | undefined): CSSProperties {
+  const match = indicator ? /(\d+)\s*\/\s*(\d+)/.exec(indicator) : null;
+  if (!match) {
+    return { top: "0%", height: "100%" };
+  }
+  const index = Number(match[1]);
+  const count = Math.max(1, Number(match[2]));
+  const height = Math.max(12, 100 / count);
+  const top = Math.min(100 - height, ((index - 1) / count) * 100);
+  return { top: `${top}%`, height: `${height}%` };
+}
+
 export function DisplayViewport({
   layout,
   zoomPercent,
@@ -204,13 +222,40 @@ export function DisplayViewport({
               </div>
             );
           case "box":
-          case "icon":
             return <div key={element.id} className={className} style={style} />;
-          case "scrollbar":
+          case "icon":
+            // An OUTLINE with its asset id, not a filled block. The theme's `icon` colour is
+            // #56d2ff, so an empty styled div painted P0's 55x55 flow-dots element as a solid cyan
+            // rectangle in the middle of the panel — which reads as a rendering fault rather than as
+            // "the firmware animates eight dots here". The footprint is what matters for judging
+            // layout; the fill was actively misleading.
             return (
-              <div key={element.id} className={`${className} scrollbar-block`} style={style}>
-                <span className="scrollbar-indicator">{options?.scrollIndicator ?? "—"}</span>
-                <span className="scrollbar-label">{element.content ?? "Screen"}</span>
+              <div
+                key={element.id}
+                className={`${className} icon-outline`}
+                style={{ ...style, background: "transparent" }}
+              >
+                <span className="icon-outline__label">{element.metadata?.assetId ?? "icon"}</span>
+              </div>
+            );
+          case "scrollbar":
+            // A TRACK AND A THUMB, sized from the ring position — which is what the firmware draws.
+            //
+            // It used to render two text spans (the index and the word "Screen") inside an element
+            // 5 px wide and 104 px tall, so both overflowed to the right of the panel as a stray
+            // floating "1" and a clipped "Scree". That is the "weird un-editable" artifact: not the
+            // scrollbar being wrong, but text no 5 px column could ever hold.
+            return (
+              <div
+                key={element.id}
+                className={`${className} scrollbar-block`}
+                style={style}
+                title={`Level position ${options?.scrollIndicator ?? "—"}`}
+              >
+                <span
+                  className="scrollbar-thumb"
+                  style={scrollThumbStyle(options?.scrollIndicator)}
+                />
               </div>
             );
           default:

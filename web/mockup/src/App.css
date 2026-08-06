@@ -2014,3 +2014,44 @@ select {
   padding: 0.35rem 0.75rem;
   font-size: 0.75rem;
 }
+/* An icon element shows its FOOTPRINT and its asset id, not a solid fill. The theme's icon colour
+   painted P0's 55x55 flow-dots block as a cyan rectangle mid-panel, which read as a bug. */
+.display-element.icon-outline {
+  border: 1px dashed rgba(86, 210, 255, 0.55);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.icon-outline__label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.02em;
+  color: rgba(86, 210, 255, 0.85);
+  text-align: center;
+  padding: 0 2px;
+}
+
+/* The level scrollbar: a track with a thumb, the way the firmware draws it. Previously two text
+   spans inside a 5px column, which overflowed the panel as a stray "1" and a clipped "Scree". */
+.scrollbar-block {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgba(124, 162, 206, 0.18);
+}
+
+.scrollbar-thumb {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: rgba(133, 187, 232, 0.9);
+  border-radius: 2px;
+}
+
+/* Combination presses. A mouse can hold only one pointer, so UP+DOWN was unreachable by clicking. */
+.button-panel__combos { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.button-panel__combos-title { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; }
+.button-panel__combos-hint { margin: 0; font-size: 10px; line-height: 1.35; color: #7c8da4; }
