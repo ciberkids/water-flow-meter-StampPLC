@@ -35,3 +35,7 @@ export interface SimulatedButtonEvent {
   kind: SimulatedButtonEventKind;
   timestamp: number;
 }
+
+// `ArmedCombo` deliberately does NOT live here. It is a projection of the gesture machine's state, so
+// utils/comboGestures.ts owns both the type and the projection; a copy here was a second declaration of
+// one fact, and the two modules were each imported by a different component.

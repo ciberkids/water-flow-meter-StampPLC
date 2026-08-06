@@ -92,6 +92,14 @@ export interface ComboState {
  */
 export type ArmedCombo = "display-off" | "selector" | null;
 
+/** That projection, as the one implementation of it — the adapter must not re-derive it. */
+export function armedComboOf(state: ComboState): ArmedCombo {
+  if (state.selector.active) {
+    return "selector";
+  }
+  return state.displayOff.active ? "display-off" : null;
+}
+
 export interface ComboUpdate {
   readonly state: ComboState;
   readonly events: readonly ComboEvent[];

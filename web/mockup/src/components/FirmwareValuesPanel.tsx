@@ -28,6 +28,8 @@ interface ValueBinding {
  * sensorConfig.ts is assignable without this component depending on its shape.
  */
 interface SensorRow {
+  /** 1-based, the number the device prints. Rows are addressed by THIS, never by array position. */
+  number: number;
   connected: boolean;
   ready: boolean;
 }
@@ -37,9 +39,25 @@ interface FirmwareValuesPanelProps {
   /** Resolved values, keyed by binding id: what the device would render right now. */
   values: Record<string, string>;
   onValueChange: (bindingId: string, value: string) => void;
+  /**
+   * Whether a binding may be typed into.
+   *
+   * The panel used to render all 104 as text inputs, including the 56 per-sensor READINGS — which are
+   * read-only on the device, and whose values memory computes. Typing in one created a pin that
+   * outranked memory permanently, so the badge could flip to `--` while the row beside it kept the typed
+   * number.
+   */
+  canEdit: (bindingId: string) => boolean;
   sensors: readonly SensorRow[];
   /** 1-based, 0 when no sensor is implied by the current level — the navigator's contract. */
   selectedSensor: number;
+  /**
+   * True when NAVIGATION fixed the selection, in which case clicking a row cannot change it.
+   *
+   * Without this the row button was a silent no-op whenever you were inside a sensor's sub-tree: it set
+   * the manual pick, navigation kept winning, and the tooltip promised an edit that never happened.
+   */
+  selectionFromNavigation: boolean;
   /** What the device would draw for that sensor's flow row, so the effect of a toggle is visible. */
   sensorPreview: (sensorNumber: number) => string;
   onSensorFieldChange: (sensorNumber: number, field: "connected" | "ready", value: boolean) => void;
@@ -72,8 +90,10 @@ export function FirmwareValuesPanel({
   bindings,
   values,
   onValueChange,
+  canEdit,
   sensors,
   selectedSensor,
+  selectionFromNavigation,
   sensorPreview,
   onSensorFieldChange,
   onSelectSensor
@@ -107,6 +127,50 @@ export function FirmwareValuesPanel({
 
   const shortLabel = (id: string) => id.split(".").slice(1).join(".") || id;
 
+  /**
+   * One row: label, then either an input or the resolved text, then the unit.
+   *
+   * The unit column is suppressed when the VALUE already ends with it, which is the general form of two
+   * separate duplications: the device's own formats carry units (`%u: %6.2f L/s`), and `formatSetting`
+   * appends the descriptor's unit — so both `2: 2.34 L/s` and `150 L/min` had the unit printed twice,
+   * once inside the value and once in the column beside it. Testing the rendered string fixes both and
+   * cannot drift, where a per-section flag had to be remembered at every call site.
+   */
+  const renderRow = (binding: ValueBinding) => {
+    const editable = canEdit(binding.id);
+    const shown = values[binding.id] ?? "";
+    // A read-only row is memory's own complete string — units included, and deliberately ABSENT from a
+    // withheld reading, which the device prints as bare `1: --`. Appending the column's unit there
+    // produced `1: -- L/s`, a unit for a reading that does not exist. Editable rows keep the column,
+    // because their input holds a bare number.
+    const unitInValue =
+      !editable || (Boolean(binding.unit) && shown.trimEnd().endsWith(binding.unit as string));
+    return (
+      <div
+        className={editable ? "firmware-values-panel__row" : "firmware-values-panel__row firmware-values-panel__row--readonly"}
+        key={binding.id}
+      >
+        <label htmlFor={`value-${binding.id}`} title={binding.description ?? binding.id}>
+          {shortLabel(binding.id)}
+        </label>
+        {editable ? (
+          <input
+            id={`value-${binding.id}`}
+            type="text"
+            value={shown}
+            placeholder="—"
+            onChange={(event) => onValueChange(binding.id, event.target.value)}
+          />
+        ) : (
+          <span className="firmware-values-panel__readout" title="Computed from device memory">
+            {shown || "—"}
+          </span>
+        )}
+        <span className="firmware-values-panel__unit">{unitInValue ? "" : binding.unit ?? ""}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="firmware-values-panel">
       <header>
@@ -130,8 +194,11 @@ export function FirmwareValuesPanel({
 
         {expanded.has("sensors") ? (
           <div className="sensor-table">
-            {sensors.map((sensor, index) => {
-              const sensorNumber = index + 1;
+            {sensors.map((sensor) => {
+              // The row's OWN number, not its position. Reading state from position while writing by
+              // field is the split that sensorAt() was just fixed to remove; repeating it here would
+              // have let a checkbox toggle one sensor while displaying another.
+              const sensorNumber = sensor.number;
               const selected = sensorNumber === selectedSensor;
               return (
                 <div
@@ -148,7 +215,12 @@ export function FirmwareValuesPanel({
                     type="button"
                     className="sensor-row__name"
                     onClick={() => onSelectSensor(sensorNumber)}
-                    title={`Edit sensor ${sensorNumber}'s settings below`}
+                    disabled={selectionFromNavigation}
+                    title={
+                      selectionFromNavigation
+                        ? `Navigation selects the sensor here (S${selectedSensor}), exactly as UiNavigator does on the device`
+                        : `Edit sensor ${sensorNumber}'s settings below`
+                    }
                     style={{
                       background: "none",
                       border: "none",
@@ -216,22 +288,7 @@ export function FirmwareValuesPanel({
                     navigate into a SEN page.
                   </p>
                 ) : null}
-                {perSensorSettings.map((binding) => (
-                  <div className="firmware-values-panel__row" key={binding.id}>
-                    <label htmlFor={`value-${binding.id}`} title={binding.description ?? binding.id}>
-                      {shortLabel(binding.id)}
-                    </label>
-                    <input
-                      id={`value-${binding.id}`}
-                      type="text"
-                      value={values[binding.id] ?? ""}
-                      placeholder="—"
-                      disabled={selectedSensor === 0}
-                      onChange={(event) => onValueChange(binding.id, event.target.value)}
-                    />
-                    <span className="firmware-values-panel__unit">{binding.unit ?? ""}</span>
-                  </div>
-                ))}
+                {perSensorSettings.map((binding) => renderRow(binding))}
               </div>
             ) : null}
           </>
@@ -256,21 +313,7 @@ export function FirmwareValuesPanel({
               </button>
               {isOpen ? (
                 <div style={{ padding: "4px 0" }}>
-                  {items.map((binding) => (
-                    <div className="firmware-values-panel__row" key={binding.id}>
-                      <label htmlFor={`value-${binding.id}`} title={binding.description ?? binding.id}>
-                        {shortLabel(binding.id)}
-                      </label>
-                      <input
-                        id={`value-${binding.id}`}
-                        type="text"
-                        value={values[binding.id] ?? ""}
-                        placeholder="—"
-                        onChange={(event) => onValueChange(binding.id, event.target.value)}
-                      />
-                      <span className="firmware-values-panel__unit">{binding.unit ?? ""}</span>
-                    </div>
-                  ))}
+                  {items.map((binding) => renderRow(binding))}
                 </div>
               ) : null}
             </div>

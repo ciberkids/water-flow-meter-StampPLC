@@ -563,6 +563,21 @@ body {
   color: #6b7d94;
 }
 
+/* A read-only row: memory computes it, so there is no input to type into. */
+.firmware-values-panel__readout {
+  font-family: "StampPLC-Pixel", "Press Start 2P", monospace;
+  font-size: 10px;
+  color: #85bbe8;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.firmware-values-panel__row--readonly > label {
+  color: #8296b1;
+}
+
 /* ── Per-sensor memory table ──────────────────────────────────────────────────────── */
 
 .sensor-table {
@@ -766,6 +781,17 @@ body {
 
 .display-element.value-overridden {
   outline: 1px dashed rgba(86, 210, 255, 0.9);
+}
+
+/* A WITHHELD reading — the `--` a disconnected or not-ready channel renders.
+ *
+ * This rule was missing while the code applied the class and a comment claimed it dimmed the cell in
+ * exchange for dropping a visible "x" marker. It dimmed nothing: `1: --` painted identically to seven
+ * live rows. Opacity only, because the string itself is what the device draws and the colour is the
+ * theme's; the point is to make "no reading here" legible at a glance in the mockup's own chrome sense
+ * without altering the pixels' content. */
+.display-element.value-disabled {
+  opacity: 0.55;
 }
 
 .legacy-animation-block {

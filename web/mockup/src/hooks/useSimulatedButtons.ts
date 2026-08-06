@@ -1,16 +1,17 @@
 import { useCallback, useRef, useState } from "react";
 import {
-  ArmedCombo,
   SimulatedButton,
   SimulatedButtonEvent,
   SimulatedButtonEventKind
 } from "../types/buttonSimulation";
 import {
+  ArmedCombo,
   ComboButtons,
   ComboEvent,
   ComboState,
   ConsumedButtons,
   applyButtons,
+  armedComboOf,
   comboConsumed,
   initialComboState,
   kSelectorHoldMs,
@@ -113,7 +114,7 @@ export function useSimulatedButtons(
   }, []);
 
   const publishArmed = useCallback((state: ComboState) => {
-    setArmedCombo(state.selector.active ? "selector" : state.displayOff.active ? "display-off" : null);
+    setArmedCombo(armedComboOf(state));
   }, []);
 
   const dispatchComboEvents = useCallback(

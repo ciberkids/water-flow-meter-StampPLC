@@ -196,11 +196,26 @@ export function DisplayViewport({
                 sampleValueFor(element.binding, definition, "sample");
         }
 
-        // Overrides win for badges as well as values. The gate used to test `kind === "value"` only,
-        // and all eight per-sensor status elements on P1 are badges — so the one element whose entire
-        // job is to render `--` / `OK` / `WAIT` was the one element nothing could drive.
-        if ((element.kind === "value" || element.kind === "badge") && overrideValue !== undefined) {
-          displayContent = overrideValue;
+        /* A per-element pin, for elements MEMORY DOES NOT ANSWER.
+         *
+         * Two changes here, and the second reverses a documented decision on purpose:
+         *
+         *  - It now covers badges as well as values. The gate tested `kind === "value"` only, and all
+         *    eight per-sensor status elements on P1 are badges — so the one element whose entire job is
+         *    to render `--` / `OK` / `WAIT` was the one element nothing could drive.
+         *  - Memory now WINS over a pin. The pin used to take precedence so a specific case could be
+         *    held for inspection, which was reasonable when the loop was a flat string map — but it
+         *    meant typing one character into a sensor row, then disconnecting that sensor, left the old
+         *    number on screen while the badge beside it read `--`. Two homes for one fact, override
+         *    winning: exactly what this round removes. To vary a modelled value now, edit memory.
+         *
+         * An EMPTY string is treated as no pin, so clearing the field restores the resolved value rather
+         * than blanking the cell with no way back (Revert is disabled when the element has no `content`).
+         */
+        const hasPin = overrideValue !== undefined && overrideValue !== "";
+        const memoryAnswered = Boolean(element.binding) && boundValues?.[element.binding!] !== undefined;
+        if ((element.kind === "value" || element.kind === "badge") && hasPin && !memoryAnswered) {
+          displayContent = overrideValue as string;
         }
 
         /* §4.3.19 — a withheld reading, detected from the string the device actually draws.
@@ -216,7 +231,8 @@ export function DisplayViewport({
 
         const isOverridden =
           (element.kind === "value" || element.kind === "badge") &&
-          overrideValue !== undefined &&
+          hasPin &&
+          !memoryAnswered &&
           displayContent !== element.content;
 
         const className = [

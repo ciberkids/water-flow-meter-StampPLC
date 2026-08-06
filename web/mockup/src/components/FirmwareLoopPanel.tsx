@@ -17,8 +17,10 @@ interface FirmwareLoopPanelProps {
     displayOn: boolean;
     /** The firmware-drawn Select Menu; while it is open the firmware owns every button. */
     selectorOpen: boolean;
-    /** How many of the eight sensors are marked connected, for the status line. */
+    /** How many sensors are marked connected, for the status line. */
     connectedSensors: number;
+    /** Total channels, from sensorConfig's single declaration of it rather than a literal here. */
+    sensorCount: number;
     onRunningChange: (running: boolean) => void;
     onIntervalChange: (intervalMs: number) => void;
     onSingleTick: () => void;
@@ -40,6 +42,7 @@ export function FirmwareLoopPanel({
     displayOn,
     selectorOpen,
     connectedSensors,
+    sensorCount,
     onRunningChange,
     onIntervalChange,
     onSingleTick,
@@ -117,7 +120,7 @@ export function FirmwareLoopPanel({
                     {displayOn ? "" : " — backlight off, panel cleared"}
                 </span>
                 <span className="loop-sensors">
-                    Sensors connected: {connectedSensors} of 8
+                    Sensors connected: {connectedSensors} of {sensorCount}
                 </span>
                 {selectorOpen ? (
                     <span className="loop-selector">Select Menu open — firmware owns all three buttons</span>

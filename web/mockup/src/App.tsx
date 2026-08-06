@@ -54,10 +54,12 @@ import {
   advanceSensorTick,
   createSensorTable,
   isPerSensorSetting,
+  kSensorCount,
   pulsesForFlow,
   resolveSensorBinding,
   sensorIndexForScreen,
-  setSensor
+  setSensor,
+  warningSensorNumbers
 } from "./utils/sensorConfig";
 
 const clamp = (value: number, min: number, max: number) =>
@@ -1331,37 +1333,77 @@ export function App() {
   const selectedSensor = navSensorIndex !== 0 ? navSensorIndex : pickedSensor;
 
   /**
-   * Aggregates over the table, excluding disconnected channels.
+   * The aggregates, with the firmware's own formats and its own summation set.
    *
-   * `sensor_state_engine.cpp` leaves a disconnected channel out of the total, so a channel switched off
-   * here stops contributing — which is the point of being able to switch one off. The two-decimal shape
-   * matches what the panel already drew; it is the mockup's formatting, not a verified device format,
-   * because these aggregates are composed in the firmware from a different code path.
+   * `SensorStateEngine::update` accumulates `totalSessionLiters` and `aggregateFlowLps` INSIDE
+   * `if (sensor.inUse)` (sensor_state_engine.cpp:21-49), so a disconnected channel contributes to
+   * neither — which is what makes switching one off visible on P0. Two details worth stating because I
+   * got both wrong first time round: the volume aggregate is SESSION litres, not cumulative, and
+   * `telemetry.totalVolumeLiters` is the same quantity as the volume inside `telemetry.total`
+   * (ui_bindings.cpp:233-235). Formats are the firmware's, quoted:
+   *   telemetry.total   -> "Total %.2f L | Flow %.2f L/s"   (ui_bindings.cpp:224)
+   *   telemetry.status  -> "%u warning%s" or "All sensors ready" (ui_bindings.cpp:237-244)
+   *
+   * P0 is the screen the app opens on, and `telemetry.total` is the only aggregate any element binds —
+   * so while these came from the sample table, disconnecting every sensor left the landing screen
+   * cheerfully reporting 1234.56 L.
    */
   const resolvedValues = useMemo(() => {
     const out: Record<string, string> = {};
-    const live = sensors.filter((sensor) => sensor.connected && sensor.ready);
-    const totalFlow = live.reduce((sum, sensor) => sum + sensor.instantFlowLps, 0);
-    const totalVolume = sensors.reduce((sum, sensor) => sum + sensor.cumulativeLiters, 0);
+    const inUse = sensors.filter((sensor) => sensor.connected);
+    const aggregateFlowLps = inUse.reduce((sum, sensor) => sum + sensor.instantFlowLps, 0);
+    const totalSessionLiters = inUse.reduce((sum, sensor) => sum + sensor.sessionLiters, 0);
+    const warnings = warningSensorNumbers(sensors).length;
+
+    const aggregate = (id: string): string | undefined => {
+      switch (id) {
+        case "telemetry.total":
+          return `Total ${totalSessionLiters.toFixed(2)} L | Flow ${aggregateFlowLps.toFixed(2)} L/s`;
+        case "telemetry.totalFlowLps":
+          return aggregateFlowLps.toFixed(2);
+        case "telemetry.totalVolumeLiters":
+          return totalSessionLiters.toFixed(2);
+        case "telemetry.status":
+          return warnings > 0 ? `${warnings} warning${warnings === 1 ? "" : "s"}` : "All sensors ready";
+        default:
+          return undefined;
+      }
+    };
 
     for (const binding of manifestValueBindings) {
-      const fromMemory = resolveSensorBinding(binding.id, sensors, selectedSensor);
-      let value = fromMemory;
-      if (value === undefined) {
-        if (binding.id === "telemetry.totalFlowLps") {
-          value = totalFlow.toFixed(2);
-        } else if (binding.id === "telemetry.totalVolumeLiters") {
-          value = totalVolume.toFixed(2);
-        }
-      }
-      // A pin wins: it is an explicit "show me this" for a binding memory does not model.
+      // MEMORY FIRST. A pin only fills in where memory is silent — the reverse order meant one keystroke
+      // in this panel permanently outranked the device's own state, which is the bug the round exists to
+      // remove rather than relocate.
       out[binding.id] =
+        resolveSensorBinding(binding.id, sensors, selectedSensor) ??
+        aggregate(binding.id) ??
         pinnedValues[binding.id] ??
-        value ??
         sampleValueFor(binding.id, manifestValueById.get(binding.id), "sample");
     }
     return out;
   }, [manifestValueBindings, manifestValueById, pinnedValues, selectedSensor, sensors]);
+
+  /** True when device memory answers this binding, so nothing may pin over it. */
+  const memoryOwnsBinding = useCallback(
+    (bindingId: string) =>
+      resolveSensorBinding(bindingId, sensors, selectedSensor) !== undefined ||
+      bindingId.startsWith("telemetry."),
+    [selectedSensor, sensors]
+  );
+
+  /** Editable in the values panel: a setting, and for a per-sensor one, only with a sensor selected. */
+  const canEditBinding = useCallback(
+    (bindingId: string) => {
+      const definition = manifestValueById.get(bindingId);
+      if (isPerSensorSetting(definition)) {
+        return selectedSensor !== 0;
+      }
+      // Everything memory owns is a READING on the device — read-only there, so read-only here. The
+      // panel used to render all 56 per-sensor readings as text inputs.
+      return definition?.category === "setting" && !memoryOwnsBinding(bindingId);
+    },
+    [manifestValueById, memoryOwnsBinding, selectedSensor]
+  );
 
   /** What the device would draw for one sensor's flow row — the visible effect of a toggle. */
   const sensorPreview = useCallback(
@@ -1391,28 +1433,43 @@ export function App() {
   const handleMemoryWrite = useCallback(
     (bindingId: string, value: string) => {
       const definition = manifestValueById.get(bindingId);
-      if (isPerSensorSetting(definition) && selectedSensor !== 0) {
-        const numeric = Number.parseInt(value, 10);
-        if (bindingId === "config.sensor.connected") {
-          const on = /^(on|1|true|yes)$/i.test(value.trim());
-          setSensors((table) => setSensor(table, selectedSensor, { connected: on }));
+      if (isPerSensorSetting(definition)) {
+        if (selectedSensor === 0) {
           return;
         }
+        if (bindingId === "config.sensor.connected") {
+          setSensors((table) =>
+            setSensor(table, selectedSensor, { connected: /^(on|1|true|yes)$/i.test(value.trim()) })
+          );
+          return;
+        }
+        // Clamped to the stored type's range, because the panel must not render a string the device
+        // cannot emit: q_max is a uint16_t and the other two are int16_t (sensor_types.h:6-8).
+        const numeric = Number.parseInt(value, 10);
         if (!Number.isFinite(numeric)) {
           return;
         }
-        const field =
-          bindingId === "config.sensor.multiplier"
-            ? "multiplier"
-            : bindingId === "config.sensor.adjust"
-              ? "adjust"
-              : "qMaxLpm";
-        setSensors((table) => setSensor(table, selectedSensor, { [field]: numeric }));
+        if (bindingId === "config.sensor.multiplier" || bindingId === "config.sensor.adjust") {
+          const field = bindingId === "config.sensor.multiplier" ? "multiplier" : "adjust";
+          setSensors((table) =>
+            setSensor(table, selectedSensor, { [field]: clamp(numeric, -32768, 32767) })
+          );
+          return;
+        }
+        if (bindingId === "config.sensor.maxFlow") {
+          setSensors((table) => setSensor(table, selectedSensor, { qMaxLpm: clamp(numeric, 0, 65535) }));
+        }
+        // No trailing else: an unrecognised per-sensor setting is DROPPED rather than being written to
+        // whichever field the chain happened to end on. A fifth entry in the manifest would otherwise
+        // silently land in qMaxLpm.
         return;
+      }
+      if (memoryOwnsBinding(bindingId)) {
+        return;  // read-only: memory is the authority for it
       }
       setPinnedValues((current) => ({ ...current, [bindingId]: value }));
     },
-    [manifestValueById, selectedSensor]
+    [manifestValueById, memoryOwnsBinding, selectedSensor]
   );
 
   /**
@@ -1425,7 +1482,12 @@ export function App() {
   const handleLoopTick = useCallback(() => {
     setSensors((table) =>
       table.map((sensor) => {
-        const target = sensor.connected && sensor.ready ? Math.random() * 4 : 0;
+        // Inside the channel's OWN ceiling. A flat 0..4 L/s target exceeded the default q_max of
+        // 150 L/min (2.5 L/s), so the engine clamped and several rows sat at exactly 2.50 for runs of
+        // ticks — indistinguishable from a frozen row, which is the one distinction this panel exists
+        // to make legible.
+        const ceilingLps = sensor.qMaxLpm / 60;
+        const target = sensor.connected && sensor.ready ? Math.random() * ceilingLps : 0;
         return advanceSensorTick(sensor, {
           pulses: pulsesForFlow(sensor, target, loopIntervalMs),
           elapsedMs: loopIntervalMs
@@ -1472,7 +1534,9 @@ export function App() {
           // The stack clear is the load-bearing half — without it the display would wake with a stale
           // parent stack and BACK would ascend into screens the device has forgotten.
           clearNavParents();
-          setSelector(false);
+          // enterIdle does NOT close the pack selector — ui_controller.cpp:92-96 ends the edit, escapes
+          // the navigator, sets the page and the mode, and never touches the selector. So the device
+          // blanks with the Select Menu still active and the next press wakes back into it, not P0.
           setDisplay(false);
           const resolvedId = selectById(kRootScreenId);
           if (resolvedId) {
@@ -1965,6 +2029,7 @@ export function App() {
                   displayOn={displayOn}
                   selectorOpen={selectorOpen}
                   connectedSensors={connectedSensorCount}
+                  sensorCount={kSensorCount}
                   onRunningChange={setLoopRunning}
                   onIntervalChange={setLoopIntervalMs}
                   onSingleTick={handleLoopTick}
@@ -2041,8 +2106,10 @@ export function App() {
                   bindings={manifestValueBindings}
                   values={resolvedValues}
                   onValueChange={handleMemoryWrite}
+                  canEdit={canEditBinding}
                   sensors={sensors}
                   selectedSensor={selectedSensor}
+                  selectionFromNavigation={navSensorIndex !== 0}
                   sensorPreview={sensorPreview}
                   onSensorFieldChange={handleSensorFieldChange}
                   onSelectSensor={handleSelectSensor}
