@@ -1289,11 +1289,138 @@ export function App() {
     setNavParents([]);
   }, []);
 
+  /**
+   * Simulated backlight and Select Menu state.
+   *
+   * Both are device MODE, not values: the firmware has no catalogue entry for either, and adding one
+   * would mean a firmware catalogue edit plus a manifest regeneration — two CI gates — to report
+   * something the simulator already knows. So they live here and are drawn as panel chrome, never as an
+   * element inside the 240x135 area. The device draws nothing at all while idle (`setBacklight(false)`
+   * then `fillScreen`), which is why the dataset's "- Display off -" text is not what we render.
+   *
+   * Refs alongside the state for the same reason as `navParentsRef`: handleButtonEvent is memoised and
+   * must read the current value without being rebuilt on every change.
+   */
+  const [displayOn, setDisplayOn] = useState<boolean>(true);
+  const displayOnRef = useRef<boolean>(true);
+  const setDisplay = useCallback((on: boolean) => {
+    displayOnRef.current = on;
+    setDisplayOn(on);
+  }, []);
+  const [selectorOpen, setSelectorOpen] = useState<boolean>(false);
+  const selectorOpenRef = useRef<boolean>(false);
+  const setSelector = useCallback((open: boolean) => {
+    selectorOpenRef.current = open;
+    setSelectorOpen(open);
+  }, []);
+
   const handleButtonEvent = useCallback(
     (event: SimulatedButtonEvent) => {
       const triggerLabel = formatTriggerLabel(event);
       const effect = deriveTransitionEffect(event);
       let activeScreenId = selectedScreen?.id ?? screens[0]?.id ?? "—";
+
+      /* ── Multi-button gestures, BEFORE flow matching ──────────────────────────────────────
+       *
+       * Order mirrors interaction_handler::update, which runs handleSelectorCombo and
+       * handleDisplayOffCombo before its event queue drains. The combo branch used to run LAST, after
+       * generic flow matching — and since no dataset flow can match `up+down` (the flow schema's
+       * `button` is a single-value enum), every combo ALSO recorded "No matching flow". A 3 s hold
+       * produced four trace entries.
+       *
+       * Neither gesture has a dispatchable actionId: FlowButton cannot express a combo, so the
+       * firmware handles both outside the action registry. The trace entry is therefore SYNTHESIZED,
+       * and uses the one catalogued id that names the effect — `ui.action.mode.idle` / "Enter idle" —
+       * marked firmware-internal so it does not imply a dataset binding that does not exist.
+       */
+      if (event.button === "up+down" || event.button === "up+down+enter") {
+        if (event.button === "up+down" && event.kind === "short") {
+          // enterIdle(): backlight off, editor discarded, navigation stack cleared, page reset to P0.
+          // The stack clear is the load-bearing half — without it the display would wake with a stale
+          // parent stack and BACK would ascend into screens the device has forgotten.
+          clearNavParents();
+          setSelector(false);
+          setDisplay(false);
+          const resolvedId = selectById(kRootScreenId);
+          if (resolvedId) {
+            activeScreenId = resolvedId;
+          }
+          recordTraceEntry({
+            id: "ui.action.mode.idle",
+            label: "Display off — navigation reset to P0, editor discarded",
+            functionName: "Enter idle",
+            trigger: triggerLabel,
+            screenId: selectedScreen?.id ?? "unknown",
+            screenName: selectedScreen?.name,
+            targetScreenId: kRootScreenId,
+            notes: "firmware-internal: no flow, no actionId (interaction_handler.cpp handleDisplayOffCombo)"
+          });
+        } else if (event.button === "up+down+enter" && event.kind === "long") {
+          setSelector(true);
+          recordTraceEntry({
+            id: "ui.selector.open",
+            label: "Select Menu opened (firmware-drawn page)",
+            functionName: "Open pack selector",
+            trigger: triggerLabel,
+            screenId: selectedScreen?.id ?? "unknown",
+            screenName: selectedScreen?.name,
+            notes: "ui_renderer draws this before every table-driven path, so the dataset cannot preview it"
+          });
+        }
+        appendLog(
+          `[${new Date(event.timestamp).toLocaleTimeString()}] ${triggerLabel} → ${activeScreenId}`
+        );
+        return;
+      }
+
+      /* ── While the Select Menu is open, the firmware owns all three buttons ───────────────
+       * UP/DOWN move the selector cursor on any event kind, ENTER-short commits, ENTER-long closes
+       * without selecting. None of it reaches flow matching.
+       */
+      if (selectorOpenRef.current) {
+        const closes = event.button === "enter";
+        if (closes) {
+          setSelector(false);
+        }
+        recordTraceEntry({
+          id: closes ? "ui.selector.close" : "ui.selector.move",
+          label: closes
+            ? event.kind === "long"
+              ? "Select Menu closed without selecting"
+              : "Select Menu choice committed (the device reboots into the pack)"
+            : "Select Menu cursor moved",
+          functionName: "Pack selector",
+          trigger: triggerLabel,
+          screenId: selectedScreen?.id ?? "unknown",
+          screenName: selectedScreen?.name,
+          notes: "consumed by the firmware-drawn selector"
+        });
+        appendLog(
+          `[${new Date(event.timestamp).toLocaleTimeString()}] ${triggerLabel} → selector`
+        );
+        return;
+      }
+
+      /* ── A press while the display is off wakes it ────────────────────────────────────────
+       * Mirroring the firmware AS BUILT, not the spec: `buttonInput.update()` and
+       * `interactionHandler.update()` run every loop pass regardless of UiMode, and nothing drops the
+       * waking event — so the press that wakes the panel ALSO dispatches. Spec §3.1 and the dataset's
+       * state-idle wake flows say the press should be swallowed and the device wake on P0 unchanged;
+       * the two cannot both be previewed, and this simulator previews the device that ships.
+       */
+      if (!displayOnRef.current) {
+        setDisplay(true);
+        recordTraceEntry({
+          id: "ui.display.wake",
+          label: "Display woke — the waking press still dispatches (firmware as built)",
+          functionName: "Wake",
+          trigger: triggerLabel,
+          screenId: selectedScreen?.id ?? "unknown",
+          screenName: selectedScreen?.name,
+          notes: "spec §3.1 would swallow this press; firmware does not"
+        });
+      }
+
       const resolvedFlows = findMatchingButtonFlows(selectedScreen, event);
       if (resolvedFlows.length > 0) {
         resolvedFlows.forEach((flow) => {
@@ -1406,50 +1533,22 @@ export function App() {
           screenName: selectedScreen?.name
         });
       }
-      // Handle combo gesture (UP+DOWN) for factory reset
-      if (event.button === "up+down") {
-        if (event.kind === "long") {
-          const resolved = selectById("countdown-factory-reset");
-          if (resolved) {
-            activeScreenId = resolved;
-          }
-          recordTraceEntry({
-            id: "core.action.factory-reset",
-            label: "Factory reset countdown started",
-            functionName: "Factory reset",
-            trigger: "up+down.long",
-            screenId: selectedScreen?.id ?? "unknown",
-            screenName: selectedScreen?.name,
-            targetScreenId: "countdown-factory-reset"
-          });
-          previewTransition({
-            targetScreenId: "countdown-factory-reset",
-            actionId: "core.action.factory-reset",
-            actionLabel: "Factory reset",
-            triggerLabel,
-            effect
-          });
-        } else if (event.kind === "combo-warning") {
-          recordTraceEntry({
-            id: "ui.action.combo-warning",
-            label: "Factory reset warning overlay",
-            trigger: "up+down.combo-warning",
-            screenId: selectedScreen?.id ?? "unknown",
-            screenName: selectedScreen?.name
-          });
-        }
-
-        appendLog(
-          `[${new Date(event.timestamp).toLocaleTimeString()}] ${triggerLabel} → ${activeScreenId}`
-        );
-        return;
-      }
-
+      /* The retired factory-reset combo used to be handled here — `up+down`.long recorded a
+       * "Factory reset countdown started" entry and previewed a transition to `countdown-factory-reset`.
+       * Deleted, for three separate reasons:
+       *   - the gesture is gone: Display_UI_Requirements §3.3 retired it and interaction_handler.cpp:226
+       *     confirms "The blind UP+DOWN 30 s arming combo is GONE";
+       *   - it fired for UP+DOWN+ENTER too, since the hook never looked at ENTER;
+       *   - `countdown-factory-reset` is not in the shipped dataset, but it IS in
+       *     tests/fixtures/legacy-screens.json — so with that dataset imported the retired gesture
+       *     really did navigate to a factory-reset countdown.
+       * Factory reset is reachable only the way the device reaches it: P8 → confirm screen → ENTER held.
+       */
       appendLog(
         `[${new Date(event.timestamp).toLocaleTimeString()}] ${triggerLabel} → ${activeScreenId}`
       );
     },
-    [actionCatalog, appendLog, previewTransition, recordTraceEntry, selectById, selectByOffset, selectedScreen, screens, pushNavParent, popNavParent, clearNavParents]
+    [actionCatalog, appendLog, previewTransition, recordTraceEntry, selectById, selectByOffset, selectedScreen, screens, pushNavParent, popNavParent, clearNavParents, setDisplay, setSelector]
   );
 
   const { pressed, comboActive, press, release, cancelAll } = useSimulatedButtons(handleButtonEvent);
@@ -1695,7 +1794,14 @@ export function App() {
                   )}
                 </section>
 
-                <ButtonPanel pressed={pressed} comboActive={comboActive} onPressStart={press} onPressEnd={release} />
+                <ButtonPanel
+                  pressed={pressed}
+                  armedCombo={armedCombo}
+                  displayOn={displayOn}
+                  selectorOpen={selectorOpen}
+                  onPressStart={press}
+                  onPressEnd={release}
+                />
 
                 <ValuePlaceholderPanel
                   screen={selectedScreen}
@@ -1705,11 +1811,18 @@ export function App() {
                   onSave={handleValueSave}
                 />
 
+                {/* Controls only. The value editors are under the Function trace — see the trace
+                    column below — so the display and the values no longer compete for one column. */}
                 <FirmwareLoopPanel
-                  bindings={manifestValueBindings}
-                  values={firmwareLoopValues}
-                  onValueChange={handleFirmwareValueChange}
-                  onBatchChange={handleFirmwareBatchChange}
+                  running={loopRunning}
+                  intervalMs={loopIntervalMs}
+                  displayOn={displayOn}
+                  selectorOpen={selectorOpen}
+                  connectedSensors={connectedSensorCount}
+                  onRunningChange={setLoopRunning}
+                  onIntervalChange={setLoopIntervalMs}
+                  onSingleTick={handleLoopTick}
+                  onResetValues={handleMemoryReset}
                 />
 
                 <section className="layout-warnings">
@@ -1775,6 +1888,18 @@ export function App() {
                   onFilterChange={setTraceFilter}
                   onReplay={handleTraceReplay}
                   onClear={handleTraceClear}
+                />
+                {/* Under the trace, as asked. This column had several hundred px of unused height
+                    below a trace list capped at 360px, and the values had none. */}
+                <FirmwareValuesPanel
+                  bindings={manifestValueBindings}
+                  values={resolvedValues}
+                  onValueChange={handleMemoryWrite}
+                  sensors={memory.sensors}
+                  selectedSensor={memory.selectedSensor}
+                  sensorPreview={sensorPreview}
+                  onSensorFieldChange={handleSensorFieldChange}
+                  onSelectSensor={handleSelectSensor}
                 />
               </div>
             </div>

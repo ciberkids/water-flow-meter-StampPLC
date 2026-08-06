@@ -1,60 +1,94 @@
 import { useCallback, useRef, useState } from "react";
-import { SimulatedButton, SimulatedButtonEvent, SimulatedButtonEventKind } from "../types/buttonSimulation";
+import {
+  ArmedCombo,
+  SimulatedButton,
+  SimulatedButtonEvent,
+  SimulatedButtonEventKind
+} from "../types/buttonSimulation";
+import {
+  ComboButtons,
+  ComboEvent,
+  ComboState,
+  ConsumedButtons,
+  applyButtons,
+  comboConsumed,
+  initialComboState,
+  kSelectorHoldMs,
+  tickCombos
+} from "../utils/comboGestures";
 
+/** button_input.h:41-42 — the firmware's own thresholds, for single buttons only. */
 const LONG_PRESS_MS = 1500;
-const COMBO_WARNING_MS = 3000;
 const REPEAT_INTERVAL_MS = 250;
+
 type TimerHandle = ReturnType<typeof setTimeout>;
 type IntervalHandle = ReturnType<typeof setInterval>;
 
 type SingleButton = "up" | "down" | "enter";
 
 interface ButtonRuntimeState {
-  pressed: boolean;
   longPressTriggered: boolean;
   longPressTimer?: TimerHandle;
   repeatTimer?: IntervalHandle;
 }
 
-interface ComboRuntimeState {
-  active: boolean;
-  longTriggered: boolean;
-  warningTriggered: boolean;
-  longTimer?: TimerHandle;
-  warningTimer?: TimerHandle;
-}
-
 export interface UseSimulatedButtonsResult {
   pressed: Record<SingleButton, boolean>;
-  comboActive: boolean;
+  /** Which multi-button gesture is armed right now, for the panel's status line. */
+  armedCombo: ArmedCombo;
   press: (button: SingleButton) => void;
   release: (button: SingleButton) => void;
   cancelAll: () => void;
 }
 
-export function useSimulatedButtons(onEvent: (event: SimulatedButtonEvent) => void): UseSimulatedButtonsResult {
+/**
+ * Adapter between pointer/keyboard input and the device's event vocabulary.
+ *
+ * All combo logic lives in utils/comboGestures.ts — a pure level-test machine that mirrors
+ * interaction_handler.cpp and is unit-tested to the millisecond. This file owns only what a browser
+ * forces on us: React state, and the timers that stand in for the firmware's polling loop.
+ *
+ * What it no longer does, and why:
+ *
+ *   - It no longer defers combo arming by 50 ms. That deferral meant a fast tap released both buttons
+ *     before the check ran, so the display-off gesture — which fires on RELEASE inside 1 s — could never
+ *     be performed by clicking. A clickable combo control would have been a permanent no-op.
+ *   - It no longer emits `up+down`/`long` at 1500 ms or `combo-warning` at 3000 ms. The device has no
+ *     UP+DOWN-held event at any duration, and 3000 ms belongs to the three-button selector.
+ *   - It no longer ignores ENTER. `checkCombo` tested `up.pressed && down.pressed` only, which is why
+ *     UP+DOWN and UP+DOWN+ENTER produced identical events and ran the same handler.
+ *
+ * One deliberate divergence, recorded because it is a divergence: the firmware calls clearEvents() only
+ * on the successful (<1 s) display-off path, so releasing UP+DOWN after a longer hold dispatches UP-short
+ * then DOWN-short — two page moves whose net effect is to land back on the starting screen. The machine
+ * here swallows those releases instead, which is what the firmware's own comment says the clearing is
+ * for. The visible difference is two trace entries, not a different screen.
+ */
+export function useSimulatedButtons(
+  onEvent: (event: SimulatedButtonEvent) => void
+): UseSimulatedButtonsResult {
   const [pressed, setPressed] = useState<Record<SingleButton, boolean>>({
     up: false,
     down: false,
     enter: false
   });
-  const [comboActive, setComboActive] = useState(false);
+  const [armedCombo, setArmedCombo] = useState<ArmedCombo>(null);
 
   const runtimeRef = useRef<Record<SingleButton, ButtonRuntimeState>>({
-    up: { pressed: false, longPressTriggered: false },
-    down: { pressed: false, longPressTriggered: false },
-    enter: { pressed: false, longPressTriggered: false }
+    up: { longPressTriggered: false },
+    down: { longPressTriggered: false },
+    enter: { longPressTriggered: false }
   });
 
-  const comboRef = useRef<ComboRuntimeState>({
-    active: false,
-    longTriggered: false,
-    warningTriggered: false
-  });
+  /** The button LEVELS, which is what the machine consumes. */
+  const levelsRef = useRef<ComboButtons>({ up: false, down: false, enter: false });
+  const comboRef = useRef<ComboState>(initialComboState());
+  /** Fires the selector, which completes while held and so is marked by no button change. */
+  const selectorTimerRef = useRef<TimerHandle | undefined>(undefined);
 
-  const emitEvent = useCallback(
-    (button: SimulatedButton, kind: SimulatedButtonEventKind) => {
-      onEvent({ button, kind, timestamp: Date.now() });
+  const emit = useCallback(
+    (button: SimulatedButton, kind: SimulatedButtonEventKind, timestamp: number) => {
+      onEvent({ button, kind, timestamp });
     },
     [onEvent]
   );
@@ -71,154 +105,144 @@ export function useSimulatedButtons(onEvent: (event: SimulatedButtonEvent) => vo
     }
   }, []);
 
-  const clearComboTimers = useCallback(() => {
-    const combo = comboRef.current;
-    if (combo.longTimer) {
-      clearTimeout(combo.longTimer);
-      combo.longTimer = undefined;
-    }
-    if (combo.warningTimer) {
-      clearTimeout(combo.warningTimer);
-      combo.warningTimer = undefined;
+  const clearSelectorTimer = useCallback(() => {
+    if (selectorTimerRef.current) {
+      clearTimeout(selectorTimerRef.current);
+      selectorTimerRef.current = undefined;
     }
   }, []);
 
-  const cancelCombo = useCallback(() => {
-    clearComboTimers();
-    comboRef.current.active = false;
-    comboRef.current.longTriggered = false;
-    comboRef.current.warningTriggered = false;
-    setComboActive(false);
-  }, [clearComboTimers]);
+  const publishArmed = useCallback((state: ComboState) => {
+    setArmedCombo(state.selector.active ? "selector" : state.displayOff.active ? "display-off" : null);
+  }, []);
 
-  const startCombo = useCallback(() => {
-    const combo = comboRef.current;
-    if (combo.active) return;
-
-    // Cancel individual button long-press timers since we're entering combo mode
-    clearTimers("up");
-    clearTimers("down");
-
-    combo.active = true;
-    combo.longTriggered = false;
-    combo.warningTriggered = false;
-    setComboActive(true);
-
-    // After LONG_PRESS_MS → fire combo long event
-    combo.longTimer = setTimeout(() => {
-      combo.longTriggered = true;
-      emitEvent("up+down", "long");
-    }, LONG_PRESS_MS);
-
-    // After COMBO_WARNING_MS → fire warning overlay event
-    combo.warningTimer = setTimeout(() => {
-      combo.warningTriggered = true;
-      emitEvent("up+down", "combo-warning");
-    }, COMBO_WARNING_MS);
-  }, [clearTimers, emitEvent]);
-
-  const checkCombo = useCallback(() => {
-    const rt = runtimeRef.current;
-    if (rt.up.pressed && rt.down.pressed && !comboRef.current.active) {
-      startCombo();
-    }
-  }, [startCombo]);
-
-  const release = useCallback(
-    (button: SingleButton) => {
-      const runtime = runtimeRef.current[button];
-      if (!runtime.pressed) {
-        return;
-      }
-
-      // If combo was active and this is UP or DOWN, cancel the combo
-      if (comboRef.current.active && (button === "up" || button === "down")) {
-        const wasLongTriggered = comboRef.current.longTriggered;
-        cancelCombo();
-
-        runtime.pressed = false;
-        runtime.longPressTriggered = false;
-        setPressed((current) => ({ ...current, [button]: false }));
-
-        // If combo long was triggered, don't fire individual short events
-        if (wasLongTriggered) {
-          return;
+  const dispatchComboEvents = useCallback(
+    (events: readonly ComboEvent[], nowMs: number) => {
+      for (const event of events) {
+        if (event.kind === "display-off") {
+          emit("up+down", "short", nowMs);
+        } else {
+          emit("up+down+enter", "long", nowMs);
         }
-        // Cancelled before long threshold — no individual event either (it was a combo attempt)
+      }
+    },
+    [emit]
+  );
+
+  /**
+   * Re-arm the selector's deadline.
+   *
+   * The machine fires the selector from tickCombos, so something has to call it while the buttons are
+   * simply held. One timeout, aimed at the exact remaining milliseconds, replaces a polling interval.
+   */
+  const scheduleSelector = useCallback(
+    (state: ComboState, nowMs: number) => {
+      clearSelectorTimer();
+      if (!state.selector.active || state.selector.fired) {
         return;
       }
-
-      clearTimers(button);
-
-      if (!runtime.longPressTriggered) {
-        emitEvent(button, "short");
-      }
-
-      runtime.pressed = false;
-      runtime.longPressTriggered = false;
-      setPressed((current) => ({ ...current, [button]: false }));
+      const remaining = Math.max(0, state.selector.startMs + kSelectorHoldMs - nowMs);
+      selectorTimerRef.current = setTimeout(() => {
+        selectorTimerRef.current = undefined;
+        const firedAt = Date.now();
+        const result = tickCombos(comboRef.current, levelsRef.current, firedAt);
+        comboRef.current = result.state;
+        publishArmed(result.state);
+        dispatchComboEvents(result.events, firedAt);
+      }, remaining);
     },
-    [cancelCombo, clearTimers, emitEvent]
+    [clearSelectorTimer, dispatchComboEvents, publishArmed]
+  );
+
+  /** Feed the machine the current levels, synchronously, and act on whatever it returns. */
+  const applyLevels = useCallback(
+    (nowMs: number): ConsumedButtons => {
+      const update = applyButtons(comboRef.current, levelsRef.current, nowMs);
+      comboRef.current = update.state;
+      publishArmed(update.state);
+      dispatchComboEvents(update.events, nowMs);
+      scheduleSelector(update.state, nowMs);
+      return update.consumed;
+    },
+    [dispatchComboEvents, publishArmed, scheduleSelector]
   );
 
   const press = useCallback(
     (button: SingleButton) => {
-      const runtime = runtimeRef.current[button];
-      if (runtime.pressed) {
+      if (levelsRef.current[button]) {
         return;
       }
-
-      runtime.pressed = true;
+      const nowMs = Date.now();
+      levelsRef.current = { ...levelsRef.current, [button]: true };
+      const runtime = runtimeRef.current[button];
       runtime.longPressTriggered = false;
       setPressed((current) => ({ ...current, [button]: true }));
 
-      // Check if this completes a combo
-      if (button === "up" || button === "down") {
-        // Small delay to allow the other button to be pressed "simultaneously"
-        setTimeout(() => checkCombo(), 50);
-      }
+      applyLevels(nowMs);
 
+      // A combo that is armed swallows the participating buttons' long press and repeats too — the
+      // firmware's clearEvents() drains the queue rather than filtering it by kind.
       runtime.longPressTimer = setTimeout(() => {
-        // Don't fire individual long press if combo is active
-        if (comboRef.current.active) return;
-
+        runtime.longPressTimer = undefined;
+        if (comboConsumed(comboRef.current)[button]) {
+          return;
+        }
         runtime.longPressTriggered = true;
-        emitEvent(button, "long");
+        emit(button, "long", Date.now());
 
         if (button !== "enter") {
-          // Display_UI_Requirements §3.1: "UP / DOWN held — Repeat every 250 ms when
-          // navigating; accelerating adjust in a numeric editor (§5.4)."
-          //
-          // Flat, not accelerating. This hook used to ramp the interval 250 -> 150 -> 150 ms
-          // and tag each event with a §5.4 tier multiplier, which is the editor's contract,
-          // not navigation's — and the mockup previews navigation only, so every repeat it
-          // emits is a navigation repeat. The multiplier was never read by any consumer, and
-          // the flat REPEAT_INTERVAL_MS above had been left declared and unused, which is the
-          // fingerprint of the tier code displacing it.
-          //
-          // ENTER is excluded because ENTER-held is a countdown, never a repeat — the same
-          // rule ButtonInputManager applies on the device.
+          // Display_UI_Requirements §3.1: UP/DOWN held repeat every 250 ms when navigating. Flat, not
+          // accelerating — the accelerating tiers belong to a numeric editor (§5.4), which the mockup
+          // does not preview. ENTER is excluded because held ENTER is a countdown, never a repeat.
           runtime.repeatTimer = setInterval(() => {
-            if (comboRef.current.active) return;
-            onEvent({ button, kind: "repeat", timestamp: Date.now() });
+            if (comboConsumed(comboRef.current)[button]) {
+              return;
+            }
+            emit(button, "repeat", Date.now());
           }, REPEAT_INTERVAL_MS);
         }
       }, LONG_PRESS_MS);
     },
-    [checkCombo, emitEvent, onEvent]
+    [applyLevels, emit]
   );
 
+  const release = useCallback(
+    (button: SingleButton) => {
+      if (!levelsRef.current[button]) {
+        return;
+      }
+      const nowMs = Date.now();
+      levelsRef.current = { ...levelsRef.current, [button]: false };
+      const runtime = runtimeRef.current[button];
+      clearTimers(button);
+      setPressed((current) => ({ ...current, [button]: false }));
+
+      const consumed = applyLevels(nowMs);
+
+      // Order matters: the machine has already reported whether this release belongs to a combo, so the
+      // single-button short press is suppressed on exactly the releases the device suppresses.
+      if (!runtime.longPressTriggered && !consumed[button]) {
+        emit(button, "short", nowMs);
+      }
+      runtime.longPressTriggered = false;
+    },
+    [applyLevels, clearTimers, emit]
+  );
 
   const cancelAll = useCallback(() => {
-    cancelCombo();
     (Object.keys(runtimeRef.current) as SingleButton[]).forEach((button) => {
-      if (runtimeRef.current[button].pressed) {
-        release(button);
-      } else {
-        clearTimers(button);
-      }
+      clearTimers(button);
+      runtimeRef.current[button].longPressTriggered = false;
     });
-  }, [cancelCombo, clearTimers, release]);
+    clearSelectorTimer();
+    // A cancel is a lost pointer or a blurred window, not a gesture: the levels drop and the machine
+    // resets without emitting anything. Feeding the release through applyLevels would fire display-off
+    // for a window that merely lost focus.
+    levelsRef.current = { up: false, down: false, enter: false };
+    comboRef.current = initialComboState();
+    setArmedCombo(null);
+    setPressed({ up: false, down: false, enter: false });
+  }, [clearSelectorTimer, clearTimers]);
 
-  return { pressed, comboActive, press, release, cancelAll };
+  return { pressed, armedCombo, press, release, cancelAll };
 }

@@ -231,6 +231,10 @@ body {
   border: 1px solid rgba(130, 160, 210, 0.2);
   border-radius: 14px;
   padding: 1.25rem;
+  /* Without this the panel's content box is the FULL workspace width (`.workspace > * { width: 100% }`),
+     so the grid inside overflowed by 2 x 1.25rem and clipped the right-hand column's edge. Harmless while
+     that column held only the trace; load-bearing now that the firmware-loop values live there. */
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -390,7 +394,8 @@ body {
 }
 
 .simulation-trace-panel,
-.value-editor-panel {
+.value-editor-panel,
+.firmware-values-panel {
   margin-top: 0.75rem;
   padding: 0.75rem 1rem;
   border-radius: 12px;
@@ -398,6 +403,218 @@ body {
   background: rgba(8, 14, 24, 0.65);
   width: 100%;
   box-sizing: border-box;
+}
+
+/* ── Firmware loop: controls and status (middle column) ───────────────────────────── */
+
+.firmware-loop-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.firmware-loop-panel h3 {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8fa6c6;
+}
+
+.firmware-loop-panel__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.firmware-loop-panel__status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  font-size: 0.7rem;
+  color: #9caec6;
+}
+
+.firmware-loop-panel__status .loop-state--running {
+  color: #22c55e;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.firmware-loop-panel__status .loop-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: pulse 1s infinite;
+}
+
+/* ON and OFF must not be told apart by colour alone — the words carry it, the colour reinforces it. */
+.display-state--on {
+  color: #7ee0a8;
+}
+
+.display-state--off {
+  color: #f0b429;
+}
+
+.firmware-loop-panel__status .loop-selector {
+  color: #85bbe8;
+}
+
+.firmware-loop-panel__where {
+  margin: 0;
+  font-size: 0.65rem;
+  color: #7c8da4;
+}
+
+.firmware-loop-panel__where b {
+  color: #a9c0e2;
+}
+
+/* ── Firmware loop: the value editors (under the Function trace) ──────────────────── */
+
+.firmware-values-panel header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.firmware-values-panel header strong {
+  font-size: 0.8rem;
+  color: #cfe1ff;
+}
+
+.firmware-values-panel__hint {
+  margin: 0;
+  font-size: 0.65rem;
+  color: #7c8da4;
+}
+
+.firmware-values-panel__scroll {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.firmware-values-panel__group {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  margin-top: 4px;
+  background: rgba(15, 30, 51, 0.6);
+  border: 1px solid rgba(128, 168, 201, 0.2);
+  border-radius: 4px;
+  color: #85bbe8;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* A row is label / input / unit. The label used to be capped at 160px and the input pinned to 70px, so
+ * a value row could never be wider than ~282px whatever column it sat in — the reason widening a column
+ * alone changed nothing. Here the label takes the slack and the input has a floor instead of a fixed
+ * width, so the row uses the column it is actually given. */
+.firmware-values-panel__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(84px, 0.5fr) 2.4rem;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 3px 8px;
+  font-size: 11px;
+  border-bottom: 1px solid rgba(128, 168, 201, 0.08);
+}
+
+.firmware-values-panel__row > label {
+  color: #9caec6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.firmware-values-panel__row input[type="text"],
+.firmware-values-panel__row input[type="number"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2px 4px;
+  background: rgba(0, 10, 23, 0.6);
+  border: 1px solid rgba(128, 168, 201, 0.25);
+  border-radius: 3px;
+  color: #56d2ff;
+  font-size: 11px;
+  text-align: right;
+}
+
+.firmware-values-panel__unit {
+  color: #9caec6;
+  font-size: 10px;
+}
+
+/* A value the device would WITHHOLD (disconnected sensor) reads as withheld here too. */
+.firmware-values-panel__row--withheld > label {
+  color: #6b7d94;
+}
+
+/* ── Per-sensor memory table ──────────────────────────────────────────────────────── */
+
+.sensor-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+}
+
+.sensor-row {
+  display: grid;
+  grid-template-columns: 2.6rem repeat(2, minmax(0, auto)) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.4rem;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #9caec6;
+  border: 1px solid transparent;
+}
+
+.sensor-row--selected {
+  border-color: rgba(133, 187, 232, 0.5);
+  background: rgba(15, 30, 51, 0.55);
+}
+
+.sensor-row__name {
+  font-weight: 600;
+  color: #cfe1ff;
+}
+
+.sensor-row__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.sensor-row__render {
+  font-family: "StampPLC-Pixel", "Press Start 2P", monospace;
+  font-size: 10px;
+  color: #56d2ff;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sensor-row--off .sensor-row__render {
+  color: #6b7d94;
 }
 
 .simulation-trace-panel header {
@@ -1199,6 +1416,16 @@ body {
   }
 }
 
+/* The simulation grid has to collapse EARLIER than the other two, because it carries 756px of fixed
+ * chrome (320 + 380 + two 28px gaps). Between the 1100px breakpoint above and roughly here, the middle
+ * column got ~217px — too narrow for the 240px display at any zoom, and too narrow for the pads, which
+ * degenerated into a single stacked strip. Collapsing to one column is tall but always legible. */
+@media (max-width: 1400px) {
+  .panel-grid--simulation {
+    grid-template-columns: 1fr;
+  }
+}
+
 .panel-column--context {
   display: flex;
   flex-direction: column;
@@ -1681,9 +1908,21 @@ select {
   }
 }
 
+/* The panel is FOUR STACKED ROWS, and only the hardware row is a grid.
+ *
+ * It used to be one `repeat(auto-fit, minmax(120px, 1fr))` grid holding everything — heading, three
+ * pads, the combinations block and the status banner — as auto-placed siblings. Two consequences, both
+ * visible: the pads got NARROWER as the window got WIDER (175px in a 396px panel, 128px in a 1000px
+ * one, because a wider container buys more empty tracks rather than bigger targets), and at the repo's
+ * own Playwright viewport the panel resolves to exactly two tracks, so the row of three broke into
+ * [BtnA][BtnB] / [BtnC][combos] with ENTER stranded underneath UP. Sharing a row with the combos block
+ * also stretched the pads to ITS height, which is where the mostly-empty rectangles came from.
+ *
+ * Pinning the hardware row to three equal tracks is the fix: three buttons stay three buttons, and they
+ * grow with the panel instead of shrinking. */
 .button-panel {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
   padding: 1rem;
   border-radius: 12px;
@@ -1691,13 +1930,33 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.button-panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .button-panel h3 {
-  grid-column: 1 / -1;
   margin: 0;
   font-size: 0.9rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #8fa6c6;
+}
+
+.button-panel__keys {
+  margin: 0;
+  font-size: 0.7rem;
+  color: #7c8da4;
+  letter-spacing: 0.03em;
+}
+
+.button-panel__hardware {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
 }
 
 .button-panel button {
@@ -1719,6 +1978,34 @@ select {
     border-color 0.15s var(--theme-animation-easing);
 }
 
+/* A pad reads as a key: the glyph is the biggest thing on it, the name and role sit under it. */
+.button-panel .pad {
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.7rem 0.5rem;
+  text-align: center;
+}
+
+.button-panel .pad__key {
+  font-size: 1.15rem;
+  line-height: 1.15rem;
+  opacity: 1;
+}
+
+.button-panel .pad__name {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: #a9c0e2;
+}
+
+.button-panel .pad__role {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
 .button-panel button span {
   font-size: 0.7rem;
   opacity: 0.75;
@@ -1730,10 +2017,39 @@ select {
   border-color: rgba(118, 164, 255, 0.6);
 }
 
+/* The transition above already declares `transform`; nothing ever set one, so a press read as
+ * "selected" rather than "held down" — on a panel whose whole subject is hold-duration gestures. */
 .button-panel button.active {
   background: linear-gradient(135deg, rgba(78, 115, 255, 0.85), rgba(108, 180, 255, 0.85));
   border-color: rgba(170, 205, 255, 0.9);
-  box-shadow: 0 10px 18px rgba(68, 108, 220, 0.35);
+  box-shadow: inset 0 2px 6px rgba(12, 24, 48, 0.55);
+  transform: translateY(2px) scale(0.98);
+}
+
+/* `preventDefault()` on pointerdown cancels the default focus action, which is fine — but there was no
+ * focus ring anywhere in the panel, so the keyboard path was undiscoverable even where it worked. */
+.button-panel button:focus-visible {
+  outline: 2px solid rgba(140, 190, 255, 0.9);
+  outline-offset: 2px;
+}
+
+.button-panel__legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: #8296b1;
+}
+
+.button-panel__legend p {
+  margin: 0;
+}
+
+.button-panel__legend b {
+  color: #a9c0e2;
+  font-weight: 600;
 }
 
 .interaction-log {
@@ -2052,6 +2368,87 @@ select {
 }
 
 /* Combination presses. A mouse can hold only one pointer, so UP+DOWN was unreachable by clicking. */
-.button-panel__combos { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
-.button-panel__combos-title { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; }
-.button-panel__combos-hint { margin: 0; font-size: 10px; line-height: 1.35; color: #7c8da4; }
+.button-panel__combos {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.button-panel__combos-title {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+
+.button-panel__combos-hint {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.35;
+  color: #7c8da4;
+}
+
+.button-panel__combo-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.5rem;
+}
+
+/* The hint is VISIBLE text, not a `title=` tooltip: a tooltip is invisible to touch and to a keyboard
+ * user, and these two controls are the only explanation of gestures a mouse cannot otherwise perform. */
+.button-panel .combo {
+  align-items: flex-start;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.button-panel .combo__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 1;
+  color: #d6e4ff;
+}
+
+.button-panel .combo__hint {
+  font-size: 0.65rem;
+  line-height: 1.3;
+  white-space: normal;
+  text-align: left;
+  opacity: 0.72;
+}
+
+/* ALWAYS rendered, full width, with a reserved line so the panel does not jump when a gesture arms.
+ * It was a bare inline-styled div auto-placed into one grid track, which made the panel's single most
+ * important readout a tall thin sliver of centred text — and a live region that is created along with
+ * its text does not announce, so it was never read out either. */
+.button-panel__status {
+  margin: 0;
+  min-height: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-align: center;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.button-panel__status--armed {
+  color: #cfe1ff;
+  background: rgba(78, 115, 255, 0.16);
+  border-color: rgba(140, 190, 255, 0.6);
+}
+
+.button-panel__status--fired {
+  color: #7ee0a8;
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(34, 197, 94, 0.45);
+}
