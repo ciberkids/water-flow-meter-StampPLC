@@ -76,15 +76,14 @@ test.describe("StampPLC mockup visual regression", () => {
       input.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    // Orientation controls moved to the Design tab; prefer them when present.
-    const landscapeButton = page.getByRole("button", { name: "Landscape", exact: true });
-    if (await landscapeButton.count()) {
-      await landscapeButton.click();
-    } else {
-      await page.getByRole("button", { name: "Design", exact: true }).click();
-      await page.getByRole("button", { name: "Landscape", exact: true }).click();
-      await page.getByRole("button", { name: "Simulation", exact: true }).click();
-    }
+    // NO ORIENTATION STEP. There is nothing left to normalise: portrait was removed by decision D3, and
+    // the Design tab's control is now a DISABLED indicator reading "Landscape 240x135".
+    //
+    // This block is why the whole suite was timing out. It waited for a button named exactly "Landscape";
+    // when the rename landed, `count()` returned 0, the else-branch opened the Design tab and waited 30 s
+    // for the same missing name, and since it runs from `beforeEach`, EVERY test failed identically. It
+    // went unseen because `npx playwright test` serves whatever is in `dist/` — `vite preview` does not
+    // build — so a stale bundle kept the old button alive. Use `npm run test:visual`, which builds first.
 
     await page.getByLabel("Show grid overlay").check();
   };
