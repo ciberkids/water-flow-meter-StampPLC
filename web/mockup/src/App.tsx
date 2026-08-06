@@ -2172,6 +2172,7 @@ export function App() {
                     showGrid={showGrid}
                     screen={selectedScreen}
                     firmwareValues={firmwareManifest.values ?? []}
+                    boundValues={resolvedValues}
                     previewFooter={
                       <section className="viewport-controls" aria-label="Viewport controls">
                         <h4>Viewport movement</h4>

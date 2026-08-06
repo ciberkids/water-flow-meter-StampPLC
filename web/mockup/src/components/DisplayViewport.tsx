@@ -26,8 +26,11 @@ interface DisplayViewportProps {
    *
    * `sample` shows plausible device output — the mode for judging layout and legibility, and the
    * default because that is the question the viewport exists to answer. `id` shows the short binding
-   * id in braces, which is what the design tab needs: there, knowing WHICH value is bound matters
-   * more than how it looks.
+   * id in braces, for a caller that needs to know WHICH value is bound rather than how it looks.
+   *
+   * NO CALL SITE PASSES `id` TODAY. Both render sites — the simulation viewport (App.tsx) and the theme
+   * editor's live preview — use the default. This doc used to assert the design tab relied on it, which
+   * was simply untrue; the mode is kept because it costs one branch, not because something uses it.
    *
    * Neither shows the catalogue DESCRIPTION any more. Rendering `{{Sensor 3 instantaneous flow}}`
    * across 137 value elements is what made the panel unreadable.
@@ -200,9 +203,11 @@ export function DisplayViewport({
          *
          * Two changes here, and the second reverses a documented decision on purpose:
          *
-         *  - It now covers badges as well as values. The gate tested `kind === "value"` only, and all
-         *    eight per-sensor status elements on P1 are badges — so the one element whose entire job is
-         *    to render `--` / `OK` / `WAIT` was the one element nothing could drive.
+         *  - Values only, because ValuePlaceholderPanel.tsx:13 filters its list to `kind === "value"`:
+         *    a badge can never HAVE a pin, so widening this gate to badges was dead code, and the comment
+         *    that came with it — claiming the widening is what let P1's status badges render `--` — was
+         *    wrong about its own mechanism. Memory resolution above is what drives those badges, and it
+         *    runs for every kind.
          *  - Memory now WINS over a pin. The pin used to take precedence so a specific case could be
          *    held for inspection, which was reasonable when the loop was a flat string map — but it
          *    meant typing one character into a sensor row, then disconnecting that sensor, left the old
@@ -214,7 +219,7 @@ export function DisplayViewport({
          */
         const hasPin = overrideValue !== undefined && overrideValue !== "";
         const memoryAnswered = Boolean(element.binding) && boundValues?.[element.binding!] !== undefined;
-        if ((element.kind === "value" || element.kind === "badge") && hasPin && !memoryAnswered) {
+        if (element.kind === "value" && hasPin && !memoryAnswered) {
           displayContent = overrideValue as string;
         }
 
@@ -230,7 +235,7 @@ export function DisplayViewport({
           (displayContent === "--" || /:\s+--$/.test(displayContent ?? ""));
 
         const isOverridden =
-          (element.kind === "value" || element.kind === "badge") &&
+          element.kind === "value" &&
           hasPin &&
           !memoryAnswered &&
           displayContent !== element.content;

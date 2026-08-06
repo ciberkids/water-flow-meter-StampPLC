@@ -102,6 +102,14 @@ interface ThemeEditorProps {
   stackControls?: boolean;
   sidebarContent?: ReactNode;
   firmwareValues?: import("../types/firmwareActions").FirmwareValueDefinition[];
+  /**
+   * Values resolved from the simulated device memory.
+   *
+   * Passed through so this preview cannot contradict the Simulation tab. Without it the theme preview
+   * drew the sample strings: disconnect sensor 1 in Simulation, switch to Design, and the same screen
+   * showed `1:   2.34 L/s` with an `OK` badge for the channel you had just switched off.
+   */
+  boundValues?: Record<string, string>;
 }
 
 export function ThemeEditor({
@@ -112,7 +120,8 @@ export function ThemeEditor({
   previewFooter,
   stackControls = false,
   sidebarContent,
-  firmwareValues
+  firmwareValues,
+  boundValues
 }: ThemeEditorProps) {
   const { theme, updateTheme, resetTheme } = useTheme();
   const previewZoom =
@@ -303,6 +312,7 @@ export function ThemeEditor({
                 zoomPercent={previewZoom}
                 showGrid={showGrid}
                 firmwareValues={firmwareValues}
+                boundValues={boundValues}
               />
             </div>
           ) : (
