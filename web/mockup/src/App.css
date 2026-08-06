@@ -1500,6 +1500,9 @@ body {
   background: rgba(5, 9, 15, 0.85);
   border: 1px solid rgba(40, 56, 78, 0.55);
   display: flex;
+  /* Wrap, so the power readout below the panel gets a line of its own instead of a narrow column
+     squeezed beside the frame. */
+  flex-wrap: wrap;
   justify-content: flex-start;
   align-items: flex-start;
   min-height: 360px;
@@ -1583,6 +1586,39 @@ select {
   position: relative;
   overflow: hidden;
   border-radius: 6px;
+}
+
+/* Backlight off. The surface keeps its geometry — it is still a 240x135 panel — and simply stops
+ * emitting: the device's idle branch blanks the framebuffer and turns the backlight off, so an unlit
+ * screen is darker than a lit one showing nothing. No text: any wording lives in the chrome outside. */
+.display-surface--off {
+  filter: brightness(0.28) saturate(0.5);
+}
+
+/* The chrome that says WHY the panel is dark, outside the emulated area. */
+/* `.viewport-container` is a flex ROW holding the framed panel, so this claims a full line of its own
+ * rather than sitting alongside the frame and wrapping into a narrow column beside it. */
+.viewport-power {
+  flex: 0 0 100%;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: #f0b429;
+}
+
+.viewport-power--on {
+  color: #7ee0a8;
+}
+
+.viewport-power__lamp {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .screen-selector {

@@ -147,15 +147,21 @@ export function createSensorTable(): SimulatedSensor[] {
   return table;
 }
 
-/** The row for a 1-based sensor number, or undefined when there is none (0 included). */
+/**
+ * The row for a 1-based sensor number, or undefined when there is none (0 included).
+ *
+ * Matched on the `number` FIELD, not on position. It was positional (`table[sensorNumber - 1]`, bounded
+ * by `table.length`) while `setSensor` below matched on the field — two lookup rules for one fact, which
+ * disagreed the moment a caller held anything other than a full eight-row table in position order.
+ */
 export function sensorAt(
   table: readonly SimulatedSensor[],
   sensorNumber: number
 ): SimulatedSensor | undefined {
-  if (!Number.isInteger(sensorNumber) || sensorNumber < 1 || sensorNumber > table.length) {
+  if (!Number.isInteger(sensorNumber) || sensorNumber < 1 || sensorNumber > kSensorCount) {
     return undefined;
   }
-  return table[sensorNumber - 1];
+  return table.find((sensor) => sensor.number === sensorNumber);
 }
 
 /**

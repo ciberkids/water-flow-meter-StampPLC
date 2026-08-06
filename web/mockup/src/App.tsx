@@ -38,7 +38,7 @@ import { ExporterPanel } from "./components/ExporterPanel";
 import { SimulationTracePanel } from "./components/SimulationTracePanel";
 import { ValuePlaceholderPanel } from "./components/ValuePlaceholderPanel";
 import { SimulationTraceEntry } from "./types/simulationTrace";
-import { FirmwareActionManifest, FirmwareActionDefinition } from "./types/firmwareActions";
+import { FirmwareActionManifest, FirmwareActionDefinition, FirmwareValueDefinition } from "./types/firmwareActions";
 import { TransitionEffect, TransitionPreviewState } from "./types/transitionPreview";
 import { findMatchingButtonFlows } from "./utils/flowMatching";
 import { ScreenHierarchyPanel } from "./components/design/ScreenHierarchyPanel";
@@ -47,6 +47,18 @@ import { DesignToolbox } from "./components/design/DesignToolbox";
 import { LiveJsonEditorPanel } from "./components/design/LiveJsonEditorPanel";
 import { validateManifest } from "./schema/manifestValidation";
 import { FirmwareLoopPanel } from "./components/FirmwareLoopPanel";
+import { FirmwareValuesPanel } from "./components/FirmwareValuesPanel";
+import { sampleValueFor } from "./utils/sampleValues";
+import {
+  SimulatedSensor,
+  advanceSensorTick,
+  createSensorTable,
+  isPerSensorSetting,
+  pulsesForFlow,
+  resolveSensorBinding,
+  sensorIndexForScreen,
+  setSensor
+} from "./utils/sensorConfig";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -363,60 +375,52 @@ export function App() {
   const totalScreens = screens.length;
   const selectedScreenOverrides = selectedScreen ? valueOverrides[selectedScreen.id] ?? {} : {};
 
-  /* ---- Firmware Loop: binding index + state ---- */
-  const bindingIndex = useMemo(() => {
-    const index = new Map<string, { screenId: string; elementId: string }[]>();
-    for (const scr of screens) {
-      for (const el of scr.elements ?? []) {
-        if (el.binding) {
-          if (!index.has(el.binding)) index.set(el.binding, []);
-          index.get(el.binding)!.push({ screenId: scr.id, elementId: el.id });
-        }
-      }
-    }
-    return index;
-  }, [screens]);
-
+  /* ---- Simulated device memory ------------------------------------------------------------------
+   *
+   * ONE home for every value the panel can draw.
+   *
+   * What this replaces: a flat `firmwareLoopValues` map of binding id → string, which was fanned out
+   * into per-element `valueOverrides`. That gave every fact two homes, and the override won — so
+   * switching the selected sensor left the previous sensor's text pinned on screen, and eight sensors
+   * shared one config because a single binding id can only hold one string.
+   *
+   * Memory is the source of truth: the loop advances it, an edit writes it, and every binding RESOLVES
+   * from it. `sampleValueFor` survives only as the fallback for bindings memory does not model.
+   */
   const manifestValueBindings = useMemo(() => {
-    return (firmwareManifest.values ?? []).map((v: { id: string; type?: string; unit?: string; description?: string }) => ({
-      id: v.id,
-      type: v.type,
-      unit: v.unit,
-      description: v.description
+    return (firmwareManifest.values ?? []).map((value) => ({
+      id: value.id,
+      type: value.type,
+      unit: value.unit,
+      description: value.description,
+      category: value.category,
+      perSensor: value.perSensor
     }));
   }, [firmwareManifest]);
 
-  const [firmwareLoopValues, setFirmwareLoopValues] = useState<Record<string, string>>({});
-
-  const handleFirmwareValueChange = useCallback((bindingId: string, value: string) => {
-    setFirmwareLoopValues(prev => ({ ...prev, [bindingId]: value }));
-    const targets = bindingIndex.get(bindingId);
-    if (targets) {
-      setValueOverrides(current => {
-        const next = { ...current };
-        for (const { screenId, elementId } of targets) {
-          next[screenId] = { ...(next[screenId] ?? {}), [elementId]: value };
-        }
-        return next;
-      });
+  const manifestValueById = useMemo(() => {
+    const index = new Map<string, FirmwareValueDefinition>();
+    for (const value of firmwareManifest.values ?? []) {
+      index.set(value.id, value);
     }
-  }, [bindingIndex]);
+    return index;
+  }, [firmwareManifest]);
 
-  const handleFirmwareBatchChange = useCallback((updates: Record<string, string>) => {
-    setFirmwareLoopValues(prev => ({ ...prev, ...updates }));
-    setValueOverrides(current => {
-      const next = { ...current };
-      for (const [bindingId, value] of Object.entries(updates)) {
-        const targets = bindingIndex.get(bindingId);
-        if (targets) {
-          for (const { screenId, elementId } of targets) {
-            next[screenId] = { ...(next[screenId] ?? {}), [elementId]: value };
-          }
-        }
-      }
-      return next;
-    });
-  }, [bindingIndex]);
+  const [sensors, setSensors] = useState<SimulatedSensor[]>(() => createSensorTable());
+  /** Manual pins for the bindings memory does not model (network, UART summary, page titles…). */
+  const [pinnedValues, setPinnedValues] = useState<Record<string, string>>({});
+  const [loopRunning, setLoopRunning] = useState<boolean>(false);
+  const [loopIntervalMs, setLoopIntervalMs] = useState<number>(1000);
+  /**
+   * A sensor picked in the values panel, used only when navigation implies none.
+   *
+   * On the device the selected sensor comes from the navigation level and nowhere else
+   * (`UiNavigator::sensorIndex_`). The simulator needs to reach a sensor's settings without walking the
+   * tree first, so a manual pick fills in — but the navigation-derived index always wins, which keeps
+   * the device's rule authoritative wherever it applies.
+   */
+  const [pickedSensor, setPickedSensor] = useState<number>(0);
+  const connectedSensorCount = sensors.filter((sensor) => sensor.connected).length;
   useEffect(() => {
     if (!selectedScreen) {
       if (selectedElementId !== null) {
@@ -1314,6 +1318,135 @@ export function App() {
     setSelectorOpen(open);
   }, []);
 
+  /* ---- Resolving a binding against device memory ------------------------------------------------ */
+
+  /**
+   * Which sensor the shared `config.sensor.*` editors describe.
+   *
+   * Navigation decides it, exactly as `UiNavigator::descend` reads the index off the screen being left;
+   * the manual pick only fills in when no level implies a sensor. 1-based, 0 for none — the navigator's
+   * own sentinel, which is why the values panel can show "no sensor selected" rather than a plausible 1.
+   */
+  const navSensorIndex = sensorIndexForScreen(selectedScreenId, navParents);
+  const selectedSensor = navSensorIndex !== 0 ? navSensorIndex : pickedSensor;
+
+  /**
+   * Aggregates over the table, excluding disconnected channels.
+   *
+   * `sensor_state_engine.cpp` leaves a disconnected channel out of the total, so a channel switched off
+   * here stops contributing — which is the point of being able to switch one off. The two-decimal shape
+   * matches what the panel already drew; it is the mockup's formatting, not a verified device format,
+   * because these aggregates are composed in the firmware from a different code path.
+   */
+  const resolvedValues = useMemo(() => {
+    const out: Record<string, string> = {};
+    const live = sensors.filter((sensor) => sensor.connected && sensor.ready);
+    const totalFlow = live.reduce((sum, sensor) => sum + sensor.instantFlowLps, 0);
+    const totalVolume = sensors.reduce((sum, sensor) => sum + sensor.cumulativeLiters, 0);
+
+    for (const binding of manifestValueBindings) {
+      const fromMemory = resolveSensorBinding(binding.id, sensors, selectedSensor);
+      let value = fromMemory;
+      if (value === undefined) {
+        if (binding.id === "telemetry.totalFlowLps") {
+          value = totalFlow.toFixed(2);
+        } else if (binding.id === "telemetry.totalVolumeLiters") {
+          value = totalVolume.toFixed(2);
+        }
+      }
+      // A pin wins: it is an explicit "show me this" for a binding memory does not model.
+      out[binding.id] =
+        pinnedValues[binding.id] ??
+        value ??
+        sampleValueFor(binding.id, manifestValueById.get(binding.id), "sample");
+    }
+    return out;
+  }, [manifestValueBindings, manifestValueById, pinnedValues, selectedSensor, sensors]);
+
+  /** What the device would draw for one sensor's flow row — the visible effect of a toggle. */
+  const sensorPreview = useCallback(
+    (sensorNumber: number) =>
+      resolveSensorBinding(`sensor.${sensorNumber}.instantFlow`, sensors, selectedSensor) ?? "—",
+    [selectedSensor, sensors]
+  );
+
+  const handleSensorFieldChange = useCallback(
+    (sensorNumber: number, field: "connected" | "ready", value: boolean) => {
+      setSensors((table) => setSensor(table, sensorNumber, { [field]: value }));
+    },
+    []
+  );
+
+  const handleSelectSensor = useCallback((sensorNumber: number) => {
+    setPickedSensor((current) => (current === sensorNumber ? 0 : sensorNumber));
+  }, []);
+
+  /**
+   * An edit writes MEMORY when memory owns the fact, and pins the string otherwise.
+   *
+   * The four per-sensor settings are stored integers on the device (`SensorCharacteristics` is three
+   * int fields plus a bitmap bit), so they are parsed rather than kept as text — which is what makes
+   * "set sensor 1 disconnected" change the eight telemetry rows too, instead of only the settings page.
+   */
+  const handleMemoryWrite = useCallback(
+    (bindingId: string, value: string) => {
+      const definition = manifestValueById.get(bindingId);
+      if (isPerSensorSetting(definition) && selectedSensor !== 0) {
+        const numeric = Number.parseInt(value, 10);
+        if (bindingId === "config.sensor.connected") {
+          const on = /^(on|1|true|yes)$/i.test(value.trim());
+          setSensors((table) => setSensor(table, selectedSensor, { connected: on }));
+          return;
+        }
+        if (!Number.isFinite(numeric)) {
+          return;
+        }
+        const field =
+          bindingId === "config.sensor.multiplier"
+            ? "multiplier"
+            : bindingId === "config.sensor.adjust"
+              ? "adjust"
+              : "qMaxLpm";
+        setSensors((table) => setSensor(table, selectedSensor, { [field]: numeric }));
+        return;
+      }
+      setPinnedValues((current) => ({ ...current, [bindingId]: value }));
+    },
+    [manifestValueById, selectedSensor]
+  );
+
+  /**
+   * One pass of the loop: advance every channel through the state engine's rules.
+   *
+   * Pulses, not flow, because that is what the device counts — `pulsesForFlow` inverts the engine's two
+   * lines so a target flow can drive it. A disconnected or not-ready channel is still ticked: the engine
+   * zeroes its instant flow and leaves its totals frozen, and seeing frozen totals is the point.
+   */
+  const handleLoopTick = useCallback(() => {
+    setSensors((table) =>
+      table.map((sensor) => {
+        const target = sensor.connected && sensor.ready ? Math.random() * 4 : 0;
+        return advanceSensorTick(sensor, {
+          pulses: pulsesForFlow(sensor, target, loopIntervalMs),
+          elapsedMs: loopIntervalMs
+        });
+      })
+    );
+  }, [loopIntervalMs]);
+
+  useEffect(() => {
+    if (!loopRunning) {
+      return;
+    }
+    const handle = setInterval(handleLoopTick, loopIntervalMs);
+    return () => clearInterval(handle);
+  }, [handleLoopTick, loopIntervalMs, loopRunning]);
+
+  const handleMemoryReset = useCallback(() => {
+    setSensors(createSensorTable());
+    setPinnedValues({});
+  }, []);
+
   const handleButtonEvent = useCallback(
     (event: SimulatedButtonEvent) => {
       const triggerLabel = formatTriggerLabel(event);
@@ -1551,7 +1684,7 @@ export function App() {
     [actionCatalog, appendLog, previewTransition, recordTraceEntry, selectById, selectByOffset, selectedScreen, screens, pushNavParent, popNavParent, clearNavParents, setDisplay, setSelector]
   );
 
-  const { pressed, comboActive, press, release, cancelAll } = useSimulatedButtons(handleButtonEvent);
+  const { pressed, armedCombo, press, release, cancelAll } = useSimulatedButtons(handleButtonEvent);
 
   const mapKeyToButton = useCallback((key: string): "up" | "down" | "enter" | undefined => {
     switch (key) {
@@ -1778,7 +1911,8 @@ export function App() {
                       zoomPercent={zoom}
                       showGrid={showGrid}
                       valueOverrides={selectedScreenOverrides}
-                      globalValues={firmwareLoopValues}
+                      boundValues={resolvedValues}
+                      powered={displayOn}
                       // The transition overlay is OFF. It faded a miniature of the incoming screen
                       // over the panel on every UP/DOWN, which on a device whose whole navigation IS
                       // UP/DOWN meant an animation over almost every press — and it obscured the
@@ -1792,6 +1926,18 @@ export function App() {
                   ) : (
                     <p>No screen selected.</p>
                   )}
+                  {/* Chrome, deliberately outside the 240x135 frame: the device draws nothing at all
+                      while idle, so anything explanatory has to live here or it is a lie about pixels. */}
+                  <p
+                    className={displayOn ? "viewport-power viewport-power--on" : "viewport-power"}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <span className="viewport-power__lamp" aria-hidden="true" />
+                    {displayOn
+                      ? "Display on"
+                      : "Display off — backlight off, framebuffer cleared. Any button wakes it."}
+                  </p>
                 </section>
 
                 <ButtonPanel
@@ -1895,8 +2041,8 @@ export function App() {
                   bindings={manifestValueBindings}
                   values={resolvedValues}
                   onValueChange={handleMemoryWrite}
-                  sensors={memory.sensors}
-                  selectedSensor={memory.selectedSensor}
+                  sensors={sensors}
+                  selectedSensor={selectedSensor}
                   sensorPreview={sensorPreview}
                   onSensorFieldChange={handleSensorFieldChange}
                   onSelectSensor={handleSelectSensor}

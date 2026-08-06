@@ -11,7 +11,13 @@ interface DisplayViewportProps {
   zoomPercent: number;
   showGrid: boolean;
   valueOverrides?: Record<string, string>;
-  globalValues?: Record<string, string>;
+  /**
+   * Every binding's value as resolved from the simulated device memory, keyed by binding id.
+   *
+   * Replaces `globalValues`, which was the loop's flat string map and never reached the renderer at all:
+   * the only path from it to pixels was a fan-out into `valueOverrides`, which then shadowed it.
+   */
+  boundValues?: Record<string, string>;
   pendingTransition?: TransitionPreviewState | null;
   scrollIndicator?: string;
   firmwareValues?: import("../types/firmwareActions").FirmwareValueDefinition[];
@@ -27,6 +33,14 @@ interface DisplayViewportProps {
    * across 137 value elements is what made the panel unreadable.
    */
   bindingDisplay?: "sample" | "id";
+  /**
+   * Backlight state. `false` renders an empty surface, because that is what the device shows: the idle
+   * branch blanks and draws nothing at all.
+   *
+   * Defaults to true so the design tab and the transition preview, which have no notion of device mode,
+   * keep rendering.
+   */
+  powered?: boolean;
 }
 
 const FRAME_PADDING = 8;
@@ -56,11 +70,12 @@ export function DisplayViewport({
   zoomPercent,
   showGrid,
   valueOverrides,
-  globalValues,
+  boundValues,
   pendingTransition,
   scrollIndicator,
   firmwareValues,
-  bindingDisplay = "sample"
+  bindingDisplay = "sample",
+  powered = true
 }: DisplayViewportProps) {
   const { theme } = useTheme();
   const orientation = layout.bounds.orientation;
@@ -169,39 +184,47 @@ export function DisplayViewport({
         let displayContent = element.content;
 
         if (element.binding) {
-          // Sample text, not `{{<description>}}`. Rendering the catalogue's English description made
-          // the panel unreadable — see sampleValues.ts. A per-element override still wins below.
-          const boundValue = firmwareValues?.find((v) => v.id === element.binding);
-          displayContent = sampleValueFor(element.binding, boundValue, bindingDisplay);
+          // Resolved from the simulated device memory when we have it, so what the panel draws is what
+          // the device's state says — including `3: --` for a disconnected sensor and `3: WAIT` for one
+          // that is enabled but not ready. `sampleValueFor` remains the fallback for bindings memory
+          // does not model, and is the whole story in `id` mode, which the design tab uses.
+          const definition = firmwareValues?.find((value) => value.id === element.binding);
+          displayContent =
+            bindingDisplay === "id"
+              ? sampleValueFor(element.binding, definition, "id")
+              : boundValues?.[element.binding] ??
+                sampleValueFor(element.binding, definition, "sample");
         }
 
-        if (element.kind === "value" && overrideValue !== undefined) {
-          // Overrides take precedence (e.g. simulation values)
+        // Overrides win for badges as well as values. The gate used to test `kind === "value"` only,
+        // and all eight per-sensor status elements on P1 are badges — so the one element whose entire
+        // job is to render `--` / `OK` / `WAIT` was the one element nothing could drive.
+        if ((element.kind === "value" || element.kind === "badge") && overrideValue !== undefined) {
           displayContent = overrideValue;
         }
 
-        // §4.3.19: Disabled sensors render `--`
-        let isDisabledSensor = false;
-        if (element.binding && globalValues && element.binding.startsWith("sensor.") && !element.binding.endsWith(".connected")) {
-          const match = element.binding.match(/^sensor\.(\d+)\./);
-          if (match) {
-            const sensorId = match[1];
-            if (globalValues[`sensor.${sensorId}.connected`] === "false") {
-              displayContent = "--";
-              isDisabledSensor = true;
-            }
-          }
-        }
+        /* §4.3.19 — a withheld reading, detected from the string the device actually draws.
+         *
+         * This used to read `globalValues["sensor.<n>.connected"]`, a binding id that is not among the
+         * 104 the firmware advertises and that nothing could ever write, so the branch never fired once
+         * and every sensor rendered as connected and flowing. Now that memory resolves the binding, the
+         * device's own withheld formats — bare `--` for a status, `<n>: --` for a metric — are the
+         * signal, and the mockup does not need a parallel notion of "disabled". */
+        const isWithheld =
+          Boolean(element.binding) &&
+          (displayContent === "--" || /:\s+--$/.test(displayContent ?? ""));
 
         const isOverridden =
-          element.kind === "value" && overrideValue !== undefined && displayContent !== element.content;
+          (element.kind === "value" || element.kind === "badge") &&
+          overrideValue !== undefined &&
+          displayContent !== element.content;
 
         const className = [
           "display-element",
           `kind-${element.kind}`,
           item.outOfBounds ? "overflow" : "",
           isOverridden ? "value-overridden" : "",
-          isDisabledSensor ? "value-disabled" : ""
+          isWithheld ? "value-disabled" : ""
         ]
           .filter(Boolean)
           .join(" ");
@@ -215,10 +238,12 @@ export function DisplayViewport({
               </div>
             );
           case "value":
+            // No added marker. A little "x" used to be appended for a withheld reading, INSIDE the
+            // emulated 240x135 area — a glyph the device never draws, in the one place that has to show
+            // only what the device shows. The `value-disabled` class dims it instead.
             return (
               <div key={element.id} className={className} style={style}>
                 {displayContent}
-                {isDisabledSensor && <span style={{ fontSize: "0.5em", marginLeft: "2px" }}>x</span>}
               </div>
             );
           case "box":
@@ -262,7 +287,10 @@ export function DisplayViewport({
             return null;
         }
       }),
-    [baseStyle, elementStyles, emphasisStyles]
+    // Stale deps were a real hazard, not a lint nit: `boundValues`, `firmwareValues` and
+    // `bindingDisplay` are read from the closure, so without them here a new value map would render the
+    // FIRST frame forever — and the whole point of resolving from memory is that it changes.
+    [baseStyle, bindingDisplay, boundValues, elementStyles, emphasisStyles, firmwareValues]
   );
 
   const wrapperStyle: CSSProperties = {
@@ -297,15 +325,23 @@ export function DisplayViewport({
   return (
     <div className={`viewport-wrapper orientation-${orientation}`} style={wrapperStyle}>
       <div className="viewport-scale" style={scaleStyle}>
-        <div className="display-surface" style={surfaceStyle}>
+        <div
+          className={powered ? "display-surface" : "display-surface display-surface--off"}
+          style={surfaceStyle}
+        >
           <DeviceGrid
             width={baseWidth}
             height={baseHeight}
-            visible={showGrid}
+            visible={showGrid && powered}
             minorColor={theme.colors.gridMinor}
             majorColor={theme.colors.gridMajor}
           />
-          {renderElementsForLayout(layout, valueOverrides, { scrollIndicator })}
+          {/* Backlight off draws NOTHING. ui_renderer.cpp:115-119 is `setBacklight(false)` followed by
+              `fillScreen(backgroundColor_)` with no drawString anywhere in the idle branch — so a blank
+              surface is the faithful render, and any "display off" wording belongs to the chrome outside
+              this frame. (The dataset's state-idle screen carries a "- Display off -" label; that label
+              is the dataset being unfaithful, and it is not what we draw here.) */}
+          {powered ? renderElementsForLayout(layout, valueOverrides, { scrollIndicator }) : null}
           {pendingTransition ? (
             <div
               className={`transition-overlay transition-overlay--${pendingTransition.effect}`}
