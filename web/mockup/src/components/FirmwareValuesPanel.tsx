@@ -86,6 +86,21 @@ function groupBindings(bindings: ValueBinding[]): Map<string, ValueBinding[]> {
   return map;
 }
 
+/**
+ * A field being typed into holds the RAW text until it loses focus.
+ *
+ * Without this an editable row is not editable: its value comes from memory already formatted — maxFlow
+ * resolves to "150 L/min" — so the controlled input contained the unit, `parseInt` read the same 150 back
+ * out, and the field snapped to "150 L/min" after every keystroke. Backspace was impossible, and the
+ * boolean row turned Off on any keystroke that was not `on`/`1`/`true`/`yes`.
+ *
+ * The draft is per-field and dies on blur, so what you read when you are NOT typing is always memory.
+ */
+interface Draft {
+  id: string;
+  text: string;
+}
+
 export function FirmwareValuesPanel({
   bindings,
   values,
@@ -99,6 +114,7 @@ export function FirmwareValuesPanel({
   onSelectSensor
 }: FirmwareValuesPanelProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(["sensors"]));
+  const [draft, setDraft] = useState<Draft | null>(null);
 
   const grouped = useMemo(() => groupBindings(bindings), [bindings]);
   const sortedGroups = useMemo(() => {
@@ -138,13 +154,15 @@ export function FirmwareValuesPanel({
    */
   const renderRow = (binding: ValueBinding) => {
     const editable = canEdit(binding.id);
-    const shown = values[binding.id] ?? "";
+    const resolved = values[binding.id] ?? "";
+    const editing = draft?.id === binding.id;
+    const shown = editing ? draft.text : resolved;
     // A read-only row is memory's own complete string — units included, and deliberately ABSENT from a
     // withheld reading, which the device prints as bare `1: --`. Appending the column's unit there
     // produced `1: -- L/s`, a unit for a reading that does not exist. Editable rows keep the column,
     // because their input holds a bare number.
     const unitInValue =
-      !editable || (Boolean(binding.unit) && shown.trimEnd().endsWith(binding.unit as string));
+      !editable || (Boolean(binding.unit) && resolved.trimEnd().endsWith(binding.unit as string));
     return (
       <div
         className={editable ? "firmware-values-panel__row" : "firmware-values-panel__row firmware-values-panel__row--readonly"}
@@ -159,7 +177,12 @@ export function FirmwareValuesPanel({
             type="text"
             value={shown}
             placeholder="—"
-            onChange={(event) => onValueChange(binding.id, event.target.value)}
+            onFocus={() => setDraft({ id: binding.id, text: resolved })}
+            onBlur={() => setDraft((current) => (current?.id === binding.id ? null : current))}
+            onChange={(event) => {
+              setDraft({ id: binding.id, text: event.target.value });
+              onValueChange(binding.id, event.target.value);
+            }}
           />
         ) : (
           <span className="firmware-values-panel__readout" title="Computed from device memory">

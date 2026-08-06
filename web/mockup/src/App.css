@@ -444,12 +444,20 @@ body {
   gap: 0.35rem;
 }
 
+/* `animation: pulse` was referencing a keyframe that DOES NOT EXIST in this stylesheet — inherited from
+ * the inline style this replaced, where it was equally dead, so the "running" dot never pulsed. Defined
+ * here rather than dropped, because a steady dot and a pulsing one say different things about a loop. */
+@keyframes loop-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
 .firmware-loop-panel__status .loop-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: #22c55e;
-  animation: pulse 1s infinite;
+  animation: loop-pulse 1s ease-in-out infinite;
 }
 
 /* ON and OFF must not be told apart by colour alone — the words carry it, the colour reinforces it. */
