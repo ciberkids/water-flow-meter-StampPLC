@@ -126,7 +126,7 @@ The expander is addressed at `0x43` over I²C (SCL = GPIO15, SDA = GPIO1
 
 - **Info Mode:** Display a small legend describing current LED semantics (e.g., “Red pulses per X L • Green=Ready • Blue=Flow”).
 - **Configuration Mode:** Add a device-level settings page that allows selecting the red volume step (1/10/100) and editing the pulse period using the coarse increment rules.
-- **Factory Reset:** Factory reset returns registers 31/32 to defaults. The trigger is the P8 → `Factory reset?` confirm screen (30 s hold); the former blind UP+DOWN 30 s combo was retired — see `Display_UI_Requirements.md` §3.3. During the countdown the LED runs the §3.5 accelerating ramp and goes solid white on acceptance; it no longer goes dark.
+- **Factory Reset:** Factory reset returns registers 31/32 to defaults. The trigger is the P6 → `Factory reset?` confirm screen (30 s hold); the former blind UP+DOWN 30 s combo was retired — see `Display_UI_Requirements.md` §3.3. During the countdown the LED runs the §3.5 accelerating ramp and goes solid white on acceptance; it no longer goes dark.
 
 ---
 

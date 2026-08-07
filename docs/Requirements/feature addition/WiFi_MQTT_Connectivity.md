@@ -996,7 +996,8 @@ Two new entries at the **root level**, siblings of the existing info pages, reac
 UP/DOWN like everything else:
 
 ```
-L0  P0 Global status … P8 Factory reset ─► WIFI ─► MQTT ─► (wraps to P0)
+L0  P0 Global status … P6 Factory reset ─► WIFI ─► MQTT ─► (wraps to P0)
+    nine ring entries: seven info pages plus these two network roots
                                             │        │
 L1  ┌───────────────────────────────────────┘        └──────────────────────────┐
     W1 Enabled              true/false   editor       M1 Enabled       true/false   editor

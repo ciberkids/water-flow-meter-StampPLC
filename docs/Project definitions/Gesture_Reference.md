@@ -276,4 +276,4 @@ Four traps, each of which produced a confident false pass while this harness was
 2. **Call `controller.update()`**, not just the input calls. `updateIdleState` lives there, so
    a harness that only drives buttons can never fail an idle test.
 3. **Wire `deps.modbus`.** `handleFlowEvent` returns early without it, swallowing every event.
-4. **ENTER on P0 does not descend.** P7 is the configuration entry.
+4. **ENTER on P0 does not descend.** P5 is the configuration entry.

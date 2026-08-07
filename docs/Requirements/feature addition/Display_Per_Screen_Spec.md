@@ -319,10 +319,10 @@ Rows inked 17 of 17. Narrowest right margin 25 px.
 | ENTER long | escape — already at root, so a no-op |
 | UP+DOWN tapped | display off, nav stack cleared, wakes on P0 |
 
-**Open defect, not P0's to fix:** §4.1's state machine describes a **9-page** ring (`P0 --> P8: UP`), but the
-real ring is **11** — `net-wifi-root` and `net-mqtt-root` were appended when the WiFi/MQTT feature landed
-and §4.1 was never updated. P0's UP therefore lands on `net-mqtt-root`. Either the diagram or the ring is
-wrong; that decision belongs with the ring as a whole, not with this screen.
+**Closed:** §4.1's state machine used to describe a 9-page ring (`P0 --> P8: UP`) while the real ring had grown
+to 11, because `net-wifi-root` and `net-mqtt-root` were appended with the WiFi/MQTT feature and the diagram was
+never updated. It now describes the nine-entry ring explicitly — seven info pages plus the two network roots —
+so P0's UP landing on `net-mqtt-root` is documented rather than accidental.
 
 ### 3.4. Changes this requires
 
@@ -544,7 +544,7 @@ in the register map, and each page reaches the right scope:
 | `REG_MASTER_RESET_ALL_SESSION` (22) | session values only | **No** |
 | `OFF_CMD_RESET_SESSION` / `OFF_CMD_RESET_ALL` (17 / 18) | the same, one channel | **No** |
 | `OFF_CMD_RESET_CONFIG` (19) | that channel's `q_max` / `f_multiplier` / `adjust` | **Yes — deliberately separate** |
-| Factory reset (P8) | NVS wholesale, including link and network configuration | Yes |
+| Factory reset (P6) | NVS wholesale, including link and network configuration | Yes |
 
 P2's ENTER opens `confirm-reset-totals`; P3's opens the session equivalent. What the spec adds is the
 statement that these are the *same operations* as registers 21 and 22 — nothing documented which scope a
@@ -906,10 +906,18 @@ The ring is **9 pages**, not 11: two volume pages were absorbed at §5.1.
 | 8–9 | `net-wifi-root`, `net-mqtt-root` | 14 net screens behind them, 14 overflows |
 | — | `config-c1…c7`, `config-s1…s4`, `config-sensor-1…8` | 29 screens, 29 overflows |
 
-Renumbering follows from the absorption and needs confirming: the old P4/P5/P6 shift up, so max-flow becomes
-P4, enter-config P5, factory-reset P6. `Display_UI_Requirements.md` §4.1's state machine and §4.3's page table
-both need rewriting for the 9-page ring — and §4.1 was already stale, since it describes a 9-page ring by
-coincidence while the real one had grown to 11 with the network pages (§3.3).
+**Renumbering is done.** `Display_UI_Requirements.md` §4.1 (state machine), §4.2 (flow indicator), §4.3 (page
+table), §4.3.1 (confirm screens) and §5.7 (identifier scheme) were rewritten for the nine-entry ring, along with
+the stale page references in `Gesture_Reference.md`, `Project_document.md`, `RGB_LED_Behavior.md` and
+`WiFi_MQTT_Connectivity.md`. §4.1 had described a nine-page ring by coincidence while the real one had grown to
+eleven with the network pages.
+
+`docs/active_work/open_decisions.md` and `docs/new feature proposal/NF-20260730-01-menu-navigation-model.md`
+were deliberately **left alone**: they record decisions and proposals as they stood, and rewriting their page
+numbers would falsify the history that justifies the current design.
+
+§5.7 also gained the rule the old title broke: **a page number belongs in the identifier, never in the title an
+operator reads.** `P8 FACTORY RESET` made renumbering invalidate its own title.
 
 The 43 config and net overflows share one cause: footer hints and option lists written as prose against a
 budget nobody had stated. The worst is the baud-rate list at **58 characters (348 px)**, 108 px past the edge;

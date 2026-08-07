@@ -12,7 +12,7 @@
 >   can satisfy all three, which is why Configuration mode was never implemented.
 > - **Navigation is now a tree.** Every level is a ring of sibling pages ending in `BACK`.
 > - **Display-off moves to UP + DOWN**, freeing ENTER-long to mean "escape" everywhere.
-> - **Factory reset moves from the blind UP+DOWN combo to page P8** with a confirm screen.
+> - **Factory reset moves from the blind UP+DOWN combo to page P6** with a confirm screen.
 > - **Destructive actions get confirm screens and acknowledgement toasts** instead of
 >   countdowns armed straight from an info page.
 > - **Editing happens on its own screen**, not via an invisible mode flag, so the web design
@@ -82,7 +82,7 @@ requires the deliberate gesture.
 
 The **UP + DOWN held 30 s** factory-reset combo is removed. A blind combo is
 undiscoverable, gives the operator no indication they are seconds away from wiping the
-device, and cannot report what happened. Factory reset is now page **P8** with a confirm
+device, and cannot report what happened. Factory reset is now page **P6** with a confirm
 screen (§4.3). LED suppression during the reset countdown is unchanged in behaviour — only
 the trigger differs (see `RGB_LED_Behavior.md`, `Project_document.md` §5.3 item 4).
 
@@ -113,16 +113,16 @@ stateDiagram-v2
         P3 --> P4: DOWN
         P4 --> P5: DOWN
         P5 --> P6: DOWN
-        P6 --> P7: DOWN
-        P7 --> P8: DOWN
-        P8 --> P0: DOWN
-        P0 --> P8: UP
+        P6 --> NetWifi: DOWN
+        NetWifi --> NetMqtt: DOWN
+        NetMqtt --> P0: DOWN
+        P0 --> NetMqtt: UP
     }
 
-    Info --> ConfirmResetTotals: ENTER short on P2/P3
-    Info --> ConfirmResetSession: ENTER short on P4/P5/P6
-    Info --> ConfigRoot: ENTER short on P7
-    Info --> ConfirmFactoryReset: ENTER short on P8
+    Info --> ConfirmResetTotals: ENTER short on P2
+    Info --> ConfirmResetSession: ENTER short on P3/P4
+    Info --> ConfigRoot: ENTER short on P5
+    Info --> ConfirmFactoryReset: ENTER short on P6
 
     ConfirmResetTotals --> Info: ENTER short (exit)
     ConfirmResetTotals --> ToastTotals: ENTER held 3 s
@@ -138,35 +138,63 @@ stateDiagram-v2
     ConfigRoot --> Info: ENTER long (escape) or BACK
 ```
 
-Configuration mode's internal structure is specified in §5.
+**The ring is nine entries, not nine info pages.** `net-wifi-root` and `net-mqtt-root` were appended when
+WiFi_MQTT_Connectivity landed and this diagram was never updated — it described a nine-page ring by
+coincidence while the real one had grown to eleven. Two of those eleven have since been absorbed (see §4.3),
+which brings it back to nine: seven info pages and the two network roots.
 
 ### 4.2. Global Flow Indicator (Animated Dots)
 
-- The **Global Status** page (P0) is the first screen shown from Idle, showing aggregated system telemetry (Total L/s and Total L) and a central flow indicator.
-- The flow indicator consists of a pair of dots:
-  - When no flow is detected across the system (`aggregateFlowLps == 0.0`), a single red dot is shown statically.
-  - When flow is detected, two blue dots appear and disappear alternately.
-  - The alternation frequency is directly correlated to the total `aggregateFlowLps`.
+- The **Global Status** page (P0) is the first screen shown from Idle. It shows the aggregate current flow, the
+  volume since reset, the largest per-channel peak with the channel that holds it, and a central flow
+  indicator. See `Display_Per_Screen_Spec.md` §3 for its exact layout.
+- The flow indicator is **four dots in a chase**: one lit at a time, travelling left to right and wrapping, at a
+  rate derived from the aggregate flow. When no flow is detected, a single red dot is shown statically in the
+  leftmost position.
+- Three defects in the current implementation are to be fixed with it, and are recorded in
+  `Display_Per_Screen_Spec.md` §3.2: it paints **two** alternating dots rather than four; the inactive dot is
+  painted with the theme's *badge* background instead of the panel background, so it renders as a visible disc
+  on a screen that has no badges; and the two colours are hardcoded RGB565 literals that bypass the palette
+  every other element uses.
+- **The rate is not observable at the current repaint cadence.** The phase is computed from `millis()` at up to
+  10 Hz while the renderer redraws roughly once a second, so the dots change position between frames but nothing
+  walks. The chase needs either a faster repaint for this element or an explicit per-frame step; specifying the
+  geometry does not make it animate.
 - No propeller animation: it was dropped when the layout was still 135 px wide, and the landscape orientation has not brought it back.
 
 ### 4.3. Telemetry Pages
 
-Pages are circular; UP/DOWN step through them with wrap-around. P0 provides a global
-summary, P1–P6 display metrics for all eight sensors concurrently (two columns, sensors
-1–4 left and 5–8 right), and P7/P8 are text-only entry points. Sensors that are disabled
-(`inUse == false`) render `--` with a footnote icon.
+Pages are circular; UP/DOWN step through them with wrap-around. P0 provides a global summary, P1–P4 display one
+metric for all eight sensors concurrently, and P5/P6 are text-only entry points. A channel that is not in
+service renders `--`; one that is in service without a valid calibration renders `SET?`.
+
+**Two volume pages were absorbed.** The ring previously carried cumulative litres, cumulative m³, session
+litres and session m³ — two quantities in two units, with each m³ page derived from its litres page by `/1000`.
+Since 1 L is exactly 0.001 m³, one page carries both readings, so cumulative and session are now one page each.
+Every wire surface still publishes both units; only the panel picks one. See `Display_Per_Screen_Spec.md`
+§2a.1 and §5.
 
 | Page ID | Title | Metric Source | ENTER short | ENTER long |
 | :------ | :---- | :------------ | :---------- | :--------- |
-| P0 | System Status | Global aggregate flow and volume | No action | Escape (already at root) |
-| P1 | Instant Flow | Holding registers 101… (`instantFlow_L_s`) | No action | Escape |
-| P2 | Cumulative Liters | Holding registers 103… (`cumulativeLiters`) | Open `Reset totals?` | Escape |
-| P3 | Cumulative Cubic Meters | Derived from P2 | Open `Reset totals?` | Escape |
-| P4 | Session Liters | Holding registers 111… (`sessionLiters`) | Open `Reset session?` | Escape |
-| P5 | Session Cubic Meters | Derived from P4 | Open `Reset session?` | Escape |
-| P6 | Max Flow Since Reset | Holding register 115… (`maxFlowSinceReset`) | Open `Reset session?` | Escape |
-| P7 | Configuration | Text-only prompt | Enter Configuration (§5) | Escape |
-| P8 | **Factory Reset** | Text-only prompt | Open `Factory reset?` | Escape |
+| P0 | System Status | Aggregate flow, volume since reset, largest peak and its channel | No action | Escape (already at root) |
+| P1 | Instant Flow | Holding registers 101… (`instantFlow`) | No action | Escape |
+| P2 | Cumulative Volume | Holding registers 107… (`cumulativeM3`) | Open `Reset totals?` | Escape |
+| P3 | Session Volume | Holding registers 113… (`sessionM3`) | Open `Reset session?` | Escape |
+| P4 | Max Flow Since Reset | Holding register 115… (`maxFlowSinceReset`) | Open `Reset session?` | Escape |
+| P5 | Configuration | Text-only prompt | Enter Configuration (§5) | Escape |
+| P6 | **Factory Reset** | Text-only prompt | Open `Factory reset?` | Escape |
+| — | `net-wifi-root`, `net-mqtt-root` | See `WiFi_MQTT_Connectivity.md` | — | Escape |
+
+**Layout is specified per screen, not here.** `Display_Per_Screen_Spec.md` owns every coordinate, and it exists
+because this section previously described the *content* of each page while nothing stated how much of it fits: an
+audit at the firmware's own text metrics found 50 of 79 screens with collisions or overflows. The binding
+constraint is that a per-sensor reading is 6–7 px per glyph on a 240 px panel, so **two columns of four** is the
+only arrangement that holds eight channels, and only after the per-sensor label and status badge are removed —
+both of which restated what the value's own format already says.
+
+P4 is retained rather than merged into P0 because it answers a different question: `MAX` marks a channel whose
+peak reached its `q_max` ceiling, which identifies a sensor under-dimensioned for the pipe it is installed on.
+P0 reports only the largest peak and its owner.
 
 > Per-sensor register addresses follow `100 + (n−1) × 40 + offset`; see
 > `Project_document.md` §4.2. The single addresses above are sensor 1.
@@ -183,15 +211,21 @@ happened rather than an unexplained screen change.
 
 | Confirm screen | Reached from | Hold to confirm | Action | Toast |
 | :--- | :--- | :--- | :--- | :--- |
-| `Reset totals?` | P2, P3 | **3 s** | `core.action.reset-all-measured` | `TOTALS RESET`, 2 s |
-| `Reset session?` | P4, P5, P6 | ENTER long (1.5 s), no countdown | `core.action.reset-session` | `SESSION RESET`, 2 s |
-| `Factory reset?` | P8 | **30 s** | `core.action.factory-reset` | reboot, no toast |
+| `Reset totals?` | P2 | **3 s** | `core.action.reset-all-measured` | `TOTALS RESET`, 2 s |
+| `Reset session?` | P3, P4 | ENTER long (1.5 s), no countdown | `core.action.reset-session` | `SESSION RESET`, 2 s |
+| `Factory reset?` | P6 | **30 s** | `core.action.factory-reset` | reboot, no toast |
 
 Hold durations are proportionate to what is at risk. Cumulative litres are persisted in
 NVS and are the only value in the system that cannot be recovered, so they get a 3 s hold.
 Session values re-accumulate on their own, so a plain long press suffices. Factory reset
-wipes NVS and reboots, and P8 is reachable by ordinary page flipping, so its 30 s hold is
+wipes NVS and reboots, and P6 is reachable by ordinary page flipping, so its 30 s hold is
 the real guard.
+
+**What the factory reset erases is wider than the screen used to say.** `preferences.clear()` covers the single
+`"flow-data"` namespace, which the network settings share — so it also erases the WiFi SSID and PSK, the MQTT
+broker, its credentials and the base topic. With on-device text entry removed (§6.3), re-provisioning then
+requires the AP portal and someone physically at the device. The confirm screen's warning must say so; see
+`Display_Per_Screen_Spec.md` §5b.1.
 
 Additional requirements:
 
@@ -199,7 +233,10 @@ Additional requirements:
 2. During a countdown, UP/DOWN have no effect.
 3. A completed reset issues the corresponding Modbus command (register 21 or 22) rather than mutating sensor state directly, so persisted state stays coherent.
 4. Every info page carries a footer hint summarising its button gestures.
-5. The RGB LED legend (“Red pulses every X L • Green = Ready • Blue = Flow”) appears on **P0**, the landing page.
+5. P0 carries the LED's **pulse configuration** — `LED: 1 pulse / 10 L`, from `config.ledPulseVolume` — on one
+   row shared with the WiFi and MQTT states. It is not a colour legend: the authored legend text was overridden
+   by its own binding on every frame, and the pulse volume is the one thing an operator cannot infer from
+   watching the LED. See `Display_Per_Screen_Spec.md` §3.2.
 
 ---
 
@@ -214,8 +251,8 @@ Configuration is a **tree**. Every level is a ring of sibling pages whose last e
 > ENTER-long escapes to P0. `BACK` ascends one level.**
 
 ```
-L0  Info mode ............ P0 P1 P2 P3 P4 P5 P6 P7 P8        (root, no BACK)
-     └─ P7 ENTER-short ─▶ L1  Config root
+L0  Info mode ............ P0 P1 P2 P3 P4 P5 P6 + 2 net roots (root, no BACK)
+     └─ P5 ENTER-short ─▶ L1  Config root
                                │  C1 C2 C3 C4 C5 C6 C7 BACK
                                │
                                ├─ C1..C6 ENTER-short ──▶ L2  Value editor (C1.V .. C6.V)
@@ -313,10 +350,14 @@ ENTER-short in an editor performs, in order:
 An editor’s identifier is **derived** from its parent page, so no lookup table is needed
 and the exporter can mechanically verify that every setting page has its editor.
 
+**A page number belongs in the identifier, never in the title an operator reads.** The factory-reset screen
+was titled `P8 FACTORY RESET`, so renumbering the ring made its own title wrong. Screen ids carry the
+position; titles carry the meaning.
+
 | Level | Page ID | Screen ID |
 | :--- | :--- | :--- |
-| Info page | `P8` | `info-p8-factory-reset` |
-| Confirm | `P8.C` | `confirm-factory-reset` |
+| Info page | `P6` | `info-p6-factory-reset` |
+| Confirm | `P6.C` | `confirm-factory-reset` |
 | Toast | `P2.T` | `toast-totals-reset` |
 | Config root | `C1` | `config-c1-modbus-id` |
 | Value editor | `C1.V` | `config-c1-modbus-id-edit` |
