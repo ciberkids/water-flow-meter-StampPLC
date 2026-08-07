@@ -1,0 +1,57 @@
+{
+  "id": "config-c1-modbus-id",
+  "name": "C1 \u2014 Modbus ID",
+  "description": "TEMPLATE for every setting page. Title names the setting, so the value needs no label; the range gives context before editing.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "Config > Modbus ID",
+      "worst": "Config > LED pulse period",
+      "bound": "longest setting name in the config tree, breadcrumbed"
+    },
+    {
+      "id": "field-value",
+      "kind": "value",
+      "x": 2,
+      "y": 24,
+      "emphasis": "strong",
+      "binding": "config.modbusSlaveId",
+      "worst": "115200",
+      "bound": "widest formatted setting value across the config tree (baud rate)"
+    },
+    {
+      "id": "range-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 44,
+      "emphasis": "muted",
+      "binding": "config.editor.range",
+      "worst": "8 rates: 1200..115200",
+      "bound": "derived from the descriptor \u2014 see 7.2; widest is the baud enum"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN pages  ENTER edit  hold=exit",
+      "worst": "UP/DN pages  ENTER edit  hold=exit",
+      "bound": "shared footer vocabulary, see 7.1",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
+    }
+  ]
+}
