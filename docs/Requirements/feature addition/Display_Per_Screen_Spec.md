@@ -398,18 +398,18 @@ Worst case on every row, from the physical bound of each value rather than its f
 
 ```
      +----------------------------------------+   240 x 135 px = 40 cols x 17 rows
-y   0 |Instant Flow                            |
+y   0 |Instant Flow (L/m)                      |
 y   8 |                                        |
 y  16 |                                       ||
-y  24 |1: 65535.00 L/m>>> 5: 65535.00 L/m>>>  ||
+y  24 |1: 65535.00>>      5: 65535.00>>       ||
 y  32 |                                       ||
 y  40 |                                       ||
-y  48 |2: 65535.00 L/m>>> 6: 65535.00 L/m>>>  ||
+y  48 |2: 65535.00>>      6: 65535.00>>       ||
 y  56 |                                       ||
-y  64 |3: 65535.00 L/m>>> 7: 65535.00 L/m>>>  ||
+y  64 |3: 65535.00>>      7: 65535.00>>       ||
 y  72 |                                       ||
 y  80 |                                       ||
-y  88 |4: 65535.00 L/m>>> 8: 65535.00 L/m>>>  ||
+y  88 |4: 65535.00>>      8: 65535.00>>       ||
 y  96 |                                       ||
 y 104 |                                       ||
 y 112 |                                        |
@@ -422,27 +422,27 @@ y 128 |UP/DN pages   UP+DN off                 |
 
 | Element | Kind | x, y | Binding | Worst case | Bound |
 | --- | --- | --- | --- | --- | --- |
-| `hdr-title` | text | 2, 2 | — | 12 ch = 72 px, x 2..74 | fixed literal |
-| `s1-value` | value | 2, 24 | `sensor.1.instantFlow` | 15 ch = 105 px, x 2..107 | clamped to q_max = 65535 L/min by the state engine |
-| `s2-value` | value | 2, 44 | `sensor.2.instantFlow` | 15 ch = 105 px, x 2..107 | clamped to q_max = 65535 L/min by the state engine |
-| `s3-value` | value | 2, 64 | `sensor.3.instantFlow` | 15 ch = 105 px, x 2..107 | clamped to q_max = 65535 L/min by the state engine |
-| `s4-value` | value | 2, 84 | `sensor.4.instantFlow` | 15 ch = 105 px, x 2..107 | clamped to q_max = 65535 L/min by the state engine |
-| `s5-value` | value | 114, 24 | `sensor.5.instantFlow` | 15 ch = 105 px, x 114..219 | clamped to q_max = 65535 L/min by the state engine |
-| `s6-value` | value | 114, 44 | `sensor.6.instantFlow` | 15 ch = 105 px, x 114..219 | clamped to q_max = 65535 L/min by the state engine |
-| `s7-value` | value | 114, 64 | `sensor.7.instantFlow` | 15 ch = 105 px, x 114..219 | clamped to q_max = 65535 L/min by the state engine |
-| `s8-value` | value | 114, 84 | `sensor.8.instantFlow` | 15 ch = 105 px, x 114..219 | clamped to q_max = 65535 L/min by the state engine |
+| `hdr-title` | text | 2, 2 | — | 18 ch = 108 px, x 2..110 | fixed literal; the unit lives here, not on eight rows |
+| `s1-value` | value | 2, 24 | `sensor.1.instantFlow` | 11 ch = 77 px, x 2..79 | clamped to q_max = 65535 L/min by the state engine |
+| `s2-value` | value | 2, 44 | `sensor.2.instantFlow` | 11 ch = 77 px, x 2..79 | clamped to q_max = 65535 L/min by the state engine |
+| `s3-value` | value | 2, 64 | `sensor.3.instantFlow` | 11 ch = 77 px, x 2..79 | clamped to q_max = 65535 L/min by the state engine |
+| `s4-value` | value | 2, 84 | `sensor.4.instantFlow` | 11 ch = 77 px, x 2..79 | clamped to q_max = 65535 L/min by the state engine |
+| `s5-value` | value | 114, 24 | `sensor.5.instantFlow` | 11 ch = 77 px, x 114..191 | clamped to q_max = 65535 L/min by the state engine |
+| `s6-value` | value | 114, 44 | `sensor.6.instantFlow` | 11 ch = 77 px, x 114..191 | clamped to q_max = 65535 L/min by the state engine |
+| `s7-value` | value | 114, 64 | `sensor.7.instantFlow` | 11 ch = 77 px, x 114..191 | clamped to q_max = 65535 L/min by the state engine |
+| `s8-value` | value | 114, 84 | `sensor.8.instantFlow` | 11 ch = 77 px, x 114..191 | clamped to q_max = 65535 L/min by the state engine |
 | `footer-hint` | text | 2, 124 | — | 23 ch = 138 px, x 2..140 | fixed literal |
 | `level-position` | scrollbar | 232, 14 | — | 5 × 100 px | geometry; 100px so it stops clear of the banner row at y=116 |
 
-Rows inked 17 of 17. Narrowest right margin 21 px.
+Rows inked 17 of 17. Narrowest right margin 49 px.
 
 > Accepted overlap: footer-hint is the row the banner replaces by design (§2c)
 
 **No collisions, no overflow, every icon addressable, and 1 banner overlap(s) declared below.**
 
-Columns at x 2..107 and 114..219 with a 7 px gutter and a 21 px right margin, four rows at 20 px pitch.
-Chosen over one column of eight because the panel is landscape: a single column uses 107 px of 240 and leaves
-55% of the width empty, and 12 px pitch reads worse at distance than 20 px.
+Columns at x 2 and x 114 with four rows at 20 px pitch — **the grid every telemetry page shares**, so paging
+moves values in place rather than relaying them out. Chosen over one column of eight because the panel is
+landscape, and 12 px pitch reads worse at distance than 20 px.
 
 ### 4.3. Format change, shared by every telemetry page
 
@@ -450,8 +450,11 @@ The per-sensor format becomes **`%u: %7.2f %s`** (was `%6.2f`). Under §2a a sin
 `9999.99 L/m`, which `%6.2f` cannot hold. This is the format shared by all six telemetry pages, so it lands
 on P2–P6 at the same time and their rows all become 14 characters wide.
 
-The unit stays on **every row** rather than once in the header: both fit, and a bare number on a plant-room
-panel is how a gauge gets misread.
+**The unit lives in the header, on every telemetry page.** Per-row units were the first choice here, on the
+argument that a bare number gets misread — but they are impossible on the volume pages, where
+`8: 99999999.99 m^3` is 18 characters and overflows two columns by 19 px. Rather than let two pages disagree
+with the other two for a purely arithmetic reason, the unit sits once in the title, which is two rows above
+and always visible. On the flow pages that also frees 28 px per row.
 
 ### 4.4. `SET?` replaces `WAIT`, and why the state model changes
 
@@ -659,6 +662,76 @@ layout and paging moves values in place instead of relaying them out.
   renders `OK` or `! S1,3` — exactly what the banner now reports from the footer row (§2c). It also reads
   `OK` permanently today, because nothing can set the bit.
 
+## 5a. P4 — Max Flow Since Reset  *(agreed)*
+
+`info-p4-max-flow`. Requirements entry: "Max Flow Since Reset | Holding register 115… | ENTER: open
+`Reset session?` | ENTER-long: escape".
+
+### 5a.1. Why it keeps its own page
+
+P0 carries `Max Flow: 140.40 L/m (S3)` — the largest peak and the channel holding it. This page carries all
+eight. The relationship is **summary versus detail, not duplication**: P0's number is the maximum *of* these
+eight, so it is derivable from the page, while the eight are not derivable from P0's one. Unlike the volume
+pages at §5.1, where one page was literally the other ÷ 1000, nothing here can be merged without losing the
+per-channel distribution — which is the commissioning question ("which channel spikes?") and the sizing
+question ("what does each line actually see?").
+
+Per-channel peaks are also on Modbus (`OFF_MAX_FLOW`) and MQTT, so this page is a convenience for someone
+standing at the device rather than the only access path. It earns the page because it is the only place that
+distribution is visible *on the device*.
+
+### 5a.2. Layout
+
+<!-- generated by tools/audit/screen-spec.ts info-p4-max-flow.json — do not hand-edit -->
+
+Worst case on every row, from the physical bound of each value rather than its format string:
+
+```
+     +----------------------------------------+   240 x 135 px = 40 cols x 17 rows
+y   0 |Max Flow (L/m)                          |
+y   8 |                                        |
+y  16 |                                       ||
+y  24 |1: 65535.00>>      5: 65535.00>>       ||
+y  32 |                                       ||
+y  40 |                                       ||
+y  48 |2: 65535.00>>      6: 65535.00>>       ||
+y  56 |                                       ||
+y  64 |3: 65535.00>>      7: 65535.00>>       ||
+y  72 |                                       ||
+y  80 |                                       ||
+y  88 |4: 65535.00>>      8: 65535.00>>       ||
+y  96 |                                       ||
+y 104 |                                       ||
+y 112 |                                        |
+y 120 |                                        |
+y 128 |ENTER reset session (hold 3s)           |
+     +----------------------------------------+
+```
+
+`>` marks a value's 7 px glyphs overhanging the 6 px grid. `·` marks two elements in one cell.
+
+| Element | Kind | x, y | Binding | Worst case | Bound |
+| --- | --- | --- | --- | --- | --- |
+| `hdr-title` | text | 2, 2 | — | 14 ch = 84 px, x 2..86 | fixed literal; the unit lives here, not on eight rows |
+| `s1-value` | value | 2, 24 | `sensor.1.maxFlowSinceReset` | 11 ch = 77 px, x 2..79 | clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset |
+| `s2-value` | value | 2, 44 | `sensor.2.maxFlowSinceReset` | 11 ch = 77 px, x 2..79 | clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset |
+| `s3-value` | value | 2, 64 | `sensor.3.maxFlowSinceReset` | 11 ch = 77 px, x 2..79 | clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset |
+| `s4-value` | value | 2, 84 | `sensor.4.maxFlowSinceReset` | 11 ch = 77 px, x 2..79 | clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset |
+| `s5-value` | value | 114, 24 | `sensor.5.maxFlowSinceReset` | 11 ch = 77 px, x 114..191 | clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset |
+| `s6-value` | value | 114, 44 | `sensor.6.maxFlowSinceReset` | 11 ch = 77 px, x 114..191 | clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset |
+| `s7-value` | value | 114, 64 | `sensor.7.maxFlowSinceReset` | 11 ch = 77 px, x 114..191 | clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset |
+| `s8-value` | value | 114, 84 | `sensor.8.maxFlowSinceReset` | 11 ch = 77 px, x 114..191 | clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset |
+| `footer-hint` | text | 2, 124 | — | 29 ch = 174 px, x 2..176 | fixed literal |
+| `level-position` | scrollbar | 232, 14 | — | 5 × 100 px | geometry; 100px so it stops clear of the banner row at y=116 |
+
+Rows inked 17 of 17. Narrowest right margin 49 px.
+
+> Accepted overlap: footer-hint is the row the banner replaces by design (§2c)
+
+**No collisions, no overflow, every icon addressable, and 1 banner overlap(s) declared below.**
+
+The same grid as every other telemetry page. `3: 140.40` here is the value P0 reports with its owner.
+
 ## 6. Queue
 
 The ring is **9 pages**, not 11: two volume pages were absorbed at §5.1.
@@ -669,7 +742,7 @@ The ring is **9 pages**, not 11: two volume pages were absorbed at §5.1.
 | 2 | `info-p1-instant-flow` | **specified, §4** |
 | 3 | `info-p2-cumulative-m3` | **specified, §5** — absorbs the old cumulative-litres page |
 | 4 | `info-p3-session-m3` | **specified, §5** — absorbs the old session-litres page |
-| 5 | `info-p4-max-flow` | next. May be a fourth duplication: P0 already carries `Max Flow: … (S3)` |
+| 5 | `info-p4-max-flow` | **specified, §5a** — kept: summary vs detail, not duplication |
 | 6 | `info-p5-enter-config` | — |
 | 7 | `info-p6-factory-reset` | — |
 | 8–9 | `net-wifi-root`, `net-mqtt-root` | 14 net screens behind them, 14 overflows |

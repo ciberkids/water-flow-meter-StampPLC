@@ -1,0 +1,109 @@
+{
+  "id": "info-p4-max-flow",
+  "name": "P4 \u2014 Max Flow Since Reset",
+  "description": "Per-channel peaks since the last session reset. P0 shows the largest of these and which channel holds it; this page is the only place the distribution across channels is visible.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "Max Flow (L/m)",
+      "worst": "Max Flow (L/m)",
+      "bound": "fixed literal; the unit lives here, not on eight rows"
+    },
+    {
+      "id": "s1-value",
+      "kind": "value",
+      "x": 2,
+      "y": 24,
+      "binding": "sensor.1.maxFlowSinceReset",
+      "worst": "1: 65535.00",
+      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+    },
+    {
+      "id": "s2-value",
+      "kind": "value",
+      "x": 2,
+      "y": 44,
+      "binding": "sensor.2.maxFlowSinceReset",
+      "worst": "2: 65535.00",
+      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+    },
+    {
+      "id": "s3-value",
+      "kind": "value",
+      "x": 2,
+      "y": 64,
+      "binding": "sensor.3.maxFlowSinceReset",
+      "worst": "3: 65535.00",
+      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+    },
+    {
+      "id": "s4-value",
+      "kind": "value",
+      "x": 2,
+      "y": 84,
+      "binding": "sensor.4.maxFlowSinceReset",
+      "worst": "4: 65535.00",
+      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+    },
+    {
+      "id": "s5-value",
+      "kind": "value",
+      "x": 114,
+      "y": 24,
+      "binding": "sensor.5.maxFlowSinceReset",
+      "worst": "5: 65535.00",
+      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+    },
+    {
+      "id": "s6-value",
+      "kind": "value",
+      "x": 114,
+      "y": 44,
+      "binding": "sensor.6.maxFlowSinceReset",
+      "worst": "6: 65535.00",
+      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+    },
+    {
+      "id": "s7-value",
+      "kind": "value",
+      "x": 114,
+      "y": 64,
+      "binding": "sensor.7.maxFlowSinceReset",
+      "worst": "7: 65535.00",
+      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+    },
+    {
+      "id": "s8-value",
+      "kind": "value",
+      "x": 114,
+      "y": 84,
+      "binding": "sensor.8.maxFlowSinceReset",
+      "worst": "8: 65535.00",
+      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "ENTER reset session (hold 3s)",
+      "worst": "ENTER reset session (hold 3s)",
+      "bound": "fixed literal",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
+    }
+  ]
+}

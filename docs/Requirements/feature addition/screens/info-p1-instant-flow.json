@@ -1,7 +1,7 @@
 {
   "id": "info-p1-instant-flow",
   "name": "P1 \u2014 Instant Flow",
-  "description": "Two columns of four. One self-describing element per sensor: the value's format carries the sensor number and the status word, so the S-label and the status badge are gone.",
+  "description": "Two columns of four. One self-describing element per sensor; the unit is in the header, as on every telemetry page.",
   "elements": [
     {
       "id": "hdr-title",
@@ -9,9 +9,9 @@
       "x": 2,
       "y": 2,
       "emphasis": "strong",
-      "content": "Instant Flow",
-      "worst": "Instant Flow",
-      "bound": "fixed literal"
+      "content": "Instant Flow (L/m)",
+      "worst": "Instant Flow (L/m)",
+      "bound": "fixed literal; the unit lives here, not on eight rows"
     },
     {
       "id": "s1-value",
@@ -19,7 +19,7 @@
       "x": 2,
       "y": 24,
       "binding": "sensor.1.instantFlow",
-      "worst": "1: 65535.00 L/m",
+      "worst": "1: 65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
     },
     {
@@ -28,7 +28,7 @@
       "x": 2,
       "y": 44,
       "binding": "sensor.2.instantFlow",
-      "worst": "2: 65535.00 L/m",
+      "worst": "2: 65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
     },
     {
@@ -37,7 +37,7 @@
       "x": 2,
       "y": 64,
       "binding": "sensor.3.instantFlow",
-      "worst": "3: 65535.00 L/m",
+      "worst": "3: 65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
     },
     {
@@ -46,7 +46,7 @@
       "x": 2,
       "y": 84,
       "binding": "sensor.4.instantFlow",
-      "worst": "4: 65535.00 L/m",
+      "worst": "4: 65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
     },
     {
@@ -55,7 +55,7 @@
       "x": 114,
       "y": 24,
       "binding": "sensor.5.instantFlow",
-      "worst": "5: 65535.00 L/m",
+      "worst": "5: 65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
     },
     {
@@ -64,7 +64,7 @@
       "x": 114,
       "y": 44,
       "binding": "sensor.6.instantFlow",
-      "worst": "6: 65535.00 L/m",
+      "worst": "6: 65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
     },
     {
@@ -73,7 +73,7 @@
       "x": 114,
       "y": 64,
       "binding": "sensor.7.instantFlow",
-      "worst": "7: 65535.00 L/m",
+      "worst": "7: 65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
     },
     {
@@ -82,7 +82,7 @@
       "x": 114,
       "y": 84,
       "binding": "sensor.8.instantFlow",
-      "worst": "8: 65535.00 L/m",
+      "worst": "8: 65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
     },
     {
