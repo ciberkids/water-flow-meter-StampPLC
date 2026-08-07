@@ -1,0 +1,77 @@
+{
+  "id": "info-p0-global-status",
+  "name": "P0 \u2014 Global Status",
+  "description": "Landing page: current aggregate flow, session volume, the peak and which sensor made it.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "System Status"
+    },
+    {
+      "id": "total-flow-label",
+      "kind": "text",
+      "x": 2,
+      "y": 16,
+      "emphasis": "muted",
+      "content": "Total Current Flow (L/m)"
+    },
+    {
+      "id": "total-flow-value",
+      "kind": "value",
+      "x": 152,
+      "y": 16,
+      "emphasis": "strong",
+      "binding": "telemetry.totalFlowLps"
+    },
+    {
+      "id": "flow-dots",
+      "kind": "icon",
+      "x": 72,
+      "y": 28,
+      "width": 96,
+      "height": 32
+    },
+    {
+      "id": "session-total",
+      "kind": "text",
+      "x": 2,
+      "y": 68,
+      "binding": "telemetry.totalVolumeLiters"
+    },
+    {
+      "id": "max-flow",
+      "kind": "text",
+      "x": 2,
+      "y": 80,
+      "binding": "telemetry.maxFlowLpm"
+    },
+    {
+      "id": "net-led-status",
+      "kind": "text",
+      "x": 2,
+      "y": 96,
+      "emphasis": "muted",
+      "binding": "legend.status"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN pages   UP+DN off"
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 104
+    }
+  ]
+}
