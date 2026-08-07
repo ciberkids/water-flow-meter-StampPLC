@@ -678,14 +678,16 @@ void logicTaskCode(void * pvParameters) {
   interactionDeps.preferences = &preferences;
   interactionDeps.settings = &uiSettingsAccess;
   interactionHandler.begin(millis(), performFactoryReset, interactionDeps);
-  // Restore calibration and which channels were enabled, then let the state engine
-  // decide readiness from the restored config rather than forcing everything off.
+  // Restore calibration and which channels were enabled. Readiness is not restored because it is not
+  // stored: it is configIsValid(configs[i]), evaluated wherever it is needed. This comment used to promise
+  // that the state engine would decide readiness from the restored config, while the next line forced the
+  // cached bit to false and nothing ever recomputed it — so every reboot left a calibrated channel
+  // counting pulses it then discarded, and publishing 0.0 for a lifetime total that was intact in RAM.
   connectedSensorsBitmap = preferences.getUShort(kPrefConnectedBitmap, 0);
   for (std::size_t i = 0; i < kNumSensors; ++i) {
     loadCumulativeData(static_cast<uint8_t>(i));
     loadSensorConfig(i);
     sensors[i].inUse = (connectedSensorsBitmap >> i) & 0x01;
-    sensors[i].isReady = false;
     modbusManager.syncSensorToHolding(i);
   }
   sensorStateEngine.refreshDiagnostics();

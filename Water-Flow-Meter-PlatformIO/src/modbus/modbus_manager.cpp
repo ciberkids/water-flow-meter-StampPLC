@@ -7,17 +7,9 @@
 #include <cstdio>
 #include <vector>
 
-namespace {
-bool configIsValid(const SensorCharacteristics& cfg) {
-  if (cfg.q_max == 0 || cfg.f_multiplier == 0) {
-    return false;
-  }
-  const int32_t multiplier = std::max<int32_t>(std::abs(static_cast<int32_t>(cfg.f_multiplier)), 1);
-  const int32_t limit = static_cast<int32_t>(cfg.q_max) * multiplier * 10;
-  const int32_t adjust = static_cast<int32_t>(cfg.adjust);
-  return std::abs(adjust) <= limit;
-}
-}
+// configIsValid now lives in modbus/sensor_types.h, beside the struct it tests. It was in an anonymous
+// namespace here, unreachable from the state engine and the UI — which is why its answer was cached into
+// SensorData::isReady and went stale across every reboot.
 
 using namespace plc;
 
@@ -102,7 +94,6 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
         deps_.sensors[i].cumulativeLiters = 0.0;
         deps_.sensors[i].maxFlowSinceReset = 0.0f;
         deps_.configs[i] = SensorCharacteristics{};
-        deps_.sensors[i].isReady = false;
         overridePending_[i] = false;
         overrideActive_[i] = false;
         pendingOverrides_[i] = SensorCharacteristics{};
@@ -284,7 +275,6 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
         return false;
       }
       deps_.configs[sensorIndex] = candidate;
-      deps_.sensors[sensorIndex].isReady = configIsValid(candidate);
       syncSensorToHolding(sensorIndex);
       evaluateSensorDiagnostics();
       return true;
@@ -297,7 +287,6 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
         return false;
       }
       deps_.configs[sensorIndex] = candidate;
-      deps_.sensors[sensorIndex].isReady = configIsValid(candidate);
       syncSensorToHolding(sensorIndex);
       evaluateSensorDiagnostics();
       return true;
@@ -310,7 +299,6 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
         return false;
       }
       deps_.configs[sensorIndex] = candidate;
-      deps_.sensors[sensorIndex].isReady = configIsValid(candidate);
       syncSensorToHolding(sensorIndex);
       evaluateSensorDiagnostics();
       return true;
@@ -329,12 +317,15 @@ void ModbusManager::syncSensorToHolding(std::size_t sensorIndex) {
   if (deps_.sensors[sensorIndex].inUse) {
     status |= 0x01;
   }
-  if (deps_.sensors[sensorIndex].isReady) {
+  if (configIsValid(deps_.configs[sensorIndex])) {
     status |= 0x02;
   }
   deps_.registers->setUint16(base + OFF_STATUS_FLAGS, status);
 
-  if (deps_.sensors[sensorIndex].inUse && deps_.sensors[sensorIndex].isReady) {
+  // Readiness is derived, so a channel restored from NVS with a valid configuration publishes its real
+  // totals immediately. Gated on the cached bit, this branch published 0.0 for the lifetime total after
+  // every reboot — the cumulative value was intact in RAM and a master read zero.
+  if (deps_.sensors[sensorIndex].inUse && configIsValid(deps_.configs[sensorIndex])) {
     deps_.registers->setFloat(base + OFF_INSTANT_FLOW, deps_.sensors[sensorIndex].instantFlow_L_s);
     deps_.registers->setDouble(base + OFF_CUMULATIVE_LITERS, deps_.sensors[sensorIndex].cumulativeLiters);
     deps_.registers->setDouble(base + OFF_CUMULATIVE_M3, deps_.sensors[sensorIndex].cumulativeLiters / 1000.0);

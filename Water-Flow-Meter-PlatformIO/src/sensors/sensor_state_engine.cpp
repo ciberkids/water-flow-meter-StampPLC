@@ -23,7 +23,11 @@ void SensorStateEngine::update(float elapsedSeconds) {
       const uint32_t pulses = sensor.pulseCount;
       sensor.pulseCount = 0;
 
-      if (sensor.isReady && config.f_multiplier != 0.0f) {
+      // One predicate, computed from the configuration in hand. This used to read a cached bit AND
+      // re-check the multiplier — belt and braces around a value it could not trust, because boot cleared
+      // the cache and nothing refilled it. configIsValid already requires a non-zero multiplier, so the
+      // second clause was redundant as well as insufficient.
+      if (configIsValid(config)) {
         const float frequency = static_cast<float>(pulses) / elapsedSeconds;
         float flowRateLpm = (frequency - config.adjust) / config.f_multiplier;
         if (flowRateLpm < 0.0f) {
@@ -47,13 +51,13 @@ void SensorStateEngine::update(float elapsedSeconds) {
 
       totalSessionLiters += sensor.sessionLiters;
       aggregateFlowLps += sensor.instantFlow_L_s;
-      if (!sensor.isReady) {
+      if (!configIsValid(config)) {
         allReady = false;
       }
     } else {
       sensor.instantFlow_L_s = 0.0f;
       // A DISABLED channel must not clear allReady. RGB_LED_Behavior.md §3.2 defines green
-      // as "solid ON when every ACTIVE sensor has isReady == true" — active, not all eight.
+      // as "solid ON when every ACTIVE sensor is ready" — active, not all eight.
       // Clearing it here meant a two-sensor installation could never show green, because the
       // six unused channels each falsified it. The "nothing enabled at all" case is already
       // handled by the activeSensors == 0 guard below, which is where it belongs.

@@ -126,11 +126,6 @@ void UiController::update(uint32_t nowMs,
                           const LedController& ledController,
                           const UiCountdownState& countdown,
                           const plc::NetStatusSnapshot& netStatus) {
-  // configs is unused today: the render context carries only what the resolver reads, and
-  // per-sensor calibration is reached through SettingsAccess instead. Kept in the signature
-  // because the caller passes the pair everywhere and dropping one would be gratuitous churn.
-  (void)configs;
-
   updateIdleState(nowMs);
 
   context_.mode = mode_;
@@ -173,7 +168,10 @@ void UiController::update(uint32_t nowMs,
     auto& dst = context_.sensors[i];
     const auto& src = sensors[i];
     dst.enabled = (connectedBitmap >> i) & 0x01;
-    dst.ready = src.isReady;
+    // Derived per frame from the configuration, which this function already receives — the parameter was
+    // threaded through and marked unused. The snapshot is rebuilt every frame, so this is a projection
+    // rather than a cache, and it cannot go stale the way SensorData::isReady did across a reboot.
+    dst.ready = configIsValid(configs[i]);
     dst.instantFlow = src.instantFlow_L_s;
     dst.cumulativeLiters = src.cumulativeLiters;
     dst.sessionLiters = src.sessionLiters;
