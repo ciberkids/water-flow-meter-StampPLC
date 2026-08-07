@@ -23,32 +23,59 @@ npx tsx tools/audit/screen-ascii.ts <screen-id>   # one screen, drawn at the dev
 Both resolve their strings through the same code the simulator uses, so they measure what renders rather
 than what was authored.
 
+**Where each screen's requirement lives, and how this document stays true.** The agreed geometry for a
+screen is a JSON file in `docs/Requirements/feature addition/screens/`, beside this prose — not in the web
+tree, because it is a requirement rather than a build artefact, and it sits upstream of everything:
+
+```
+screens/<id>.json  ->  tools/skeleton/generate.mjs  ->  web/mockup/src/data/screens.json
+                                                    ->  exporter  ->  src/ui/generated/GeneratedUi.*
+```
+
+Every ASCII block and element table below is **generated** from that JSON by
+`npx tsx tools/audit/screen-spec.ts "<path>"`, and marked as generated. The first draft of this document
+hand-maintained them beside the JSON and an audit found three mutually exclusive geometries for one element
+— the same two-homes-for-one-fact defect this project keeps removing from its code, reproduced in its own
+requirements. Regenerate; never hand-edit a generated block.
+
+Worst-case widths come from each value's **physical bound**, declared per element in the JSON with its
+justification. A printf field width is not a bound: `%7.2f` is a *minimum*, so a channel clamped to
+`q_max = 65535 L/min` renders `65535.00` — eight characters, not seven.
+
 ## 2. The panel budget — the numbers that were missing
 
 From `ui_renderer.cpp`, not from the mockup:
 
 | Quantity | Value | Source |
 | --- | --- | --- |
-| Panel | 240 × 135 px | `utils/layout.ts`, `ui_pages.h` |
+| Panel | 240 × 135 px | `web/mockup/src/utils/layout.ts` (`DISPLAY_WIDTH`/`DISPLAY_HEIGHT`) |
 | Glyph width, `text` / `badge` / `scrollbar` | **6 px** | `ui_renderer.cpp:16` |
 | Glyph width, `value` | **7 px** | `ui_renderer.cpp:17` |
-| Glyph height, all kinds | 8 px | `ui_renderer.cpp:292` |
+| Glyph height, all kinds | 8 px | `ui_renderer.cpp:292`, as the badge box's text height |
 | Badge box | text width + 3 px each side; 8 + 2×2 tall | `ui_renderer.cpp:285-293` |
-| Box / icon fallback when width is 0 | 40 × 12 px | `ui_renderer.cpp:314-315` |
+| **Box** fallback when width is 0 | 40 × 12 px | `ui_renderer.cpp:314-315` — boxes only; an icon has no fallback |
 
 Therefore:
 
 - **40 characters** per row of `text`, from x = 0. From the usual x = 8 margin, **38**.
 - **34 characters** per row of `value`.
-- **17 rows** of 8 px; the last (y = 128…135) is clipped by 3 px.
+- **17 rows** of 8 px; the last (y = 128…135) has 7 px of room, so it is clipped by **1 px**.
 - A per-sensor reading in the device's own format — `%u: %6.2f %s` → `1:   2.34 L/s` — is 13 characters
   and therefore **91 px**. Two such columns plus labels and badges need 242 px on a 240 px panel, which is
   why every two-column sensor page collides. This arithmetic, not taste, is what forces their redesign.
 
-**Rules for every screen from here on.** An element must not overlap another element's box; an `icon` is
-not decorative (`drawFlowDots` paints its whole area, and P0's own defect was text drawn across it); a
-row's worst-case string — not its typical one — must fit; and an element's authored `content` must never
-contradict its `binding`, because on the device the binding always wins.
+**Rules for every screen from here on.**
+
+1. An element must not overlap another element's box.
+2. An `icon` is not decorative. `drawFlowDots` paints two discs of `radius = min(w,h)/4` inside its box —
+   about 13% of a 120 × 40 area, not the whole of it — but discs are pixels, and text drawn across them is
+   as broken as two overlapping labels. P0's own defect was exactly that.
+3. **An `icon` must carry an `assetId`.** Dispatch is `if (element.assetId && strcmp(element.assetId,
+   "flow-dots") == 0)` (`ui_renderer.cpp:324`), so an icon without one draws *nothing at all* — silently,
+   and neither the mockup nor an ASCII render shows the absence.
+4. A row's **worst case** must fit, taken from the value's physical bound rather than its format string.
+5. An element's authored `content` must never contradict its `binding`: on the device the binding wins.
+6. Nothing may sit in the banner band unless the screen declares it — see §2c.
 
 **Character size is fixed.** The renderer selects one font globally — `display.setFont(&fonts::Font0)` with
 `setTextSize(1)` (`ui_renderer.cpp:58`, :300) — so there is no per-element font and 6 px is the floor. The
@@ -68,7 +95,7 @@ This resolves a three-way split in which the same fact had two units and three c
 | --- | --- | --- |
 | Internal state | L/s | `SensorData::instantFlow_L_s`, `maxFlowSinceReset` |
 | Display | L/s | `"%u: %6.2f %s"` with `L/s` |
-| Modbus holding registers | L/s, **documented nowhere** | `modbus_manager.cpp:338` writes `instantFlow_L_s` |
+| Modbus holding registers | L/s, **and documented as such** | `modbus_manager.cpp:338` writes `instantFlow_L_s`; `docs/Requirements/Project_document.md:169` publishes register 101 as "Instant Flow (L/s) … Liters per Second", :174 the same for 115 |
 | MQTT | L/min | `flowLPerMin`, `maxFlowLPerMin` |
 | Home Assistant | L/min | `ha_discovery.cpp:269` |
 | `config.sensor.maxFlow` (q_max) | L/min | `ui_settings_types.cpp:56` |
@@ -82,8 +109,12 @@ Consequences worth stating plainly:
 - Today an operator sets `150 L/min` on a sensor and the panel reports its peak as `2.50 L/s`. That
   division-by-60 in the head is the user-visible symptom of the split.
 - **Changing `OFF_INSTANT_FLOW` and `OFF_MAX_FLOW` is a breaking change for any Modbus master already
-  integrated.** No hardware has shipped, so this is the cheapest moment it will ever be — but the register
-  units must be *documented* this time, since no document currently states them.
+  integrated.** No hardware has shipped, so this is the cheapest moment it will ever be. The register units
+  ARE documented — `Project_document.md:169` and :174 state Liters per Second explicitly — so that table is
+  part of this change, not an afterthought. It is also the file an integrator reads.
+- `RGB_LED_Behavior.md:57` specifies the blue LED against "aggregated instantaneous flow … exceeds 0.0 L/s",
+  and `drawFlowDots` gates on `aggregateFlowLps > 0.001` (`ui_renderer.cpp:332`). Both are thresholds in the
+  old unit and both need restating.
 - Volumes are unaffected: litres and m³ throughout.
 
 ## 2b. Aggregates are published, not re-derived
@@ -129,6 +160,32 @@ Edge cases, matching what the panel shows:
 publish over MQTT, but `kHaMaxEntities = kNumSensors * 3 + 4` (`ha_discovery.h:120`) budgets exactly four
 globals, so adding four more changes that constant and the discovery payload's size.
 
+## 2c. The warning banner owns y 34…52 on every screen
+
+`drawWarningBanner` paints `fillRect(0, 34, 240, 18)` whenever `context.hasWarnings` is set
+(`ui_renderer.cpp:422-435`) — **edge to edge, over whatever the screen had drawn there**, followed by `!` at
+x=4 and the warning summary at x=16. No requirement document mentions it, and no screen in the dataset
+accounts for it.
+
+That is 18 px of a 135 px panel, on all 79 screens. A screen therefore has to do one of three things, and
+must say which:
+
+1. **Keep the band clear** — costs 13% of the panel permanently, on every screen, for an overlay that is
+   usually absent.
+2. **Nominate what it loses** — declare `acceptsBannerOverlap` on the element, with the reason. The
+   generator prints the declaration; an undeclared overlap is reported as a problem.
+3. **Move the banner** — the recommendation below.
+
+**Open decision: relocate the banner to the footer row.** At y=34 it lands mid-panel, which is where the
+content is. The footer hint is the least valuable row on any screen — a gesture reminder an operator reads
+once — so a warning replacing it is an honest trade, and no screen has to sacrifice data. It is a one-line
+firmware change (`bannerY`), and it makes rule 6 above nearly free.
+
+The case is clearest on P1: its second row sits at y=44, so a per-sensor undersampling warning would **hide
+sensors 2 and 6 while naming a sensor**. P0 can absorb the overlay — it nominates the flow dots, and the
+headline number above them still reads — but a telemetry page cannot sensibly hide two channels to report a
+problem with one.
+
 ## 3. P0 — System Status  *(agreed)*
 
 `info-p0-global-status`. The landing page from Idle, and the root of the info ring. Requirements entry:
@@ -136,50 +193,53 @@ globals, so adding four more changes that constant and the discovery payload's s
 
 ### 3.1. Layout
 
-Generated by `npx tsx tools/audit/screen-ascii.ts info-p0-global-status --proposal
-tools/audit/proposals/info-p0-global-status.json`, showing each row's WORST CASE, not its typical one:
+<!-- generated by tools/audit/screen-spec.ts info-p0-global-status.json — do not hand-edit -->
+
+Worst case on every row, from the physical bound of each value rather than its format string:
 
 ```
-     +----------------------------------------+   40 cols x 17 rows
-y   2 |System Status                           |
-y  16 |Total Current Flow (L/m) 9999.99>      ||
-y  32 |            ++++++++++++++++           ||
-y  40 |            +   (o)  (o)   +           ||   flow-dots, 96x32 at (72,28)
-y  56 |            ++++++++++++++++           ||
-y  72 |Since reset: 9999.99 L                 ||
-y  80 |Max Flow: 9999.99 L/m (S8)             ||
-y  96 |WiFi AuthF  MQTT OK  LED 1p/100L       ||
-y 124 |UP/DN pages   UP+DN off                 |
+     +----------------------------------------+   240 x 135 px = 40 cols x 17 rows
+y   0 |System Status                           |
+y   8 |                                        |
+y  16 |Total Current Flow (L/m) 524280.00>>   ||
+y  24 |                                       ||
+y  32 |          ++++++++++++++++++++         ||
+y  40 |          +                  +         ||
+y  48 |          +                  +         ||
+y  56 |          +                  +         ||
+y  64 |          ++++++++++++++++++++         ||
+y  72 |                                       ||
+y  80 |Since reset: 999999.99 L               ||
+y  88 |                                       ||
+y  96 |Max Flow: 65535.00 L/m (S8)            ||
+y 104 |                                       ||
+y 112 |WiFi RETRY  MQTT OFF  LED 1p/100L      ||
+y 120 |                                        |
+y 128 |UP/DN pages   UP+DN off                 |
      +----------------------------------------+
 ```
 
-With typical values, and the dots drawn as the firmware draws them:
+`>` marks a value's 7 px glyphs overhanging the 6 px grid. `·` marks two elements in one cell.
 
-```
-     +----------------------------------------+
-y   2 |System Status                           |
-y  16 |Total Current Flow (L/m)  1123.20      ||
-y  40 |              (o)      ( )             ||   left dot lit, right dark
-y  72 |Since reset: 987.60 L                  ||
-y  80 |Max Flow:  140.40 L/m (S3)             ||
-y  96 |WiFi OK  MQTT OK  LED 1p/10L           ||
-y 124 |UP/DN pages   UP+DN off                 |
-     +----------------------------------------+
-```
-
-| Element | Kind | x, y | Binding | Format | Worst case |
+| Element | Kind | x, y | Binding | Worst case | Bound |
 | --- | --- | --- | --- | --- | --- |
-| `hdr-title` | text | 2, 2 | — | `System Status` | 13 ch = 78 px |
-| `total-flow-label` | text | 2, 16 | — | `Total Current Flow (L/m)` | 24 ch = 144 px |
-| `total-flow-value` | **value** | 152, 16 | `telemetry.totalFlowLpm` | `%7.2f` | 7 ch = 49 px, ends x=201 |
-| `flow-dots` | icon | 72, 28 | — | TWO alternating dots, 96 × 32 | r = min(w,h)/4 = 8 |
-| `session-total` | text | 2, 68 | `telemetry.totalVolumeLiters` | `Since reset: %7.2f L` | 22 ch = 132 px |
-| `max-flow` | text | 2, 80 | `telemetry.maxFlowLpm` *(new)* | `Max Flow: %7.2f L/m (S%u)` | 26 ch = 156 px |
-| `net-led-status` | text | 2, 96 | `legend.status` *(new)* | `WiFi %s  MQTT %s  LED 1p/%uL` | 32 ch = 192 px |
-| `footer-hint` | text | 2, 124 | — | `UP/DN pages   UP+DN off` | 23 ch = 138 px |
-| `level-position` | scrollbar | 232, 14 | — | 5 × 104 | — |
+| `hdr-title` | text | 2, 2 | — | 13 ch = 78 px, x 2..80 | fixed literal |
+| `total-flow-label` | text | 2, 14 | — | 24 ch = 144 px, x 2..146 | fixed literal |
+| `total-flow-value` | value | 152, 14 | `telemetry.totalFlowLpm` | 9 ch = 63 px, x 152..215 | 8 channels each clamped to q_max=65535 L/min |
+| `flow-dots` | icon | 60, 30 | — | 120 × 40 px | geometry; assetId required by ui_renderer.cpp:324 |
+| `session-total` | text | 2, 80 | `telemetry.totalVolumeLiters` | 24 ch = 144 px, x 2..146 | float32 session litres, 6 integer digits |
+| `max-flow` | text | 2, 92 | `telemetry.maxFlowLpm` | 27 ch = 162 px, x 2..164 | one channel clamped to q_max=65535 |
+| `net-led-status` | text | 2, 108 | `legend.status` | 33 ch = 198 px, x 2..200 | wifiStateText max RETRY(5), mqttStateText max OFF(3), volume max 100 |
+| `level-position` | scrollbar | 232, 14 | — | 5 × 104 px | geometry |
+| `footer-hint` | text | 2, 124 | — | 23 ch = 138 px, x 2..140 | fixed literal |
 
-Every worst case leaves ≥ 84 px spare and no two elements share a pixel.
+Rows inked 17 of 17. Narrowest right margin 25 px.
+
+> Accepted overlap: flow-dots (y 30..70) sits under the warning banner's band y 34..52, painted edge to edge while a warning is live — ACCEPTED: P0 nominates the dots: a live warning should dominate, and the dots are the element whose loss costs least here — the flow number above them still reads
+
+> Accepted overlap: level-position (y 14..118) sits under the warning banner's band y 34..52, painted edge to edge while a warning is live — ACCEPTED: the scrollbar is 5px at the right edge; the banner covers it for the 18px it occupies, on every screen alike
+
+**No collisions, no overflow, every icon addressable, and 2 banner overlap(s) declared below.**
 
 ### 3.2. What each row means
 
@@ -199,10 +259,16 @@ Every worst case leaves ≥ 84 px spare and no two elements share a pixel.
     (`ui_renderer.cpp:62`, :66) — so an "off" dot renders as a visible disc in the wrong colour, and P0 has no
     badges at all. And the two colours are hardcoded RGB565 literals, `0xF800` red and `0x001F` blue, so a
     theme change moves every element except these.
-  - **Consequence of §2a that must be fixed with the unit change:** the animation rate is derived from
-    `aggregateFlowLps` clamped to 0.1..10.0 with `periodMs = 1000 / flow` (`ui_renderer.cpp:345-349`). Those
-    constants are calibrated for litres per SECOND; fed litres per minute every non-trivial flow saturates
-    the clamp and the dots alternate at a fixed maximum rate, losing all information.
+  - **Two consequences of §2a, both to fix with the unit change.** The animation rate comes from
+    `aggregateFlowLps` clamped to 0.1..10.0 with `periodMs = 1000 / flow` (`ui_renderer.cpp:345-349`), and the
+    active/inactive test is `aggregateFlowLps > 0.001` (:332). Both constants are calibrated for litres per
+    SECOND: fed litres per minute, every non-trivial flow saturates the clamp and the dots run at a fixed
+    maximum, conveying nothing.
+  - **And the animation is unobservable regardless of unit until the repaint cadence is addressed.** The
+    renderer redraws on a ~1 s cadence, so a phase computed from `millis()` at up to 10 Hz is sampled once a
+    second: the dots change position between frames, but nothing walks. Four dots in a chase need either a
+    faster repaint for this element or an explicit per-frame step; specifying the geometry does not make it
+    animate.
 - **Since reset** — `totalSessionLiters`, likewise summed over `inUse` sensors. This is **session** volume,
   cleared by the session reset on P4/P5/P6 — not the lifetime cumulative total. The old label said "Total",
   which is why the number looked wrong for what it is; the quantity was always the one wanted.
@@ -215,8 +281,9 @@ Every worst case leaves ≥ 84 px spare and no two elements share a pixel.
     sensor owns the peak.
 - **WiFi / MQTT / LED** — one row, deliberately: none of it is vital, and combining them frees a row. It is a
   `text` element at 6 px rather than a `value` at 7 px, which is the only size reduction the renderer offers.
-  - `wifiStateText` is capped at five characters (`wifi_manager.h:66`) and MQTT's states are `OK` / `OFF`, so
-    the network half cannot exceed 21 characters whatever happens to the link.
+  - The real state strings, from `wifiStateText` (`wifi_manager.cpp`): `OFF`, `CONN`, `OK`, `RETRY`, `AP`,
+    `FAIL`, `?` — longest **`RETRY`**, five characters. `AuthF` is not a string the device can produce.
+    `mqttStateText` emits `OK` or `OFF`. So the worst case is `WiFi RETRY  MQTT OFF  LED 1p/100L`.
   - The LED half is the red pulse volume from `config.ledPulseVolume` (1 / 10 / 100 L), phrased as one pulse
     per N litres — `1p/10L`. The pulse **period** is deliberately absent: it is a blink duration, unlabelled
     it reads as meaningless, and it stays editable and labelled on C6.
@@ -239,25 +306,42 @@ wrong; that decision belongs with the ring as a whole, not with this screen.
 
 ### 3.4. Changes this requires
 
-**Dataset** — relabel `total-flow-label` to `Total Current Flow (L/m)`; `total-flow-value` becomes
-`kind: "value"` bound to `telemetry.totalFlowLpm`; add `session-total` and `max-flow`; move `flow-dots` to
-(72, 44) at 96 × 16; **replace `net-status` and `legend-led` with one `net-led-status` row** at (2, 96),
-which also **deletes `legend-led`'s authored content** (`LED: Red=Pulse Grn=Ready Blu=Flow`) that its
-binding has always overridden. Dataset edits go through `tools/skeleton/generate.mjs`, which CI diffs.
+**Dataset** — take the geometry from `screens/info-p0-global-status.json`; it is the requirement and §3.1 is
+generated from it. In prose: relabel `total-flow-label`; `total-flow-value` becomes `kind: "value"` bound to
+`telemetry.totalFlowLpm`; add `session-total` and `max-flow`; give `flow-dots` its **`assetId: "flow-dots"`**
+without which it draws nothing (§2 rule 3); **replace `net-status` and `legend-led` with one `net-led-status`
+row**, which also **deletes `legend-led`'s authored content** (`LED: Red=Pulse Grn=Ready Blu=Flow`) that its
+binding has always overridden; shorten the footer hint to `UP/DN pages   UP+DN off`. Dataset edits go through
+`tools/skeleton/generate.mjs`, which CI diffs.
+
+Note that removing `legend.led`'s only binding leaves a catalogue value with no user. That is safe for the
+value-coverage gate, which fails only on the reverse — an element binding an id the manifest lacks — but it
+means `legend.led` should either be deleted from the catalogue in the same change or documented as retained
+deliberately.
 
 **Firmware formats** — `telemetry.totalFlowLpm`: `%7.2f`, so four digits and two decimals are guaranteed
 rather than hoped for (`%.2f` was unbounded). `legend.status` replaces `legend.led`'s
 `"LED: %uL pulses | %ums"` with `"WiFi %s  MQTT %s  LED 1p/%uL"`, folding in what `net.status` used to
 render on its own row.
 
-**New firmware values** — two:
-- `telemetry.maxFlowLpm`, an argmax over `SensorSnapshot::maxFlow` (`ui_controller.h:24`), which the render
+**New firmware values** — **three**, not two. The catalogue has `telemetry.totalFlowLps`; under §2a the
+L/m-valued binding is a new id:
+- `telemetry.totalFlowLpm` — the aggregate in litres per minute.
+- `telemetry.maxFlowLpm` — an argmax over `SensorSnapshot::maxFlow` (`ui_controller.h:24`), which the render
   context already holds. No new stored state, no new register, no new topic: the per-sensor peak already
   exists in RAM (`sensor_types.h:26`), on Modbus (`OFF_MAX_FLOW = 15`) and over MQTT (`firmware.cpp:955`).
-- `legend.status`, the combined network-and-LED row.
+  One format cannot serve its three states, so the resolver arm must branch: `Max Flow: --` (nothing
+  enabled), `Max Flow: 0.00 L/m` (enabled, no peak yet), `Max Flow: %7.2f L/m (S%u)` (a peak with an owner).
+- `legend.status` — the combined network-and-LED row.
 
-Each needs a `kSimpleValues` entry, a resolver arm and a manifest regeneration. `net.status` and
-`legend.led` lose their only users on P0 but stay in the catalogue for the net pages.
+Each needs a `kSimpleValues` entry, a resolver arm and a manifest regeneration
+(`Water-Flow-Meter-PlatformIO/tools/manifest_gen/run.sh`, then commit the result; `--check` is what CI runs).
+Adding values needs no catalogue ABI bump — only a removal or rename does.
+
+**A gap that would let this ship broken:** nothing hard-fails a catalogue value that has no resolver arm. The
+exporter's `firmware-manifest-resolvable` check returns `warning`, and only `fail` escalates — so a value can
+be advertised, bound by an element, and render blank on hardware while every gate passes. Add the arms and
+the tests in the same change, and treat that warning as fatal for these three.
 
 **Unit change** — every flow format moves to L/m per §2a, which for P0 means the current-flow value and the
 max-flow row. Volumes are untouched.
@@ -288,45 +372,61 @@ both leaves one self-describing element per sensor, and that is what makes two c
 
 ### 4.2. Layout
 
-Generated by `npx tsx tools/audit/screen-ascii.ts info-p1-instant-flow --proposal
-tools/audit/proposals/info-p1-instant-flow.json`. `%7.2f` pads, so **every row is exactly 14 characters wide
-whatever the magnitude** — which is what keeps the two columns aligned:
+<!-- generated by tools/audit/screen-spec.ts info-p1-instant-flow.json — do not hand-edit -->
+
+Worst case on every row, from the physical bound of each value rather than its format string:
 
 ```
-     +----------------------------------------+   40 cols x 17 rows
-y   2 |Instant Flow                            |
-y  24 |1: 9999.99 L/m    5: 9999.99 L/m       ||
-y  44 |2: 9999.99 L/m    6: 9999.99 L/m       ||
-y  64 |3: 9999.99 L/m    7: 9999.99 L/m       ||
-y  84 |4: 9999.99 L/m    8: 9999.99 L/m       ||
-y 124 |UP/DN pages   UP+DN off                 |
+     +----------------------------------------+   240 x 135 px = 40 cols x 17 rows
+y   0 |Instant Flow                            |
+y   8 |                                        |
+y  16 |                                       ||
+y  24 |1: 65535.00 L/m>>> 5: 65535.00 L/m>>>  ||
+y  32 |                                       ||
+y  40 |                                       ||
+y  48 |2: 65535.00 L/m>>> 6: 65535.00 L/m>>>  ||
+y  56 |                                       ||
+y  64 |3: 65535.00 L/m>>> 7: 65535.00 L/m>>>  ||
+y  72 |                                       ||
+y  80 |                                       ||
+y  88 |4: 65535.00 L/m>>> 8: 65535.00 L/m>>>  ||
+y  96 |                                       ||
+y 104 |                                       ||
+y 112 |                                       ||
+y 120 |                                        |
+y 128 |UP/DN pages   UP+DN off                 |
      +----------------------------------------+
 ```
 
-With a mixed, realistic fleet — two channels not in service, one uncalibrated:
+`>` marks a value's 7 px glyphs overhanging the 6 px grid. `·` marks two elements in one cell.
 
-```
-     +----------------------------------------+
-y   2 |Instant Flow                            |
-y  24 |1:  140.40 L/m    5:    0.00 L/m       ||
-y  44 |2:  138.90 L/m    6: --                ||
-y  64 |3: --             7: --                ||
-y  84 |4: SET?           8:   96.20 L/m       ||
-y 124 |UP/DN pages   UP+DN off                 |
-     +----------------------------------------+
-```
+| Element | Kind | x, y | Binding | Worst case | Bound |
+| --- | --- | --- | --- | --- | --- |
+| `hdr-title` | text | 2, 2 | — | 12 ch = 72 px, x 2..74 | fixed literal |
+| `s1-value` | value | 2, 24 | `sensor.1.instantFlow` | 15 ch = 105 px, x 2..107 | clamped to q_max = 65535 L/min by the state engine |
+| `s2-value` | value | 2, 44 | `sensor.2.instantFlow` | 15 ch = 105 px, x 2..107 | clamped to q_max = 65535 L/min by the state engine |
+| `s3-value` | value | 2, 64 | `sensor.3.instantFlow` | 15 ch = 105 px, x 2..107 | clamped to q_max = 65535 L/min by the state engine |
+| `s4-value` | value | 2, 84 | `sensor.4.instantFlow` | 15 ch = 105 px, x 2..107 | clamped to q_max = 65535 L/min by the state engine |
+| `s5-value` | value | 114, 24 | `sensor.5.instantFlow` | 15 ch = 105 px, x 114..219 | clamped to q_max = 65535 L/min by the state engine |
+| `s6-value` | value | 114, 44 | `sensor.6.instantFlow` | 15 ch = 105 px, x 114..219 | clamped to q_max = 65535 L/min by the state engine |
+| `s7-value` | value | 114, 64 | `sensor.7.instantFlow` | 15 ch = 105 px, x 114..219 | clamped to q_max = 65535 L/min by the state engine |
+| `s8-value` | value | 114, 84 | `sensor.8.instantFlow` | 15 ch = 105 px, x 114..219 | clamped to q_max = 65535 L/min by the state engine |
+| `footer-hint` | text | 2, 124 | — | 23 ch = 138 px, x 2..140 | fixed literal |
+| `level-position` | scrollbar | 232, 14 | — | 5 × 104 px | geometry |
 
-| Element | Kind | x, y | Binding | Worst case |
-| --- | --- | --- | --- | --- |
-| `hdr-title` | text | 2, 2 | — | `Instant Flow`, 12 ch = 72 px |
-| `s1-value` … `s4-value` | value | 2, 24 / 44 / 64 / 84 | `sensor.1..4.instantFlow` | 14 ch = 98 px, x 2..100 |
-| `s5-value` … `s8-value` | value | 110, 24 / 44 / 64 / 84 | `sensor.5..8.instantFlow` | 14 ch = 98 px, x 110..208 |
-| `footer-hint` | text | 2, 124 | — | 23 ch = 138 px |
-| `level-position` | scrollbar | 232, 14 | — | 5 × 104 |
+Rows inked 17 of 17. Narrowest right margin 21 px.
 
-Column gap 10 px, right margin 32 px, 20 px row pitch. No collisions. Chosen over one column of eight
-because the panel is landscape: a single column uses 100 px of 240 and leaves 58% of the width empty, and
-12 px pitch reads worse at distance than 20 px.
+> Accepted overlap: s2-value (y 44..52) sits under the warning banner's band y 34..52, painted edge to edge while a warning is live — ACCEPTED: see §2c — this row is the argument for relocating the banner: a per-sensor warning would hide sensors 2 and 6 while naming a sensor
+
+> Accepted overlap: s6-value (y 44..52) sits under the warning banner's band y 34..52, painted edge to edge while a warning is live — ACCEPTED: see §2c — this row is the argument for relocating the banner: a per-sensor warning would hide sensors 2 and 6 while naming a sensor
+
+> Accepted overlap: level-position (y 14..118) sits under the warning banner's band y 34..52, painted edge to edge while a warning is live — ACCEPTED: 5 px at the right edge, covered for the banner's 18 px on every screen alike
+
+**No collisions, no overflow, every icon addressable, and 3 banner overlap(s) declared below.**
+
+Columns at x 2..107 and 114..219 with a 7 px gutter and a 21 px right margin, four rows at 20 px pitch.
+Chosen over one column of eight because the panel is landscape: a single column uses 107 px of 240 and leaves
+55% of the width empty, and 12 px pitch reads worse at distance than 20 px.
 
 ### 4.3. Format change, shared with P2–P6
 

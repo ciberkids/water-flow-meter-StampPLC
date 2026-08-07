@@ -1,0 +1,111 @@
+{
+  "id": "info-p1-instant-flow",
+  "name": "P1 \u2014 Instant Flow",
+  "description": "Two columns of four. One self-describing element per sensor: the value's format carries the sensor number and the status word, so the S-label and the status badge are gone.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "Instant Flow",
+      "worst": "Instant Flow",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "s1-value",
+      "kind": "value",
+      "x": 2,
+      "y": 24,
+      "binding": "sensor.1.instantFlow",
+      "worst": "1: 65535.00 L/m",
+      "bound": "clamped to q_max = 65535 L/min by the state engine"
+    },
+    {
+      "id": "s2-value",
+      "kind": "value",
+      "x": 2,
+      "y": 44,
+      "binding": "sensor.2.instantFlow",
+      "worst": "2: 65535.00 L/m",
+      "bound": "clamped to q_max = 65535 L/min by the state engine",
+      "acceptsBannerOverlap": "see \u00a72c \u2014 this row is the argument for relocating the banner: a per-sensor warning would hide sensors 2 and 6 while naming a sensor"
+    },
+    {
+      "id": "s3-value",
+      "kind": "value",
+      "x": 2,
+      "y": 64,
+      "binding": "sensor.3.instantFlow",
+      "worst": "3: 65535.00 L/m",
+      "bound": "clamped to q_max = 65535 L/min by the state engine"
+    },
+    {
+      "id": "s4-value",
+      "kind": "value",
+      "x": 2,
+      "y": 84,
+      "binding": "sensor.4.instantFlow",
+      "worst": "4: 65535.00 L/m",
+      "bound": "clamped to q_max = 65535 L/min by the state engine"
+    },
+    {
+      "id": "s5-value",
+      "kind": "value",
+      "x": 114,
+      "y": 24,
+      "binding": "sensor.5.instantFlow",
+      "worst": "5: 65535.00 L/m",
+      "bound": "clamped to q_max = 65535 L/min by the state engine"
+    },
+    {
+      "id": "s6-value",
+      "kind": "value",
+      "x": 114,
+      "y": 44,
+      "binding": "sensor.6.instantFlow",
+      "worst": "6: 65535.00 L/m",
+      "bound": "clamped to q_max = 65535 L/min by the state engine",
+      "acceptsBannerOverlap": "see \u00a72c \u2014 this row is the argument for relocating the banner: a per-sensor warning would hide sensors 2 and 6 while naming a sensor"
+    },
+    {
+      "id": "s7-value",
+      "kind": "value",
+      "x": 114,
+      "y": 64,
+      "binding": "sensor.7.instantFlow",
+      "worst": "7: 65535.00 L/m",
+      "bound": "clamped to q_max = 65535 L/min by the state engine"
+    },
+    {
+      "id": "s8-value",
+      "kind": "value",
+      "x": 114,
+      "y": 84,
+      "binding": "sensor.8.instantFlow",
+      "worst": "8: 65535.00 L/m",
+      "bound": "clamped to q_max = 65535 L/min by the state engine"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN pages   UP+DN off",
+      "worst": "UP/DN pages   UP+DN off",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 104,
+      "bound": "geometry",
+      "acceptsBannerOverlap": "5 px at the right edge, covered for the banner's 18 px on every screen alike"
+    }
+  ]
+}

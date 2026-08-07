@@ -1,0 +1,98 @@
+{
+  "id": "info-p0-global-status",
+  "name": "P0 \u2014 Global Status",
+  "description": "Four groups: identity + current flow, the walking dots, the since-reset pair, then network and LED.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "System Status",
+      "worst": "System Status",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "total-flow-label",
+      "kind": "text",
+      "x": 2,
+      "y": 14,
+      "emphasis": "muted",
+      "content": "Total Current Flow (L/m)",
+      "worst": "Total Current Flow (L/m)",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "total-flow-value",
+      "kind": "value",
+      "x": 152,
+      "y": 14,
+      "emphasis": "strong",
+      "binding": "telemetry.totalFlowLpm",
+      "worst": "524280.00",
+      "bound": "8 channels each clamped to q_max=65535 L/min"
+    },
+    {
+      "id": "flow-dots",
+      "kind": "icon",
+      "x": 60,
+      "y": 30,
+      "width": 120,
+      "height": 40,
+      "metadata": {
+        "assetId": "flow-dots"
+      },
+      "bound": "geometry; assetId required by ui_renderer.cpp:324",
+      "acceptsBannerOverlap": "P0 nominates the dots: a live warning should dominate, and the dots are the element whose loss costs least here \u2014 the flow number above them still reads"
+    },
+    {
+      "id": "session-total",
+      "kind": "text",
+      "x": 2,
+      "y": 80,
+      "binding": "telemetry.totalVolumeLiters",
+      "worst": "Since reset: 999999.99 L",
+      "bound": "float32 session litres, 6 integer digits"
+    },
+    {
+      "id": "max-flow",
+      "kind": "text",
+      "x": 2,
+      "y": 92,
+      "binding": "telemetry.maxFlowLpm",
+      "worst": "Max Flow: 65535.00 L/m (S8)",
+      "bound": "one channel clamped to q_max=65535"
+    },
+    {
+      "id": "net-led-status",
+      "kind": "text",
+      "x": 2,
+      "y": 108,
+      "emphasis": "muted",
+      "binding": "legend.status",
+      "worst": "WiFi RETRY  MQTT OFF  LED 1p/100L",
+      "bound": "wifiStateText max RETRY(5), mqttStateText max OFF(3), volume max 100"
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 104,
+      "bound": "geometry",
+      "acceptsBannerOverlap": "the scrollbar is 5px at the right edge; the banner covers it for the 18px it occupies, on every screen alike"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN pages   UP+DN off",
+      "worst": "UP/DN pages   UP+DN off",
+      "bound": "fixed literal"
+    }
+  ]
+}
