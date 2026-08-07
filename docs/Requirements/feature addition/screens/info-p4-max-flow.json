@@ -1,7 +1,7 @@
 {
   "id": "info-p4-max-flow",
   "name": "P4 \u2014 Max Flow Since Reset",
-  "description": "Per-channel peaks since the last session reset. P0 shows the largest of these and which channel holds it; this page is the only place the distribution across channels is visible.",
+  "description": "Per-channel peaks since the last session reset, with MAX marking a channel that hit its q_max ceiling \u2014 i.e. a sensor under-dimensioned for its pipe.",
   "elements": [
     {
       "id": "hdr-title",
@@ -19,8 +19,8 @@
       "x": 2,
       "y": 24,
       "binding": "sensor.1.maxFlowSinceReset",
-      "worst": "1: 65535.00",
-      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+      "worst": "1: 65535.00 MAX",
+      "bound": "q_max = 65535 L/min is the clamp ceiling; MAX appears when the peak reached it"
     },
     {
       "id": "s2-value",
@@ -28,8 +28,8 @@
       "x": 2,
       "y": 44,
       "binding": "sensor.2.maxFlowSinceReset",
-      "worst": "2: 65535.00",
-      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+      "worst": "2: 65535.00 MAX",
+      "bound": "q_max = 65535 L/min is the clamp ceiling; MAX appears when the peak reached it"
     },
     {
       "id": "s3-value",
@@ -37,8 +37,8 @@
       "x": 2,
       "y": 64,
       "binding": "sensor.3.maxFlowSinceReset",
-      "worst": "3: 65535.00",
-      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+      "worst": "3: 65535.00 MAX",
+      "bound": "q_max = 65535 L/min is the clamp ceiling; MAX appears when the peak reached it"
     },
     {
       "id": "s4-value",
@@ -46,8 +46,8 @@
       "x": 2,
       "y": 84,
       "binding": "sensor.4.maxFlowSinceReset",
-      "worst": "4: 65535.00",
-      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+      "worst": "4: 65535.00 MAX",
+      "bound": "q_max = 65535 L/min is the clamp ceiling; MAX appears when the peak reached it"
     },
     {
       "id": "s5-value",
@@ -55,8 +55,8 @@
       "x": 114,
       "y": 24,
       "binding": "sensor.5.maxFlowSinceReset",
-      "worst": "5: 65535.00",
-      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+      "worst": "5: 65535.00 MAX",
+      "bound": "q_max = 65535 L/min is the clamp ceiling; MAX appears when the peak reached it"
     },
     {
       "id": "s6-value",
@@ -64,8 +64,8 @@
       "x": 114,
       "y": 44,
       "binding": "sensor.6.maxFlowSinceReset",
-      "worst": "6: 65535.00",
-      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+      "worst": "6: 65535.00 MAX",
+      "bound": "q_max = 65535 L/min is the clamp ceiling; MAX appears when the peak reached it"
     },
     {
       "id": "s7-value",
@@ -73,8 +73,8 @@
       "x": 114,
       "y": 64,
       "binding": "sensor.7.maxFlowSinceReset",
-      "worst": "7: 65535.00",
-      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+      "worst": "7: 65535.00 MAX",
+      "bound": "q_max = 65535 L/min is the clamp ceiling; MAX appears when the peak reached it"
     },
     {
       "id": "s8-value",
@@ -82,8 +82,8 @@
       "x": 114,
       "y": 84,
       "binding": "sensor.8.maxFlowSinceReset",
-      "worst": "8: 65535.00",
-      "bound": "clamped to q_max = 65535 L/min; the peak this channel reached since the last session reset"
+      "worst": "8: 65535.00 MAX",
+      "bound": "q_max = 65535 L/min is the clamp ceiling; MAX appears when the peak reached it"
     },
     {
       "id": "footer-hint",
@@ -91,9 +91,9 @@
       "x": 2,
       "y": 124,
       "emphasis": "muted",
-      "content": "ENTER reset session (hold 3s)",
-      "worst": "ENTER reset session (hold 3s)",
-      "bound": "fixed literal",
+      "content": "MAX = at sensor ceiling",
+      "worst": "MAX = at sensor ceiling",
+      "bound": "fixed literal; explains the marker rather than repeating the gestures",
       "bannerReplaces": true
     },
     {

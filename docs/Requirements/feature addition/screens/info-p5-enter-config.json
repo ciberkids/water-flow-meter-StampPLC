@@ -1,0 +1,55 @@
+{
+  "id": "info-p5-enter-config",
+  "name": "P5 \u2014 Enter Configuration",
+  "description": "A prompt, not a menu. The body says what Configuration contains; the footer says the gesture. Neither repeats the other.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "Configuration",
+      "worst": "Configuration",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "body-1",
+      "kind": "text",
+      "x": 2,
+      "y": 28,
+      "content": "Sensor calibration, Modbus",
+      "worst": "Sensor calibration, Modbus",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "body-2",
+      "kind": "text",
+      "x": 2,
+      "y": 40,
+      "content": "link, LED pulses, network.",
+      "worst": "link, LED pulses, network.",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "ENTER opens Configuration",
+      "worst": "ENTER opens Configuration",
+      "bound": "fixed literal",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
+    }
+  ]
+}

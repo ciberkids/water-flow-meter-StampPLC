@@ -1,0 +1,85 @@
+{
+  "id": "info-p6-factory-reset",
+  "name": "P6 \u2014 Factory Reset",
+  "description": "The warning names everything preferences.clear() erases, including the network provisioning the old text omitted. No page number in the title.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "Factory Reset",
+      "worst": "Factory Reset",
+      "bound": "fixed literal; no page number \u2014 renumbering must not invalidate a title"
+    },
+    {
+      "id": "warning-1",
+      "kind": "text",
+      "x": 2,
+      "y": 28,
+      "emphasis": "strong",
+      "content": "Erases totals, calibration,",
+      "worst": "Erases totals, calibration,",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "warning-2",
+      "kind": "text",
+      "x": 2,
+      "y": 40,
+      "emphasis": "strong",
+      "content": "LED, Modbus link and WiFi",
+      "worst": "LED, Modbus link and WiFi",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "warning-3",
+      "kind": "text",
+      "x": 2,
+      "y": 52,
+      "emphasis": "strong",
+      "content": "and MQTT credentials.",
+      "worst": "and MQTT credentials.",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "warning-4",
+      "kind": "text",
+      "x": 2,
+      "y": 72,
+      "content": "Re-provisioning needs the AP",
+      "worst": "Re-provisioning needs the AP",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "warning-5",
+      "kind": "text",
+      "x": 2,
+      "y": 84,
+      "content": "portal, at the device.",
+      "worst": "portal, at the device.",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "ENTER opens confirm screen",
+      "worst": "ENTER opens confirm screen",
+      "bound": "fixed literal",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
+    }
+  ]
+}
