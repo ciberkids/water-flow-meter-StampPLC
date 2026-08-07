@@ -1,7 +1,7 @@
 {
   "id": "info-p0-global-status",
   "name": "P0 \u2014 Global Status",
-  "description": "Landing page: current aggregate flow, session volume, the peak and which sensor made it.",
+  "description": "Landing page in four groups: identity + current flow, the walking dots, the since-reset pair, then network and LED.",
   "elements": [
     {
       "id": "hdr-title",
@@ -15,7 +15,7 @@
       "id": "total-flow-label",
       "kind": "text",
       "x": 2,
-      "y": 16,
+      "y": 14,
       "emphasis": "muted",
       "content": "Total Current Flow (L/m)"
     },
@@ -23,37 +23,37 @@
       "id": "total-flow-value",
       "kind": "value",
       "x": 152,
-      "y": 16,
+      "y": 14,
       "emphasis": "strong",
       "binding": "telemetry.totalFlowLps"
     },
     {
       "id": "flow-dots",
       "kind": "icon",
-      "x": 72,
-      "y": 28,
-      "width": 96,
-      "height": 32
+      "x": 60,
+      "y": 30,
+      "width": 120,
+      "height": 40
     },
     {
       "id": "session-total",
       "kind": "text",
       "x": 2,
-      "y": 68,
+      "y": 80,
       "binding": "telemetry.totalVolumeLiters"
     },
     {
       "id": "max-flow",
       "kind": "text",
       "x": 2,
-      "y": 80,
+      "y": 92,
       "binding": "telemetry.maxFlowLpm"
     },
     {
       "id": "net-led-status",
       "kind": "text",
       "x": 2,
-      "y": 96,
+      "y": 108,
       "emphasis": "muted",
       "binding": "legend.status"
     },

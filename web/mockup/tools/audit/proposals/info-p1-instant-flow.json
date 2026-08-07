@@ -1,0 +1,87 @@
+{
+  "id": "info-p1-instant-flow",
+  "name": "P1 \u2014 Instant Flow",
+  "description": "Two columns of four. One self-describing element per sensor: the value's own format carries the sensor number and the status word, so the S-label and the status badge are gone.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "Instant Flow"
+    },
+    {
+      "id": "s1-value",
+      "kind": "value",
+      "x": 2,
+      "y": 24,
+      "binding": "sensor.1.instantFlow"
+    },
+    {
+      "id": "s2-value",
+      "kind": "value",
+      "x": 2,
+      "y": 44,
+      "binding": "sensor.2.instantFlow"
+    },
+    {
+      "id": "s3-value",
+      "kind": "value",
+      "x": 2,
+      "y": 64,
+      "binding": "sensor.3.instantFlow"
+    },
+    {
+      "id": "s4-value",
+      "kind": "value",
+      "x": 2,
+      "y": 84,
+      "binding": "sensor.4.instantFlow"
+    },
+    {
+      "id": "s5-value",
+      "kind": "value",
+      "x": 110,
+      "y": 24,
+      "binding": "sensor.5.instantFlow"
+    },
+    {
+      "id": "s6-value",
+      "kind": "value",
+      "x": 110,
+      "y": 44,
+      "binding": "sensor.6.instantFlow"
+    },
+    {
+      "id": "s7-value",
+      "kind": "value",
+      "x": 110,
+      "y": 64,
+      "binding": "sensor.7.instantFlow"
+    },
+    {
+      "id": "s8-value",
+      "kind": "value",
+      "x": 110,
+      "y": 84,
+      "binding": "sensor.8.instantFlow"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN pages   UP+DN off"
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 104
+    }
+  ]
+}

@@ -91,6 +91,11 @@ function renderedText(element: Element): string {
   if (kProposedFormats[element.binding]) {
     return kProposedFormats[element.binding];
   }
+  // Per-sensor readings under §2a: L/m, and %7.2f because a single channel can reach 9999.99 L/m.
+  const perSensor = /^sensor\.(\d)\.instantFlow$/.exec(element.binding);
+  if (perSensor) {
+    return `${perSensor[1]}: 9999.99 L/m`;
+  }
   return (
     resolveSensorBinding(element.binding, table, 8) ??
     sampleValueFor(element.binding, valueById.get(element.binding), "sample")
