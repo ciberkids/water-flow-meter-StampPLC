@@ -117,6 +117,29 @@ Consequences worth stating plainly:
   old unit and both need restating.
 - Volumes are unaffected: litres and m³ throughout.
 
+### 2a.1. The panel is a view; the wire is the record
+
+**Decision:** the panel shows cubic metres only, at 2 decimals. Every wire surface carries **both** litres
+and cubic metres, at full stored precision.
+
+That asymmetry is the point, not a compromise. A 240 × 135 panel with 6–7 px glyphs is a human-readable
+summary — it can afford to round, because nothing downstream reads it. Modbus and MQTT are the record, and
+they already hold more than the panel can show: `setDouble` for cumulative litres *and* cumulative m³,
+`setFloat` for both session variants (`modbus_manager.cpp:339-342`).
+
+Consequences to hold onto:
+
+- **The panel's resolution is 10 L** (0.01 m³). A 123 L reading shows as `0.12 m^3`. For a lifetime
+  totalizer that is a summary; for a *session* being watched during commissioning, a 5 L bucket test reads
+  `0.00` on the panel while the register holds `5.0`. See §5.2 for the session page's decimals.
+- **The conversion needs exactly one implementation.** It currently has four — `firmware.cpp:954`,
+  `ui_bindings.cpp:290` and `:296`, `modbus_manager.cpp:340` (into a double) and `:342` (into a float),
+  each with a bare `1000` literal. Publishing both units everywhere doubles the number of places that
+  division happens, so a single `litresToCubicMeters()` comes first.
+- **MQTT is currently inconsistent with itself**: cumulative goes out as m³ (`totalCubicMeters`) and session
+  as litres (`sessionLiters`) (`mqtt_publisher.h:124-128`), and Home Assistant mirrors that split
+  (`ha_discovery.cpp:239-240`). Both-units-everywhere fixes it rather than adding to it.
+
 ## 2b. Aggregates are published, not re-derived
 
 **Decision:** the four aggregate facts P0 displays get their own Modbus registers. The device already
@@ -421,7 +444,7 @@ Columns at x 2..107 and 114..219 with a 7 px gutter and a 21 px right margin, fo
 Chosen over one column of eight because the panel is landscape: a single column uses 107 px of 240 and leaves
 55% of the width empty, and 12 px pitch reads worse at distance than 20 px.
 
-### 4.3. Format change, shared with P2–P6
+### 4.3. Format change, shared by every telemetry page
 
 The per-sensor format becomes **`%u: %7.2f %s`** (was `%6.2f`). Under §2a a single channel can reach
 `9999.99 L/m`, which `%6.2f` cannot hold. This is the format shared by all six telemetry pages, so it lands
@@ -473,24 +496,190 @@ wire looks like, and the device cannot say otherwise.
   stores it back. The recompute is nearly there.
 - No host test covers boot restore; `test/host/sensor_state_test.cpp:90` sets `isReady` by hand.
 
-## 5. Queue
+## 5. P2 — Cumulative Volume, and P3 — Session Volume  *(agreed)*
 
-In ring order, with the audit's current findings. Each becomes a section here as it is agreed.
+### 5.1. Two pages absorbed
 
-| # | Screen | Findings today |
+The ring carried **four** volume pages: cumulative litres, cumulative m³, session litres, session m³ — two
+quantities in two units, with the m³ form derived from the litres one by `/1000`
+(`ui_bindings.cpp:290`, `:296`). The device stored one fact and paginated it twice.
+
+Because 1 L is exactly 0.001 m³, a m³ page carries the litres reading too: the decimal point moves and
+nothing is lost that the panel could have shown anyway. So **cumulative litres and cumulative m³ become one
+page, and session litres and session m³ become one page.** The ring drops from 11 pages to 9.
+
+This is the same duplication removed at §4.1 (a label restating the value's prefix) and §4.1 again (a badge
+restating its status word), one level up: two whole pages restating each other's number ÷ 1000.
+
+Both litres and m³ remain on **every wire surface** — see §2a.1. Nothing is lost to an integrator; only the
+panel picks one.
+
+### 5.2. Bound and resolution
+
+**8 integer digits and 2 decimals**, so the widest row is `8: 99999999.99`:
+
+- maximum `99,999,999.99 m³` = 99,999,999,990 L — **1,268 years** at 150 L/min continuous, so the counter
+  cannot realistically overflow. The value reset therefore exists for operational reasons (a new billing
+  period, a sensor swap), not for wrap-around.
+- resolution `0.01 m³` = **10 L**.
+
+The unit is in the header, not on the rows: at 4 characters × 8 rows it would cost 224 px to restate one
+fact, and it would push the row to 18 characters — which overflows two columns by 19 px.
+
+**Open on the session page:** at 10 L resolution a 5 L bucket test reads `0.00` while the register holds
+`5.0`. Three decimals would give 1 L resolution for one more character (`8: 99999999.999` = 15 ch = 105 px,
+still fits), at the cost of the two pages no longer being dimensionally identical.
+
+### 5.3. The reset each page reaches — and what it does NOT touch
+
+The owner's requirement was that a value reset must not disturb calibration. That separation already exists
+in the register map, and each page reaches the right scope:
+
+| Command | Clears | Touches calibration? |
 | --- | --- | --- |
-| 1 | `info-p0-global-status` | 3 collisions — **specified, §3** |
-| 2 | `info-p1-instant-flow` | 20 collisions — **specified, §4** |
-| 3 | `info-p2-cumulative-liters` | 8 collisions |
-| 4 | `info-p3-cumulative-m3` | 8 collisions |
-| 5 | `info-p4-session-liters` | 8 collisions |
-| 6 | `info-p5-session-m3` | 8 collisions |
-| 7 | `info-p6-max-flow` | 8 collisions |
-| 8 | `info-p7-enter-config` | — |
-| 9 | `info-p8-factory-reset` | — |
-| 10 | `net-wifi-root` … `net-mqtt-*` (14 screens) | 14 overflows |
-| 11 | `config-c1…c7`, `config-s1…s4`, `config-sensor-1…8` (29 screens) | 29 overflows |
+| `REG_MASTER_RESET_ALL_MEASURED` (21) | `sessionLiters`, `cumulativeLiters`, `maxFlowSinceReset` on every in-use channel, then persists to NVS (`modbus_manager.cpp:175-189`) | **No** |
+| `REG_MASTER_RESET_ALL_SESSION` (22) | session values only | **No** |
+| `OFF_CMD_RESET_SESSION` / `OFF_CMD_RESET_ALL` (17 / 18) | the same, one channel | **No** |
+| `OFF_CMD_RESET_CONFIG` (19) | that channel's `q_max` / `f_multiplier` / `adjust` | **Yes — deliberately separate** |
+| Factory reset (P8) | NVS wholesale, including link and network configuration | Yes |
+
+P2's ENTER opens `confirm-reset-totals`; P3's opens the session equivalent. What the spec adds is the
+statement that these are the *same operations* as registers 21 and 22 — nothing documented which scope a
+screen's reset had.
+
+### 5.4. P2 layout
+
+<!-- generated by tools/audit/screen-spec.ts info-p2-cumulative-m3.json — do not hand-edit -->
+
+Worst case on every row, from the physical bound of each value rather than its format string:
+
+```
+     +----------------------------------------+   240 x 135 px = 40 cols x 17 rows
+y   0 |Cumulative (m3)                         |
+y   8 |                                        |
+y  16 |                                       ||
+y  24 |1: 99999999.99>>   5: 99999999.99>>    ||
+y  32 |                                       ||
+y  40 |                                       ||
+y  48 |2: 99999999.99>>   6: 99999999.99>>    ||
+y  56 |                                       ||
+y  64 |3: 99999999.99>>   7: 99999999.99>>    ||
+y  72 |                                       ||
+y  80 |                                       ||
+y  88 |4: 99999999.99>>   8: 99999999.99>>    ||
+y  96 |                                       ||
+y 104 |                                       ||
+y 112 |                                        |
+y 120 |                                        |
+y 128 |ENTER reset totals (hold 3s)            |
+     +----------------------------------------+
+```
+
+`>` marks a value's 7 px glyphs overhanging the 6 px grid. `·` marks two elements in one cell.
+
+| Element | Kind | x, y | Binding | Worst case | Bound |
+| --- | --- | --- | --- | --- | --- |
+| `hdr-title` | text | 2, 2 | — | 15 ch = 90 px, x 2..92 | fixed literal; the unit lives here, not on eight rows |
+| `s1-value` | value | 2, 24 | `sensor.1.cumulativeM3` | 14 ch = 98 px, x 2..100 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `s2-value` | value | 2, 44 | `sensor.2.cumulativeM3` | 14 ch = 98 px, x 2..100 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `s3-value` | value | 2, 64 | `sensor.3.cumulativeM3` | 14 ch = 98 px, x 2..100 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `s4-value` | value | 2, 84 | `sensor.4.cumulativeM3` | 14 ch = 98 px, x 2..100 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `s5-value` | value | 114, 24 | `sensor.5.cumulativeM3` | 14 ch = 98 px, x 114..212 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `s6-value` | value | 114, 44 | `sensor.6.cumulativeM3` | 14 ch = 98 px, x 114..212 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `s7-value` | value | 114, 64 | `sensor.7.cumulativeM3` | 14 ch = 98 px, x 114..212 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `s8-value` | value | 114, 84 | `sensor.8.cumulativeM3` | 14 ch = 98 px, x 114..212 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `footer-hint` | text | 2, 124 | — | 28 ch = 168 px, x 2..170 | fixed literal |
+| `level-position` | scrollbar | 232, 14 | — | 5 × 100 px | geometry; 100px so it stops clear of the banner row at y=116 |
+
+Rows inked 17 of 17. Narrowest right margin 28 px.
+
+> Accepted overlap: footer-hint is the row the banner replaces by design (§2c)
+
+**No collisions, no overflow, every icon addressable, and 1 banner overlap(s) declared below.**
+
+### 5.5. P3 layout
+
+<!-- generated by tools/audit/screen-spec.ts info-p3-session-m3.json — do not hand-edit -->
+
+Worst case on every row, from the physical bound of each value rather than its format string:
+
+```
+     +----------------------------------------+   240 x 135 px = 40 cols x 17 rows
+y   0 |Session (m3)                            |
+y   8 |                                        |
+y  16 |                                       ||
+y  24 |1: 99999999.99>>   5: 99999999.99>>    ||
+y  32 |                                       ||
+y  40 |                                       ||
+y  48 |2: 99999999.99>>   6: 99999999.99>>    ||
+y  56 |                                       ||
+y  64 |3: 99999999.99>>   7: 99999999.99>>    ||
+y  72 |                                       ||
+y  80 |                                       ||
+y  88 |4: 99999999.99>>   8: 99999999.99>>    ||
+y  96 |                                       ||
+y 104 |                                       ||
+y 112 |                                        |
+y 120 |                                        |
+y 128 |ENTER reset session (hold 3s)           |
+     +----------------------------------------+
+```
+
+`>` marks a value's 7 px glyphs overhanging the 6 px grid. `·` marks two elements in one cell.
+
+| Element | Kind | x, y | Binding | Worst case | Bound |
+| --- | --- | --- | --- | --- | --- |
+| `hdr-title` | text | 2, 2 | — | 12 ch = 72 px, x 2..74 | fixed literal; the unit lives here, not on eight rows |
+| `s1-value` | value | 2, 24 | `sensor.1.sessionM3` | 14 ch = 98 px, x 2..100 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `s2-value` | value | 2, 44 | `sensor.2.sessionM3` | 14 ch = 98 px, x 2..100 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `s3-value` | value | 2, 64 | `sensor.3.sessionM3` | 14 ch = 98 px, x 2..100 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `s4-value` | value | 2, 84 | `sensor.4.sessionM3` | 14 ch = 98 px, x 2..100 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `s5-value` | value | 114, 24 | `sensor.5.sessionM3` | 14 ch = 98 px, x 114..212 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `s6-value` | value | 114, 44 | `sensor.6.sessionM3` | 14 ch = 98 px, x 114..212 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `s7-value` | value | 114, 64 | `sensor.7.sessionM3` | 14 ch = 98 px, x 114..212 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `s8-value` | value | 114, 84 | `sensor.8.sessionM3` | 14 ch = 98 px, x 114..212 | display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution) |
+| `footer-hint` | text | 2, 124 | — | 29 ch = 174 px, x 2..176 | fixed literal |
+| `level-position` | scrollbar | 232, 14 | — | 5 × 100 px | geometry; 100px so it stops clear of the banner row at y=116 |
+
+Rows inked 17 of 17. Narrowest right margin 28 px.
+
+> Accepted overlap: footer-hint is the row the banner replaces by design (§2c)
+
+**No collisions, no overflow, every icon addressable, and 1 banner overlap(s) declared below.**
+
+Both on P1's grid — columns at x 2 and 114, four rows at 20 px pitch — so all telemetry pages share one
+layout and paging moves values in place instead of relaying them out.
+
+### 5.6. Defects in the authored pages, beyond the eight collisions each
+
+- **`divider-1` is a `box` at (0, 65) with no width or height**, so it takes the 40 × 12 fallback
+  (`ui_renderer.cpp:314-315`) and paints a small filled rectangle at the middle-left of the panel. A
+  full-width divider was intended.
+- **`undersampling-badge` at (176, 4) duplicates the banner.** It binds `diagnostics.undersampling`, which
+  renders `OK` or `! S1,3` — exactly what the banner now reports from the footer row (§2c). It also reads
+  `OK` permanently today, because nothing can set the bit.
+
+## 6. Queue
+
+The ring is **9 pages**, not 11: two volume pages were absorbed at §5.1.
+
+| # | Screen | State |
+| --- | --- | --- |
+| 1 | `info-p0-global-status` | **specified, §3** |
+| 2 | `info-p1-instant-flow` | **specified, §4** |
+| 3 | `info-p2-cumulative-m3` | **specified, §5** — absorbs the old cumulative-litres page |
+| 4 | `info-p3-session-m3` | **specified, §5** — absorbs the old session-litres page |
+| 5 | `info-p4-max-flow` | next. May be a fourth duplication: P0 already carries `Max Flow: … (S3)` |
+| 6 | `info-p5-enter-config` | — |
+| 7 | `info-p6-factory-reset` | — |
+| 8–9 | `net-wifi-root`, `net-mqtt-root` | 14 net screens behind them, 14 overflows |
+| — | `config-c1…c7`, `config-s1…s4`, `config-sensor-1…8` | 29 screens, 29 overflows |
+
+Renumbering follows from the absorption and needs confirming: the old P4/P5/P6 shift up, so max-flow becomes
+P4, enter-config P5, factory-reset P6. `Display_UI_Requirements.md` §4.1's state machine and §4.3's page table
+both need rewriting for the 9-page ring — and §4.1 was already stale, since it describes a 9-page ring by
+coincidence while the real one had grown to 11 with the network pages (§3.3).
 
 The 43 config and net overflows share one cause: footer hints and option lists written as prose against a
-budget nobody had stated. The worst is the baud-rate list at **58 characters (348 px)**, 108 px past the
-edge; `UP/DN adjust  ENTER save  hold ENTER discard` is 44. Every one of them fits once shortened to 38.
+budget nobody had stated. The worst is the baud-rate list at **58 characters (348 px)**, 108 px past the edge;
+`UP/DN adjust  ENTER save  hold ENTER discard` is 44. Every one fits once shortened to 38.
