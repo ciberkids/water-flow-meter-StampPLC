@@ -29,8 +29,7 @@
       "y": 44,
       "binding": "sensor.2.instantFlow",
       "worst": "2: 65535.00 L/m",
-      "bound": "clamped to q_max = 65535 L/min by the state engine",
-      "acceptsBannerOverlap": "see \u00a72c \u2014 this row is the argument for relocating the banner: a per-sensor warning would hide sensors 2 and 6 while naming a sensor"
+      "bound": "clamped to q_max = 65535 L/min by the state engine"
     },
     {
       "id": "s3-value",
@@ -66,8 +65,7 @@
       "y": 44,
       "binding": "sensor.6.instantFlow",
       "worst": "6: 65535.00 L/m",
-      "bound": "clamped to q_max = 65535 L/min by the state engine",
-      "acceptsBannerOverlap": "see \u00a72c \u2014 this row is the argument for relocating the banner: a per-sensor warning would hide sensors 2 and 6 while naming a sensor"
+      "bound": "clamped to q_max = 65535 L/min by the state engine"
     },
     {
       "id": "s7-value",
@@ -95,7 +93,8 @@
       "emphasis": "muted",
       "content": "UP/DN pages   UP+DN off",
       "worst": "UP/DN pages   UP+DN off",
-      "bound": "fixed literal"
+      "bound": "fixed literal",
+      "bannerReplaces": true
     },
     {
       "id": "level-position",
@@ -103,9 +102,8 @@
       "x": 232,
       "y": 14,
       "width": 5,
-      "height": 104,
-      "bound": "geometry",
-      "acceptsBannerOverlap": "5 px at the right edge, covered for the banner's 18 px on every screen alike"
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
     }
   ]
 }

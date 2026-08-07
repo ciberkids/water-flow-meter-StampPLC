@@ -43,8 +43,7 @@
       "metadata": {
         "assetId": "flow-dots"
       },
-      "bound": "geometry; assetId required by ui_renderer.cpp:324",
-      "acceptsBannerOverlap": "P0 nominates the dots: a live warning should dominate, and the dots are the element whose loss costs least here \u2014 the flow number above them still reads"
+      "bound": "geometry; assetId required by ui_renderer.cpp:324"
     },
     {
       "id": "session-total",
@@ -80,9 +79,8 @@
       "x": 232,
       "y": 14,
       "width": 5,
-      "height": 104,
-      "bound": "geometry",
-      "acceptsBannerOverlap": "the scrollbar is 5px at the right edge; the banner covers it for the 18px it occupies, on every screen alike"
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
     },
     {
       "id": "footer-hint",
@@ -92,7 +90,8 @@
       "emphasis": "muted",
       "content": "UP/DN pages   UP+DN off",
       "worst": "UP/DN pages   UP+DN off",
-      "bound": "fixed literal"
+      "bound": "fixed literal",
+      "bannerReplaces": true
     }
   ]
 }

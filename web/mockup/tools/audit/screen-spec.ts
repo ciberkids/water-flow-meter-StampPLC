@@ -31,9 +31,16 @@ const kGlyphHeight = 8;
 const kBadgePadX = 3;
 const kBadgePadY = 2;
 
-/** The firmware draws its undersampling banner here whenever a warning is live (ui_renderer.cpp:427-428). */
-const kBannerTop = 34;
-const kBannerBottom = 52;
+/**
+ * Where the firmware paints its undersampling banner while a warning is live (`ui_renderer.cpp:427-428`).
+ *
+ * RELOCATED by decision §2c: it was `bannerY = 34`, which put 18 px of full-width overlay mid-panel on all
+ * 79 screens — the one place every screen keeps its content. It now covers the FOOTER row, the least valuable
+ * row anywhere: a gesture reminder read once. A warning replacing it costs nothing while a warning is live,
+ * and no screen has to reserve a band or nominate an element to sacrifice.
+ */
+const kBannerTop = 116;
+const kBannerBottom = 134;
 
 interface Element {
   id: string;
@@ -51,13 +58,13 @@ interface Element {
   /** Why that is the worst case — a physical limit, an enum, or a fixed literal. */
   bound?: string;
   /**
-   * Set when this element KNOWINGLY sits under the warning banner's band, with the reason.
+   * Set on the ONE element the banner is designed to replace — the footer hint.
    *
-   * The band is not reservable for free: it is 18px of a 135px panel, edge to edge, on every screen. So a
-   * screen either gives it up permanently or nominates the element it is willing to lose while a warning is
-   * live. Nominating requires saying which, here, rather than discovering it on hardware.
+   * After the §2c relocation the banner covers the footer row, so the footer being hidden while a warning is
+   * live is the intent rather than a collision. Every OTHER element in that band is still a defect, which is
+   * what keeps this from becoming a blanket exemption.
    */
-  acceptsBannerOverlap?: string;
+  bannerReplaces?: boolean;
 }
 
 interface Proposal {
@@ -161,8 +168,8 @@ for (const box of boxes) {
     const line =
       `${box.element.id} (y ${box.top}..${box.bottom}) sits under the warning banner's band ` +
       `y ${kBannerTop}..${kBannerBottom}, painted edge to edge while a warning is live`;
-    if (box.element.acceptsBannerOverlap) {
-      accepted.push(`${line} — ACCEPTED: ${box.element.acceptsBannerOverlap}`);
+    if (box.element.bannerReplaces) {
+      accepted.push(`${box.element.id} is the row the banner replaces by design (§2c)`);
     } else {
       problems.push(line);
     }

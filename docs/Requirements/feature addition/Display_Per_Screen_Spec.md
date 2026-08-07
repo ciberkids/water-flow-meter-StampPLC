@@ -75,7 +75,7 @@ Therefore:
    and neither the mockup nor an ASCII render shows the absence.
 4. A row's **worst case** must fit, taken from the value's physical bound rather than its format string.
 5. An element's authored `content` must never contradict its `binding`: on the device the binding wins.
-6. Nothing may sit in the banner band unless the screen declares it — see §2c.
+6. Only the footer hint may sit in y 116…134, the banner's row — see §2c.
 
 **Character size is fixed.** The renderer selects one font globally — `display.setFont(&fonts::Font0)` with
 `setTextSize(1)` (`ui_renderer.cpp:58`, :300) — so there is no per-element font and 6 px is the floor. The
@@ -160,31 +160,30 @@ Edge cases, matching what the panel shows:
 publish over MQTT, but `kHaMaxEntities = kNumSensors * 3 + 4` (`ha_discovery.h:120`) budgets exactly four
 globals, so adding four more changes that constant and the discovery payload's size.
 
-## 2c. The warning banner owns y 34…52 on every screen
+## 2c. The warning banner lives in the footer row  *(decided)*
 
-`drawWarningBanner` paints `fillRect(0, 34, 240, 18)` whenever `context.hasWarnings` is set
-(`ui_renderer.cpp:422-435`) — **edge to edge, over whatever the screen had drawn there**, followed by `!` at
-x=4 and the warning summary at x=16. No requirement document mentions it, and no screen in the dataset
-accounts for it.
+`drawWarningBanner` paints `fillRect(0, bannerY, 240, 18)` whenever `context.hasWarnings` is set
+(`ui_renderer.cpp:422-435`), followed by `!` at x=4 and the summary at x=16. **`bannerY` was 34**, which put
+18 px of full-width overlay mid-panel — the one place every screen keeps its content — on all 79 screens, and
+no requirement document mentioned it.
 
-That is 18 px of a 135 px panel, on all 79 screens. A screen therefore has to do one of three things, and
-must say which:
+**Decision: `bannerY = 116`, so the banner covers the footer row.** The footer hint is the least valuable row
+on any screen: a gesture reminder an operator reads once. A warning replacing it costs nothing while a warning
+is live, and no screen has to reserve a band or nominate an element to sacrifice. It is a one-line firmware
+change.
 
-1. **Keep the band clear** — costs 13% of the panel permanently, on every screen, for an overlay that is
-   usually absent.
-2. **Nominate what it loses** — declare `acceptsBannerOverlap` on the element, with the reason. The
-   generator prints the declaration; an undeclared overlap is reported as a problem.
-3. **Move the banner** — the recommendation below.
+The case for moving rather than reserving is P1. With the banner at y=34, its second row sits at y=44, so a
+per-sensor undersampling warning would **hide sensors 2 and 6 while naming a sensor** — and no arrangement of
+eight sensors on four rows avoids that band.
 
-**Open decision: relocate the banner to the footer row.** At y=34 it lands mid-panel, which is where the
-content is. The footer hint is the least valuable row on any screen — a gesture reminder an operator reads
-once — so a warning replacing it is an honest trade, and no screen has to sacrifice data. It is a one-line
-firmware change (`bannerY`), and it makes rule 6 above nearly free.
+What comes with the decision:
 
-The case is clearest on P1: its second row sits at y=44, so a per-sensor undersampling warning would **hide
-sensors 2 and 6 while naming a sensor**. P0 can absorb the overlay — it nominates the flow dots, and the
-headline number above them still reads — but a telemetry page cannot sensibly hide two channels to report a
-problem with one.
+- **The banner inherits the footer's budget**: 40 characters at 6 px. `!` at x=4 and the summary at x=16 leave
+  **37 characters**, which holds the widest summary the device can produce (`! S1,2,3,4,5,6,7,8` is 18).
+- **Exactly one element per screen may sit in y 116…134** — the footer hint, marked `bannerReplaces` in the
+  screen's JSON. Anything else there is reported as a collision, so this is not a blanket exemption.
+- `level-position` shortens from 104 px to **100 px** (y 14…114) on every screen that carries it: at 104 it
+  grazed the band by 2 px.
 
 ## 3. P0 — System Status  *(agreed)*
 
@@ -213,7 +212,7 @@ y  80 |Since reset: 999999.99 L               ||
 y  88 |                                       ||
 y  96 |Max Flow: 65535.00 L/m (S8)            ||
 y 104 |                                       ||
-y 112 |WiFi RETRY  MQTT OFF  LED 1p/100L      ||
+y 112 |WiFi RETRY  MQTT OFF  LED 1p/100L       |
 y 120 |                                        |
 y 128 |UP/DN pages   UP+DN off                 |
      +----------------------------------------+
@@ -230,16 +229,14 @@ y 128 |UP/DN pages   UP+DN off                 |
 | `session-total` | text | 2, 80 | `telemetry.totalVolumeLiters` | 24 ch = 144 px, x 2..146 | float32 session litres, 6 integer digits |
 | `max-flow` | text | 2, 92 | `telemetry.maxFlowLpm` | 27 ch = 162 px, x 2..164 | one channel clamped to q_max=65535 |
 | `net-led-status` | text | 2, 108 | `legend.status` | 33 ch = 198 px, x 2..200 | wifiStateText max RETRY(5), mqttStateText max OFF(3), volume max 100 |
-| `level-position` | scrollbar | 232, 14 | — | 5 × 104 px | geometry |
+| `level-position` | scrollbar | 232, 14 | — | 5 × 100 px | geometry; 100px so it stops clear of the banner row at y=116 |
 | `footer-hint` | text | 2, 124 | — | 23 ch = 138 px, x 2..140 | fixed literal |
 
 Rows inked 17 of 17. Narrowest right margin 25 px.
 
-> Accepted overlap: flow-dots (y 30..70) sits under the warning banner's band y 34..52, painted edge to edge while a warning is live — ACCEPTED: P0 nominates the dots: a live warning should dominate, and the dots are the element whose loss costs least here — the flow number above them still reads
+> Accepted overlap: footer-hint is the row the banner replaces by design (§2c)
 
-> Accepted overlap: level-position (y 14..118) sits under the warning banner's band y 34..52, painted edge to edge while a warning is live — ACCEPTED: the scrollbar is 5px at the right edge; the banner covers it for the 18px it occupies, on every screen alike
-
-**No collisions, no overflow, every icon addressable, and 2 banner overlap(s) declared below.**
+**No collisions, no overflow, every icon addressable, and 1 banner overlap(s) declared below.**
 
 ### 3.2. What each row means
 
@@ -392,7 +389,7 @@ y  80 |                                       ||
 y  88 |4: 65535.00 L/m>>> 8: 65535.00 L/m>>>  ||
 y  96 |                                       ||
 y 104 |                                       ||
-y 112 |                                       ||
+y 112 |                                        |
 y 120 |                                        |
 y 128 |UP/DN pages   UP+DN off                 |
      +----------------------------------------+
@@ -412,17 +409,13 @@ y 128 |UP/DN pages   UP+DN off                 |
 | `s7-value` | value | 114, 64 | `sensor.7.instantFlow` | 15 ch = 105 px, x 114..219 | clamped to q_max = 65535 L/min by the state engine |
 | `s8-value` | value | 114, 84 | `sensor.8.instantFlow` | 15 ch = 105 px, x 114..219 | clamped to q_max = 65535 L/min by the state engine |
 | `footer-hint` | text | 2, 124 | — | 23 ch = 138 px, x 2..140 | fixed literal |
-| `level-position` | scrollbar | 232, 14 | — | 5 × 104 px | geometry |
+| `level-position` | scrollbar | 232, 14 | — | 5 × 100 px | geometry; 100px so it stops clear of the banner row at y=116 |
 
 Rows inked 17 of 17. Narrowest right margin 21 px.
 
-> Accepted overlap: s2-value (y 44..52) sits under the warning banner's band y 34..52, painted edge to edge while a warning is live — ACCEPTED: see §2c — this row is the argument for relocating the banner: a per-sensor warning would hide sensors 2 and 6 while naming a sensor
+> Accepted overlap: footer-hint is the row the banner replaces by design (§2c)
 
-> Accepted overlap: s6-value (y 44..52) sits under the warning banner's band y 34..52, painted edge to edge while a warning is live — ACCEPTED: see §2c — this row is the argument for relocating the banner: a per-sensor warning would hide sensors 2 and 6 while naming a sensor
-
-> Accepted overlap: level-position (y 14..118) sits under the warning banner's band y 34..52, painted edge to edge while a warning is live — ACCEPTED: 5 px at the right edge, covered for the banner's 18 px on every screen alike
-
-**No collisions, no overflow, every icon addressable, and 3 banner overlap(s) declared below.**
+**No collisions, no overflow, every icon addressable, and 1 banner overlap(s) declared below.**
 
 Columns at x 2..107 and 114..219 with a 7 px gutter and a 21 px right margin, four rows at 20 px pitch.
 Chosen over one column of eight because the panel is landscape: a single column uses 107 px of 240 and leaves
@@ -464,8 +457,21 @@ the reboot defect disappears with the cache. The four display states are then ex
 `3:    0.00 L/m` for a calibrated channel with no pulses — which, per the point above, is also what a fallen
 wire looks like, and the device cannot say otherwise.
 
-*Status: the collapse is specified but not yet agreed to implement — a blast-radius trace over the engine,
-the status register, the LED green-ready rule, MQTT presence and the mockup is in flight.*
+**Status: the trace is complete and the defect is CONFIRMED — and it is data loss, not a display fault.**
+
+- `firmware.cpp:681-682` promises "let the state engine decide readiness from the restored config rather than
+  forcing everything off", then `:688` writes `isReady = false` and nothing recomputes it. The engine only
+  reads the bit; `refreshDiagnostics` does not touch it.
+- Pulses are still counted — the polling mask comes from `inUse` (`firmware.cpp:617-618`) — and then
+  **discarded**: `sensor.pulseCount = 0` (`sensor_state_engine.cpp:24`) runs BEFORE the `isReady` gate at
+  `:26`, and the else-branch only zeroes flow, so `cumulativeLiters += litersInterval` never executes.
+- The register block is gated on `inUse && isReady` (`modbus_manager.cpp:337`), so the else-branch publishes
+  `setDouble(OFF_CUMULATIVE_LITERS, 0.0)` — **a Modbus master reads the lifetime total as zero.**
+- The NVS copy survives, because the periodic writer only saves when the value changes and it never moves
+  (`firmware.cpp:741`). So deriving `calibrated` recovers the true total rather than a lost one.
+- `evaluateSensorDiagnostics` already computes `configIsValid(cfg)` (`modbus_manager.cpp:393`) and never
+  stores it back. The recompute is nearly there.
+- No host test covers boot restore; `test/host/sensor_state_test.cpp:90` sets `isReady` by hand.
 
 ## 5. Queue
 
