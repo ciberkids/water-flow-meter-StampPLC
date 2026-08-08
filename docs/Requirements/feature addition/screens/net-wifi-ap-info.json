@@ -1,0 +1,113 @@
+{
+  "id": "net-wifi-ap-info",
+  "name": "W6 \u2014 AP info",
+  "description": "WiFi information page. Read-only; the values come from the live radio and broker. \u2014 laid out to the \u00a77 info template.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "WiFi > AP info",
+      "worst": "WiFi > AP info",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row0-label",
+      "kind": "text",
+      "x": 2,
+      "y": 26,
+      "emphasis": "muted",
+      "content": "AP network",
+      "worst": "AP network",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row0-value",
+      "kind": "text",
+      "x": 84,
+      "y": 26,
+      "binding": "net.ap.ssid",
+      "worst": "water_flow_meter_999999",
+      "bound": "the generated AP name"
+    },
+    {
+      "id": "row1-label",
+      "kind": "text",
+      "x": 2,
+      "y": 44,
+      "emphasis": "muted",
+      "content": "AP key",
+      "worst": "AP key",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row1-value",
+      "kind": "text",
+      "x": 84,
+      "y": 44,
+      "binding": "net.ap.password",
+      "worst": "KU67QJ4DRPDP",
+      "bound": "twelve generated characters"
+    },
+    {
+      "id": "row2-label",
+      "kind": "text",
+      "x": 2,
+      "y": 62,
+      "emphasis": "muted",
+      "content": "Browse to",
+      "worst": "Browse to",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row2-value",
+      "kind": "text",
+      "x": 84,
+      "y": 62,
+      "binding": "net.ap.ip",
+      "worst": "255.255.255.255",
+      "bound": "widest IPv4 dotted quad"
+    },
+    {
+      "id": "row3-label",
+      "kind": "text",
+      "x": 2,
+      "y": 80,
+      "emphasis": "muted",
+      "content": "Closes in (s)",
+      "worst": "Closes in (s)",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row3-value",
+      "kind": "text",
+      "x": 84,
+      "y": 80,
+      "binding": "net.portal.remaining",
+      "worst": "900",
+      "bound": "the portal window in seconds"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN pages  hold=exit",
+      "worst": "UP/DN pages  hold=exit",
+      "bound": "shared footer vocabulary, see 7.1",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
+    }
+  ]
+}

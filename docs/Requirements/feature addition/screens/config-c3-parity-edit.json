@@ -1,0 +1,87 @@
+{
+  "id": "config-c3-parity-edit",
+  "name": "C3.V \u2014 Edit Parity",
+  "description": "Value editor for C3. ENTER commits and ascends; hold ENTER discards. \u2014 laid out to the \u00a77 editor template.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "Edit > Parity",
+      "worst": "Edit > Parity",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "pending-label",
+      "kind": "text",
+      "x": 2,
+      "y": 26,
+      "emphasis": "muted",
+      "content": "New",
+      "worst": "New",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "pending-value",
+      "kind": "value",
+      "x": 44,
+      "y": 26,
+      "emphasis": "strong",
+      "binding": "config.editor.pending",
+      "worst": "115200",
+      "bound": "widest formatted setting value in the config tree"
+    },
+    {
+      "id": "saved-label",
+      "kind": "text",
+      "x": 2,
+      "y": 44,
+      "emphasis": "muted",
+      "content": "Saved",
+      "worst": "Saved",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "saved-value",
+      "kind": "value",
+      "x": 44,
+      "y": 44,
+      "binding": "config.parity",
+      "worst": "None",
+      "bound": "widest parity option"
+    },
+    {
+      "id": "range-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 66,
+      "emphasis": "muted",
+      "binding": "config.editor.range",
+      "worst": "8 rates: 1200..115200",
+      "bound": "derived from the descriptor \u2014 see 7.2"
+    },
+    {
+      "id": "nyquist-warning",
+      "kind": "text",
+      "x": 2,
+      "y": 86,
+      "emphasis": "strong",
+      "binding": "config.sensor.nyquistWarning",
+      "worst": "Write refused. UP=Back",
+      "bound": "editor state; empty in the normal case"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN adjust  ENTER save  hold=cancel",
+      "worst": "UP/DN adjust  ENTER save  hold=cancel",
+      "bound": "shared footer vocabulary, see 7.1",
+      "bannerReplaces": true
+    }
+  ]
+}

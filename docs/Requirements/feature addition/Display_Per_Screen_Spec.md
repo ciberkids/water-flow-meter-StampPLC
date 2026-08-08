@@ -1065,35 +1065,79 @@ Rows inked 17 of 17. Narrowest right margin 16 px.
 One firmware change carries the whole sweep: `config.editor.range` as a catalogue value with a resolver arm.
 Everything else is dataset geometry and text.
 
-## 8. Queue
+### 7.6. The five shapes C1's template did not cover
 
-The ring is **9 pages**, not 11: two volume pages were absorbed at §5.1.
+Classifying every config and net screen by its element signature found **61 screens in 7 shapes** — not the 43
+first estimated, which was the count of *overflows* rather than screens. C1 and C1.V cover 38 of them
+(22 setting pages, 16 editors). The other five shapes:
 
-| # | Screen | State |
+| Shape | Screens | Template |
 | --- | --- | --- |
-| 1 | `info-p0-global-status` | **specified, §3** |
-| 2 | `info-p1-instant-flow` | **specified, §4** |
-| 3 | `info-p2-cumulative-m3` | **specified, §5** — absorbs the old cumulative-litres page |
-| 4 | `info-p3-session-m3` | **specified, §5** — absorbs the old session-litres page |
-| 5 | `info-p4-max-flow` | **specified, §5a** — kept: summary vs detail, not duplication |
-| 6 | `info-p5-enter-config` | **specified, §5b** |
-| 7 | `info-p6-factory-reset` | **specified, §5b** — its warning was materially untrue |
-| 8–9 | `net-wifi-root`, `net-mqtt-root` | 14 net screens behind them, 14 overflows |
-| — | `config-c1…c7`, `config-s1…s4`, `config-sensor-1…8` | 29 screens. **C1 and C1.V specified as the template, §7**; 27 to apply it to |
+| Sensor list entry | 8 | C1's setting page plus a status value at x=44. `Sensor` was dropped: the title reads `Config > Sensors` and the value is `1 >`, so the label restated it — C1's finding again |
+| BACK entry | 6 | Title, `< BACK` at (2, 24), `ENTER go back`. It had 90 px of empty panel below the label |
+| Per-sensor setting | 4 | C1's setting page plus `sensor-index` right-aligned at x=200 and the Nyquist row. Both belong; only the footer was over budget |
+| Info table | 3 | **One row per fact** — label at x=2, value at x=84 as 6 px `text`. It spent TWO rows per fact, eight rows for four values, filling the panel |
+| Section root | 2 | Folded into P5's prompt template (§5b.3). Its `prompt` element read `ENTER to open >`, duplicating the footer's `ENTER open` — the same duplication removed from P5 |
 
-**Renumbering is done.** `Display_UI_Requirements.md` §4.1 (state machine), §4.2 (flow indicator), §4.3 (page
-table), §4.3.1 (confirm screens) and §5.7 (identifier scheme) were rewritten for the nine-entry ring, along with
-the stale page references in `Gesture_Reference.md`, `Project_document.md`, `RGB_LED_Behavior.md` and
-`WiFi_MQTT_Connectivity.md`. §4.1 had described a nine-page ring by coincidence while the real one had grown to
-eleven with the network pages.
+**Two constraints the info table exposed, both now stated rather than discovered on hardware:**
 
-`docs/active_work/open_decisions.md` and `docs/new feature proposal/NF-20260730-01-menu-navigation-model.md`
-were deliberately **left alone**: they record decisions and proposals as they stood, and rewriting their page
-numbers would falsify the history that justifies the current design.
+- **A 32-character SSID does not fit.** From x=84 at 6 px, 24 characters reach the scrollbar at x=232, so a
+  longer name is **clipped**. The same applies to an MQTT hostname, which may be 64 characters. The panel is
+  240 px; something has to give, and clipping the tail beats overrunning the scrollbar.
+- **Labels may be up to 13 characters.** The value column began at x=78, which fits 12 — and
+  `net-wifi-ap-info`'s `Closes in (s)` is 13, overrunning by 2 px. The column moved to x=84 rather than the
+  label being shortened: labels are authored English, and trimming them to fit a column invented for them is
+  the wrong direction. The cost is one character of SSID.
 
-§5.7 also gained the rule the old title broke: **a page number belongs in the identifier, never in the title an
-operator reads.** `P8 FACTORY RESET` made renumbering invalidate its own title.
+Info-table values are `text` at 6 px rather than `value` at 7 px, deliberately: they are diagnostics, not
+measurements, and the extra character per 42 px is what makes the SSID row useful.
 
-The 43 config and net overflows share one cause: footer hints and option lists written as prose against a
-budget nobody had stated. The worst is the baud-rate list at **58 characters (348 px)**, 108 px past the edge;
-`UP/DN adjust  ENTER save  hold ENTER discard` is 44. Every one fits once shortened to 38.
+### 7.7. State after the sweep
+
+**68 screens specified, all auditing clean** — the nine-entry ring plus every config and net screen.
+
+| Shape | Count |
+| --- | --- |
+| Setting page | 22 |
+| Editor | 16 |
+| Sensor list entry | 8 |
+| BACK entry | 6 |
+| Telemetry page | 5 |
+| Per-sensor setting | 4 |
+| Info table | 3 |
+| Info page (P0, P5, P6) | 2 |
+| Section root | 2 |
+
+Twelve distinct footer strings across all 68, the widest 224 px against a 240 px panel. Seven of them are the
+shared vocabulary covering 63 screens; the other five are screen-specific and say something the gesture list
+cannot — `ENTER reset totals (hold 3s)`, `MAX = at sensor ceiling`.
+
+## 8. State and what remains
+
+**Every screen is specified.** 68 JSON files under `screens/`, all clean against
+`tools/audit/screen-spec.ts`: no collisions, no overflow, every icon addressable, and the only element in the
+banner's row is the footer it is designed to replace.
+
+Nothing is implemented. The spec is deliberately ahead of the dataset, which still holds the eleven-page ring
+with its litres pages and its 43 overflowing footers. Closing that gap, in order:
+
+1. `screens/*.json` → `tools/skeleton/generate.mjs` → `web/mockup/src/data/screens.json` → exporter →
+   `src/ui/generated/GeneratedUi.*`. CI diffs each stage, so the generator must be taught the new layouts
+   rather than the dataset hand-edited.
+2. Firmware changes the screens depend on:
+   - **Units** (§2a): store flow in L/min; update `OFF_INSTANT_FLOW` / `OFF_MAX_FLOW`, the
+     `Project_document.md` register table that documents them as L/s, `RGB_LED_Behavior.md`'s 0.0 L/s
+     threshold, and `drawFlowDots`' 0.1–10.0 clamp.
+   - **Aggregate registers** 50–56 (§2b), including which sensor holds the peak.
+   - **`bannerY = 116`** (§2c) — one line.
+   - **Four catalogue values**: `telemetry.totalFlowLpm`, `telemetry.maxFlowLpm`, `legend.status`,
+     `config.editor.range`. Each needs a resolver arm, and the exporter's resolvable check only *warns*, so
+     treat a missing arm as fatal for these four.
+   - **Four dots in a chase**, with the inactive dot painted from the panel background and the colours taken
+     from the palette (§3.2).
+3. Volumes in both litres and m³ on MQTT and Home Assistant (§2a.1). Partly mapped only — the entity budget
+   `kHaMaxEntities = kNumSensors * 3 + 4` and the discovery payload size are the open questions, and
+   `<base>/total/state` publishes a permanently-zero m³ total because `firmware.cpp` never assigns it.
+
+Already done, ahead of the rest: the `isReady` cache is deleted, so a reboot no longer discards pulses or
+publishes a zero lifetime total.

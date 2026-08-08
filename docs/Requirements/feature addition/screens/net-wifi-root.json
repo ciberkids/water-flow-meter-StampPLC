@@ -1,0 +1,55 @@
+{
+  "id": "net-wifi-root",
+  "name": "WIFI \u2014 WiFi",
+  "description": "TEMPLATE for a section root. Same shape as P5: title, what is inside, and the gesture in the footer.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "WiFi",
+      "worst": "WiFi",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "line-1",
+      "kind": "text",
+      "x": 2,
+      "y": 28,
+      "content": "Radio, network name and",
+      "worst": "Radio, network name and",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "line-2",
+      "kind": "text",
+      "x": 2,
+      "y": 40,
+      "content": "passphrase.",
+      "worst": "passphrase.",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN pages  ENTER open  hold=exit",
+      "worst": "UP/DN pages  ENTER open  hold=exit",
+      "bound": "shared footer vocabulary, see 7.1",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; clears the banner row"
+    }
+  ]
+}

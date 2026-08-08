@@ -1,0 +1,56 @@
+{
+  "id": "config-sensor-3",
+  "name": "SEN3 \u2014 Sensor 3",
+  "description": "Sensor list entry. ENTER descends into sensor 3's settings; the level carries the sensor index, so no selectedSensor state exists. \u2014 laid out to the \u00a77 sensor template.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "Config > Sensors",
+      "worst": "Config > Sensors",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "field-value",
+      "kind": "value",
+      "x": 2,
+      "y": 24,
+      "emphasis": "strong",
+      "content": "3 >",
+      "worst": "8 >",
+      "bound": "the sensor number and a descend marker"
+    },
+    {
+      "id": "status-value",
+      "kind": "value",
+      "x": 44,
+      "y": 24,
+      "binding": "sensor.3.status",
+      "worst": "WAIT",
+      "bound": "the widest per-sensor status word"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN sensors  ENTER open  hold=exit",
+      "worst": "UP/DN sensors  ENTER open  hold=exit",
+      "bound": "shared footer vocabulary, see 7.1",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
+    }
+  ]
+}

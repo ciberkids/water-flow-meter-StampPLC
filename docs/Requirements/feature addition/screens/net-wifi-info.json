@@ -1,0 +1,113 @@
+{
+  "id": "net-wifi-info",
+  "name": "WIFI.I \u2014 WiFi info",
+  "description": "TEMPLATE for a read-only info table. One row per fact: label at x=2, value at x=78 as 6px text. Values are diagnostics rather than measurements, which is why they are text and not `value`.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "WiFi > WiFi info",
+      "worst": "WiFi > WiFi info",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row0-label",
+      "kind": "text",
+      "x": 2,
+      "y": 26,
+      "emphasis": "muted",
+      "content": "State",
+      "worst": "State",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row0-value",
+      "kind": "text",
+      "x": 84,
+      "y": 26,
+      "binding": "net.wifi.state",
+      "worst": "RETRY",
+      "bound": "wifiStateText is capped at five characters (wifi_manager.h:66)"
+    },
+    {
+      "id": "row1-label",
+      "kind": "text",
+      "x": 2,
+      "y": 44,
+      "emphasis": "muted",
+      "content": "Network",
+      "worst": "Network",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row1-value",
+      "kind": "text",
+      "x": 84,
+      "y": 44,
+      "binding": "net.wifi.ssid",
+      "worst": "MyPlantFloorNetwork24ch",
+      "bound": "an SSID is up to 32 characters; from x=84 at 6px only 24 fit before the scrollbar at x=232, so a longer name is CLIPPED \u2014 stated in 7.6 rather than discovered on hardware"
+    },
+    {
+      "id": "row2-label",
+      "kind": "text",
+      "x": 2,
+      "y": 62,
+      "emphasis": "muted",
+      "content": "Address",
+      "worst": "Address",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row2-value",
+      "kind": "text",
+      "x": 84,
+      "y": 62,
+      "binding": "net.wifi.ip",
+      "worst": "255.255.255.255",
+      "bound": "widest IPv4 dotted quad"
+    },
+    {
+      "id": "row3-label",
+      "kind": "text",
+      "x": 2,
+      "y": 80,
+      "emphasis": "muted",
+      "content": "Signal (dBm)",
+      "worst": "Signal (dBm)",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row3-value",
+      "kind": "text",
+      "x": 84,
+      "y": 80,
+      "binding": "net.wifi.rssi",
+      "worst": "-100",
+      "bound": "RSSI floor"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN pages  hold=exit",
+      "worst": "UP/DN pages  hold=exit",
+      "bound": "shared footer vocabulary, see 7.1",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; clears the banner row"
+    }
+  ]
+}

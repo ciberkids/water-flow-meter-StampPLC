@@ -1,0 +1,57 @@
+{
+  "id": "net-wifi-psk",
+  "name": "W3 \u2014 Passphrase",
+  "description": "WiFi entry W3. ENTER edits; UP/DOWN move within the level. \u2014 laid out to the \u00a77 setting template.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "WiFi > Passphrase",
+      "worst": "WiFi > Passphrase",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "field-value",
+      "kind": "value",
+      "x": 2,
+      "y": 24,
+      "emphasis": "strong",
+      "binding": "config.wifi.psk",
+      "worst": "?",
+      "bound": "bound not yet established \u2014 see 7.6"
+    },
+    {
+      "id": "range-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 44,
+      "emphasis": "muted",
+      "binding": "config.editor.range",
+      "worst": "8 rates: 1200..115200",
+      "bound": "derived from the descriptor \u2014 see 7.2"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN pages  ENTER edit  hold=exit",
+      "worst": "UP/DN pages  ENTER edit  hold=exit",
+      "bound": "shared footer vocabulary, see 7.1",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
+    }
+  ]
+}

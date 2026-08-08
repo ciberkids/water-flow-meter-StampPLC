@@ -1,0 +1,113 @@
+{
+  "id": "net-mqtt-info",
+  "name": "M3 \u2014 MQTT info",
+  "description": "MQTT information page. Read-only; the values come from the live radio and broker. \u2014 laid out to the \u00a77 info template.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "MQTT > MQTT info",
+      "worst": "MQTT > MQTT info",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row0-label",
+      "kind": "text",
+      "x": 2,
+      "y": 26,
+      "emphasis": "muted",
+      "content": "State",
+      "worst": "State",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row0-value",
+      "kind": "text",
+      "x": 84,
+      "y": 26,
+      "binding": "net.mqtt.state",
+      "worst": "OFF",
+      "bound": "mqttStateText emits OK or OFF"
+    },
+    {
+      "id": "row1-label",
+      "kind": "text",
+      "x": 2,
+      "y": 44,
+      "emphasis": "muted",
+      "content": "Broker",
+      "worst": "Broker",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row1-value",
+      "kind": "text",
+      "x": 84,
+      "y": 44,
+      "binding": "config.mqtt.host",
+      "worst": "?",
+      "bound": "bound not yet established \u2014 see 7.6"
+    },
+    {
+      "id": "row2-label",
+      "kind": "text",
+      "x": 2,
+      "y": 62,
+      "emphasis": "muted",
+      "content": "Port",
+      "worst": "Port",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row2-value",
+      "kind": "text",
+      "x": 84,
+      "y": 62,
+      "binding": "config.mqtt.port",
+      "worst": "?",
+      "bound": "bound not yet established \u2014 see 7.6"
+    },
+    {
+      "id": "row3-label",
+      "kind": "text",
+      "x": 2,
+      "y": 80,
+      "emphasis": "muted",
+      "content": "Topic",
+      "worst": "Topic",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row3-value",
+      "kind": "text",
+      "x": 84,
+      "y": 80,
+      "binding": "config.mqtt.baseTopic",
+      "worst": "?",
+      "bound": "bound not yet established \u2014 see 7.6"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN pages  hold=exit",
+      "worst": "UP/DN pages  hold=exit",
+      "bound": "shared footer vocabulary, see 7.1",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
+    }
+  ]
+}
