@@ -24,22 +24,38 @@ function findElement(
 const validationChecks: Array<
   (dataset: ScreenDataset, ir: ExportIR) => ValidationCheck
 > = [
+    /**
+     * The LED pulse meaning must be readable somewhere on the panel.
+     *
+     * Accepts EITHER binding. `legend.status` (spec §3.4) folded the LED legend together with the
+     * network row so P0 could give the walking dots the row back, which left `legend.led` with no
+     * user — §3.4 anticipated exactly that and required it be resolved rather than left to rot.
+     *
+     * What this check is FOR is the fact, not the binding: an operator watching a red LED blink has
+     * no way to know whether it means ten litres or a hundred unless the panel says so. Either
+     * binding carries the pulse volume, so either satisfies it; neither present is still a failure.
+     */
     (dataset) => {
-      const match = findElement(dataset, (element) => element.binding === "legend.led");
+      const legendBindings = ["legend.status", "legend.led"];
+      const match = findElement(dataset, (element) =>
+        legendBindings.includes(element.binding ?? "")
+      );
       if (!match) {
         return {
           id: "led-legend",
           title: "LED legend is present",
           status: "fail",
-          message: "Add a text element bound to legend.led so the LED legend renders in firmware.",
-          recommendation: "Create a legend text element on any info screen and bind it to legend.led."
+          message:
+            "No element binds legend.status or legend.led, so the LED pulse volume is nowhere on the panel.",
+          recommendation:
+            "Bind a text element on an info screen to legend.status (preferred, per §3.4) or legend.led."
         };
       }
       return {
         id: "led-legend",
         title: "LED legend is present",
         status: "pass",
-        message: `Element ${match.element.id} on ${match.screen.id} exposes the LED legend binding.`,
+        message: `Element ${match.element.id} on ${match.screen.id} exposes the LED legend via ${match.element.binding}.`,
         screenId: match.screen.id,
         elementId: match.element.id
       };

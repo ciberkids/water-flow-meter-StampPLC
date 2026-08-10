@@ -3,50 +3,71 @@
     {
       "id": "info-p0-global-status",
       "name": "P0 — Global Status",
-      "description": "P0 landing page: aggregate flow and volume, plus the flow indicator and LED legend.",
+      "description": "Four groups: identity + current flow, the walking dots, the since-reset pair, then network and LED.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
           "x": 2,
           "y": 2,
-          "content": "System Status",
-          "emphasis": "strong"
+          "emphasis": "strong",
+          "content": "System Status"
         },
         {
           "id": "total-flow-label",
           "kind": "text",
           "x": 2,
-          "y": 20,
-          "content": "Total Flow (L/s):",
-          "emphasis": "muted"
+          "y": 14,
+          "emphasis": "muted",
+          "content": "Total Current Flow (L/m)"
         },
         {
           "id": "total-flow-value",
-          "kind": "text",
-          "x": 2,
-          "y": 32,
-          "binding": "telemetry.total",
-          "emphasis": "strong"
+          "kind": "value",
+          "x": 152,
+          "y": 14,
+          "emphasis": "strong",
+          "binding": "telemetry.totalFlowLpm"
         },
         {
           "id": "flow-dots",
           "kind": "icon",
-          "x": 40,
-          "y": 70,
-          "width": 55,
-          "height": 55,
+          "x": 60,
+          "y": 30,
+          "width": 120,
+          "height": 40,
           "metadata": {
             "assetId": "flow-dots"
           }
         },
         {
-          "id": "footer-hint",
+          "id": "session-total-label",
           "kind": "text",
           "x": 2,
-          "y": 124,
-          "content": "UP/DN pages   UP+DN display off",
-          "emphasis": "muted"
+          "y": 80,
+          "content": "Since reset (m3)"
+        },
+        {
+          "id": "session-total-value",
+          "kind": "value",
+          "x": 153,
+          "y": 80,
+          "binding": "telemetry.totalVolumeM3"
+        },
+        {
+          "id": "max-flow",
+          "kind": "text",
+          "x": 2,
+          "y": 92,
+          "binding": "telemetry.maxFlowLpm"
+        },
+        {
+          "id": "net-led-status",
+          "kind": "text",
+          "x": 2,
+          "y": 108,
+          "emphasis": "muted",
+          "binding": "legend.status"
         },
         {
           "id": "level-position",
@@ -54,24 +75,15 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         },
         {
-          "id": "legend-led",
+          "id": "footer-hint",
           "kind": "text",
-          "x": 8,
-          "y": 112,
-          "content": "LED: Red=Pulse Grn=Ready Blu=Flow",
+          "x": 2,
+          "y": 124,
           "emphasis": "muted",
-          "binding": "legend.led"
-        },
-        {
-          "id": "net-status",
-          "kind": "value",
-          "x": 8,
-          "y": 98,
-          "binding": "net.status",
-          "emphasis": "muted"
+          "content": "UP/DN pages   UP+DN off"
         }
       ],
       "flows": [
@@ -88,7 +100,7 @@
         },
         {
           "id": "f-prev",
-          "label": "Prev page",
+          "label": "Previous page",
           "trigger": {
             "type": "button",
             "button": "up",
@@ -113,215 +125,79 @@
     {
       "id": "info-p1-instant-flow",
       "name": "P1 — Instant Flow",
-      "description": "P1: instantaneous flow for all eight sensors in two columns.",
+      "description": "Two columns of four. One self-describing element per sensor; the unit is in the header, as on every telemetry page.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
           "x": 2,
           "y": 2,
-          "content": "Instant Flow (L/s)",
-          "emphasis": "strong"
-        },
-        {
-          "id": "s1-label",
-          "kind": "text",
-          "x": 2,
-          "y": 18,
-          "content": "S1",
-          "emphasis": "muted"
+          "emphasis": "strong",
+          "content": "Instant Flow (L/m)"
         },
         {
           "id": "s1-value",
           "kind": "value",
-          "x": 14,
-          "y": 18,
-          "binding": "sensor.1.instantFlow"
-        },
-        {
-          "id": "s1-status",
-          "kind": "badge",
-          "x": 60,
-          "y": 18,
-          "binding": "sensor.1.status"
-        },
-        {
-          "id": "s2-label",
-          "kind": "text",
           "x": 2,
-          "y": 30,
-          "content": "S2",
-          "emphasis": "muted"
+          "y": 24,
+          "binding": "sensor.1.instantFlow"
         },
         {
           "id": "s2-value",
           "kind": "value",
-          "x": 14,
-          "y": 30,
-          "binding": "sensor.2.instantFlow"
-        },
-        {
-          "id": "s2-status",
-          "kind": "badge",
-          "x": 60,
-          "y": 30,
-          "binding": "sensor.2.status"
-        },
-        {
-          "id": "s3-label",
-          "kind": "text",
           "x": 2,
-          "y": 42,
-          "content": "S3",
-          "emphasis": "muted"
+          "y": 44,
+          "binding": "sensor.2.instantFlow"
         },
         {
           "id": "s3-value",
           "kind": "value",
-          "x": 14,
-          "y": 42,
-          "binding": "sensor.3.instantFlow"
-        },
-        {
-          "id": "s3-status",
-          "kind": "badge",
-          "x": 60,
-          "y": 42,
-          "binding": "sensor.3.status"
-        },
-        {
-          "id": "s4-label",
-          "kind": "text",
           "x": 2,
-          "y": 54,
-          "content": "S4",
-          "emphasis": "muted"
+          "y": 64,
+          "binding": "sensor.3.instantFlow"
         },
         {
           "id": "s4-value",
           "kind": "value",
-          "x": 14,
-          "y": 54,
+          "x": 2,
+          "y": 84,
           "binding": "sensor.4.instantFlow"
-        },
-        {
-          "id": "s4-status",
-          "kind": "badge",
-          "x": 60,
-          "y": 54,
-          "binding": "sensor.4.status"
-        },
-        {
-          "id": "s5-label",
-          "kind": "text",
-          "x": 69,
-          "y": 18,
-          "content": "S5",
-          "emphasis": "muted"
         },
         {
           "id": "s5-value",
           "kind": "value",
-          "x": 81,
-          "y": 18,
+          "x": 114,
+          "y": 24,
           "binding": "sensor.5.instantFlow"
-        },
-        {
-          "id": "s5-status",
-          "kind": "badge",
-          "x": 120,
-          "y": 18,
-          "binding": "sensor.5.status"
-        },
-        {
-          "id": "s6-label",
-          "kind": "text",
-          "x": 69,
-          "y": 30,
-          "content": "S6",
-          "emphasis": "muted"
         },
         {
           "id": "s6-value",
           "kind": "value",
-          "x": 81,
-          "y": 30,
+          "x": 114,
+          "y": 44,
           "binding": "sensor.6.instantFlow"
-        },
-        {
-          "id": "s6-status",
-          "kind": "badge",
-          "x": 120,
-          "y": 30,
-          "binding": "sensor.6.status"
-        },
-        {
-          "id": "s7-label",
-          "kind": "text",
-          "x": 69,
-          "y": 42,
-          "content": "S7",
-          "emphasis": "muted"
         },
         {
           "id": "s7-value",
           "kind": "value",
-          "x": 81,
-          "y": 42,
+          "x": 114,
+          "y": 64,
           "binding": "sensor.7.instantFlow"
-        },
-        {
-          "id": "s7-status",
-          "kind": "badge",
-          "x": 120,
-          "y": 42,
-          "binding": "sensor.7.status"
-        },
-        {
-          "id": "s8-label",
-          "kind": "text",
-          "x": 69,
-          "y": 54,
-          "content": "S8",
-          "emphasis": "muted"
         },
         {
           "id": "s8-value",
           "kind": "value",
-          "x": 81,
-          "y": 54,
+          "x": 114,
+          "y": 84,
           "binding": "sensor.8.instantFlow"
-        },
-        {
-          "id": "s8-status",
-          "kind": "badge",
-          "x": 120,
-          "y": 54,
-          "binding": "sensor.8.status"
-        },
-        {
-          "id": "divider-1",
-          "kind": "box",
-          "x": 0,
-          "y": 65,
-          "width": 240,
-          "height": 1
-        },
-        {
-          "id": "divider-2",
-          "kind": "box",
-          "x": 0,
-          "y": 124,
-          "width": 240,
-          "height": 1
         },
         {
           "id": "footer-hint",
           "kind": "text",
           "x": 2,
           "y": 124,
-          "content": "UP/DN pages   UP+DN display off",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages   UP+DN off"
         },
         {
           "id": "level-position",
@@ -329,7 +205,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -341,12 +217,12 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "info-p2-cumulative-liters",
+          "targetScreenId": "info-p2-cumulative-m3",
           "actionId": "ui.action.page.next"
         },
         {
           "id": "f-prev",
-          "label": "Prev page",
+          "label": "Previous page",
           "trigger": {
             "type": "button",
             "button": "up",
@@ -369,162 +245,81 @@
       ]
     },
     {
-      "id": "info-p2-cumulative-liters",
-      "name": "P2 — Cumulative Liters",
-      "description": "P2: cumulative litres. ENTER opens the reset-totals confirm screen (3 s hold).",
+      "id": "info-p2-cumulative-m3",
+      "name": "P2 — Cumulative Volume",
+      "description": "Two columns of four on P1's grid, in m3. Absorbs the old litres page: 1 L = 0.001 m3, so one page carries both readings.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
           "x": 2,
           "y": 2,
-          "content": "Cumulative (L)",
-          "emphasis": "strong"
-        },
-        {
-          "id": "s1-label",
-          "kind": "text",
-          "x": 2,
-          "y": 18,
-          "content": "S1",
-          "emphasis": "muted"
+          "emphasis": "strong",
+          "content": "Cumulative (m3)"
         },
         {
           "id": "s1-value",
           "kind": "value",
-          "x": 14,
-          "y": 18,
-          "binding": "sensor.1.cumulativeLiters"
-        },
-        {
-          "id": "s2-label",
-          "kind": "text",
           "x": 2,
-          "y": 30,
-          "content": "S2",
-          "emphasis": "muted"
+          "y": 24,
+          "binding": "sensor.1.cumulativeM3"
         },
         {
           "id": "s2-value",
           "kind": "value",
-          "x": 14,
-          "y": 30,
-          "binding": "sensor.2.cumulativeLiters"
-        },
-        {
-          "id": "s3-label",
-          "kind": "text",
           "x": 2,
-          "y": 42,
-          "content": "S3",
-          "emphasis": "muted"
+          "y": 44,
+          "binding": "sensor.2.cumulativeM3"
         },
         {
           "id": "s3-value",
           "kind": "value",
-          "x": 14,
-          "y": 42,
-          "binding": "sensor.3.cumulativeLiters"
-        },
-        {
-          "id": "s4-label",
-          "kind": "text",
           "x": 2,
-          "y": 54,
-          "content": "S4",
-          "emphasis": "muted"
+          "y": 64,
+          "binding": "sensor.3.cumulativeM3"
         },
         {
           "id": "s4-value",
           "kind": "value",
-          "x": 14,
-          "y": 54,
-          "binding": "sensor.4.cumulativeLiters"
-        },
-        {
-          "id": "s5-label",
-          "kind": "text",
-          "x": 69,
-          "y": 18,
-          "content": "S5",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 84,
+          "binding": "sensor.4.cumulativeM3"
         },
         {
           "id": "s5-value",
           "kind": "value",
-          "x": 81,
-          "y": 18,
-          "binding": "sensor.5.cumulativeLiters"
-        },
-        {
-          "id": "s6-label",
-          "kind": "text",
-          "x": 69,
-          "y": 30,
-          "content": "S6",
-          "emphasis": "muted"
+          "x": 114,
+          "y": 24,
+          "binding": "sensor.5.cumulativeM3"
         },
         {
           "id": "s6-value",
           "kind": "value",
-          "x": 81,
-          "y": 30,
-          "binding": "sensor.6.cumulativeLiters"
-        },
-        {
-          "id": "s7-label",
-          "kind": "text",
-          "x": 69,
-          "y": 42,
-          "content": "S7",
-          "emphasis": "muted"
+          "x": 114,
+          "y": 44,
+          "binding": "sensor.6.cumulativeM3"
         },
         {
           "id": "s7-value",
           "kind": "value",
-          "x": 81,
-          "y": 42,
-          "binding": "sensor.7.cumulativeLiters"
-        },
-        {
-          "id": "s8-label",
-          "kind": "text",
-          "x": 69,
-          "y": 54,
-          "content": "S8",
-          "emphasis": "muted"
+          "x": 114,
+          "y": 64,
+          "binding": "sensor.7.cumulativeM3"
         },
         {
           "id": "s8-value",
           "kind": "value",
-          "x": 81,
-          "y": 54,
-          "binding": "sensor.8.cumulativeLiters"
-        },
-        {
-          "id": "divider-1",
-          "kind": "box",
-          "x": 0,
-          "y": 65,
-          "width": 240,
-          "height": 1
+          "x": 114,
+          "y": 84,
+          "binding": "sensor.8.cumulativeM3"
         },
         {
           "id": "footer-hint",
           "kind": "text",
           "x": 2,
           "y": 124,
-          "content": "ENTER reset totals (hold 3s)",
-          "emphasis": "muted"
-        },
-        {
-          "id": "undersampling-badge",
-          "kind": "badge",
-          "x": 176,
-          "y": 4,
-          "content": "! Undersampling",
-          "binding": "diagnostics.undersampling",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "ENTER reset totals (hold 3s)"
         },
         {
           "id": "level-position",
@@ -532,7 +327,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -544,12 +339,12 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "info-p3-cumulative-m3",
+          "targetScreenId": "info-p3-session-m3",
           "actionId": "ui.action.page.next"
         },
         {
           "id": "f-prev",
-          "label": "Prev page",
+          "label": "Previous page",
           "trigger": {
             "type": "button",
             "button": "up",
@@ -583,555 +378,72 @@
       ]
     },
     {
-      "id": "info-p3-cumulative-m3",
-      "name": "P3 — Cumulative m³",
-      "description": "P3: cumulative cubic metres. ENTER opens the reset-totals confirm screen (3 s hold).",
+      "id": "info-p3-session-m3",
+      "name": "P3 — Session Volume",
+      "description": "Session volume in m3. Absorbs the old session-litres page for the same reason.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
           "x": 2,
           "y": 2,
-          "content": "Cumulative (m3)",
-          "emphasis": "strong"
-        },
-        {
-          "id": "s1-label",
-          "kind": "text",
-          "x": 2,
-          "y": 18,
-          "content": "S1",
-          "emphasis": "muted"
+          "emphasis": "strong",
+          "content": "Session (m3)"
         },
         {
           "id": "s1-value",
           "kind": "value",
-          "x": 14,
-          "y": 18,
-          "binding": "sensor.1.cumulativeM3"
-        },
-        {
-          "id": "s2-label",
-          "kind": "text",
           "x": 2,
-          "y": 30,
-          "content": "S2",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s2-value",
-          "kind": "value",
-          "x": 14,
-          "y": 30,
-          "binding": "sensor.2.cumulativeM3"
-        },
-        {
-          "id": "s3-label",
-          "kind": "text",
-          "x": 2,
-          "y": 42,
-          "content": "S3",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s3-value",
-          "kind": "value",
-          "x": 14,
-          "y": 42,
-          "binding": "sensor.3.cumulativeM3"
-        },
-        {
-          "id": "s4-label",
-          "kind": "text",
-          "x": 2,
-          "y": 54,
-          "content": "S4",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s4-value",
-          "kind": "value",
-          "x": 14,
-          "y": 54,
-          "binding": "sensor.4.cumulativeM3"
-        },
-        {
-          "id": "s5-label",
-          "kind": "text",
-          "x": 69,
-          "y": 18,
-          "content": "S5",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s5-value",
-          "kind": "value",
-          "x": 81,
-          "y": 18,
-          "binding": "sensor.5.cumulativeM3"
-        },
-        {
-          "id": "s6-label",
-          "kind": "text",
-          "x": 69,
-          "y": 30,
-          "content": "S6",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s6-value",
-          "kind": "value",
-          "x": 81,
-          "y": 30,
-          "binding": "sensor.6.cumulativeM3"
-        },
-        {
-          "id": "s7-label",
-          "kind": "text",
-          "x": 69,
-          "y": 42,
-          "content": "S7",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s7-value",
-          "kind": "value",
-          "x": 81,
-          "y": 42,
-          "binding": "sensor.7.cumulativeM3"
-        },
-        {
-          "id": "s8-label",
-          "kind": "text",
-          "x": 69,
-          "y": 54,
-          "content": "S8",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s8-value",
-          "kind": "value",
-          "x": 81,
-          "y": 54,
-          "binding": "sensor.8.cumulativeM3"
-        },
-        {
-          "id": "divider-1",
-          "kind": "box",
-          "x": 0,
-          "y": 65,
-          "width": 240,
-          "height": 1
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "content": "ENTER reset totals (hold 3s)",
-          "emphasis": "muted"
-        },
-        {
-          "id": "undersampling-badge",
-          "kind": "badge",
-          "x": 176,
-          "y": 4,
-          "content": "! Undersampling",
-          "binding": "diagnostics.undersampling",
-          "emphasis": "muted"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 104
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next page",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "info-p4-session-liters",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Prev page",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "info-p2-cumulative-liters",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-enter",
-          "label": "Open",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "confirm-reset-totals",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
-          "id": "f-escape",
-          "label": "Back to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "info-p4-session-liters",
-      "name": "P4 — Session Liters",
-      "description": "P4: session litres. ENTER opens the reset-session confirm screen.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "content": "Session (L)",
-          "emphasis": "strong"
-        },
-        {
-          "id": "s1-label",
-          "kind": "text",
-          "x": 2,
-          "y": 18,
-          "content": "S1",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s1-value",
-          "kind": "value",
-          "x": 14,
-          "y": 18,
-          "binding": "sensor.1.sessionLiters"
-        },
-        {
-          "id": "s2-label",
-          "kind": "text",
-          "x": 2,
-          "y": 30,
-          "content": "S2",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s2-value",
-          "kind": "value",
-          "x": 14,
-          "y": 30,
-          "binding": "sensor.2.sessionLiters"
-        },
-        {
-          "id": "s3-label",
-          "kind": "text",
-          "x": 2,
-          "y": 42,
-          "content": "S3",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s3-value",
-          "kind": "value",
-          "x": 14,
-          "y": 42,
-          "binding": "sensor.3.sessionLiters"
-        },
-        {
-          "id": "s4-label",
-          "kind": "text",
-          "x": 2,
-          "y": 54,
-          "content": "S4",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s4-value",
-          "kind": "value",
-          "x": 14,
-          "y": 54,
-          "binding": "sensor.4.sessionLiters"
-        },
-        {
-          "id": "s5-label",
-          "kind": "text",
-          "x": 69,
-          "y": 18,
-          "content": "S5",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s5-value",
-          "kind": "value",
-          "x": 81,
-          "y": 18,
-          "binding": "sensor.5.sessionLiters"
-        },
-        {
-          "id": "s6-label",
-          "kind": "text",
-          "x": 69,
-          "y": 30,
-          "content": "S6",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s6-value",
-          "kind": "value",
-          "x": 81,
-          "y": 30,
-          "binding": "sensor.6.sessionLiters"
-        },
-        {
-          "id": "s7-label",
-          "kind": "text",
-          "x": 69,
-          "y": 42,
-          "content": "S7",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s7-value",
-          "kind": "value",
-          "x": 81,
-          "y": 42,
-          "binding": "sensor.7.sessionLiters"
-        },
-        {
-          "id": "s8-label",
-          "kind": "text",
-          "x": 69,
-          "y": 54,
-          "content": "S8",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s8-value",
-          "kind": "value",
-          "x": 81,
-          "y": 54,
-          "binding": "sensor.8.sessionLiters"
-        },
-        {
-          "id": "undersampling-diag",
-          "kind": "badge",
-          "x": 2,
-          "y": 66,
-          "binding": "diagnostics.undersampling",
-          "emphasis": "strong"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "content": "ENTER reset session",
-          "emphasis": "muted"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 104
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next page",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "info-p5-session-m3",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Prev page",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "info-p3-cumulative-m3",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-enter",
-          "label": "Open",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "confirm-reset-session",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
-          "id": "f-escape",
-          "label": "Back to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "info-p5-session-m3",
-      "name": "P5 — Session m³",
-      "description": "P5: session cubic metres. ENTER opens the reset-session confirm screen.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "content": "Session (m3)",
-          "emphasis": "strong"
-        },
-        {
-          "id": "s1-label",
-          "kind": "text",
-          "x": 2,
-          "y": 18,
-          "content": "S1",
-          "emphasis": "muted"
-        },
-        {
-          "id": "s1-value",
-          "kind": "value",
-          "x": 14,
-          "y": 18,
+          "y": 24,
           "binding": "sensor.1.sessionM3"
         },
         {
-          "id": "s2-label",
-          "kind": "text",
-          "x": 2,
-          "y": 30,
-          "content": "S2",
-          "emphasis": "muted"
-        },
-        {
           "id": "s2-value",
           "kind": "value",
-          "x": 14,
-          "y": 30,
-          "binding": "sensor.2.sessionM3"
-        },
-        {
-          "id": "s3-label",
-          "kind": "text",
           "x": 2,
-          "y": 42,
-          "content": "S3",
-          "emphasis": "muted"
+          "y": 44,
+          "binding": "sensor.2.sessionM3"
         },
         {
           "id": "s3-value",
           "kind": "value",
-          "x": 14,
-          "y": 42,
-          "binding": "sensor.3.sessionM3"
-        },
-        {
-          "id": "s4-label",
-          "kind": "text",
           "x": 2,
-          "y": 54,
-          "content": "S4",
-          "emphasis": "muted"
+          "y": 64,
+          "binding": "sensor.3.sessionM3"
         },
         {
           "id": "s4-value",
           "kind": "value",
-          "x": 14,
-          "y": 54,
+          "x": 2,
+          "y": 84,
           "binding": "sensor.4.sessionM3"
-        },
-        {
-          "id": "s5-label",
-          "kind": "text",
-          "x": 69,
-          "y": 18,
-          "content": "S5",
-          "emphasis": "muted"
         },
         {
           "id": "s5-value",
           "kind": "value",
-          "x": 81,
-          "y": 18,
+          "x": 114,
+          "y": 24,
           "binding": "sensor.5.sessionM3"
-        },
-        {
-          "id": "s6-label",
-          "kind": "text",
-          "x": 69,
-          "y": 30,
-          "content": "S6",
-          "emphasis": "muted"
         },
         {
           "id": "s6-value",
           "kind": "value",
-          "x": 81,
-          "y": 30,
+          "x": 114,
+          "y": 44,
           "binding": "sensor.6.sessionM3"
-        },
-        {
-          "id": "s7-label",
-          "kind": "text",
-          "x": 69,
-          "y": 42,
-          "content": "S7",
-          "emphasis": "muted"
         },
         {
           "id": "s7-value",
           "kind": "value",
-          "x": 81,
-          "y": 42,
+          "x": 114,
+          "y": 64,
           "binding": "sensor.7.sessionM3"
-        },
-        {
-          "id": "s8-label",
-          "kind": "text",
-          "x": 69,
-          "y": 54,
-          "content": "S8",
-          "emphasis": "muted"
         },
         {
           "id": "s8-value",
           "kind": "value",
-          "x": 81,
-          "y": 54,
+          "x": 114,
+          "y": 84,
           "binding": "sensor.8.sessionM3"
         },
         {
@@ -1139,17 +451,8 @@
           "kind": "text",
           "x": 2,
           "y": 124,
-          "content": "ENTER reset session",
-          "emphasis": "muted"
-        },
-        {
-          "id": "undersampling-badge",
-          "kind": "badge",
-          "x": 176,
-          "y": 4,
-          "content": "! Undersampling",
-          "binding": "diagnostics.undersampling",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "ENTER reset session (hold 3s)"
         },
         {
           "id": "level-position",
@@ -1157,7 +460,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -1169,18 +472,18 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "info-p6-max-flow",
+          "targetScreenId": "info-p4-max-flow",
           "actionId": "ui.action.page.next"
         },
         {
           "id": "f-prev",
-          "label": "Prev page",
+          "label": "Previous page",
           "trigger": {
             "type": "button",
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "info-p4-session-liters",
+          "targetScreenId": "info-p2-cumulative-m3",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -1208,136 +511,72 @@
       ]
     },
     {
-      "id": "info-p6-max-flow",
-      "name": "P6 — Max Flow Since Reset",
-      "description": "P6: peak flow since the last session reset. ENTER opens the reset-session confirm screen.",
+      "id": "info-p4-max-flow",
+      "name": "P4 — Max Flow Since Reset",
+      "description": "Per-channel peaks since the last session reset, with MAX marking a channel that hit its q_max ceiling — i.e. a sensor under-dimensioned for its pipe.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
           "x": 2,
           "y": 2,
-          "content": "Max Flow (L/s)",
-          "emphasis": "strong"
-        },
-        {
-          "id": "s1-label",
-          "kind": "text",
-          "x": 2,
-          "y": 18,
-          "content": "S1",
-          "emphasis": "muted"
+          "emphasis": "strong",
+          "content": "Max Flow (L/m)"
         },
         {
           "id": "s1-value",
           "kind": "value",
-          "x": 14,
-          "y": 18,
-          "binding": "sensor.1.maxFlowSinceReset"
-        },
-        {
-          "id": "s2-label",
-          "kind": "text",
           "x": 2,
-          "y": 30,
-          "content": "S2",
-          "emphasis": "muted"
+          "y": 24,
+          "binding": "sensor.1.maxFlowSinceReset"
         },
         {
           "id": "s2-value",
           "kind": "value",
-          "x": 14,
-          "y": 30,
-          "binding": "sensor.2.maxFlowSinceReset"
-        },
-        {
-          "id": "s3-label",
-          "kind": "text",
           "x": 2,
-          "y": 42,
-          "content": "S3",
-          "emphasis": "muted"
+          "y": 44,
+          "binding": "sensor.2.maxFlowSinceReset"
         },
         {
           "id": "s3-value",
           "kind": "value",
-          "x": 14,
-          "y": 42,
-          "binding": "sensor.3.maxFlowSinceReset"
-        },
-        {
-          "id": "s4-label",
-          "kind": "text",
           "x": 2,
-          "y": 54,
-          "content": "S4",
-          "emphasis": "muted"
+          "y": 64,
+          "binding": "sensor.3.maxFlowSinceReset"
         },
         {
           "id": "s4-value",
           "kind": "value",
-          "x": 14,
-          "y": 54,
+          "x": 2,
+          "y": 84,
           "binding": "sensor.4.maxFlowSinceReset"
-        },
-        {
-          "id": "s5-label",
-          "kind": "text",
-          "x": 69,
-          "y": 18,
-          "content": "S5",
-          "emphasis": "muted"
         },
         {
           "id": "s5-value",
           "kind": "value",
-          "x": 81,
-          "y": 18,
+          "x": 114,
+          "y": 24,
           "binding": "sensor.5.maxFlowSinceReset"
-        },
-        {
-          "id": "s6-label",
-          "kind": "text",
-          "x": 69,
-          "y": 30,
-          "content": "S6",
-          "emphasis": "muted"
         },
         {
           "id": "s6-value",
           "kind": "value",
-          "x": 81,
-          "y": 30,
+          "x": 114,
+          "y": 44,
           "binding": "sensor.6.maxFlowSinceReset"
-        },
-        {
-          "id": "s7-label",
-          "kind": "text",
-          "x": 69,
-          "y": 42,
-          "content": "S7",
-          "emphasis": "muted"
         },
         {
           "id": "s7-value",
           "kind": "value",
-          "x": 81,
-          "y": 42,
+          "x": 114,
+          "y": 64,
           "binding": "sensor.7.maxFlowSinceReset"
-        },
-        {
-          "id": "s8-label",
-          "kind": "text",
-          "x": 69,
-          "y": 54,
-          "content": "S8",
-          "emphasis": "muted"
         },
         {
           "id": "s8-value",
           "kind": "value",
-          "x": 81,
-          "y": 54,
+          "x": 114,
+          "y": 84,
           "binding": "sensor.8.maxFlowSinceReset"
         },
         {
@@ -1345,17 +584,8 @@
           "kind": "text",
           "x": 2,
           "y": 124,
-          "content": "ENTER reset session",
-          "emphasis": "muted"
-        },
-        {
-          "id": "undersampling-badge",
-          "kind": "badge",
-          "x": 176,
-          "y": 4,
-          "content": "! Undersampling",
-          "binding": "diagnostics.undersampling",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "MAX = at sensor ceiling"
         },
         {
           "id": "level-position",
@@ -1363,7 +593,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -1375,18 +605,18 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "info-p7-enter-config",
+          "targetScreenId": "info-p5-enter-config",
           "actionId": "ui.action.page.next"
         },
         {
           "id": "f-prev",
-          "label": "Prev page",
+          "label": "Previous page",
           "trigger": {
             "type": "button",
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "info-p5-session-m3",
+          "targetScreenId": "info-p3-session-m3",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -1414,47 +644,39 @@
       ]
     },
     {
-      "id": "info-p7-enter-config",
-      "name": "P7 — Enter Configuration",
-      "description": "P7: entry point to Configuration. ENTER descends to the config root.",
+      "id": "info-p5-enter-config",
+      "name": "P5 — Enter Configuration",
+      "description": "A prompt, not a menu. The body says what Configuration contains; the footer says the gesture. Neither repeats the other.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
           "x": 2,
           "y": 2,
-          "content": "Configuration",
-          "emphasis": "strong"
+          "emphasis": "strong",
+          "content": "Configuration"
         },
         {
-          "id": "prompt-line1",
+          "id": "body-1",
           "kind": "text",
-          "x": 10,
-          "y": 100,
-          "content": "Press ENTER to open"
+          "x": 2,
+          "y": 28,
+          "content": "Sensor calibration, Modbus"
         },
         {
-          "id": "prompt-line2",
+          "id": "body-2",
           "kind": "text",
-          "x": 10,
-          "y": 112,
-          "content": "Configuration."
-        },
-        {
-          "id": "divider-1",
-          "kind": "box",
-          "x": 20,
-          "y": 120,
-          "width": 95,
-          "height": 1
+          "x": 2,
+          "y": 40,
+          "content": "link, LED pulses, network."
         },
         {
           "id": "footer-hint",
           "kind": "text",
           "x": 2,
           "y": 124,
-          "content": "ENTER opens Configuration",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "ENTER opens Configuration"
         },
         {
           "id": "level-position",
@@ -1462,7 +684,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -1474,18 +696,18 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "info-p8-factory-reset",
+          "targetScreenId": "info-p6-factory-reset",
           "actionId": "ui.action.page.next"
         },
         {
           "id": "f-prev",
-          "label": "Prev page",
+          "label": "Previous page",
           "trigger": {
             "type": "button",
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "info-p6-max-flow",
+          "targetScreenId": "info-p4-max-flow",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -1654,38 +876,39 @@
     {
       "id": "config-c1-modbus-id",
       "name": "C1 — Modbus ID",
-      "description": "Config root entry C1. ENTER descends; UP/DOWN move within the level.",
+      "description": "TEMPLATE for every setting page. Title names the setting, so the value needs no label; the range gives context before editing.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > Modbus ID"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.modbusSlaveId",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.modbusSlaveId"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit  hold=exit"
         },
         {
           "id": "level-position",
@@ -1693,7 +916,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -1746,38 +969,39 @@
     {
       "id": "config-c2-baud-rate",
       "name": "C2 — Baud Rate",
-      "description": "Config root entry C2. ENTER descends; UP/DOWN move within the level.",
+      "description": "Config root entry C2. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > Baud Rate"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.baudRate",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.baudRate"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit  hold=exit"
         },
         {
           "id": "level-position",
@@ -1785,7 +1009,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -1838,38 +1062,39 @@
     {
       "id": "config-c3-parity",
       "name": "C3 — Parity",
-      "description": "Config root entry C3. ENTER descends; UP/DOWN move within the level.",
+      "description": "Config root entry C3. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > Parity"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.parity",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.parity"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit  hold=exit"
         },
         {
           "id": "level-position",
@@ -1877,7 +1102,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -1930,38 +1155,39 @@
     {
       "id": "config-c4-stop-bits",
       "name": "C4 — Stop Bits",
-      "description": "Config root entry C4. ENTER descends; UP/DOWN move within the level.",
+      "description": "Config root entry C4. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > Stop Bits"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.stopBits",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.stopBits"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit  hold=exit"
         },
         {
           "id": "level-position",
@@ -1969,7 +1195,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -2022,38 +1248,39 @@
     {
       "id": "config-c5-led-pulse-vol",
       "name": "C5 — LED Pulse Volume",
-      "description": "Config root entry C5. ENTER descends; UP/DOWN move within the level.",
+      "description": "Config root entry C5. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > LED Pulse Volume"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current L",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.ledPulseVolume",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.ledPulseVolume"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit  hold=exit"
         },
         {
           "id": "level-position",
@@ -2061,7 +1288,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -2114,38 +1341,39 @@
     {
       "id": "config-c6-led-pulse-period",
       "name": "C6 — LED Pulse Period",
-      "description": "Config root entry C6. ENTER descends; UP/DOWN move within the level.",
+      "description": "Config root entry C6. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > LED Pulse Period"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current ms",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.ledPulsePeriod",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.ledPulsePeriod"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit  hold=exit"
         },
         {
           "id": "level-position",
@@ -2153,7 +1381,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -2206,38 +1434,23 @@
     {
       "id": "config-c7-sensor-select",
       "name": "C7 — Sensors",
-      "description": "Config root entry C7. ENTER descends; UP/DOWN move within the level.",
+      "description": "Config root entry C7. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > Sensors"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Select a sensor",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-value",
-          "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "Sensors 1-8 >",
-          "emphasis": "strong"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER open  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open  hold=exit"
         },
         {
           "id": "level-position",
@@ -2245,7 +1458,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -2298,30 +1511,31 @@
     {
       "id": "config-root-back",
       "name": "C.BACK — Back",
-      "description": "Ascends one level, out of Configuration.",
+      "description": "Ascends one level, out of Configuration. — laid out to the §7 back template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config"
         },
         {
           "id": "back-label",
           "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "< BACK",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "content": "< BACK"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "ENTER go back",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "ENTER go back"
         },
         {
           "id": "level-position",
@@ -2329,7 +1543,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -2381,62 +1595,78 @@
     {
       "id": "config-c1-modbus-id-edit",
       "name": "C1.V — Edit Modbus ID",
-      "description": "Value editor for C1. ENTER commits and ascends; hold ENTER discards.",
+      "description": "TEMPLATE for every value editor. New above Saved, aligned on one column so the change is directly comparable.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Edit > Modbus ID"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "1 to 247",
-          "emphasis": "muted"
         },
         {
           "id": "pending-label",
           "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 26,
+          "emphasis": "muted",
+          "content": "New"
         },
         {
           "id": "pending-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
+          "x": 44,
+          "y": 26,
+          "emphasis": "strong",
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
           "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "Saved"
         },
         {
           "id": "saved-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.modbusSlaveId",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 44,
+          "binding": "config.modbusSlaveId"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "nyquist-warning",
+          "kind": "text",
+          "x": 2,
+          "y": 86,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN adjust  ENTER save  hold=cancel"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
         }
       ],
       "flows": [
@@ -2487,62 +1717,70 @@
     {
       "id": "config-c2-baud-rate-edit",
       "name": "C2.V — Edit Baud Rate",
-      "description": "Value editor for C2. ENTER commits and ascends; hold ENTER discards.",
+      "description": "Value editor for C2. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Edit > Baud Rate"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "1200 / 2400 / 4800 / 9600 / 19200 / 38400 / 57600 / 115200",
-          "emphasis": "muted"
         },
         {
           "id": "pending-label",
           "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 26,
+          "emphasis": "muted",
+          "content": "New"
         },
         {
           "id": "pending-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
+          "x": 44,
+          "y": 26,
+          "emphasis": "strong",
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
           "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "Saved"
         },
         {
           "id": "saved-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.baudRate",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 44,
+          "binding": "config.baudRate"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "nyquist-warning",
+          "kind": "text",
+          "x": 2,
+          "y": 86,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN adjust  ENTER save  hold=cancel"
         }
       ],
       "flows": [
@@ -2593,62 +1831,70 @@
     {
       "id": "config-c3-parity-edit",
       "name": "C3.V — Edit Parity",
-      "description": "Value editor for C3. ENTER commits and ascends; hold ENTER discards.",
+      "description": "Value editor for C3. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Edit > Parity"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "None / Even / Odd",
-          "emphasis": "muted"
         },
         {
           "id": "pending-label",
           "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 26,
+          "emphasis": "muted",
+          "content": "New"
         },
         {
           "id": "pending-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
+          "x": 44,
+          "y": 26,
+          "emphasis": "strong",
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
           "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "Saved"
         },
         {
           "id": "saved-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.parity",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 44,
+          "binding": "config.parity"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "nyquist-warning",
+          "kind": "text",
+          "x": 2,
+          "y": 86,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN adjust  ENTER save  hold=cancel"
         }
       ],
       "flows": [
@@ -2699,62 +1945,70 @@
     {
       "id": "config-c4-stop-bits-edit",
       "name": "C4.V — Edit Stop Bits",
-      "description": "Value editor for C4. ENTER commits and ascends; hold ENTER discards.",
+      "description": "Value editor for C4. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Edit > Stop Bits"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "1 / 2",
-          "emphasis": "muted"
         },
         {
           "id": "pending-label",
           "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 26,
+          "emphasis": "muted",
+          "content": "New"
         },
         {
           "id": "pending-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
+          "x": 44,
+          "y": 26,
+          "emphasis": "strong",
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
           "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "Saved"
         },
         {
           "id": "saved-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.stopBits",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 44,
+          "binding": "config.stopBits"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "nyquist-warning",
+          "kind": "text",
+          "x": 2,
+          "y": 86,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN adjust  ENTER save  hold=cancel"
         }
       ],
       "flows": [
@@ -2805,62 +2059,70 @@
     {
       "id": "config-c5-led-pulse-vol-edit",
       "name": "C5.V — Edit LED Pulse Volume",
-      "description": "Value editor for C5. ENTER commits and ascends; hold ENTER discards.",
+      "description": "Value editor for C5. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Edit > LED Pulse Volume"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "1 / 10 / 100 L",
-          "emphasis": "muted"
         },
         {
           "id": "pending-label",
           "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 26,
+          "emphasis": "muted",
+          "content": "New"
         },
         {
           "id": "pending-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
+          "x": 44,
+          "y": 26,
+          "emphasis": "strong",
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
           "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "Saved"
         },
         {
           "id": "saved-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.ledPulseVolume",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 44,
+          "binding": "config.ledPulseVolume"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "nyquist-warning",
+          "kind": "text",
+          "x": 2,
+          "y": 86,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN adjust  ENTER save  hold=cancel"
         }
       ],
       "flows": [
@@ -2911,62 +2173,70 @@
     {
       "id": "config-c6-led-pulse-period-edit",
       "name": "C6.V — Edit LED Pulse Period",
-      "description": "Value editor for C6. ENTER commits and ascends; hold ENTER discards.",
+      "description": "Value editor for C6. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Edit > LED Pulse Period"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "100 to 2000 ms",
-          "emphasis": "muted"
         },
         {
           "id": "pending-label",
           "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 26,
+          "emphasis": "muted",
+          "content": "New"
         },
         {
           "id": "pending-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
+          "x": 44,
+          "y": 26,
+          "emphasis": "strong",
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
           "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "Saved"
         },
         {
           "id": "saved-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.ledPulsePeriod",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 44,
+          "binding": "config.ledPulsePeriod"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "nyquist-warning",
+          "kind": "text",
+          "x": 2,
+          "y": 86,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN adjust  ENTER save  hold=cancel"
         }
       ],
       "flows": [
@@ -3017,46 +2287,30 @@
     {
       "id": "config-sensor-1",
       "name": "SEN1 — Sensor 1",
-      "description": "Sensor list entry. ENTER descends into sensor 1's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "description": "Sensor list entry. ENTER descends into sensor 1's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > Sensors"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Sensor",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-value",
-          "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "1 >",
-          "emphasis": "strong"
         },
         {
           "id": "status-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "sensor.1.status",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 24,
+          "binding": "sensor.1.status"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN sensor  ENTER open  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open  hold=exit"
         },
         {
           "id": "level-position",
@@ -3064,7 +2318,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -3117,46 +2371,30 @@
     {
       "id": "config-sensor-2",
       "name": "SEN2 — Sensor 2",
-      "description": "Sensor list entry. ENTER descends into sensor 2's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "description": "Sensor list entry. ENTER descends into sensor 2's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > Sensors"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Sensor",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-value",
-          "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "2 >",
-          "emphasis": "strong"
         },
         {
           "id": "status-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "sensor.2.status",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 24,
+          "binding": "sensor.2.status"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN sensor  ENTER open  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open  hold=exit"
         },
         {
           "id": "level-position",
@@ -3164,7 +2402,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -3217,46 +2455,30 @@
     {
       "id": "config-sensor-3",
       "name": "SEN3 — Sensor 3",
-      "description": "Sensor list entry. ENTER descends into sensor 3's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "description": "Sensor list entry. ENTER descends into sensor 3's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > Sensors"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Sensor",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-value",
-          "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "3 >",
-          "emphasis": "strong"
         },
         {
           "id": "status-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "sensor.3.status",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 24,
+          "binding": "sensor.3.status"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN sensor  ENTER open  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open  hold=exit"
         },
         {
           "id": "level-position",
@@ -3264,7 +2486,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -3317,46 +2539,30 @@
     {
       "id": "config-sensor-4",
       "name": "SEN4 — Sensor 4",
-      "description": "Sensor list entry. ENTER descends into sensor 4's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "description": "Sensor list entry. ENTER descends into sensor 4's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > Sensors"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Sensor",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-value",
-          "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "4 >",
-          "emphasis": "strong"
         },
         {
           "id": "status-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "sensor.4.status",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 24,
+          "binding": "sensor.4.status"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN sensor  ENTER open  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open  hold=exit"
         },
         {
           "id": "level-position",
@@ -3364,7 +2570,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -3417,46 +2623,30 @@
     {
       "id": "config-sensor-5",
       "name": "SEN5 — Sensor 5",
-      "description": "Sensor list entry. ENTER descends into sensor 5's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "description": "Sensor list entry. ENTER descends into sensor 5's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > Sensors"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Sensor",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-value",
-          "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "5 >",
-          "emphasis": "strong"
         },
         {
           "id": "status-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "sensor.5.status",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 24,
+          "binding": "sensor.5.status"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN sensor  ENTER open  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open  hold=exit"
         },
         {
           "id": "level-position",
@@ -3464,7 +2654,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -3517,46 +2707,30 @@
     {
       "id": "config-sensor-6",
       "name": "SEN6 — Sensor 6",
-      "description": "Sensor list entry. ENTER descends into sensor 6's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "description": "Sensor list entry. ENTER descends into sensor 6's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > Sensors"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Sensor",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-value",
-          "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "6 >",
-          "emphasis": "strong"
         },
         {
           "id": "status-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "sensor.6.status",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 24,
+          "binding": "sensor.6.status"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN sensor  ENTER open  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open  hold=exit"
         },
         {
           "id": "level-position",
@@ -3564,7 +2738,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -3617,46 +2791,30 @@
     {
       "id": "config-sensor-7",
       "name": "SEN7 — Sensor 7",
-      "description": "Sensor list entry. ENTER descends into sensor 7's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "description": "Sensor list entry. ENTER descends into sensor 7's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > Sensors"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Sensor",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-value",
-          "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "7 >",
-          "emphasis": "strong"
         },
         {
           "id": "status-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "sensor.7.status",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 24,
+          "binding": "sensor.7.status"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN sensor  ENTER open  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open  hold=exit"
         },
         {
           "id": "level-position",
@@ -3664,7 +2822,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -3717,46 +2875,30 @@
     {
       "id": "config-sensor-8",
       "name": "SEN8 — Sensor 8",
-      "description": "Sensor list entry. ENTER descends into sensor 8's settings; the level carries the sensor index, so no selectedSensor state exists.",
+      "description": "Sensor list entry. ENTER descends into sensor 8's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > Sensors"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Sensor",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-value",
-          "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "8 >",
-          "emphasis": "strong"
         },
         {
           "id": "status-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "sensor.8.status",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 24,
+          "binding": "sensor.8.status"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN sensor  ENTER open  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open  hold=exit"
         },
         {
           "id": "level-position",
@@ -3764,7 +2906,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -3817,30 +2959,31 @@
     {
       "id": "config-sensor-back",
       "name": "SEN.BACK — Back",
-      "description": "Ascends from the sensor list to the config root.",
+      "description": "Ascends from the sensor list to the config root. — laid out to the §7 back template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Config > Sensors"
         },
         {
           "id": "back-label",
           "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "< BACK",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "content": "< BACK"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "ENTER go back",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "ENTER go back"
         },
         {
           "id": "level-position",
@@ -3848,7 +2991,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -3900,13 +3043,14 @@
     {
       "id": "config-s1-connected",
       "name": "S1 — Connected",
-      "description": "Sensor settings entry S1, scoped to the sensor of the current level.",
+      "description": "Sensor settings entry S1, scoped to the sensor of the current level. — laid out to the §7 persensor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Sensor > Connected"
         },
         {
@@ -3914,40 +3058,39 @@
           "kind": "value",
           "x": 200,
           "y": 2,
-          "binding": "config.selectedSensor",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
+          "binding": "config.selectedSensor"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.sensor.connected",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.sensor.connected"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
         },
         {
           "id": "nyquist-warning",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.sensor.nyquistWarning",
-          "emphasis": "muted"
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit  hold=exit"
         },
         {
           "id": "level-position",
@@ -3955,7 +3098,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -4008,62 +3151,70 @@
     {
       "id": "config-s1-connected-edit",
       "name": "S1.V — Edit Connected",
-      "description": "Value editor for S1. ENTER commits and ascends; hold ENTER discards.",
+      "description": "Value editor for S1. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Edit > Connected"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "Off / On",
-          "emphasis": "muted"
         },
         {
           "id": "pending-label",
           "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 26,
+          "emphasis": "muted",
+          "content": "New"
         },
         {
           "id": "pending-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
+          "x": 44,
+          "y": 26,
+          "emphasis": "strong",
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
           "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "Saved"
         },
         {
           "id": "saved-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.sensor.connected",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 44,
+          "binding": "config.sensor.connected"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "nyquist-warning",
+          "kind": "text",
+          "x": 2,
+          "y": 86,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN adjust  ENTER save  hold=cancel"
         }
       ],
       "flows": [
@@ -4114,13 +3265,14 @@
     {
       "id": "config-s2-multiplier",
       "name": "S2 — Multiplier (F)",
-      "description": "Sensor settings entry S2, scoped to the sensor of the current level.",
+      "description": "Sensor settings entry S2, scoped to the sensor of the current level. — laid out to the §7 persensor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Sensor > Multiplier (F)"
         },
         {
@@ -4128,40 +3280,39 @@
           "kind": "value",
           "x": 200,
           "y": 2,
-          "binding": "config.selectedSensor",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
+          "binding": "config.selectedSensor"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.sensor.multiplier",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.sensor.multiplier"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
         },
         {
           "id": "nyquist-warning",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.sensor.nyquistWarning",
-          "emphasis": "muted"
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit  hold=exit"
         },
         {
           "id": "level-position",
@@ -4169,7 +3320,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -4222,62 +3373,70 @@
     {
       "id": "config-s2-multiplier-edit",
       "name": "S2.V — Edit Multiplier (F)",
-      "description": "Value editor for S2. ENTER commits and ascends; hold ENTER discards.",
+      "description": "Value editor for S2. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Edit > Multiplier (F)"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "-32768 to 32767",
-          "emphasis": "muted"
         },
         {
           "id": "pending-label",
           "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 26,
+          "emphasis": "muted",
+          "content": "New"
         },
         {
           "id": "pending-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
+          "x": 44,
+          "y": 26,
+          "emphasis": "strong",
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
           "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "Saved"
         },
         {
           "id": "saved-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.sensor.multiplier",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 44,
+          "binding": "config.sensor.multiplier"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "nyquist-warning",
+          "kind": "text",
+          "x": 2,
+          "y": 86,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN adjust  ENTER save  hold=cancel"
         }
       ],
       "flows": [
@@ -4328,13 +3487,14 @@
     {
       "id": "config-s3-adjust",
       "name": "S3 — Adjust",
-      "description": "Sensor settings entry S3, scoped to the sensor of the current level.",
+      "description": "Sensor settings entry S3, scoped to the sensor of the current level. — laid out to the §7 persensor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Sensor > Adjust"
         },
         {
@@ -4342,40 +3502,39 @@
           "kind": "value",
           "x": 200,
           "y": 2,
-          "binding": "config.selectedSensor",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
+          "binding": "config.selectedSensor"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.sensor.adjust",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.sensor.adjust"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
         },
         {
           "id": "nyquist-warning",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.sensor.nyquistWarning",
-          "emphasis": "muted"
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit  hold=exit"
         },
         {
           "id": "level-position",
@@ -4383,7 +3542,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -4436,62 +3595,70 @@
     {
       "id": "config-s3-adjust-edit",
       "name": "S3.V — Edit Adjust",
-      "description": "Value editor for S3. ENTER commits and ascends; hold ENTER discards.",
+      "description": "Value editor for S3. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Edit > Adjust"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "-32768 to 32767",
-          "emphasis": "muted"
         },
         {
           "id": "pending-label",
           "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 26,
+          "emphasis": "muted",
+          "content": "New"
         },
         {
           "id": "pending-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
+          "x": 44,
+          "y": 26,
+          "emphasis": "strong",
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
           "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "Saved"
         },
         {
           "id": "saved-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.sensor.adjust",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 44,
+          "binding": "config.sensor.adjust"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "nyquist-warning",
+          "kind": "text",
+          "x": 2,
+          "y": 86,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN adjust  ENTER save  hold=cancel"
         }
       ],
       "flows": [
@@ -4542,13 +3709,14 @@
     {
       "id": "config-s4-max-flow",
       "name": "S4 — Max Flow (Q)",
-      "description": "Sensor settings entry S4, scoped to the sensor of the current level.",
+      "description": "Sensor settings entry S4, scoped to the sensor of the current level. — laid out to the §7 persensor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Sensor > Max Flow (Q)"
         },
         {
@@ -4556,40 +3724,39 @@
           "kind": "value",
           "x": 200,
           "y": 2,
-          "binding": "config.selectedSensor",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current L/min",
-          "emphasis": "muted"
+          "binding": "config.selectedSensor"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.sensor.maxFlow",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.sensor.maxFlow"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
         },
         {
           "id": "nyquist-warning",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.sensor.nyquistWarning",
-          "emphasis": "muted"
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit  hold=exit"
         },
         {
           "id": "level-position",
@@ -4597,7 +3764,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -4650,62 +3817,70 @@
     {
       "id": "config-s4-max-flow-edit",
       "name": "S4.V — Edit Max Flow (Q)",
-      "description": "Value editor for S4. ENTER commits and ascends; hold ENTER discards.",
+      "description": "Value editor for S4. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Edit > Max Flow (Q)"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "0 to 65535 L/min",
-          "emphasis": "muted"
         },
         {
           "id": "pending-label",
           "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 26,
+          "emphasis": "muted",
+          "content": "New"
         },
         {
           "id": "pending-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
+          "x": 44,
+          "y": 26,
+          "emphasis": "strong",
+          "binding": "config.editor.pending"
         },
         {
           "id": "saved-label",
           "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "Saved"
         },
         {
           "id": "saved-value",
           "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.sensor.maxFlow",
-          "emphasis": "muted"
+          "x": 44,
+          "y": 44,
+          "binding": "config.sensor.maxFlow"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "nyquist-warning",
+          "kind": "text",
+          "x": 2,
+          "y": 86,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN adjust  ENTER save  hold=cancel"
         }
       ],
       "flows": [
@@ -4756,30 +3931,31 @@
     {
       "id": "config-sensor-settings-back",
       "name": "S.BACK — Back",
-      "description": "Ascends from sensor settings to the sensor list.",
+      "description": "Ascends from sensor settings to the sensor list. — laid out to the §7 back template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "Sensor"
         },
         {
           "id": "back-label",
           "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "< BACK",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "content": "< BACK"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "ENTER go back",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "ENTER go back"
         },
         {
           "id": "level-position",
@@ -4787,7 +3963,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -4839,46 +4015,37 @@
     {
       "id": "net-wifi-root",
       "name": "WIFI — WiFi",
-      "description": "Root-level WiFi entry. ENTER descends into the WiFi level.",
+      "description": "TEMPLATE for a section root. Same shape as P5: title, what is inside, and the gesture in the footer.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
-          "content": "WIFI"
+          "emphasis": "strong",
+          "content": "WiFi"
         },
         {
           "id": "line-1",
           "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Radio, network name and",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 28,
+          "content": "Radio, network name and"
         },
         {
           "id": "line-2",
           "kind": "text",
-          "x": 8,
-          "y": 42,
-          "content": "passphrase.",
-          "emphasis": "muted"
-        },
-        {
-          "id": "prompt",
-          "kind": "text",
-          "x": 8,
-          "y": 64,
-          "content": "ENTER to open >",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 40,
+          "content": "passphrase."
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER open",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open  hold=exit"
         },
         {
           "id": "level-position",
@@ -4886,7 +4053,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -4909,7 +4076,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "info-p8-factory-reset",
+          "targetScreenId": "info-p6-factory-reset",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -4939,46 +4106,37 @@
     {
       "id": "net-mqtt-root",
       "name": "MQTT — MQTT",
-      "description": "Root-level MQTT entry. ENTER descends into the MQTT level.",
+      "description": "Root-level MQTT entry. ENTER descends into the MQTT level. — laid out to the §7 root template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT"
         },
         {
           "id": "line-1",
           "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Broker, credentials and",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 28,
+          "content": "Broker, credentials and"
         },
         {
           "id": "line-2",
           "kind": "text",
-          "x": 8,
-          "y": 42,
-          "content": "Home Assistant discovery.",
-          "emphasis": "muted"
-        },
-        {
-          "id": "prompt",
-          "kind": "text",
-          "x": 8,
-          "y": 64,
-          "content": "ENTER to open >",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 40,
+          "content": "Home Assistant discovery."
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER open",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open  hold=exit"
         },
         {
           "id": "level-position",
@@ -4986,7 +4144,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -5039,38 +4197,31 @@
     {
       "id": "net-wifi-enabled",
       "name": "W1 — Enabled",
-      "description": "WiFi entry W1. ENTER edits; UP/DOWN move within the level.",
+      "description": "WiFi entry W1. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "WiFi > Enabled"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.wifi.enabled",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.wifi.enabled"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "Set via web portal or RS485"
         },
         {
           "id": "level-position",
@@ -5078,7 +4229,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -5105,17 +4256,6 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-wifi-enabled-edit",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
           "id": "f-escape",
           "label": "Exit to main screen",
           "trigger": {
@@ -5129,146 +4269,33 @@
       ]
     },
     {
-      "id": "net-wifi-enabled-edit",
-      "name": "W1.V — Edit Enabled",
-      "description": "Value editor for W1. ENTER commits and ascends; hold ENTER discards.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 8,
-          "y": 2,
-          "content": "Edit > Enabled"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "Off / On",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-value",
-          "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
-        },
-        {
-          "id": "saved-label",
-          "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
-        },
-        {
-          "id": "saved-value",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.wifi.enabled",
-          "emphasis": "muted"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-inc",
-          "label": "Increase",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.increment"
-        },
-        {
-          "id": "f-dec",
-          "label": "Decrease",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.decrement"
-        },
-        {
-          "id": "f-commit",
-          "label": "Save and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-wifi-enabled",
-          "actionId": "config.action.value.commit"
-        },
-        {
-          "id": "f-discard",
-          "label": "Discard and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "net-wifi-enabled",
-          "actionId": "config.action.value.discard"
-        }
-      ]
-    },
-    {
       "id": "net-wifi-ssid",
       "name": "W2 — Network (SSID)",
-      "description": "WiFi entry W2. ENTER edits; UP/DOWN move within the level.",
+      "description": "WiFi entry W2. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "WiFi > Network (SSID)"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.wifi.ssid",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.wifi.ssid"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "Set via web portal or RS485",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "Set via web portal or RS485"
         },
         {
           "id": "level-position",
@@ -5276,7 +4303,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -5318,38 +4345,31 @@
     {
       "id": "net-wifi-psk",
       "name": "W3 — Passphrase",
-      "description": "WiFi entry W3. ENTER edits; UP/DOWN move within the level.",
+      "description": "WiFi entry W3. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "WiFi > Passphrase"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.wifi.psk",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.wifi.psk"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "Set via web portal or RS485",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "Set via web portal or RS485"
         },
         {
           "id": "level-position",
@@ -5357,7 +4377,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -5399,38 +4419,23 @@
     {
       "id": "net-wifi-portal-reset",
       "name": "W4 — Reset portal login",
-      "description": "WiFi entry W4. ENTER descends; UP/DOWN move within the level.",
+      "description": "WiFi entry W4. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "WiFi > Reset portal login"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Open",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-value",
-          "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "Settings >",
-          "emphasis": "strong"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER open  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open  hold=exit"
         },
         {
           "id": "level-position",
@@ -5438,7 +4443,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -5491,30 +4496,31 @@
     {
       "id": "net-wifi-back",
       "name": "W.BACK — Back",
-      "description": "Ascends one level, out of WiFi.",
+      "description": "Ascends one level, out of WiFi. — laid out to the §7 back template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "WiFi"
         },
         {
           "id": "back-label",
           "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "< BACK",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "content": "< BACK"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "ENTER go back",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "ENTER go back"
         },
         {
           "id": "level-position",
@@ -5522,7 +4528,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -5574,38 +4580,31 @@
     {
       "id": "net-mqtt-enabled",
       "name": "M1 — Enabled",
-      "description": "MQTT entry M1. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT entry M1. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT > Enabled"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.mqtt.enabled",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.mqtt.enabled"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "Set via web portal or RS485"
         },
         {
           "id": "level-position",
@@ -5613,7 +4612,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -5640,17 +4639,6 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-enabled-edit",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
           "id": "f-escape",
           "label": "Exit to main screen",
           "trigger": {
@@ -5664,146 +4652,25 @@
       ]
     },
     {
-      "id": "net-mqtt-enabled-edit",
-      "name": "M1.V — Edit Enabled",
-      "description": "Value editor for M1. ENTER commits and ascends; hold ENTER discards.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 8,
-          "y": 2,
-          "content": "Edit > Enabled"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "Off / On",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-value",
-          "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
-        },
-        {
-          "id": "saved-label",
-          "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
-        },
-        {
-          "id": "saved-value",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.mqtt.enabled",
-          "emphasis": "muted"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-inc",
-          "label": "Increase",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.increment"
-        },
-        {
-          "id": "f-dec",
-          "label": "Decrease",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.decrement"
-        },
-        {
-          "id": "f-commit",
-          "label": "Save and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-enabled",
-          "actionId": "config.action.value.commit"
-        },
-        {
-          "id": "f-discard",
-          "label": "Discard and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "net-mqtt-enabled",
-          "actionId": "config.action.value.discard"
-        }
-      ]
-    },
-    {
       "id": "net-mqtt-setup",
       "name": "M2 — Broker",
-      "description": "MQTT entry M2. ENTER descends; UP/DOWN move within the level.",
+      "description": "MQTT entry M2. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT > Broker"
         },
         {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Open",
-          "emphasis": "muted"
-        },
-        {
-          "id": "field-value",
-          "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "Settings >",
-          "emphasis": "strong"
-        },
-        {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER open  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open  hold=exit"
         },
         {
           "id": "level-position",
@@ -5811,7 +4678,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -5864,30 +4731,31 @@
     {
       "id": "net-mqtt-back",
       "name": "M.BACK — Back",
-      "description": "Ascends one level, out of MQTT.",
+      "description": "Ascends one level, out of MQTT. — laid out to the §7 back template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT"
         },
         {
           "id": "back-label",
           "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "< BACK",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "content": "< BACK"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "ENTER go back",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "ENTER go back"
         },
         {
           "id": "level-position",
@@ -5895,7 +4763,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -5947,86 +4815,83 @@
     {
       "id": "net-wifi-info",
       "name": "W5 — WiFi info",
-      "description": "WiFi information page. Read-only; the values come from the live radio and broker.",
+      "description": "TEMPLATE for a read-only info table. One row per fact: label at x=2, value at x=78 as 6px text. Values are diagnostics rather than measurements, which is why they are text and not `value`.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "WiFi > WiFi info"
         },
         {
           "id": "row0-label",
           "kind": "text",
-          "x": 8,
-          "y": 24,
-          "content": "State",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 26,
+          "emphasis": "muted",
+          "content": "State"
         },
         {
           "id": "row0-value",
-          "kind": "value",
-          "x": 8,
-          "y": 34,
-          "binding": "net.wifi.state",
-          "emphasis": "strong"
+          "kind": "text",
+          "x": 84,
+          "y": 26,
+          "binding": "net.wifi.state"
         },
         {
           "id": "row1-label",
           "kind": "text",
-          "x": 8,
-          "y": 46,
-          "content": "Network",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "Network"
         },
         {
           "id": "row1-value",
-          "kind": "value",
-          "x": 8,
-          "y": 56,
-          "binding": "net.wifi.ssid",
-          "emphasis": "strong"
+          "kind": "text",
+          "x": 84,
+          "y": 44,
+          "binding": "net.wifi.ssid"
         },
         {
           "id": "row2-label",
           "kind": "text",
-          "x": 8,
-          "y": 68,
-          "content": "Address",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 62,
+          "emphasis": "muted",
+          "content": "Address"
         },
         {
           "id": "row2-value",
-          "kind": "value",
-          "x": 8,
-          "y": 78,
-          "binding": "net.wifi.ip",
-          "emphasis": "strong"
+          "kind": "text",
+          "x": 84,
+          "y": 62,
+          "binding": "net.wifi.ip"
         },
         {
           "id": "row3-label",
           "kind": "text",
-          "x": 8,
-          "y": 90,
-          "content": "Signal (dBm)",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 80,
+          "emphasis": "muted",
+          "content": "Signal (dBm)"
         },
         {
           "id": "row3-value",
-          "kind": "value",
-          "x": 8,
-          "y": 100,
-          "binding": "net.wifi.rssi",
-          "emphasis": "strong"
+          "kind": "text",
+          "x": 84,
+          "y": 80,
+          "binding": "net.wifi.rssi"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  hold=exit"
         },
         {
           "id": "level-position",
@@ -6034,7 +4899,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -6076,86 +4941,83 @@
     {
       "id": "net-wifi-ap-info",
       "name": "W6 — AP info",
-      "description": "WiFi information page. Read-only; the values come from the live radio and broker.",
+      "description": "WiFi information page. Read-only; the values come from the live radio and broker. — laid out to the §7 info template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "WiFi > AP info"
         },
         {
           "id": "row0-label",
           "kind": "text",
-          "x": 8,
-          "y": 24,
-          "content": "AP network",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 26,
+          "emphasis": "muted",
+          "content": "AP network"
         },
         {
           "id": "row0-value",
-          "kind": "value",
-          "x": 8,
-          "y": 34,
-          "binding": "net.ap.ssid",
-          "emphasis": "strong"
+          "kind": "text",
+          "x": 84,
+          "y": 26,
+          "binding": "net.ap.ssid"
         },
         {
           "id": "row1-label",
           "kind": "text",
-          "x": 8,
-          "y": 46,
-          "content": "AP key",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "AP key"
         },
         {
           "id": "row1-value",
-          "kind": "value",
-          "x": 8,
-          "y": 56,
-          "binding": "net.ap.password",
-          "emphasis": "strong"
+          "kind": "text",
+          "x": 84,
+          "y": 44,
+          "binding": "net.ap.password"
         },
         {
           "id": "row2-label",
           "kind": "text",
-          "x": 8,
-          "y": 68,
-          "content": "Browse to",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 62,
+          "emphasis": "muted",
+          "content": "Browse to"
         },
         {
           "id": "row2-value",
-          "kind": "value",
-          "x": 8,
-          "y": 78,
-          "binding": "net.ap.ip",
-          "emphasis": "strong"
+          "kind": "text",
+          "x": 84,
+          "y": 62,
+          "binding": "net.ap.ip"
         },
         {
           "id": "row3-label",
           "kind": "text",
-          "x": 8,
-          "y": 90,
-          "content": "Closes in (s)",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 80,
+          "emphasis": "muted",
+          "content": "Closes in (s)"
         },
         {
           "id": "row3-value",
-          "kind": "value",
-          "x": 8,
-          "y": 100,
-          "binding": "net.portal.remaining",
-          "emphasis": "strong"
+          "kind": "text",
+          "x": 84,
+          "y": 80,
+          "binding": "net.portal.remaining"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "Join the AP and browse to the address",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  hold=exit"
         },
         {
           "id": "level-position",
@@ -6163,7 +5025,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -6205,86 +5067,83 @@
     {
       "id": "net-mqtt-info",
       "name": "M3 — MQTT info",
-      "description": "MQTT information page. Read-only; the values come from the live radio and broker.",
+      "description": "MQTT information page. Read-only; the values come from the live radio and broker. — laid out to the §7 info template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT > MQTT info"
         },
         {
           "id": "row0-label",
           "kind": "text",
-          "x": 8,
-          "y": 24,
-          "content": "State",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 26,
+          "emphasis": "muted",
+          "content": "State"
         },
         {
           "id": "row0-value",
-          "kind": "value",
-          "x": 8,
-          "y": 34,
-          "binding": "net.mqtt.state",
-          "emphasis": "strong"
+          "kind": "text",
+          "x": 84,
+          "y": 26,
+          "binding": "net.mqtt.state"
         },
         {
           "id": "row1-label",
           "kind": "text",
-          "x": 8,
-          "y": 46,
-          "content": "Broker",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "Broker"
         },
         {
           "id": "row1-value",
-          "kind": "value",
-          "x": 8,
-          "y": 56,
-          "binding": "config.mqtt.host",
-          "emphasis": "strong"
+          "kind": "text",
+          "x": 84,
+          "y": 44,
+          "binding": "config.mqtt.host"
         },
         {
           "id": "row2-label",
           "kind": "text",
-          "x": 8,
-          "y": 68,
-          "content": "Port",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 62,
+          "emphasis": "muted",
+          "content": "Port"
         },
         {
           "id": "row2-value",
-          "kind": "value",
-          "x": 8,
-          "y": 78,
-          "binding": "config.mqtt.port",
-          "emphasis": "strong"
+          "kind": "text",
+          "x": 84,
+          "y": 62,
+          "binding": "config.mqtt.port"
         },
         {
           "id": "row3-label",
           "kind": "text",
-          "x": 8,
-          "y": 90,
-          "content": "Topic",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 80,
+          "emphasis": "muted",
+          "content": "Topic"
         },
         {
           "id": "row3-value",
-          "kind": "value",
-          "x": 8,
-          "y": 100,
-          "binding": "config.mqtt.baseTopic",
-          "emphasis": "strong"
+          "kind": "text",
+          "x": 84,
+          "y": 80,
+          "binding": "config.mqtt.baseTopic"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "UP/DN pages  hold=exit"
         },
         {
           "id": "level-position",
@@ -6292,7 +5151,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -6334,38 +5193,31 @@
     {
       "id": "net-mqtt-host",
       "name": "B1 — Broker host",
-      "description": "MQTT Broker entry B1. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B1. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT Broker > Broker host"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.mqtt.host",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.mqtt.host"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "Set via web portal or RS485",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "Set via web portal or RS485"
         },
         {
           "id": "level-position",
@@ -6373,7 +5225,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -6415,38 +5267,31 @@
     {
       "id": "net-mqtt-port",
       "name": "B2 — Port",
-      "description": "MQTT Broker entry B2. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B2. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT Broker > Port"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.mqtt.port",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.mqtt.port"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "Set via web portal or RS485"
         },
         {
           "id": "level-position",
@@ -6454,7 +5299,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -6481,17 +5326,6 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-port-edit",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
           "id": "f-escape",
           "label": "Exit to main screen",
           "trigger": {
@@ -6505,146 +5339,33 @@
       ]
     },
     {
-      "id": "net-mqtt-port-edit",
-      "name": "B2.V — Edit Port",
-      "description": "Value editor for B2. ENTER commits and ascends; hold ENTER discards.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 8,
-          "y": 2,
-          "content": "Edit > Port"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "1 to 65535",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-value",
-          "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
-        },
-        {
-          "id": "saved-label",
-          "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
-        },
-        {
-          "id": "saved-value",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.mqtt.port",
-          "emphasis": "muted"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-inc",
-          "label": "Increase",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.increment"
-        },
-        {
-          "id": "f-dec",
-          "label": "Decrease",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.decrement"
-        },
-        {
-          "id": "f-commit",
-          "label": "Save and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-port",
-          "actionId": "config.action.value.commit"
-        },
-        {
-          "id": "f-discard",
-          "label": "Discard and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "net-mqtt-port",
-          "actionId": "config.action.value.discard"
-        }
-      ]
-    },
-    {
       "id": "net-mqtt-user",
       "name": "B3 — Username",
-      "description": "MQTT Broker entry B3. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B3. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT Broker > Username"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.mqtt.user",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.mqtt.user"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "Set via web portal or RS485",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "Set via web portal or RS485"
         },
         {
           "id": "level-position",
@@ -6652,7 +5373,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -6694,38 +5415,31 @@
     {
       "id": "net-mqtt-password",
       "name": "B4 — Password",
-      "description": "MQTT Broker entry B4. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B4. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT Broker > Password"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.mqtt.password",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.mqtt.password"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "Set via web portal or RS485",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "Set via web portal or RS485"
         },
         {
           "id": "level-position",
@@ -6733,7 +5447,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -6775,38 +5489,31 @@
     {
       "id": "net-mqtt-base-topic",
       "name": "B5 — Base topic",
-      "description": "MQTT Broker entry B5. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B5. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT Broker > Base topic"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.mqtt.baseTopic",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.mqtt.baseTopic"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "Set via web portal or RS485",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "Set via web portal or RS485"
         },
         {
           "id": "level-position",
@@ -6814,7 +5521,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -6856,38 +5563,31 @@
     {
       "id": "net-mqtt-prefix",
       "name": "B6 — HA prefix",
-      "description": "MQTT Broker entry B6. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B6. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT Broker > HA prefix"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.mqtt.discoveryPrefix",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.mqtt.discoveryPrefix"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "Set via web portal or RS485",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "Set via web portal or RS485"
         },
         {
           "id": "level-position",
@@ -6895,7 +5595,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -6937,38 +5637,31 @@
     {
       "id": "net-mqtt-period",
       "name": "B7 — Publish period",
-      "description": "MQTT Broker entry B7. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B7. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT Broker > Publish period"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current s",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.mqtt.publishPeriod",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.mqtt.publishPeriod"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "Set via web portal or RS485"
         },
         {
           "id": "level-position",
@@ -6976,7 +5669,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -7003,17 +5696,6 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-period-edit",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
           "id": "f-escape",
           "label": "Exit to main screen",
           "trigger": {
@@ -7027,146 +5709,33 @@
       ]
     },
     {
-      "id": "net-mqtt-period-edit",
-      "name": "B7.V — Edit Publish period",
-      "description": "Value editor for B7. ENTER commits and ascends; hold ENTER discards.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 8,
-          "y": 2,
-          "content": "Edit > Publish period"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "1 to 3600 s",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-value",
-          "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
-        },
-        {
-          "id": "saved-label",
-          "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
-        },
-        {
-          "id": "saved-value",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.mqtt.publishPeriod",
-          "emphasis": "muted"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-inc",
-          "label": "Increase",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.increment"
-        },
-        {
-          "id": "f-dec",
-          "label": "Decrease",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.decrement"
-        },
-        {
-          "id": "f-commit",
-          "label": "Save and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-period",
-          "actionId": "config.action.value.commit"
-        },
-        {
-          "id": "f-discard",
-          "label": "Discard and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "net-mqtt-period",
-          "actionId": "config.action.value.discard"
-        }
-      ]
-    },
-    {
       "id": "net-mqtt-ha-discovery",
       "name": "B8 — HA discovery",
-      "description": "MQTT Broker entry B8. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B8. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT Broker > HA discovery"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.mqtt.haDiscovery",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.mqtt.haDiscovery"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "Set via web portal or RS485"
         },
         {
           "id": "level-position",
@@ -7174,7 +5743,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -7201,17 +5770,6 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-ha-discovery-edit",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
           "id": "f-escape",
           "label": "Exit to main screen",
           "trigger": {
@@ -7225,146 +5783,33 @@
       ]
     },
     {
-      "id": "net-mqtt-ha-discovery-edit",
-      "name": "B8.V — Edit HA discovery",
-      "description": "Value editor for B8. ENTER commits and ascends; hold ENTER discards.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 8,
-          "y": 2,
-          "content": "Edit > HA discovery"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "Off / On",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-value",
-          "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
-        },
-        {
-          "id": "saved-label",
-          "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
-        },
-        {
-          "id": "saved-value",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.mqtt.haDiscovery",
-          "emphasis": "muted"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-inc",
-          "label": "Increase",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.increment"
-        },
-        {
-          "id": "f-dec",
-          "label": "Decrease",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.decrement"
-        },
-        {
-          "id": "f-commit",
-          "label": "Save and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-ha-discovery",
-          "actionId": "config.action.value.commit"
-        },
-        {
-          "id": "f-discard",
-          "label": "Discard and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "net-mqtt-ha-discovery",
-          "actionId": "config.action.value.discard"
-        }
-      ]
-    },
-    {
       "id": "net-mqtt-qos",
       "name": "B9 — QoS",
-      "description": "MQTT Broker entry B9. ENTER edits; UP/DOWN move within the level.",
+      "description": "MQTT Broker entry B9. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT Broker > QoS"
-        },
-        {
-          "id": "field-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Current",
-          "emphasis": "muted"
         },
         {
           "id": "field-value",
           "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.mqtt.qos",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.mqtt.qos"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER edit  hold ENTER exit",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "Set via web portal or RS485"
         },
         {
           "id": "level-position",
@@ -7372,7 +5817,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -7399,17 +5844,6 @@
           "actionId": "ui.action.page.previous"
         },
         {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-qos-edit",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
           "id": "f-escape",
           "label": "Exit to main screen",
           "trigger": {
@@ -7423,138 +5857,33 @@
       ]
     },
     {
-      "id": "net-mqtt-qos-edit",
-      "name": "B9.V — Edit QoS",
-      "description": "Value editor for B9. ENTER commits and ascends; hold ENTER discards.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 8,
-          "y": 2,
-          "content": "Edit > QoS"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 16,
-          "content": "0 / 1",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-label",
-          "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "New value",
-          "emphasis": "muted"
-        },
-        {
-          "id": "pending-value",
-          "kind": "value",
-          "x": 8,
-          "y": 50,
-          "binding": "config.editor.pending",
-          "emphasis": "strong"
-        },
-        {
-          "id": "saved-label",
-          "kind": "text",
-          "x": 8,
-          "y": 78,
-          "content": "Saved",
-          "emphasis": "muted"
-        },
-        {
-          "id": "saved-value",
-          "kind": "value",
-          "x": 8,
-          "y": 92,
-          "binding": "config.mqtt.qos",
-          "emphasis": "muted"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 8,
-          "y": 124,
-          "content": "UP/DN adjust  ENTER save  hold ENTER discard",
-          "emphasis": "muted"
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-inc",
-          "label": "Increase",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.increment"
-        },
-        {
-          "id": "f-dec",
-          "label": "Decrease",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "actionId": "config.action.value.decrement"
-        },
-        {
-          "id": "f-commit",
-          "label": "Save and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-qos",
-          "actionId": "config.action.value.commit"
-        },
-        {
-          "id": "f-discard",
-          "label": "Discard and go back",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "net-mqtt-qos",
-          "actionId": "config.action.value.discard"
-        }
-      ]
-    },
-    {
       "id": "net-mqtt-setup-back",
       "name": "B.BACK — Back",
-      "description": "Ascends one level, out of MQTT Broker.",
+      "description": "Ascends one level, out of MQTT Broker. — laid out to the §7 back template.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
+          "emphasis": "strong",
           "content": "MQTT Broker"
         },
         {
           "id": "back-label",
           "kind": "text",
-          "x": 8,
-          "y": 50,
-          "content": "< BACK",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "content": "< BACK"
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "ENTER go back",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "ENTER go back"
         },
         {
           "id": "level-position",
@@ -7562,7 +5891,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -7612,48 +5941,63 @@
       ]
     },
     {
-      "id": "info-p8-factory-reset",
-      "name": "P8 — Factory Reset",
-      "description": "Info-level entry point for a full factory reset. ENTER opens the confirm screen.",
+      "id": "info-p6-factory-reset",
+      "name": "P6 — Factory Reset",
+      "description": "The warning names everything preferences.clear() erases, including the network provisioning the old text omitted. No page number in the title.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 2,
-          "content": "P8 FACTORY RESET"
+          "emphasis": "strong",
+          "content": "Factory Reset"
         },
         {
           "id": "warning-1",
           "kind": "text",
-          "x": 8,
-          "y": 30,
-          "content": "Erases all totals, sensor",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 28,
+          "emphasis": "strong",
+          "content": "Erases totals, calibration,"
         },
         {
           "id": "warning-2",
           "kind": "text",
-          "x": 8,
-          "y": 42,
-          "content": "config and LED settings.",
-          "emphasis": "muted"
+          "x": 2,
+          "y": 40,
+          "emphasis": "strong",
+          "content": "LED, Modbus link and WiFi"
         },
         {
-          "id": "prompt",
+          "id": "warning-3",
           "kind": "text",
-          "x": 8,
-          "y": 64,
-          "content": "ENTER to continue >",
-          "emphasis": "strong"
+          "x": 2,
+          "y": 52,
+          "emphasis": "strong",
+          "content": "and MQTT credentials."
+        },
+        {
+          "id": "warning-4",
+          "kind": "text",
+          "x": 2,
+          "y": 72,
+          "content": "Re-provisioning needs the AP"
+        },
+        {
+          "id": "warning-5",
+          "kind": "text",
+          "x": 2,
+          "y": 84,
+          "content": "portal, at the device."
         },
         {
           "id": "footer-hint",
           "kind": "text",
-          "x": 8,
+          "x": 2,
           "y": 124,
-          "content": "UP/DN page  ENTER confirm screen",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "ENTER opens confirm screen"
         },
         {
           "id": "level-position",
@@ -7661,7 +6005,7 @@
           "x": 232,
           "y": 14,
           "width": 5,
-          "height": 104
+          "height": 100
         }
       ],
       "flows": [
@@ -7684,7 +6028,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "info-p7-enter-config",
+          "targetScreenId": "info-p5-enter-config",
           "actionId": "ui.action.page.previous"
         },
         {

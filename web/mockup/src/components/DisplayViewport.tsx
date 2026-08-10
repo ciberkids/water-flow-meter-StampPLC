@@ -269,21 +269,56 @@ export function DisplayViewport({
             );
           case "box":
             return <div key={element.id} className={className} style={style} />;
-          case "icon":
-            // An OUTLINE with its asset id, not a filled block. The theme's `icon` colour is
-            // #56d2ff, so an empty styled div painted P0's 55x55 flow-dots element as a solid cyan
-            // rectangle in the middle of the panel — which reads as a rendering fault rather than as
-            // "the firmware animates eight dots here". The footprint is what matters for judging
-            // layout; the fill was actively misleading.
+          case "icon": {
+            /**
+             * `flow-dots` draws the DOTS, because that is what the device draws.
+             *
+             * It used to draw a labelled outline reading "flow-dots" — honest about the footprint,
+             * but it left the landing screen of the simulator showing a dashed box where the panel
+             * shows a chase, and the SVG gallery drew the four dots. Two renderings of one element
+             * disagreeing is the same defect class as the sample tables that disagreed about Modbus
+             * ID, and this one sat on P0.
+             *
+             * Geometry from `drawFlowDots`: four dots (the agreed count — the old comment here said
+             * eight), radius min(spacing, height) / 3, the leftmost lit. Any OTHER asset id keeps the
+             * outline, which stays the honest rendering for something with no implementation.
+             */
+            const isFlowDots = element.metadata?.assetId === "flow-dots";
+            if (!isFlowDots) {
+              return (
+                <div
+                  key={element.id}
+                  className={`${className} icon-outline`}
+                  style={{ ...style, background: "transparent" }}
+                >
+                  <span className="icon-outline__label">{element.metadata?.assetId ?? "icon"}</span>
+                </div>
+              );
+            }
+            const w = element.width ?? 40;
+            const h = element.height ?? 12;
+            const count = 4;
+            const spacing = w / count;
+            const r = Math.min(spacing, h) / 3;
             return (
-              <div
-                key={element.id}
-                className={`${className} icon-outline`}
-                style={{ ...style, background: "transparent" }}
-              >
-                <span className="icon-outline__label">{element.metadata?.assetId ?? "icon"}</span>
+              <div key={element.id} className={className} style={{ ...style, background: "transparent" }}>
+                <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} style={{ display: "block" }}>
+                  {Array.from({ length: count }, (_, i) => (
+                    <circle
+                      key={i}
+                      cx={spacing / 2 + i * spacing}
+                      cy={h / 2}
+                      r={r}
+                      fill={i === 0 ? theme.colors.value : "none"}
+                      stroke={theme.colors.value}
+                      strokeWidth={0.75}
+                      opacity={i === 0 ? 1 : 0.35}
+                    />
+                  ))}
+                </svg>
               </div>
             );
+          }
           case "scrollbar":
             // A TRACK AND A THUMB, sized from the ring position — which is what the firmware draws.
             //

@@ -64,8 +64,34 @@ constexpr SimpleValue kSimpleValues[] = {
 
     {"telemetry.totalFlowLps", ValueCategory::System, ValueType::Number, "L/s", kNoRegister,
      ValueSource::Telemetry, false, "Aggregate instantaneous flow across ready sensors"},
+    /**
+     * The same aggregate in L/min, which is the unit the panel shows (spec §2a).
+     *
+     * A NEW id rather than a change of unit on the one above: `telemetry.totalFlowLps` is the wire's
+     * name for a L/s quantity, and silently redefining its unit would leave every existing reader
+     * off by sixty with nothing to notice it by.
+     */
+    {"telemetry.totalFlowLpm", ValueCategory::System, ValueType::Number, "L/min", kNoRegister,
+     ValueSource::Telemetry, false, "Aggregate instantaneous flow, in litres per minute"},
     {"telemetry.totalVolumeLiters", ValueCategory::System, ValueType::Number, "L", kNoRegister,
      ValueSource::Telemetry, false, "Aggregate session volume across ready sensors"},
+    /**
+     * Aggregate session volume in cubic metres — what the PANEL shows, per §2a.1.
+     *
+     * The litres binding above stays: §2a.1 makes every wire surface carry both units at full
+     * precision, and only the 240x135 panel round to m3. Two ids for two audiences, not two homes
+     * for one fact — the m3 arm divides the litres one rather than accumulating its own total.
+     */
+    {"telemetry.totalVolumeM3", ValueCategory::System, ValueType::Number, "m3", kNoRegister,
+     ValueSource::Telemetry, false, "Aggregate session volume, in cubic metres"},
+    /**
+     * The highest per-channel peak and which channel owns it (spec §5a).
+     *
+     * An argmax over `SensorSnapshot::maxFlow`, which the render context already holds — no new
+     * stored state, no new register, no new topic.
+     */
+    {"telemetry.maxFlowLpm", ValueCategory::System, ValueType::String, nullptr, kNoRegister,
+     ValueSource::Telemetry, false, "Highest per-channel peak flow and the channel holding it"},
     {"telemetry.total", ValueCategory::System, ValueType::String, nullptr, kNoRegister,
      ValueSource::Telemetry, false, "Aggregate volume and flow summary line"},
     {"telemetry.status", ValueCategory::System, ValueType::String, nullptr, kNoRegister,
@@ -77,6 +103,12 @@ constexpr SimpleValue kSimpleValues[] = {
      "Undersampling flags bitmap (bits 0-7 = sensors 1-8)"},
     {"legend.led", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
      ValueSource::UiState, false, "RGB LED status legend text"},
+    /**
+     * P0's combined network-and-LED row (spec §3.4), folding in what `net.status` used to render on
+     * a row of its own so the walking dots can have the space instead.
+     */
+    {"legend.status", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
+     ValueSource::UiState, false, "Combined WiFi, MQTT and LED-pulse legend for the status page"},
     {"legend.warning", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
      ValueSource::UiState, false, "Active sampling-warning summary"},
     {"page.title", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
@@ -94,7 +126,16 @@ constexpr SimpleValue kSimpleValues[] = {
      kNoRegister, ValueSource::UiState, true,
      "Whether the current sensor failed its last Nyquist validation"},
     {"config.editor.pending", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
-     ValueSource::UiState, false, "The value currently being edited, before it is committed"}};
+     ValueSource::UiState, false, "The value currently being edited, before it is committed"},
+    /**
+     * The domain of the setting the current page is about, formatted for display (spec §7.2).
+     *
+     * Derived from the descriptor, never authored. Sixteen editors used to carry their range as
+     * literal text — sixteen second copies of a fact `ui_settings_types.cpp` already holds, free to
+     * drift, and one of them (the eight baud rates) overflowed the panel by 108 px.
+     */
+    {"config.editor.range", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
+     ValueSource::UiState, false, "Permitted range or option list of the setting on this page"}};
 
 constexpr std::size_t kSensorMetricCount = sizeof(kSensorMetrics) / sizeof(kSensorMetrics[0]);
 constexpr std::size_t kSimpleValueCount = sizeof(kSimpleValues) / sizeof(kSimpleValues[0]);

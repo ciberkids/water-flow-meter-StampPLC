@@ -48,8 +48,21 @@ constexpr SettingDescriptor kSettings[] = {
     {"config.sensor.connected", SettingTarget::SensorConnected, SettingKind::Boolean,
      0, 1, 1, kBoolOptions,
      static_cast<uint8_t>(sizeof(kBoolOptions) / sizeof(kBoolOptions[0])), nullptr, true, 10, kNoRegister, "Sensor enabled (bit n of the connected-sensors bitmap)", 0, false},
+    /**
+     * Lower bound 1, not -32768. The multiplier is a DIVISOR:
+     * `flowLpm = (frequency - adjust) / f_multiplier` (sensor_state_engine.cpp:32).
+     *
+     * The old domain let the editor reach two values the device cannot use. Zero fails
+     * `configIsValid`, so the channel silently never becomes ready — the operator sees `SET?` on a
+     * channel they just finished configuring, with nothing saying why. A negative multiplier maps
+     * rising frequency to falling flow, which the `flowRateLpm < 0` clamp then pins at zero forever:
+     * a channel that reads 0.00 no matter how much water passes it.
+     *
+     * Neither is reachable by accident from 1 — they were reachable because the bound was written
+     * as the storage type's range rather than the quantity's.
+     */
     {"config.sensor.multiplier", SettingTarget::SensorMultiplier, SettingKind::Numeric,
-     -32768, 32767, 1, nullptr, 0, nullptr, true, kNoRegister, plc::OFF_CFG_F_MULT, "Frequency multiplier F", 0, false},
+     1, 32767, 1, nullptr, 0, nullptr, true, kNoRegister, plc::OFF_CFG_F_MULT, "Frequency multiplier F", 0, false},
     {"config.sensor.adjust", SettingTarget::SensorAdjust, SettingKind::Numeric,
      -32768, 32767, 1, nullptr, 0, nullptr, true, kNoRegister, plc::OFF_CFG_ADJUST, "Frequency offset Adjust", 0, false},
     {"config.sensor.maxFlow", SettingTarget::SensorMaxFlow, SettingKind::Numeric,
@@ -184,6 +197,62 @@ void formatSetting(const SettingDescriptor& setting,
     std::snprintf(out, size, "%ld %s", static_cast<long>(value), setting.unit);
   } else {
     std::snprintf(out, size, "%ld", static_cast<long>(value));
+  }
+}
+
+/**
+ * Widest listed option list, in characters, before it is summarised.
+ *
+ * Mirrors `kMaxListedWidth` in `web/mockup/src/utils/settingHints.ts`, which is what draws the
+ * mockup. The two are checked against each other by the range-hint unit tests rather than by
+ * anyone remembering: a mockup that lists where the device summarises is a mockup that lies about
+ * the one thing this row exists to show.
+ */
+constexpr std::size_t kMaxListedRangeWidth = 20;
+
+void formatSettingRange(const SettingDescriptor& setting, char* out, std::size_t size) {
+  if (!out || size == 0) {
+    return;
+  }
+  out[0] = '\0';
+  if (setting.kind == SettingKind::Text) {
+    return;
+  }
+  if (setting.options && setting.optionCount > 0) {
+    // Measure before writing: the choice between listing and summarising depends on the total
+    // width, which is not known until every label has been counted.
+    std::size_t listed = 0;
+    for (uint8_t i = 0; i < setting.optionCount; ++i) {
+      listed += std::strlen(setting.options[i].label);
+      if (i + 1 < setting.optionCount) {
+        listed += 3;  // the " / " separator
+      }
+    }
+    if (listed <= kMaxListedRangeWidth) {
+      std::size_t written = 0;
+      for (uint8_t i = 0; i < setting.optionCount && written + 1 < size; ++i) {
+        written += static_cast<std::size_t>(std::snprintf(out + written,
+                                                         size - written,
+                                                         "%s%s",
+                                                         i == 0 ? "" : " / ",
+                                                         setting.options[i].label));
+      }
+      return;
+    }
+    std::snprintf(out,
+                  size,
+                  "%s..%s (%u)",
+                  setting.options[0].label,
+                  setting.options[setting.optionCount - 1].label,
+                  static_cast<unsigned>(setting.optionCount));
+    return;
+  }
+  if (setting.unit) {
+    std::snprintf(out, size, "%ld to %ld %s", static_cast<long>(setting.min),
+                  static_cast<long>(setting.max), setting.unit);
+  } else {
+    std::snprintf(out, size, "%ld to %ld", static_cast<long>(setting.min),
+                  static_cast<long>(setting.max));
   }
 }
 

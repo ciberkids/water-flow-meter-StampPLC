@@ -120,6 +120,20 @@ void formatSetting(const SettingDescriptor& setting,
                    std::size_t size);
 
 /**
+ * Renders the setting's DOMAIN for display — its option list, or its bounds with the unit.
+ *
+ * Bound by `config.editor.range` (Display_Per_Screen_Spec §7.2). It exists so that no screen has to
+ * author its own range text: sixteen editors used to carry the range as a literal, which is sixteen
+ * second copies of what this descriptor already says, and one of them — the eight baud rates — ran
+ * 108 px past the edge of the panel.
+ *
+ * A long option list is summarised as `first..last (count)` rather than listed, because eight baud
+ * rates cannot fit and do not need to: the editor steps through them, so the operator sees each in
+ * turn. A Text setting writes an empty string; it has no domain to state.
+ */
+void formatSettingRange(const SettingDescriptor& setting, char* out, std::size_t size);
+
+/**
  * Renders a Text setting for display, masking it when the descriptor says writeOnly.
  *
  * Separate from formatSetting rather than an overload, for the same reason the kinds are

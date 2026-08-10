@@ -56,6 +56,7 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "ui/core/ui_screen_router.h"
 #include "ui/core/ui_value_catalogue.h"
 #include "ui/pack/ui_pack_storage_sd.h"
+#include "units.h"
 
 using namespace plc;
 
@@ -953,7 +954,7 @@ void logicTaskCode(void * pvParameters) {
         }
         out.flowLPerMin = sensors[i].instantFlow_L_s * 60.0f;
         out.sessionLiters = sensors[i].sessionLiters;
-        out.totalCubicMeters = sensors[i].cumulativeLiters / 1000.0;
+        out.totalCubicMeters = units::litresToCubicMeters(sensors[i].cumulativeLiters);
         out.maxFlowLPerMin = sensors[i].maxFlowSinceReset * 60.0f;
         out.pulses = sensors[i].pulseCount;
       }

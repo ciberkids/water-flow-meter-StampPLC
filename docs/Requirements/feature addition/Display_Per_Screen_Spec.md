@@ -920,17 +920,40 @@ Sixteen editors carry an authored range string that duplicates its own descripto
 to drift, and one of them is the 58-character baud list — **348 px, 108 px past the edge**. The overflow and
 the duplication are the same defect.
 
-**New value `config.editor.range`**, formatted from the active descriptor. No plumbing is needed:
-`controller_->editor().setting` *is* the descriptor, and `formatSetting` already reads it
-(`ui_bindings.cpp:377-384`) — this is a second formatter over the same pointer. Worst cases:
+**New value `config.editor.range`**, formatted from the descriptor — `formatSettingRange`
+(`ui_settings_types.cpp`), a second formatter over the same pointer `formatSetting` already reads.
+
+An open editor names its own descriptor through `controller_->editor().setting`, but a **setting page has
+no editor** and still shows the range, which the first draft of this section overlooked. So when nothing is
+being edited the resolver asks the SCREEN which setting it is about, by finding the element whose binding
+`findSetting` recognises. `settingOfScreen` in `web/mockup/src/utils/settingHints.ts` answers the same
+question the same way, so the mockup and the device agree by construction rather than by coincidence.
 
 | Kind | Rendered | Width |
 | --- | --- | --- |
-| Numeric | `-32768 to 32767` | 15 ch = 92 px |
+| Numeric | `1 to 32767` | 10 ch = 62 px |
 | Numeric with unit | `0 to 65535 L/min` | 16 ch = 98 px |
 | Boolean | `Off / On` | 8 ch = 50 px |
 | Small enum | `None / Even / Odd` | 17 ch = 104 px |
-| Large enum | `8 rates: 1200..115200` | 21 ch = 128 px |
+| Large enum | `1200..115200 (8)` | 16 ch = 98 px |
+
+**Widest is `None / Even / Odd` at 17 ch = 104 px**, x 2..106 — not the baud list, and 24 px narrower than
+this table first claimed.
+
+Two corrections to the first draft, both found by rendering it:
+
+- The large-enum summary was written `8 rates: 1200..115200`. That needs a per-setting noun — "rates" is
+  meaningless for parity — which would have put a display string into a descriptor that `manifest_gen`
+  generates from source. `1200..115200 (8)` needs no noun, is five characters narrower, and reads as eight
+  discrete choices spanning that span. The threshold for summarising (20 characters) is declared on both
+  sides and a unit test compares them, because a mockup that lists where the device summarises lies about
+  the one thing this row exists to show.
+- The `Numeric` row quoted `-32768 to 32767`, the multiplier's declared domain. That domain was itself
+  wrong: `f_multiplier` is the DIVISOR in `flowLpm = (frequency - adjust) / f_multiplier`, so zero fails
+  `configIsValid` and leaves a just-configured channel reading `SET?` with nothing saying why, and a
+  negative value maps rising frequency to falling flow, which the `flowRateLpm < 0` clamp pins at zero
+  forever. The bound had been written as the storage type's range rather than the quantity's. It is now
+  `1 to 32767`. `adjust` keeps the full signed range, which it legitimately needs.
 
 A large enum is summarised rather than listed. Eight baud rates cannot fit and do not need to: the editor
 steps through them, so the operator sees each in turn.

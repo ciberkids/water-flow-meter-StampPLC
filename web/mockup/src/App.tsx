@@ -33,6 +33,12 @@ import {
   ClampAdjustment,
   ClampCorrection
 } from "./utils/datasetClamp";
+import {
+  formatSetting,
+  pendingRawFor,
+  rangeHintFor,
+  settingOfScreen
+} from "./utils/settingHints";
 import { SchemaValidationError, validateDataset } from "./schema/validation";
 import { ExporterPanel } from "./components/ExporterPanel";
 import { SimulationTracePanel } from "./components/SimulationTracePanel";
@@ -1355,19 +1361,97 @@ export function App() {
     const totalSessionLiters = inUse.reduce((sum, sensor) => sum + sensor.sessionLiters, 0);
     const warnings = warningSensorNumbers(sensors).length;
 
+    /**
+     * The peak across enabled channels and which channel holds it, mirroring
+     * `ui_bindings.cpp`'s `telemetry.maxFlowLpm` arm including its three states: nothing enabled,
+     * enabled but no flow seen yet, and a real peak with an owner. §5a's purpose is spotting a
+     * sensor under-dimensioned for its pipe, which needs the channel number and not just the number.
+     */
+    const maxFlowRow = (): string => {
+      let owner = 0;
+      let peak = 0;
+      for (const sensor of inUse) {
+        if (sensor.maxFlowLps > peak) {
+          peak = sensor.maxFlowLps;
+          owner = sensor.number;
+        }
+      }
+      if (inUse.length === 0) {
+        return "Max Flow: --";
+      }
+      if (owner === 0) {
+        return "Max Flow: 0.00 L/m";
+      }
+      return `Max Flow: ${(peak * 60).toFixed(2).padStart(7)} L/m (S${owner})`;
+    };
+
+    /**
+     * P0's combined legend, from the same net strings its own rows use plus the LED pulse volume.
+     *
+     * Read through `pinnedValues` first so that pinning `net.wifi.state` to RETRY moves this row too
+     * — the whole point of folding three facts onto one row is that they stay the same three facts.
+     */
+    const legendRow = (): string => {
+      const part = (id: string) => pinnedValues[id] ?? sampleValueFor(id, manifestValueById.get(id), "sample");
+      // The LED half reads the PIN too. Taking it from `sampleRawFor` alone meant pinning
+      // config.ledPulseVolume to 100 showed `100 L` on C5 while P0 still said `LED 1p/10L` — the two
+      // rows disagreeing about one setting, which is the whole thing folding them together was meant
+      // to prevent. The pin is already formatted (`10 L`), so the unit suffix is stripped rather than
+      // re-added.
+      const led = part("config.ledPulseVolume").replace(/\s*L$/, "");
+      return `WiFi ${part("net.wifi.state")}  MQTT ${part("net.mqtt.state")}  LED 1p/${led}L`;
+    };
+
     const aggregate = (id: string): string | undefined => {
       switch (id) {
         case "telemetry.total":
           return `Total ${totalSessionLiters.toFixed(2)} L | Flow ${aggregateFlowLps.toFixed(2)} L/s`;
         case "telemetry.totalFlowLps":
           return aggregateFlowLps.toFixed(2);
+        // `%7.2f` on the device: a field width, so the column cannot shift under a growing integer
+        // part. padStart reproduces it rather than approximating with a fixed prefix.
+        case "telemetry.totalFlowLpm":
+          return (aggregateFlowLps * 60).toFixed(2).padStart(7);
         case "telemetry.totalVolumeLiters":
           return totalSessionLiters.toFixed(2);
+        case "telemetry.totalVolumeM3":
+          return (totalSessionLiters / 1000).toFixed(2);
+        case "telemetry.maxFlowLpm":
+          return maxFlowRow();
+        case "legend.status":
+          return legendRow();
         case "telemetry.status":
           return warnings > 0 ? `${warnings} warning${warnings === 1 ? "" : "s"}` : "All sensors ready";
         default:
           return undefined;
       }
+    };
+
+    /**
+     * The two facts a setting page derives from the setting IT shows, rather than from a global.
+     *
+     * Both were single fixed strings, so `config.editor.range` read `1 to 247` on Baud Rate, Parity,
+     * Stop Bits and every sensor page, and `config.editor.pending` read `19200` on Modbus ID, whose
+     * domain stops at 247. They depend on the screen, so they are resolved here where the screen is
+     * known — and only for a screen that actually shows a setting, so a reading page draws nothing.
+     */
+    const screenSetting = settingOfScreen(selectedScreen, manifestValueById);
+    const editorDerived = (id: string): string | undefined => {
+      if (id !== "config.editor.range" && id !== "config.editor.pending") {
+        return undefined;
+      }
+      if (!screenSetting) {
+        return "";
+      }
+      if (id === "config.editor.range") {
+        return rangeHintFor(screenSetting);
+      }
+      // A text setting has no numeric domain to step, so there is no pending value to invent; the
+      // editor for one is a keyboard, which R5.3 does not give this device.
+      if (screenSetting.type === "string") {
+        return "";
+      }
+      return formatSetting(screenSetting, pendingRawFor(screenSetting));
     };
 
     for (const binding of manifestValueBindings) {
@@ -1377,11 +1461,12 @@ export function App() {
       out[binding.id] =
         resolveSensorBinding(binding.id, sensors, selectedSensor) ??
         aggregate(binding.id) ??
+        editorDerived(binding.id) ??
         pinnedValues[binding.id] ??
         sampleValueFor(binding.id, manifestValueById.get(binding.id), "sample");
     }
     return out;
-  }, [manifestValueBindings, manifestValueById, pinnedValues, selectedSensor, sensors]);
+  }, [manifestValueBindings, manifestValueById, pinnedValues, selectedScreen, selectedSensor, sensors]);
 
   /** True when device memory answers this binding, so nothing may pin over it. */
   const memoryOwnsBinding = useCallback(

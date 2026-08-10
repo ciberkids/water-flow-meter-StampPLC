@@ -39,6 +39,37 @@ const L = {
   scrollbar: { x: 232, y: 14, width: 5, height: 104 }
 };
 
+/**
+ * The agreed layout for a screen, from the requirement rather than from here.
+ *
+ * `docs/Requirements/feature addition/screens/<id>.json` is where each screen's geometry is decided and
+ * reviewed (Display_Per_Screen_Spec.md). This generator owns NAVIGATION — rings, descents, escapes — which
+ * those files deliberately do not carry, and defers every coordinate to them. Before this, the layout table
+ * `L` below was the only source, so the requirement and the dataset were two homes for one fact and the
+ * dataset was the one that shipped.
+ *
+ * `worst`, `bound` and `bannerReplaces` are spec metadata — the declared worst-case string, its
+ * justification, and the banner declaration — and are stripped: the dataset schema does not know them.
+ */
+const SPEC_DIR = path.join(ROOT, "..", "..", "docs", "Requirements", "feature addition", "screens");
+const specs = new Map();
+if (fs.existsSync(SPEC_DIR)) {
+  for (const file of fs.readdirSync(SPEC_DIR).filter((f) => f.endsWith(".json"))) {
+    const spec = JSON.parse(fs.readFileSync(path.join(SPEC_DIR, file), "utf8"));
+    specs.set(spec.id, spec);
+  }
+}
+const SPEC_ONLY_KEYS = ["worst", "bound", "bannerReplaces"];
+function specElements(id) {
+  const spec = specs.get(id);
+  if (!spec) return null;
+  return spec.elements.map((element) => {
+    const copy = { ...element };
+    for (const key of SPEC_ONLY_KEYS) delete copy[key];
+    return copy;
+  });
+}
+
 const manifest = JSON.parse(fs.readFileSync(MANIFEST, "utf8"));
 const byId = new Map(manifest.values.map((v) => [v.id, v]));
 
@@ -79,6 +110,41 @@ function ringFlows(ids, index) {
     btn("f-prev", "Previous entry", "up", "short", A.prev, prev)
   ];
 }
+
+/**
+ * The ring lost two entries and the rest moved up.
+ *
+ * Cumulative litres and session litres were absorbed by their m3 pages: 1 L is exactly 0.001 m3, so one page
+ * carries both readings and the device was paginating one fact twice (Display_Per_Screen_Spec.md 5.1). Every
+ * flow that referenced a dropped or renamed page is rewritten below, so the ring closes at nine entries.
+ */
+const RING_RENAMES = {
+  "info-p3-cumulative-m3": "info-p2-cumulative-m3",
+  "info-p5-session-m3": "info-p3-session-m3",
+  "info-p6-max-flow": "info-p4-max-flow",
+  "info-p7-enter-config": "info-p5-enter-config",
+  "info-p8-factory-reset": "info-p6-factory-reset"
+};
+const RING_DROPPED = new Set(["info-p2-cumulative-liters", "info-p4-session-liters"]);
+/** The nine entries, in order. UP/DOWN are rebuilt from THIS rather than patched target by target. */
+const INFO_RING = [
+  "info-p0-global-status",
+  "info-p1-instant-flow",
+  "info-p2-cumulative-m3",
+  "info-p3-session-m3",
+  "info-p4-max-flow",
+  "info-p5-enter-config",
+  "info-p6-factory-reset",
+  "net-wifi-root",
+  "net-mqtt-root"
+];
+const RING_NAMES = {
+  "info-p2-cumulative-m3": "P2 — Cumulative Volume",
+  "info-p3-session-m3": "P3 — Session Volume",
+  "info-p4-max-flow": "P4 — Max Flow Since Reset",
+  "info-p5-enter-config": "P5 — Enter Configuration",
+  "info-p6-factory-reset": "P6 — Factory Reset"
+};
 
 const screens = [];
 
@@ -123,6 +189,15 @@ function assertCoversEverySetting(deviceList, sensorList) {
     // Guarded editors were rejected for exactly the opposite reason (R7.3) — a guard is not
     // statically decidable. See §6.3.
     .filter((v) => v.type !== "string")
+    // NETWORK SETTINGS ARE EXEMPT TOO, by the owner's decision that the panel only READS WiFi and
+    // MQTT configuration. It is the same exemption as the text one widened to its natural edge: the
+    // portal, RS485 and the SD file are where a broker gets configured, and a panel that offers to
+    // edit half a broker's settings is worse than one that offers none.
+    //
+    // Still decided by a STATIC property — the binding's prefix — so the gate keeps proving that
+    // every setting an operator can change at the panel has an editor there. That is what made the
+    // text exemption safe and what disqualified guarded editors (R7.3).
+    .filter((v) => !v.id.startsWith("config.wifi.") && !v.id.startsWith("config.mqtt."))
     .map((v) => v.id)
     .filter((id) => !declared.has(id));
   if (missing.length > 0) {
@@ -130,7 +205,7 @@ function assertCoversEverySetting(deviceList, sensorList) {
       `the skeleton would violate the completeness rule: no editor screen for ` +
       `${missing.join(", ")}. Add each to DEVICE (device-wide) or SENSOR_SETTINGS ` +
       `(per-sensor) in tools/skeleton/generate.mjs, with a title a human can read. ` +
-      `(Text settings are exempt — they are set via the portal, RS485 or the SD file.)`
+      `(Text and network settings are exempt — they are set via the portal, RS485 or the SD file.)`
     );
   }
 }
@@ -421,11 +496,22 @@ function emitLevel({ items, ring, crumb, backId, backName }) {
     const v = item.binding ? byId.get(item.binding) : null;
     if (item.binding && !v) throw new Error(`catalogue has no value "${item.binding}"`);
     const unit = v?.unit ? ` ${v.unit}` : "";
-    // A text value is DISPLAYED, never edited here — see assertCoversEverySetting. The row still
-    // exists because an operator standing at the device needs to see which network and which broker
-    // it is configured for; that is the diagnostic half of §7.1's information pages, at zero input
-    // cost. Secrets render as "********" via formatSettingText, so the row is safe on a wall panel.
-    const isReadOnly = v?.type === "string";
+    /**
+     * EVERY bound row in a network level is read-only — the panel reads WiFi and MQTT, it does not
+     * set them.
+     *
+     * This used to be `v?.type === "string"`, exempting only the seven text settings because there is no
+     * on-device text entry. The owner extended it to the whole of both levels: configuring a broker
+     * through three buttons is, in their words, too painful, and the surfaces that were always the
+     * real ones — the web portal, the RS485 register block, the SD credential file — already do it
+     * better. So a numeric row like the broker port is read-only for the same reason the passphrase
+     * always was, not for a different one.
+     *
+     * The rows themselves stay. An operator at the device still needs to see which network and which
+     * broker it is pointed at, and that is the diagnostic half of §7.1's information pages at zero
+     * input cost. Secrets render as "********" via formatSettingText, so a wall panel is safe.
+     */
+    const isReadOnly = !isDescent;
     screens.push({
       id: item.id,
       name: `${item.page} — ${item.title}`,
@@ -482,7 +568,7 @@ function emitLevel({ items, ring, crumb, backId, backName }) {
 // The two root-level entries. Their ring is the INFO ring, so they page with P0..P8.
 [
   { id: "net-wifi-root", name: "WIFI — WiFi", crumb: "WiFi", enter: "net-wifi-enabled",
-    prev: "info-p8-factory-reset", next: "net-mqtt-root",
+    prev: "info-p6-factory-reset", next: "net-mqtt-root",
     lines: ["Radio, network name and", "passphrase."] },
   { id: "net-mqtt-root", name: "MQTT — MQTT", crumb: "MQTT", enter: "net-mqtt-enabled",
     prev: "net-wifi-root", next: "info-p0-global-status",
@@ -560,8 +646,8 @@ emitLevel({ items: MQTT_SETUP, ring: MQTT_SETUP_RING, crumb: "MQTT Broker",
 
 // ── P8 Factory Reset info page ───────────────────────────────────────────────
 screens.push({
-  id: "info-p8-factory-reset",
-  name: "P8 — Factory Reset",
+  id: "info-p6-factory-reset",
+  name: "P6 — Factory Reset",
   description: "Info-level entry point for a full factory reset. ENTER opens the confirm screen.",
   elements: [
     text("hdr-title", L.headerY, "P8 FACTORY RESET"),
@@ -573,7 +659,7 @@ screens.push({
   ],
   flows: [
     btn("f-next", "Next page", "down", "short", A.next, "net-wifi-root"),
-    btn("f-prev", "Previous page", "up", "short", A.prev, "info-p7-enter-config"),
+    btn("f-prev", "Previous page", "up", "short", A.prev, "info-p5-enter-config"),
     btn("f-enter", "Open confirm screen", "enter", "short", A.descend, "confirm-factory-reset"),
     btn("f-escape", "Back to main screen", "enter", "long", A.escape, "info-p0-global-status")
   ]
@@ -664,6 +750,33 @@ for (const t of TOASTS) {
 
 // ── Merge: replace generated ids, keep hand-tuned info pages ─────────────────
 const dataset = JSON.parse(fs.readFileSync(SCREENS, "utf8"));
+
+// The ring change, applied before anything else reads an id: drop the two absorbed litres pages, rename the
+// five that moved up, and rewrite every flow target that pointed at either.
+dataset.screens = dataset.screens.filter((s) => !RING_DROPPED.has(s.id));
+for (const s of dataset.screens) {
+  if (RING_RENAMES[s.id]) {
+    s.id = RING_RENAMES[s.id];
+    if (RING_NAMES[s.id]) s.name = RING_NAMES[s.id];
+  }
+  for (const flow of s.flows ?? []) {
+    if (flow.targetScreenId && RING_RENAMES[flow.targetScreenId]) {
+      flow.targetScreenId = RING_RENAMES[flow.targetScreenId];
+    }
+  }
+}
+// Rebuild UP/DOWN across the ring from INFO_RING. Renaming targets alone left P1 pointing DOWN at the
+// absorbed litres page: a dropped screen has no rename, so patching cannot express "the page that took over".
+for (const s of dataset.screens) {
+  const at = INFO_RING.indexOf(s.id);
+  if (at === -1) continue;
+  const prev = INFO_RING[(at - 1 + INFO_RING.length) % INFO_RING.length];
+  const next = INFO_RING[(at + 1) % INFO_RING.length];
+  s.flows = (s.flows ?? []).filter((f) => !(f.trigger?.type === "button"
+    && (f.trigger.button === "up" || f.trigger.button === "down") && f.trigger.gesture === "short"));
+  s.flows.unshift(btn("f-prev", "Previous page", "up", "short", A.prev, prev));
+  s.flows.unshift(btn("f-next", "Next page", "down", "short", A.next, next));
+}
 const generatedIds = new Set(screens.map((s) => s.id));
 const RETIRED = new Set([
   // Replaced by confirm screens; enter-config, sensor-save and config-exit are no
@@ -680,7 +793,13 @@ const RETIRED = new Set([
   // that does nothing implies protection that is not there. §6.1 had listed it, contradicting the
   // decision; the decision wins. Retired explicitly because `kept` preserves anything the generator
   // stops emitting, and these would otherwise survive bound to a catalogue id that no longer exists.
-  "net-mqtt-tls", "net-mqtt-tls-edit"
+  "net-mqtt-tls", "net-mqtt-tls-edit",
+  // The six NUMERIC network editors, retired with the decision that the panel only reads WiFi and
+  // MQTT (see isReadOnly in emitLevel). Listed explicitly for the same reason the text editors are:
+  // `kept` preserves anything the generator stops emitting, so without this they would survive as
+  // orphans — editors with a commit flow and no parent descending into them.
+  "net-wifi-enabled-edit", "net-mqtt-enabled-edit", "net-mqtt-port-edit",
+  "net-mqtt-period-edit", "net-mqtt-qos-edit", "net-mqtt-ha-discovery-edit"
 ]);
 
 const kept = dataset.screens.filter((s) => !generatedIds.has(s.id) && !RETIRED.has(s.id));
@@ -695,9 +814,23 @@ const FOOTER_ROWS = [L.footerY, L.footerY - 12, L.footerY - 24, L.footerY - 36];
 const TEXT_H = { text: 8, value: 10, badge: 12, icon: 10, box: 0, scrollbar: 0 };
 const implicitH = (e) => e.height ?? TEXT_H[e.kind] ?? 8;
 
+let specApplied = 0;
 let moved = 0, resized = 0, barsAdded = 0, badgesMoved = 0, asciiFolded = 0, dividersWidened = 0, legendMoved = 0, textCorrected = 0, descriptionsFixed = 0;
 for (const s of kept) {
-  for (const e of s.elements) {
+  /**
+   * A SPECIFIED screen's layout is the requirement, and needs none of the repair below.
+   *
+   * The repairs exist for screens authored before Display_Per_Screen_Spec.md: re-stacking a footer zone,
+   * widening portrait dividers, moving a badge off a title. Running them over a specified layout would move
+   * elements the spec placed deliberately — and the footer re-stack proved it by refusing P0 outright, whose
+   * agreed layout has more elements in its lower half than the repair's four rows allow.
+   */
+  const fromSpec = specElements(s.id);
+  const hasSpec = Boolean(fromSpec);
+  if (hasSpec) {
+    s.elements = fromSpec;
+  }
+  if (!hasSpec) for (const e of s.elements) {
     if (e.kind === "box" && e.width === 135 && e.height === 240) { e.width = W; e.height = H; resized += 1; }
   }
 
@@ -706,7 +839,7 @@ for (const s of kept) {
   // had already pulled two elements up onto the same row, so on the next run
   // neither overflowed and the collision was invisible.
   const FOOTER_ZONE_TOP = FOOTER_ROWS[FOOTER_ROWS.length - 1];
-  const strays = s.elements
+  const strays = hasSpec ? [] : s.elements
     .filter((e) => e.kind !== "box" && e.kind !== "scrollbar"
                    && (e.y >= FOOTER_ZONE_TOP || e.y + implicitH(e) > H - 2))
     .sort((a2, b2) => a2.y - b2.y);
@@ -719,7 +852,7 @@ for (const s of kept) {
   // A badge is 12px tall against a text header's 8px, so a badge sharing the
   // header's x and y buries the title under its opaque background. Move badges
   // that collide with the header to the right-hand end of the same row.
-  const hdr = s.elements.find((e) => e.id === "hdr-title");
+  const hdr = hasSpec ? null : s.elements.find((e) => e.id === "hdr-title");
   if (hdr) {
     for (const e of s.elements) {
       if (e === hdr || e.kind !== "badge") continue;
@@ -727,17 +860,15 @@ for (const s of kept) {
       if (overlapsY && Math.abs(e.x - hdr.x) < 60) { e.x = 176; badgesMoved += 1; }
     }
   }
-  if (s.id.startsWith("info-p") && !s.elements.some((e) => e.kind === "scrollbar")) {
+  if (!hasSpec && s.id.startsWith("info-p") && !s.elements.some((e) => e.kind === "scrollbar")) {
     s.elements.push(scrollbar()); barsAdded += 1;
   }
   // Info pages: ENTER-short now descends into a confirm screen or Configuration.
   const descend = {
-    "info-p2-cumulative-liters": "confirm-reset-totals",
-    "info-p3-cumulative-m3": "confirm-reset-totals",
-    "info-p4-session-liters": "confirm-reset-session",
-    "info-p5-session-m3": "confirm-reset-session",
-    "info-p6-max-flow": "confirm-reset-session",
-    "info-p7-enter-config": "config-c1-modbus-id"
+    "info-p2-cumulative-m3": "confirm-reset-totals",
+    "info-p3-session-m3": "confirm-reset-session",
+    "info-p4-max-flow": "confirm-reset-session",
+    "info-p5-enter-config": "config-c1-modbus-id"
   }[s.id];
   // Every info page gets its ENTER flows rebuilt, not just those with a descent
   // target. P0 and P1 previously kept 0.1-era `ui.action.mode.idle -> state-idle`
@@ -778,20 +909,14 @@ for (const s of kept) {
   }
 
   // Dividers were authored at the portrait DISPLAY_WIDTH of 135 on a 240px panel.
-  for (const e of s.elements) {
+  if (!hasSpec) for (const e of s.elements) {
     if (e.kind === "box" && e.height === 1 && e.width === 135) { e.width = W; dividersWidened += 1; }
   }
 
   // Footer text that still advertises retired durations.
-  const footerText = {
-    "info-p0-global-status": "UP/DN pages   UP+DN display off",
-    "info-p1-instant-flow": "UP/DN pages   UP+DN display off",
-    "info-p2-cumulative-liters": "ENTER reset totals (hold 3s)",
-    "info-p3-cumulative-m3": "ENTER reset totals (hold 3s)",
-    "info-p4-session-liters": "ENTER reset session",
-    "info-p5-session-m3": "ENTER reset session",
-    "info-p6-max-flow": "ENTER reset session",
-    "info-p7-enter-config": "ENTER opens Configuration"
+  // Only for screens without a spec: a specified screen's footer comes from its requirement file.
+  const footerText = specs.has(s.id) ? undefined : {
+    "info-p0-global-status": "UP/DN pages   UP+DN off"
   }[s.id];
   if (footerText) {
     const fh = s.elements.find((e) => e.id === "footer-hint");
@@ -800,7 +925,9 @@ for (const s of kept) {
 
   // §4.3 note 5 and §6 note 8: the LED legend belongs on P0, the landing page. It
   // was on P1-P7 and absent from P0 — the exact inverse.
-  if (s.id.startsWith("info-p")) {
+  // Skipped for a specified screen: P0's spec folded the LED text into net-led-status, and an
+  // "add it if missing" repair reads that deliberate removal as an omission and undoes it.
+  if (!hasSpec && s.id.startsWith("info-p")) {
     const legend = s.elements.find((e) => e.id === "legend-led");
     if (s.id === "info-p0-global-status") {
       if (!legend) {
@@ -818,7 +945,7 @@ for (const s of kept) {
   // now escapes to P0 and a short press descends.
   // The prompt is split across two elements, so match them by id rather than by
   // looking for both words in one string.
-  if (s.id === "info-p7-enter-config") {
+  if (s.id === "info-p5-enter-config" && !hasSpec) {
     const prompt = { "prompt-line1": "Press ENTER to open", "prompt-line2": "Configuration." };
     for (const e of s.elements) {
       if (prompt[e.id] && e.content !== prompt[e.id]) { e.content = prompt[e.id]; textCorrected += 1; }
@@ -827,15 +954,13 @@ for (const s of kept) {
 
   // Screen descriptions still advertised retired countdowns and a dropped
   // propeller animation. They are metadata, but they are what the next person reads.
-  const desc = {
-    "info-p0-global-status": "P0 landing page: aggregate flow and volume, plus the flow indicator and LED legend.",
-    "info-p1-instant-flow": "P1: instantaneous flow for all eight sensors in two columns.",
-    "info-p2-cumulative-liters": "P2: cumulative litres. ENTER opens the reset-totals confirm screen (3 s hold).",
-    "info-p3-cumulative-m3": "P3: cumulative cubic metres. ENTER opens the reset-totals confirm screen (3 s hold).",
-    "info-p4-session-liters": "P4: session litres. ENTER opens the reset-session confirm screen.",
-    "info-p5-session-m3": "P5: session cubic metres. ENTER opens the reset-session confirm screen.",
-    "info-p6-max-flow": "P6: peak flow since the last session reset. ENTER opens the reset-session confirm screen.",
-    "info-p7-enter-config": "P7: entry point to Configuration. ENTER descends to the config root."
+  const desc = specs.get(s.id)?.description ?? {
+    "info-p0-global-status": "P0 landing page: current aggregate flow, volume since reset, the peak and its channel.",
+    "info-p1-instant-flow": "P1: instantaneous flow for all eight sensors, two columns of four.",
+    "info-p2-cumulative-m3": "P2: cumulative volume in m3. ENTER opens the reset-totals confirm screen (3 s hold).",
+    "info-p3-session-m3": "P3: session volume in m3. ENTER opens the reset-session confirm screen.",
+    "info-p4-max-flow": "P4: peak flow per channel since the last session reset; MAX marks a channel at its ceiling.",
+    "info-p5-enter-config": "P5: entry point to Configuration. ENTER descends to the config root."
   }[s.id];
   if (desc) { s.description = desc; descriptionsFixed += 1; }
 
@@ -851,7 +976,7 @@ for (const s of kept) {
     }
   }
   // P7 now wraps to P8 rather than back to P0.
-  if (s.id === "info-p7-enter-config") {
+  if (s.id === "info-p5-enter-config" && !hasSpec) {
     for (const f of s.flows) {
       if (f.id === "f-next") f.targetScreenId = "info-p8-factory-reset";
     }
@@ -860,7 +985,7 @@ for (const s of kept) {
     // The main-screen connection indicator, which was the owner's very first request for this
     // feature. y=98 is the free row between the flow icon (70) and the LED legend (112), so it groups
     // with the other status lines rather than displacing telemetry.
-    if (!s.elements.some((e) => e.id === "net-status")) {
+    if (!hasSpec && !s.elements.some((e) => e.id === "net-status")) {
       s.elements.push(value("net-status", 98, "net.status", { emphasis: "muted" }));
     }
     for (const f of s.flows) {
@@ -872,11 +997,30 @@ for (const s of kept) {
 
 const merged = { ...dataset, screens: [...kept, ...screens] };
 
+/**
+ * One pass over EVERY screen: a specified layout wins, whether the screen was kept or generated.
+ *
+ * The emitters above build 69 of the 77 screens from their own tables, and those never pass through the
+ * repair loop — so overriding inside that loop reached only the 8 hand-tuned info pages and left every
+ * config and net screen on the generator's own geometry. Layout has one source; this is where it is applied.
+ */
+for (const screen of merged.screens) {
+  const fromSpec = specElements(screen.id);
+  if (!fromSpec) continue;
+  screen.elements = fromSpec;
+  const spec = specs.get(screen.id);
+  if (spec?.description) screen.description = spec.description;
+  specApplied += 1;
+}
+const unspecified = merged.screens.filter((s) => !specs.has(s.id)).map((s) => s.id);
+
 const report = {
   kept: kept.length,
   generated: screens.length,
   retired: [...RETIRED].filter((id) => dataset.screens.some((s) => s.id === id)).length,
   total: merged.screens.length,
+  layoutsFromSpec: specApplied,
+  unspecifiedScreens: unspecified,
   footersMoved: moved,
   overlaysResized: resized,
   scrollbarsAdded: barsAdded,

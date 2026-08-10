@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdio>
 #include <vector>
+#include "units.h"
 
 // configIsValid now lives in modbus/sensor_types.h, beside the struct it tests. It was in an anonymous
 // namespace here, unreachable from the state engine and the UI — which is why its answer was cached into
@@ -328,9 +329,11 @@ void ModbusManager::syncSensorToHolding(std::size_t sensorIndex) {
   if (deps_.sensors[sensorIndex].inUse && configIsValid(deps_.configs[sensorIndex])) {
     deps_.registers->setFloat(base + OFF_INSTANT_FLOW, deps_.sensors[sensorIndex].instantFlow_L_s);
     deps_.registers->setDouble(base + OFF_CUMULATIVE_LITERS, deps_.sensors[sensorIndex].cumulativeLiters);
-    deps_.registers->setDouble(base + OFF_CUMULATIVE_M3, deps_.sensors[sensorIndex].cumulativeLiters / 1000.0);
+    deps_.registers->setDouble(base + OFF_CUMULATIVE_M3,
+                               units::litresToCubicMeters(deps_.sensors[sensorIndex].cumulativeLiters));
     deps_.registers->setFloat(base + OFF_SESSION_LITERS, deps_.sensors[sensorIndex].sessionLiters);
-    deps_.registers->setFloat(base + OFF_SESSION_M3, deps_.sensors[sensorIndex].sessionLiters / 1000.0f);
+    deps_.registers->setFloat(base + OFF_SESSION_M3,
+                              units::litresToCubicMeters(deps_.sensors[sensorIndex].sessionLiters));
     deps_.registers->setFloat(base + OFF_MAX_FLOW, deps_.sensors[sensorIndex].maxFlowSinceReset);
   } else {
     deps_.registers->setFloat(base + OFF_INSTANT_FLOW, 0.0f);

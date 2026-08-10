@@ -14,16 +14,6 @@
       "bound": "fixed literal"
     },
     {
-      "id": "field-value",
-      "kind": "value",
-      "x": 2,
-      "y": 24,
-      "emphasis": "strong",
-      "content": "5 >",
-      "worst": "8 >",
-      "bound": "the sensor number and a descend marker"
-    },
-    {
       "id": "status-value",
       "kind": "value",
       "x": 44,
@@ -38,8 +28,8 @@
       "x": 2,
       "y": 124,
       "emphasis": "muted",
-      "content": "UP/DN sensors  ENTER open  hold=exit",
-      "worst": "UP/DN sensors  ENTER open  hold=exit",
+      "content": "UP/DN pages  ENTER open  hold=exit",
+      "worst": "UP/DN pages  ENTER open  hold=exit",
       "bound": "shared footer vocabulary, see 7.1",
       "bannerReplaces": true
     },

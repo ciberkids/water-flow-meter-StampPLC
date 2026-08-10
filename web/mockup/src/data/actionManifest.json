@@ -165,7 +165,7 @@
       "id": "config.sensor.multiplier",
       "category": "setting",
       "type": "number",
-      "min": -32768,
+      "min": 1,
       "max": 32767,
       "step": 1,
       "perSensor": true,
@@ -924,12 +924,35 @@
       "description": "Aggregate instantaneous flow across ready sensors"
     },
     {
+      "id": "telemetry.totalFlowLpm",
+      "category": "system",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true,
+      "description": "Aggregate instantaneous flow, in litres per minute"
+    },
+    {
       "id": "telemetry.totalVolumeLiters",
       "category": "system",
       "type": "number",
       "unit": "L",
       "readOnly": true,
       "description": "Aggregate session volume across ready sensors"
+    },
+    {
+      "id": "telemetry.totalVolumeM3",
+      "category": "system",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true,
+      "description": "Aggregate session volume, in cubic metres"
+    },
+    {
+      "id": "telemetry.maxFlowLpm",
+      "category": "system",
+      "type": "string",
+      "readOnly": true,
+      "description": "Highest per-channel peak flow and the channel holding it"
     },
     {
       "id": "telemetry.total",
@@ -968,6 +991,13 @@
       "type": "string",
       "readOnly": true,
       "description": "RGB LED status legend text"
+    },
+    {
+      "id": "legend.status",
+      "category": "derived",
+      "type": "string",
+      "readOnly": true,
+      "description": "Combined WiFi, MQTT and LED-pulse legend for the status page"
     },
     {
       "id": "legend.warning",
@@ -1026,6 +1056,13 @@
       "type": "string",
       "readOnly": true,
       "description": "The value currently being edited, before it is committed"
+    },
+    {
+      "id": "config.editor.range",
+      "category": "derived",
+      "type": "string",
+      "readOnly": true,
+      "description": "Permitted range or option list of the setting on this page"
     }
   ],
   "screens": [
@@ -1038,36 +1075,28 @@
       "role": "info-page-1 (UiPage::InstantFlow)"
     },
     {
-      "id": "info-p2-cumulative-liters",
-      "role": "info-page-2 (UiPage::CumulativeLiters)"
+      "id": "info-p2-cumulative-m3",
+      "role": "info-page-2 (UiPage::CumulativeCubicMeters)"
     },
     {
-      "id": "info-p3-cumulative-m3",
-      "role": "info-page-3 (UiPage::CumulativeCubicMeters)"
+      "id": "info-p3-session-m3",
+      "role": "info-page-3 (UiPage::SessionCubicMeters)"
     },
     {
-      "id": "info-p4-session-liters",
-      "role": "info-page-4 (UiPage::SessionLiters)"
+      "id": "info-p4-max-flow",
+      "role": "info-page-4 (UiPage::MaxFlow)"
     },
     {
-      "id": "info-p5-session-m3",
-      "role": "info-page-5 (UiPage::SessionCubicMeters)"
-    },
-    {
-      "id": "info-p6-max-flow",
-      "role": "info-page-6 (UiPage::MaxFlow)"
-    },
-    {
-      "id": "info-p7-enter-config",
-      "role": "info-page-7 (UiPage::EnterConfiguration)"
+      "id": "info-p5-enter-config",
+      "role": "info-page-5 (UiPage::EnterConfiguration)"
     },
     {
       "id": "config-c1-modbus-id",
       "role": "configuration-entry"
     },
     {
-      "id": "info-p8-factory-reset",
-      "role": "info-page-8 (UiPage::FactoryReset)"
+      "id": "info-p6-factory-reset",
+      "role": "info-page-6 (UiPage::FactoryReset)"
     },
     {
       "id": "confirm-factory-reset",

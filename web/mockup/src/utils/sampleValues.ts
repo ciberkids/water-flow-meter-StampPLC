@@ -1,4 +1,5 @@
 import type { FirmwareValueDefinition } from "../types/firmwareActions";
+import { formatSetting, formatSettingText, sampleRawFor } from "./settingHints";
 
 /**
  * A plausible rendering for a bound value, so the panel shows what the DEVICE will show.
@@ -93,6 +94,18 @@ export function sampleValueFor(
   const specific = kByBinding[binding] ?? sampleForSensorBinding(binding);
   if (specific !== undefined) {
     return specific;
+  }
+
+  /**
+   * A SETTING is formatted from its own descriptor, never from its bare type.
+   *
+   * The type fallback below drew every numeric setting as `42`, so the Baud Rate page read `42` — not
+   * a baud rate at all — and Parity, Stop Bits and QoS read `42` alongside a correct range hint that
+   * contradicted them. The descriptor already says which values are legal and how they are labelled,
+   * and `formatSetting` is the device's own rendering of it, so this asks the descriptor instead.
+   */
+  if (value?.category === "setting") {
+    return value.type === "string" ? formatSettingText(value) : formatSetting(value, sampleRawFor(value));
   }
 
   // Fall back to the declared type, so a value added to the catalogue renders sensibly without

@@ -6,6 +6,7 @@
 #include <string_view>
 
 #include "modbus/register_map.h"
+#include "units.h"
 
 namespace ui {
 
@@ -15,14 +16,15 @@ constexpr std::size_t kBufferMin = 4;
 
 const char* pageTitle(UiPage page) {
   switch (page) {
+    // These are the titles the SCREENS carry (spec §3.1, §4.2, §5.4, §5.5, §5a.3, §5b.3, §5b.4), not
+    // paraphrases of the enum names. A flow page whose enum says "Instant Flow" while the panel says
+    // "Instant Flow (L/m)" is two homes for the page's name, and the unit is the half that matters.
     case UiPage::GlobalStatus: return "System Status";
-    case UiPage::InstantFlow: return "Instant Flow";
-    case UiPage::CumulativeLiters: return "Cumulative Liters";
-    case UiPage::CumulativeCubicMeters: return "Cumulative m^3";
-    case UiPage::SessionLiters: return "Session Liters";
-    case UiPage::SessionCubicMeters: return "Session m^3";
-    case UiPage::MaxFlow: return "Max Flow";
-    case UiPage::EnterConfiguration: return "Enter Configuration";
+    case UiPage::InstantFlow: return "Instant Flow (L/m)";
+    case UiPage::CumulativeCubicMeters: return "Cumulative (m3)";
+    case UiPage::SessionCubicMeters: return "Session (m3)";
+    case UiPage::MaxFlow: return "Max Flow (L/m)";
+    case UiPage::EnterConfiguration: return "Configuration";
     case UiPage::FactoryReset: return "Factory Reset";
     default: return "";
   }
@@ -230,8 +232,54 @@ bool UiBindingResolver::resolveTelemetryBinding(const UiRenderContext& context,
     std::snprintf(buffer, bufferSize, "%.2f", context.aggregateFlowLps);
     return true;
   }
+  // `%7.2f`, not `%.2f`: a field WIDTH so the column cannot shift under a growing integer part.
+  // Eight channels each clamped to q_max = 65535 L/min reach 524280.00, which is nine characters —
+  // the width is a floor, so the layout's declared worst case comes from that bound and not from here.
+  if (binding == "telemetry.totalFlowLpm") {
+    std::snprintf(buffer, bufferSize, "%7.2f", units::flowLpsToLpm(context.aggregateFlowLps));
+    return true;
+  }
   if (binding == "telemetry.totalVolumeLiters") {
     std::snprintf(buffer, bufferSize, "%.2f", context.totalSessionLiters);
+    return true;
+  }
+  if (binding == "telemetry.totalVolumeM3") {
+    std::snprintf(buffer, bufferSize, "%.2f", units::litresToCubicMeters(context.totalSessionLiters));
+    return true;
+  }
+  /**
+   * The worst channel and which one it is.
+   *
+   * Three states need three formats, so this branches rather than forcing one: with nothing enabled
+   * there is no peak to report and no channel to blame; with channels enabled but no flow yet the
+   * honest answer is zero, not "--"; and once there is a peak the operator needs to know WHICH pipe
+   * it is on, because §5a's whole purpose is spotting an under-dimensioned sensor.
+   */
+  if (binding == "telemetry.maxFlowLpm") {
+    std::size_t owner = 0;
+    float peak = 0.0f;
+    bool anyEnabled = false;
+    for (std::size_t i = 0; i < context.sensors.size(); ++i) {
+      if (!context.sensors[i].enabled) {
+        continue;
+      }
+      anyEnabled = true;
+      if (context.sensors[i].maxFlow > peak) {
+        peak = context.sensors[i].maxFlow;
+        owner = i + 1;
+      }
+    }
+    if (!anyEnabled) {
+      return copyLiteral("Max Flow: --", buffer, bufferSize);
+    }
+    if (owner == 0) {
+      return copyLiteral("Max Flow: 0.00 L/m", buffer, bufferSize);
+    }
+    std::snprintf(buffer,
+                  bufferSize,
+                  "Max Flow: %7.2f L/m (S%u)",
+                  units::flowLpsToLpm(peak),
+                  static_cast<unsigned>(owner));
     return true;
   }
   if (binding == "telemetry.status") {
@@ -287,13 +335,13 @@ bool UiBindingResolver::resolveSensorBinding(const UiRenderContext& context,
     value = sensor.cumulativeLiters;
     unit = "L";
   } else if (metric == "cumulativeM3") {
-    value = sensor.cumulativeLiters / 1000.0;
+    value = units::litresToCubicMeters(sensor.cumulativeLiters);
     unit = "m^3";
   } else if (metric == "sessionLiters") {
     value = sensor.sessionLiters;
     unit = "L";
   } else if (metric == "sessionM3") {
-    value = sensor.sessionLiters / 1000.0;
+    value = units::litresToCubicMeters(static_cast<double>(sensor.sessionLiters));
     unit = "m^3";
   } else if (metric == "maxFlowSinceReset") {
     value = sensor.maxFlow;
@@ -351,6 +399,27 @@ bool UiBindingResolver::resolveLegendBinding(const UiRenderContext& context,
                   context.ledPulsePeriodMs);
     return true;
   }
+  /**
+   * P0's one legend row: network on the left, LED meaning on the right (spec §3.4).
+   *
+   * It replaces two separate rows — `net.status` and `legend.led` — because P0 needed a row back to
+   * give the walking dots breathing space. The network half is rendered with the SAME helpers
+   * `net.status` uses, so the two rows cannot disagree about what state the link is in.
+   *
+   * `legend.led`'s authored fallback text used to read `LED: Red=Pulse Grn=Ready Blu=Flow`, which its
+   * binding always overwrote — a caption that documented three colours where the value showed one
+   * number. Only the pulse volume survives here, because that is the part an operator cannot infer
+   * by watching the LED.
+   */
+  if (binding == "legend.status") {
+    std::snprintf(buffer,
+                  bufferSize,
+                  "WiFi %s  MQTT %s  LED 1p/%uL",
+                  plc::wifiStateText(context.net.wifiState),
+                  mqttStateText(context.net),
+                  static_cast<unsigned>(context.ledVolumeStep));
+    return true;
+  }
   if (binding == "legend.warning") {
     return copyLiteral(context.warningSummary.c_str(), buffer, bufferSize);
   }
@@ -380,6 +449,42 @@ bool UiBindingResolver::resolveConfigBinding(const UiRenderContext& context,
     }
     const auto& editor = controller_->editor();
     formatSetting(*editor.setting, editor.pending, buffer, bufferSize);
+    return true;
+  }
+
+  /**
+   * The domain of the setting this page is about (§7.2).
+   *
+   * An open editor names its own descriptor, but a SETTING page has no editor and still shows the
+   * range — knowing `1 to 247` before entering the editor is cheaper than discovering it by hitting
+   * a limit. So when nothing is being edited this asks the SCREEN which setting it is about, by
+   * finding the element whose binding is a known setting. That is the same question
+   * `settingOfScreen` answers in the mockup, asked the same way: by looking the binding up rather
+   * than by trusting an element id, so renaming `field-value` cannot silently blank the row.
+   */
+  if (binding == "config.editor.range") {
+    const ui::SettingDescriptor* descriptor = nullptr;
+    if (controller_ && controller_->editor().active && controller_->editor().setting) {
+      descriptor = controller_->editor().setting;
+    } else if (context.currentScreen) {
+      for (std::size_t i = 0; i < context.currentScreen->elementCount; ++i) {
+        const char* elementBinding = context.currentScreen->elements[i].bindingId;
+        if (!elementBinding) {
+          continue;
+        }
+        if (const auto* candidate = ui::findSetting(elementBinding)) {
+          descriptor = candidate;
+          break;
+        }
+      }
+    }
+    if (!descriptor) {
+      // A page with no setting has no range. Empty rather than false: returning false would let the
+      // element fall back to authored placeholder text, which is exactly the authored duplication
+      // this value replaces.
+      return copyLiteral("", buffer, bufferSize);
+    }
+    ui::formatSettingRange(*descriptor, buffer, bufferSize);
     return true;
   }
 

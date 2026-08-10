@@ -18,15 +18,14 @@ void UiController::syncPageFromScreen(const ui_exporter::Screen* screen, uint32_
   }
   // Only info-level screens map onto a UiPage; deeper levels leave it untouched so
   // page.title keeps naming the info page the operator came from.
-  static constexpr const char* kInfoIds[] = {
-      "info-p0-global-status", "info-p1-instant-flow", "info-p2-cumulative-liters",
-      "info-p3-cumulative-m3", "info-p4-session-liters", "info-p5-session-m3",
-      "info-p6-max-flow", "info-p7-enter-config", "info-p8-factory-reset"};
-  static_assert(sizeof(kInfoIds) / sizeof(kInfoIds[0]) ==
-                    static_cast<std::size_t>(UiPage::Count),
-                "kInfoIds must have one entry per UiPage");
+  //
+  // `kInfoScreenIds` from ui/core/ui_pages.h, NOT a local copy. This function used to carry its own
+  // identical array — a second home for the very mapping that header exists to keep in one place,
+  // and its comment already records that the enum and the ids drifted once when they were apart.
+  // The ring renumbering of §5.1 found it: the router had been updated and this had not, so an
+  // operator paging to P2 would have had `page.title` name a screen the ring no longer contains.
   for (std::size_t i = 0; i < static_cast<std::size_t>(UiPage::Count); ++i) {
-    if (std::strcmp(screen->id, kInfoIds[i]) == 0) {
+    if (std::strcmp(screen->id, kInfoScreenIds[i]) == 0) {
       setPage(static_cast<UiPage>(i), nowMs);
       return;
     }
