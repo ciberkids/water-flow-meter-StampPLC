@@ -39,6 +39,8 @@ struct DisplayRecorder {
   uint32_t fillRects = 0;
   uint32_t drawRects = 0;
   uint32_t fillCircles = 0;
+  /** The unlit flow dots are OUTLINES, so they are counted separately from the lit one. */
+  uint32_t drawCircles = 0;
   uint32_t startWrites = 0;
   uint32_t endWrites = 0;
   uint32_t drawStrings = 0;
@@ -81,6 +83,7 @@ struct DisplayRecorder {
   void fillRect(int16_t, int16_t, int16_t, int16_t, uint16_t) { ++fillRects; }
   void drawRect(int16_t, int16_t, int16_t, int16_t, uint16_t) { ++drawRects; }
   void fillCircle(int16_t, int16_t, int16_t, uint16_t) { ++fillCircles; }
+  void drawCircle(int16_t, int16_t, int16_t, uint16_t) { ++drawCircles; }
 
   void reset() { *this = DisplayRecorder{}; }
 };

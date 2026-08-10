@@ -42,14 +42,16 @@ int main() {
   nav.reset(p0);
   check(nav.current() == p0 && nav.depth() == 0, "reset lands on P0 at depth 0");
   // §7.1 put WIFI and MQTT at the ROOT level, as siblings of the info pages rather than under
-  // Configuration — so the ring is eleven, and P8 now steps to WIFI instead of wrapping.
-  const char* expect[] = {"info-p1-instant-flow","info-p2-cumulative-liters",
-    "info-p3-cumulative-m3","info-p4-session-liters","info-p5-session-m3",
-    "info-p6-max-flow","info-p7-enter-config","info-p8-factory-reset",
+  // Configuration, and §5.1 then RENUMBERED the info pages from nine to seven: cumulative and
+  // session each had a litres page and an m3 page, which is one quantity paginated twice, and the
+  // panel shows m3 only. So the ring is nine, and P6 steps to WIFI instead of wrapping.
+  const char* expect[] = {"info-p1-instant-flow","info-p2-cumulative-m3",
+    "info-p3-session-m3","info-p4-max-flow","info-p5-enter-config",
+    "info-p6-factory-reset",
     "net-wifi-root","net-mqtt-root",
     "info-p0-global-status"};
   bool ok = true;
-  for (int i = 0; i < 11; ++i) {
+  for (int i = 0; i < 9; ++i) {
     nav.goToSibling(follow(nav.current(), ui_exporter::FlowButton::Down,
                            ui_exporter::FlowGesture::Short));
     if (std::strcmp(idOf(nav.current()), expect[i]) != 0) {
@@ -57,24 +59,24 @@ int main() {
       ok = false;
     }
   }
-  check(ok, "11 DOWN presses traverse P0..P8, WIFI, MQTT and wrap to P0");
+  check(ok, "9 DOWN presses traverse P0..P6, WIFI, MQTT and wrap to P0");
   check(nav.depth() == 0, "sibling moves never change depth");
 
   uint8_t ri = 0, rc = 0;
-  check(nav.ringPosition(&ri, &rc) && rc == 11,
-        "info ring reports 11 members (P0-P8 + WIFI + MQTT)");
+  check(nav.ringPosition(&ri, &rc) && rc == 9,
+        "info ring reports 9 members (P0-P6 + WIFI + MQTT)");
 
   std::printf("\n[descend to the deepest documented path]\n");
   nav.reset(p0);
-  for (int i = 0; i < 7; ++i)
+  for (int i = 0; i < 5; ++i)
     nav.goToSibling(follow(nav.current(), ui_exporter::FlowButton::Down,
                            ui_exporter::FlowGesture::Short));
-  check(std::strcmp(idOf(nav.current()), "info-p7-enter-config") == 0, "reached P7");
+  check(std::strcmp(idOf(nav.current()), "info-p5-enter-config") == 0, "reached P5");
 
   nav.descend(follow(nav.current(), ui_exporter::FlowButton::Enter,
                      ui_exporter::FlowGesture::Short));
   check(std::strcmp(idOf(nav.current()), "config-c1-modbus-id") == 0 && nav.depth() == 1,
-        "P7 ENTER descends to config root, depth 1");
+        "P5 ENTER descends to config root, depth 1");
   check(nav.ringPosition(&ri, &rc) && rc == 8, "config ring reports 8 members (C1-C7 + BACK)");
 
   for (int i = 0; i < 6; ++i)

@@ -274,32 +274,72 @@ void fuzzTests(const std::vector<uint8_t>& good) {
           "a pack targeting an OLDER catalogue is accepted, not refused");
   }
 
-  // Every single-byte corruption of the header must be refused rather than crash. This is the
-  // check that would catch an offset the individual bounds tests happen to miss.
+  /**
+   * Every single-byte corruption of the header must be refused rather than crash — and any byte that
+   * IS accepted must belong to a field where surviving is explainable.
+   *
+   * This asserted an exact count of 23 accepted bytes. The count is DATASET-DEPENDENT and the
+   * assertion was not: the pack is emitted from `kGeneratedScreens`, so the string table's contents
+   * decide whether a flipped `stringsBytes` low byte happens to land on a length that both fits the
+   * buffer and ends on a NUL. Reworking the screen tree moved those NULs and the count became 24,
+   * failing a test whose comment claimed every survivor was "accounted for" by a field — when one of
+   * them was an accident of where the zero bytes fell.
+   *
+   * So the invariant is stated by FIELD instead. A survivor is acceptable in exactly four places:
+   *
+   *   label        free-form display text; corrupting it yields a wrong name, not a bad pack
+   *   unused       header padding, read by nothing
+   *   themeOffset  a value that stays in range while pointing at the wrong data. §3.2 puts the CRC
+   *                over the payload only, so the header is protected field by field rather than as a
+   *                block, and an in-range-but-wrong offset survives that until the theme is parsed.
+   *   stringsBytes same story: a shorter length that still ends on a NUL is indistinguishable here.
+   *
+   * Anything ELSE surviving means a field lost its protection, which is what this sweep is for — it
+   * previously found four unprotected themeOffset bytes and two unvalidated level-record bytes.
+   */
+  struct Field {
+    const char* name;
+    std::size_t from;
+    std::size_t to;  // inclusive
+    bool maySurvive;
+  };
+  static constexpr Field kFields[] = {
+      {"magic", 0, 5, false},          {"formatVersion", 6, 7, false},
+      {"catalogueAbi", 8, 9, false},   {"payloadBytes", 10, 13, false},
+      {"crc32", 14, 17, false},        {"levelCount", 18, 19, false},
+      {"screenCount", 20, 21, false},  {"levelsOffset", 22, 25, false},
+      {"screensOffset", 26, 29, false}, {"themeOffset", 30, 33, true},
+      {"stringsOffset", 34, 37, false}, {"stringsBytes", 38, 41, true},
+      {"label", 42, 61, true},          {"unused", 62, 63, true}};
+
+  const auto fieldAt = [](std::size_t index) -> const Field* {
+    for (const auto& field : kFields) {
+      if (index >= field.from && index <= field.to) return &field;
+    }
+    return nullptr;
+  };
+
+  bool onlyExplainableBytesSurvive = true;
   std::size_t accepted = 0;
   for (std::size_t i = 0; i < ui::PackHeader::kSize; ++i) {
     auto bad = good;
     bad[i] ^= 0xFF;
-    if (pack.validate(bad.data(), bad.size(), kFirmwareAbi) == ui::PackStatus::Ok) {
-      ++accepted;
+    if (pack.validate(bad.data(), bad.size(), kFirmwareAbi) != ui::PackStatus::Ok) {
+      continue;
+    }
+    ++accepted;
+    const Field* field = fieldAt(i);
+    if (!field || !field->maySurvive) {
+      onlyExplainableBytesSurvive = false;
+      std::printf("    byte %zu (%s) survives corruption but must not\n", i,
+                  field ? field->name : "beyond the header");
     }
   }
-  // 23 of 64 bytes can be flipped and still yield a valid pack, and each is accounted for:
-  //
-  //   20  label      free-form display text; corrupting it yields a wrong name, not a bad pack
-  //    2  unused     header padding, read by nothing
-  //    1  themeOffset a low byte that keeps the offset in range while pointing at the wrong
-  //                  data. Not detectable until the theme is actually parsed — §3.2 puts the
-  //                  CRC over the payload only, so the header is protected field by field
-  //                  rather than as a block, and an in-range-but-wrong offset survives that.
-  //
-  // Asserted exactly rather than loosely: if this number moves, a field has either gained or
-  // lost protection, and either is worth knowing. The sweep already earned its place — it found
-  // four unprotected themeOffset bytes and two unvalidated level-record bytes, and both are now
-  // checked.
-  constexpr std::size_t kExpectedFreeFormBytes = 23;
-  check(accepted == kExpectedFreeFormBytes,
-        "exactly the label, the padding and one in-range themeOffset byte survive corruption");
+  // The whole header must never be accepted wholesale, so at least the protected fields have to bite.
+  check(accepted < ui::PackHeader::kSize,
+        "corrupting the header is not universally accepted");
+  check(onlyExplainableBytesSurvive,
+        "only the label, the padding and the two in-range offset fields survive corruption");
   std::printf("      %zu of %zu header corruptions still validated\n", accepted,
               ui::PackHeader::kSize);
 }

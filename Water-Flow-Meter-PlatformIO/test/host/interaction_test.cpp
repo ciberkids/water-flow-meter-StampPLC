@@ -116,6 +116,31 @@ namespace {
 int failures = 0;
 int checks = 0;
 
+/**
+ * Whether a setting can be changed AT THE PANEL — the completeness rule's subject.
+ *
+ * Two exemptions, both decided by a STATIC property so the rule stays decidable, which is what
+ * disqualified runtime-guarded editors (R7.3):
+ *
+ *  - TEXT, because there is no on-device text entry. A three-button character wheel is not a way to
+ *    type a 63-character passphrase (§6.3).
+ *  - WIFI and MQTT, by the owner's ruling that the panel READS them and does not set them. It is the
+ *    text exemption widened to its natural edge: the web portal, the RS485 block and the SD
+ *    credential file are where a broker gets configured, and a panel offering to edit half a broker's
+ *    settings is worse than one offering none.
+ *
+ * Mirrors `assertCoversEverySetting` in web/mockup/tools/skeleton/generate.mjs, which enforces the
+ * same rule on the dataset before it is generated. Two homes for one rule is not ideal, but they
+ * check different artefacts — the generator refuses to EMIT an incomplete menu, this refuses to
+ * ACCEPT one — and a rule enforced at only one of those two points is a rule with a hole.
+ */
+bool panelEditable(const ui::SettingDescriptor& setting) {
+  if (setting.kind == ui::SettingKind::Text) return false;
+  const char* id = setting.bindingId;
+  if (!id) return false;
+  return std::strncmp(id, "config.wifi.", 12) != 0 && std::strncmp(id, "config.mqtt.", 12) != 0;
+}
+
 void check(bool condition, const char* what) {
   ++checks;
   std::printf("  %-64s %s\n", what, condition ? "ok" : "FAIL");
@@ -724,7 +749,7 @@ void sensorEditorDescentTests() {
 
   // The S ring pages the same way the C ring does, and for the same reason.
   dev.hold(ButtonInputManager::Button::Down, 330);
-  check(onScreen(dev, "config-s2-multiplier"), "a 330 ms DOWN pages S1 -> S2");
+  check(onScreen(dev, "config-s2-calibration"), "a 330 ms DOWN pages S1 -> S2");
   dev.hold(ButtonInputManager::Button::Up, 330);
   check(onScreen(dev, "config-s1-connected"), "a 330 ms UP pages S2 -> S1 again");
 
@@ -817,12 +842,15 @@ void editorDatasetInvariantTests() {
     if (!carriesSetting) continue;
     ++settingListPages;
 
-    // A row showing a TEXT setting must NOT descend to an editor — there is no on-device text
-    // entry (§6.3). Everything else must, or the setting is unreachable at the panel.
+    // A row the PANEL CANNOT EDIT must not descend to an editor; everything else must, or the
+    // setting is unreachable at the panel. Two kinds cannot be edited here, and the second is new:
+    // text, because there is no on-device text entry (§6.3), and every WiFi/MQTT setting, because the
+    // owner ruled that the panel only reads them — configuring a broker through three buttons is too
+    // painful, and the portal, RS485 and SD file already do it better.
     bool carriesTextSetting = false;
     for (std::size_t e = 0; e < screen.elementCount; ++e) {
       const auto* found = ui::findSetting(screen.elements[e].bindingId);
-      if (found && found->kind == ui::SettingKind::Text) {
+      if (found && !panelEditable(*found)) {
         carriesTextSetting = true;
         break;
       }
@@ -854,7 +882,7 @@ void editorDatasetInvariantTests() {
   std::size_t editableSettings = 0;
   for (std::size_t i = 0; i < ui::settingCount(); ++i) {
     const auto* setting = ui::settingAt(i);
-    if (setting && setting->kind != ui::SettingKind::Text) ++editableSettings;
+    if (setting && panelEditable(*setting)) ++editableSettings;
   }
   std::printf("      %zu editors / %zu rows (%zu text) / %zu settings, %zu editable\n",
               static_cast<std::size_t>(editors), static_cast<std::size_t>(settingListPages),
@@ -1043,7 +1071,7 @@ void confirmCountdownTests() {
 
   Device dev;
   dev.boot();
-  check(walkToInfoPage(dev, UiPage::CumulativeLiters), "paged the info ring to P2");
+  check(walkToInfoPage(dev, UiPage::CumulativeCubicMeters), "paged the info ring to P2");
   dev.tap(ButtonInputManager::Button::Enter);
   check(onScreen(dev, "confirm-reset-totals"), "ENTER-short on P2 opens the confirm screen");
   check(dev.controller.navigator().depth() == 1, "the confirm screen is one level down");
@@ -1078,7 +1106,7 @@ void confirmCountdownTests() {
   // §4.3.1 asks for. Asserted end to end rather than only at the destination.
   check(onScreen(dev, "toast-totals-reset"), "and the acknowledgement toast is shown");
   for (int i = 0; i < 24; ++i) dev.tick(100);  // past the toast's declared 2000 ms
-  check(dev.controller.navigator().depth() == 0 && onScreen(dev, "info-p2-cumulative-liters"),
+  check(dev.controller.navigator().depth() == 0 && onScreen(dev, "info-p2-cumulative-m3"),
         "which then dismisses itself back to the page it was opened from");
   check(!dev.controller.context().countdownActive, "the overlay is gone once the action fired");
 
@@ -1097,7 +1125,7 @@ void confirmSessionCountdownTests() {
 
   Device dev;
   dev.boot();
-  check(walkToInfoPage(dev, UiPage::SessionLiters), "paged the info ring to P4");
+  check(walkToInfoPage(dev, UiPage::SessionCubicMeters), "paged the info ring to P4");
   dev.tap(ButtonInputManager::Button::Enter);
   check(onScreen(dev, "confirm-reset-session"), "ENTER-short on P4 opens the confirm screen");
 
@@ -1116,7 +1144,7 @@ void confirmSessionCountdownTests() {
         "holding ENTER for 1.5 s issues the reset-session command");
   check(onScreen(dev, "toast-session-reset"), "and its acknowledgement toast is shown");
   for (int i = 0; i < 24; ++i) dev.tick(100);
-  check(dev.controller.navigator().depth() == 0 && onScreen(dev, "info-p4-session-liters"),
+  check(dev.controller.navigator().depth() == 0 && onScreen(dev, "info-p3-session-m3"),
         "and returns to the page the operator started from");
   dev.press(ButtonInputManager::Button::Enter, false);
   dev.tick(30);
@@ -1127,7 +1155,7 @@ void confirmAbortTests() {
 
   Device dev;
   dev.boot();
-  check(walkToInfoPage(dev, UiPage::CumulativeLiters), "paged the info ring to P2");
+  check(walkToInfoPage(dev, UiPage::CumulativeCubicMeters), "paged the info ring to P2");
   dev.tap(ButtonInputManager::Button::Enter);
   check(onScreen(dev, "confirm-reset-totals"), "on the 3 s confirm screen");
 
@@ -1155,13 +1183,13 @@ void confirmAbortTests() {
   // A plain tap is still the way out, and must not be swallowed by the arming path.
   dev.tap(ButtonInputManager::Button::Enter);
   check(harness::writes.empty(), "a tap on the confirm screen writes nothing");
-  check(dev.controller.navigator().depth() == 0 && onScreen(dev, "info-p2-cumulative-liters"),
+  check(dev.controller.navigator().depth() == 0 && onScreen(dev, "info-p2-cumulative-m3"),
         "a tap exits via the screen's own ENTER-short f-exit flow");
 
   // §4.3 note 2: "during a countdown, UP/DOWN have no effect" — including not cancelling it.
   Device other;
   other.boot();
-  check(walkToInfoPage(other, UiPage::CumulativeLiters), "paged a second device to P2");
+  check(walkToInfoPage(other, UiPage::CumulativeCubicMeters), "paged a second device to P2");
   other.tap(ButtonInputManager::Button::Enter);
   harness::writes.clear();
   other.press(ButtonInputManager::Button::Enter, true);
@@ -1329,7 +1357,7 @@ void nyquistPromptTests() {
 /** Walks to P2 and holds ENTER long enough to complete its reset-totals confirm screen. */
 bool completeResetTotals(Device& dev) {
   for (int i = 0; i < 16; ++i) {
-    if (dev.controller.page() == UiPage::CumulativeLiters) break;
+    if (dev.controller.page() == UiPage::CumulativeCubicMeters) break;
     dev.tap(ButtonInputManager::Button::Down);
   }
   dev.tap(ButtonInputManager::Button::Enter);  // descend to the confirm screen
@@ -1373,7 +1401,7 @@ void toastTests() {
   // operator would be asked again whether to do what they just did.
   check(afterToast && std::strcmp(afterToast->id, "confirm-reset-totals") != 0,
         "and does NOT return to the confirm screen");
-  check(afterToast && std::strcmp(afterToast->id, "info-p2-cumulative-liters") == 0,
+  check(afterToast && std::strcmp(afterToast->id, "info-p2-cumulative-m3") == 0,
         "it returns to the page the operator started from");
   check(dev.controller.navigator().depth() < depthOnToast,
         "one level shallower than the toast, so the modal is fully unwound");

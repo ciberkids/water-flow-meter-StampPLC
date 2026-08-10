@@ -194,6 +194,12 @@ Storage storageFor(ui::SettingTarget target) {
     case ui::SettingTarget::SensorMultiplier:
     case ui::SettingTarget::SensorAdjust:
     case ui::SettingTarget::SensorMaxFlow:
+    // The calibration pair joins the other per-sensor settings: the portal does not serve them, the
+    // sensor register block does. Grouped here rather than defaulted, which is the point of the
+    // -Wswitch gate this file's header describes — it failed the build until somebody said where they
+    // belong, and this is that answer.
+    case ui::SettingTarget::SensorCalibrationType:
+    case ui::SettingTarget::SensorPulsesPerLitre:
       return Storage{Storage::Kind::External, NetField::Count};
   }
   return Storage{};
@@ -226,6 +232,12 @@ bool readNetScalar(const NetSettings& net, ui::SettingTarget target, int32_t& ou
     case ui::SettingTarget::SensorMultiplier:
     case ui::SettingTarget::SensorAdjust:
     case ui::SettingTarget::SensorMaxFlow:
+    // The calibration pair joins the other per-sensor settings: the portal does not serve them, the
+    // sensor register block does. Grouped here rather than defaulted, which is the point of the
+    // -Wswitch gate this file's header describes — it failed the build until somebody said where they
+    // belong, and this is that answer.
+    case ui::SettingTarget::SensorCalibrationType:
+    case ui::SettingTarget::SensorPulsesPerLitre:
       return false;
   }
   return false;
@@ -259,6 +271,12 @@ bool stageNetScalar(NetSettings& net, ui::SettingTarget target, int32_t value) {
     case ui::SettingTarget::SensorMultiplier:
     case ui::SettingTarget::SensorAdjust:
     case ui::SettingTarget::SensorMaxFlow:
+    // The calibration pair joins the other per-sensor settings: the portal does not serve them, the
+    // sensor register block does. Grouped here rather than defaulted, which is the point of the
+    // -Wswitch gate this file's header describes — it failed the build until somebody said where they
+    // belong, and this is that answer.
+    case ui::SettingTarget::SensorCalibrationType:
+    case ui::SettingTarget::SensorPulsesPerLitre:
       return false;
   }
   return false;
