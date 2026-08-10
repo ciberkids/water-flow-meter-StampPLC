@@ -1,15 +1,15 @@
 {
-  "id": "net-mqtt-info",
-  "name": "M.I1 \u2014 MQTT",
-  "description": "MQTT information, page 1 of 3. Read-only; every value it shows was its own screen before.",
+  "id": "net-mqtt-info-2",
+  "name": "M.I2 \u2014 MQTT broker",
+  "description": "MQTT information, page 2 of 3 \u2014 credentials and topics. Was B3, B4, B5 and B6.",
   "elements": [
     {
       "id": "hdr-title",
       "kind": "text",
       "x": 2,
       "y": 2,
-      "content": "MQTT > MQTT",
-      "worst": "MQTT > MQTT",
+      "content": "MQTT > MQTT broker",
+      "worst": "MQTT > MQTT broker",
       "bound": "fixed literal"
     },
     {
@@ -17,9 +17,9 @@
       "kind": "text",
       "x": 2,
       "y": 26,
-      "content": "State",
+      "content": "Username",
       "emphasis": "muted",
-      "worst": "State",
+      "worst": "Username",
       "bound": "fixed literal"
     },
     {
@@ -27,19 +27,19 @@
       "kind": "text",
       "x": 84,
       "y": 26,
-      "binding": "net.mqtt.state",
+      "binding": "config.mqtt.user",
       "emphasis": "strong",
-      "worst": "UNSET",
-      "bound": "mqttStateText: OFF / OK / DOWN / UNSET"
+      "worst": "xxxxxxxxxxxxxxxxxxxxxxxx",
+      "bound": "user holds 32 bytes; clipped to the 24-char value column by ui_renderer; real bound is longer"
     },
     {
       "id": "row1-label",
       "kind": "text",
       "x": 2,
       "y": 44,
-      "content": "Enabled",
+      "content": "Password",
       "emphasis": "muted",
-      "worst": "Enabled",
+      "worst": "Password",
       "bound": "fixed literal"
     },
     {
@@ -47,19 +47,19 @@
       "kind": "text",
       "x": 84,
       "y": 44,
-      "binding": "config.mqtt.enabled",
+      "binding": "config.mqtt.password",
       "emphasis": "strong",
-      "worst": "Off",
-      "bound": "boolean, Off / On"
+      "worst": "********",
+      "bound": "writeOnly, always eight asterisks"
     },
     {
       "id": "row2-label",
       "kind": "text",
       "x": 2,
       "y": 62,
-      "content": "Broker",
+      "content": "Topic",
       "emphasis": "muted",
-      "worst": "Broker",
+      "worst": "Topic",
       "bound": "fixed literal"
     },
     {
@@ -67,19 +67,19 @@
       "kind": "text",
       "x": 84,
       "y": 62,
-      "binding": "config.mqtt.host",
+      "binding": "config.mqtt.baseTopic",
       "emphasis": "strong",
       "worst": "xxxxxxxxxxxxxxxxxxxxxxxx",
-      "bound": "host holds 64 bytes; clipped to the 24-char value column by ui_renderer; real bound is longer"
+      "bound": "base topic holds 48 bytes; clipped to the 24-char value column by ui_renderer; real bound is longer"
     },
     {
       "id": "row3-label",
       "kind": "text",
       "x": 2,
       "y": 80,
-      "content": "Port",
+      "content": "HA prefix",
       "emphasis": "muted",
-      "worst": "Port",
+      "worst": "HA prefix",
       "bound": "fixed literal"
     },
     {
@@ -87,10 +87,10 @@
       "kind": "text",
       "x": 84,
       "y": 80,
-      "binding": "config.mqtt.port",
+      "binding": "config.mqtt.discoveryPrefix",
       "emphasis": "strong",
-      "worst": "65535",
-      "bound": "uint16 domain 1..65535"
+      "worst": "xxxxxxxxxxxxxxxxxxxxxxxx",
+      "bound": "prefix holds 32 bytes; clipped to the 24-char value column by ui_renderer; real bound is longer"
     },
     {
       "id": "footer-hint",

@@ -1,15 +1,15 @@
 {
-  "id": "net-mqtt-info",
-  "name": "M.I1 \u2014 MQTT",
-  "description": "MQTT information, page 1 of 3. Read-only; every value it shows was its own screen before.",
+  "id": "net-mqtt-info-3",
+  "name": "M.I3 \u2014 MQTT publish",
+  "description": "MQTT information, page 3 of 3 \u2014 publish behaviour. Was B7, B8 and B9.",
   "elements": [
     {
       "id": "hdr-title",
       "kind": "text",
       "x": 2,
       "y": 2,
-      "content": "MQTT > MQTT",
-      "worst": "MQTT > MQTT",
+      "content": "MQTT > MQTT publish",
+      "worst": "MQTT > MQTT publish",
       "bound": "fixed literal"
     },
     {
@@ -17,9 +17,9 @@
       "kind": "text",
       "x": 2,
       "y": 26,
-      "content": "State",
+      "content": "HA discovery",
       "emphasis": "muted",
-      "worst": "State",
+      "worst": "HA discovery",
       "bound": "fixed literal"
     },
     {
@@ -27,19 +27,19 @@
       "kind": "text",
       "x": 84,
       "y": 26,
-      "binding": "net.mqtt.state",
+      "binding": "config.mqtt.haDiscovery",
       "emphasis": "strong",
-      "worst": "UNSET",
-      "bound": "mqttStateText: OFF / OK / DOWN / UNSET"
+      "worst": "Off",
+      "bound": "boolean, Off / On"
     },
     {
       "id": "row1-label",
       "kind": "text",
       "x": 2,
       "y": 44,
-      "content": "Enabled",
+      "content": "Period",
       "emphasis": "muted",
-      "worst": "Enabled",
+      "worst": "Period",
       "bound": "fixed literal"
     },
     {
@@ -47,19 +47,19 @@
       "kind": "text",
       "x": 84,
       "y": 44,
-      "binding": "config.mqtt.enabled",
+      "binding": "config.mqtt.publishPeriod",
       "emphasis": "strong",
-      "worst": "Off",
-      "bound": "boolean, Off / On"
+      "worst": "3600 s",
+      "bound": "domain 1..3600 with unit s"
     },
     {
       "id": "row2-label",
       "kind": "text",
       "x": 2,
       "y": 62,
-      "content": "Broker",
+      "content": "QoS",
       "emphasis": "muted",
-      "worst": "Broker",
+      "worst": "QoS",
       "bound": "fixed literal"
     },
     {
@@ -67,30 +67,10 @@
       "kind": "text",
       "x": 84,
       "y": 62,
-      "binding": "config.mqtt.host",
+      "binding": "config.mqtt.qos",
       "emphasis": "strong",
-      "worst": "xxxxxxxxxxxxxxxxxxxxxxxx",
-      "bound": "host holds 64 bytes; clipped to the 24-char value column by ui_renderer; real bound is longer"
-    },
-    {
-      "id": "row3-label",
-      "kind": "text",
-      "x": 2,
-      "y": 80,
-      "content": "Port",
-      "emphasis": "muted",
-      "worst": "Port",
-      "bound": "fixed literal"
-    },
-    {
-      "id": "row3-value",
-      "kind": "text",
-      "x": 84,
-      "y": 80,
-      "binding": "config.mqtt.port",
-      "emphasis": "strong",
-      "worst": "65535",
-      "bound": "uint16 domain 1..65535"
+      "worst": "1",
+      "bound": "options 0 / 1"
     },
     {
       "id": "footer-hint",

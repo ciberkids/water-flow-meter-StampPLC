@@ -415,40 +415,77 @@ screens.push({
 // emit them unconditionally: every one of the fourteen settings is reachable by paging, with no
 // guard for the export gate to reason around. Configuring a broker before switching MQTT on is also
 // the friendlier order.
-const WIFI_L1 = [
-  { page: "W1", id: "net-wifi-enabled", title: "Enabled", binding: "config.wifi.enabled" },
-  { page: "W2", id: "net-wifi-ssid", title: "Network (SSID)", binding: "config.wifi.ssid" },  // read-only
-  { page: "W3", id: "net-wifi-psk", title: "Passphrase", binding: "config.wifi.psk" },
-  // R8.2a. Lives in the WiFi level because the portal is reached through the AP the radio raises,
-  // and because §6.3 left the panel with no other way to influence the portal at all.
+/**
+ * CONSOLIDATED. The network levels are PAGINATED INFORMATION PAGES, not one screen per value.
+ *
+ * There used to be fifteen screens between them — W1..W4, M1..M2, B1..B9 — each showing a single
+ * read-only row and leaving two thirds of the panel empty. Once the owner ruled that the panel only
+ * READS WiFi and MQTT, one screen per value bought nothing: paging fourteen times to see fourteen
+ * facts, when four fit on a page and the scrollbar already says where you are in the level.
+ *
+ * So the values stay exposed and the screens collapse. Four rows to a page, the shape §7.1 gave the
+ * information pages, and the level ring paginates them.
+ */
+const WIFI_INFO_PAGES = [
+  {
+    id: "net-wifi-info", page: "W.I1", title: "WiFi", rows: [
+      { label: "State", binding: "net.wifi.state" },
+      { label: "Enabled", binding: "config.wifi.enabled" },
+      { label: "Network", binding: "config.wifi.ssid" },
+      // Masked by formatSettingText. Present so an operator can see that a passphrase IS set
+      // without it being readable off a wall panel.
+      { label: "Passphrase", binding: "config.wifi.psk" }
+    ]
+  },
+  {
+    id: "net-wifi-info-2", page: "W.I2", title: "WiFi link", rows: [
+      { label: "Address", binding: "net.wifi.ip" },
+      { label: "Signal (dBm)", binding: "net.wifi.rssi" }
+    ]
+  }
+];
+
+const MQTT_INFO_PAGES = [
+  {
+    id: "net-mqtt-info", page: "M.I1", title: "MQTT", rows: [
+      { label: "State", binding: "net.mqtt.state" },
+      { label: "Enabled", binding: "config.mqtt.enabled" },
+      { label: "Broker", binding: "config.mqtt.host" },
+      { label: "Port", binding: "config.mqtt.port" }
+    ]
+  },
+  {
+    id: "net-mqtt-info-2", page: "M.I2", title: "MQTT broker", rows: [
+      { label: "Username", binding: "config.mqtt.user" },
+      { label: "Password", binding: "config.mqtt.password" },
+      { label: "Topic", binding: "config.mqtt.baseTopic" },
+      { label: "HA prefix", binding: "config.mqtt.discoveryPrefix" }
+    ]
+  },
+  {
+    id: "net-mqtt-info-3", page: "M.I3", title: "MQTT publish", rows: [
+      { label: "HA discovery", binding: "config.mqtt.haDiscovery" },
+      { label: "Period", binding: "config.mqtt.publishPeriod" },
+      { label: "QoS", binding: "config.mqtt.qos" }
+    ]
+  }
+];
+
+/**
+ * The one WiFi row that is NOT a value: reaching the provisioning portal (R8.2a).
+ *
+ * It survives the consolidation because it is an ACTION, not a reading — and because §6.3 left the
+ * panel with no other way to influence the portal at all. Removing it would leave a device whose
+ * WiFi can only be configured by something the operator standing in front of it cannot reach.
+ */
+const WIFI_ACTIONS = [
   { page: "W4", id: "net-wifi-portal-reset", title: "Reset portal login", binding: null,
     descendTo: "confirm-reset-portal-login" }
 ];
-const WIFI_RING = [...WIFI_L1.map((w) => w.id), "net-wifi-info", "net-wifi-ap-info",
-                   "net-wifi-back"];
 
-const MQTT_L1 = [
-  { page: "M1", id: "net-mqtt-enabled", title: "Enabled", binding: "config.mqtt.enabled" },
-  // "Broker", not "Broker setup". Since §6.3 removed on-device text entry, five of the ten rows in
-  // that level are read-only displays — a name promising setup would be half a lie, and the first
-  // row the descent lands on (the broker host) is one of the read-only ones. The rows themselves
-  // say where to change them.
-  { page: "M2", id: "net-mqtt-setup", title: "Broker", binding: null, descendTo: "net-mqtt-host" }
-];
-const MQTT_RING = [...MQTT_L1.map((m) => m.id), "net-mqtt-info", "net-mqtt-back"];
-
-const MQTT_SETUP = [
-  { page: "B1", id: "net-mqtt-host", title: "Broker host", binding: "config.mqtt.host" },
-  { page: "B2", id: "net-mqtt-port", title: "Port", binding: "config.mqtt.port" },
-  { page: "B3", id: "net-mqtt-user", title: "Username", binding: "config.mqtt.user" },
-  { page: "B4", id: "net-mqtt-password", title: "Password", binding: "config.mqtt.password" },
-  { page: "B5", id: "net-mqtt-base-topic", title: "Base topic", binding: "config.mqtt.baseTopic" },
-  { page: "B6", id: "net-mqtt-prefix", title: "HA prefix", binding: "config.mqtt.discoveryPrefix" },
-  { page: "B7", id: "net-mqtt-period", title: "Publish period", binding: "config.mqtt.publishPeriod" },
-  { page: "B8", id: "net-mqtt-ha-discovery", title: "HA discovery", binding: "config.mqtt.haDiscovery" },
-  { page: "B9", id: "net-mqtt-qos", title: "QoS", binding: "config.mqtt.qos" }
-];
-const MQTT_SETUP_RING = [...MQTT_SETUP.map((b) => b.id), "net-mqtt-setup-back"];
+const WIFI_RING = [...WIFI_INFO_PAGES.map((p) => p.id), ...WIFI_ACTIONS.map((a) => a.id),
+                   "net-wifi-ap-info", "net-wifi-back"];
+const MQTT_RING = [...MQTT_INFO_PAGES.map((p) => p.id), "net-mqtt-back"];
 
 /**
  * Emits one navigation level: an entry screen per item, an editor for each that binds a setting,
@@ -490,8 +527,38 @@ function emitInfoPage({ id, page, title, crumb, ring, index, rows, footer }) {
   });
 }
 
-function emitLevel({ items, ring, crumb, backId, backName }) {
-  items.forEach((item, i) => {
+/**
+ * Emits the `< BACK` row that closes a level.
+ *
+ * Split out of emitLevel because the MQTT level no longer has ANY bound items — the consolidation
+ * turned all of them into information pages — and emitLevel used to be the only thing that emitted
+ * the back row. A level whose ring names `net-mqtt-back` while nothing emits it is a flow pointing
+ * at a screen that does not exist, which is exactly what the export gate rejects.
+ */
+function emitBackRow({ backId, backName, ring, crumb }) {
+  screens.push({
+    id: backId,
+    name: backName,
+    description: `Ascends one level, out of ${crumb}.`,
+    elements: [
+      text("hdr-title", L.headerY, crumb),
+      text("back-label", L.valueY, "< BACK", { emphasis: "strong" }),
+      text("footer-hint", L.footerY, "ENTER go back", { emphasis: "muted" }),
+      scrollbar()
+    ],
+    flows: [
+      ...ringFlows(ring, ring.length - 1),
+      btn("f-back", "Back one level", "enter", "short", A.back),
+      btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+    ]
+  });
+}
+
+function emitLevel({ items, ring, crumb, backId, backName, ringOffset = 0 }) {
+  items.forEach((item, itemIndex) => {
+    // Where this item sits in the RING, which is no longer the same as where it sits in `items`:
+    // the network levels put information pages ahead of the action rows.
+    const i = itemIndex + ringOffset;
     const isDescent = item.binding === null;
     const v = item.binding ? byId.get(item.binding) : null;
     if (item.binding && !v) throw new Error(`catalogue has no value "${item.binding}"`);
@@ -547,30 +614,15 @@ function emitLevel({ items, ring, crumb, backId, backName }) {
       }));
     }
   });
-  screens.push({
-    id: backId,
-    name: backName,
-    description: `Ascends one level, out of ${crumb}.`,
-    elements: [
-      text("hdr-title", L.headerY, crumb),
-      text("back-label", L.valueY, "< BACK", { emphasis: "strong" }),
-      text("footer-hint", L.footerY, "ENTER go back", { emphasis: "muted" }),
-      scrollbar()
-    ],
-    flows: [
-      ...ringFlows(ring, ring.length - 1),
-      btn("f-back", "Back one level", "enter", "short", A.back),
-      btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
-    ]
-  });
+  if (backId) emitBackRow({ backId, backName, ring, crumb });
 }
 
 // The two root-level entries. Their ring is the INFO ring, so they page with P0..P8.
 [
-  { id: "net-wifi-root", name: "WIFI — WiFi", crumb: "WiFi", enter: "net-wifi-enabled",
+  { id: "net-wifi-root", name: "WIFI — WiFi", crumb: "WiFi", enter: "net-wifi-info",
     prev: "info-p6-factory-reset", next: "net-mqtt-root",
     lines: ["Radio, network name and", "passphrase."] },
-  { id: "net-mqtt-root", name: "MQTT — MQTT", crumb: "MQTT", enter: "net-mqtt-enabled",
+  { id: "net-mqtt-root", name: "MQTT — MQTT", crumb: "MQTT", enter: "net-mqtt-info",
     prev: "net-wifi-root", next: "info-p0-global-status",
     lines: ["Broker, credentials and", "Home Assistant discovery."] }
 ].forEach((r) => {
@@ -598,28 +650,26 @@ function emitLevel({ items, ring, crumb, backId, backName }) {
 // Checked here rather than earlier: it must see EVERY list, and the network lists are declared
 // above this point. Placed before the emit calls so a missing editor fails before any screen is
 // written rather than after.
-assertCoversEverySetting([...DEVICE, ...WIFI_L1, ...MQTT_L1, ...MQTT_SETUP], SENSOR_SETTINGS);
+// Checked here rather than earlier: it must see EVERY list, and the network lists are declared
+// above this point. Placed before the emit calls so a missing editor fails before any screen is
+// written rather than after. The network settings are exempt by surface (see the function), so the
+// consolidated info pages do not need to be passed in — they contain no editors at all.
+assertCoversEverySetting(DEVICE, SENSOR_SETTINGS);
 
-emitLevel({ items: WIFI_L1, ring: WIFI_RING, crumb: "WiFi",
-            backId: "net-wifi-back", backName: "W.BACK — Back" });
-emitLevel({ items: MQTT_L1, ring: MQTT_RING, crumb: "MQTT",
-            backId: "net-mqtt-back", backName: "M.BACK — Back" });
-// The §7.1 information pages, now that N4 produces the values they bind. Unguarded, like everything
-// else in these levels: R7.2's guards are still unimplemented, and leaving them unconditional keeps
-// the completeness rule statically decidable (see the note above assertCoversEverySetting).
-emitInfoPage({
-  id: "net-wifi-info", page: "W5", title: "WiFi info", crumb: "WiFi",
-  ring: WIFI_RING, index: WIFI_L1.length,
-  rows: [
-    { label: "State", binding: "net.wifi.state" },
-    { label: "Network", binding: "net.wifi.ssid" },
-    { label: "Address", binding: "net.wifi.ip" },
-    { label: "Signal (dBm)", binding: "net.wifi.rssi" }
-  ]
+// The WiFi level: two paginated information pages, the portal action, the AP page, then BACK.
+WIFI_INFO_PAGES.forEach((page, i) => {
+  emitInfoPage({
+    id: page.id, page: page.page, title: page.title, crumb: "WiFi",
+    ring: WIFI_RING, index: i, rows: page.rows,
+    footer: "UP/DN pages  hold=exit"
+  });
 });
+emitLevel({ items: WIFI_ACTIONS, ring: WIFI_RING, crumb: "WiFi",
+            backId: "net-wifi-back", backName: "W.BACK — Back",
+            ringOffset: WIFI_INFO_PAGES.length });
 emitInfoPage({
   id: "net-wifi-ap-info", page: "W6", title: "AP info", crumb: "WiFi",
-  ring: WIFI_RING, index: WIFI_L1.length + 1,
+  ring: WIFI_RING, index: WIFI_INFO_PAGES.length + WIFI_ACTIONS.length,
   rows: [
     { label: "AP network", binding: "net.ap.ssid" },
     // Shown in clear on purpose — R5.3. The device is broadcasting this network, so anyone in range
@@ -630,19 +680,17 @@ emitInfoPage({
   ],
   footer: "Join the AP and browse to the address"
 });
-emitInfoPage({
-  id: "net-mqtt-info", page: "M3", title: "MQTT info", crumb: "MQTT",
-  ring: MQTT_RING, index: MQTT_L1.length,
-  rows: [
-    { label: "State", binding: "net.mqtt.state" },
-    { label: "Broker", binding: "config.mqtt.host" },
-    { label: "Port", binding: "config.mqtt.port" },
-    { label: "Topic", binding: "config.mqtt.baseTopic" }
-  ]
-});
 
-emitLevel({ items: MQTT_SETUP, ring: MQTT_SETUP_RING, crumb: "MQTT Broker",
-            backId: "net-mqtt-setup-back", backName: "B.BACK — Back" });
+// The MQTT level: three paginated information pages, then BACK. Everything B1..B9 and M1..M2 showed
+// is on them.
+MQTT_INFO_PAGES.forEach((page, i) => {
+  emitInfoPage({
+    id: page.id, page: page.page, title: page.title, crumb: "MQTT",
+    ring: MQTT_RING, index: i, rows: page.rows,
+    footer: "Set via web portal or RS485"
+  });
+});
+emitBackRow({ backId: "net-mqtt-back", backName: "M.BACK — Back", ring: MQTT_RING, crumb: "MQTT" });
 
 // ── P8 Factory Reset info page ───────────────────────────────────────────────
 screens.push({
@@ -799,7 +847,16 @@ const RETIRED = new Set([
   // `kept` preserves anything the generator stops emitting, so without this they would survive as
   // orphans — editors with a commit flow and no parent descending into them.
   "net-wifi-enabled-edit", "net-mqtt-enabled-edit", "net-mqtt-port-edit",
-  "net-mqtt-period-edit", "net-mqtt-qos-edit", "net-mqtt-ha-discovery-edit"
+  "net-mqtt-period-edit", "net-mqtt-qos-edit", "net-mqtt-ha-discovery-edit",
+  // The fifteen one-value-per-screen network rows, replaced by the paginated information pages.
+  // Every value they showed is still on the panel — W.I1/W.I2 and M.I1/M.I2/M.I3 carry all of them —
+  // so this is a consolidation, not a removal. Listed explicitly because `kept` preserves anything
+  // the generator stops emitting, and these would otherwise survive as unreachable orphans.
+  "net-wifi-enabled", "net-wifi-ssid", "net-wifi-psk",
+  "net-mqtt-enabled", "net-mqtt-setup", "net-mqtt-setup-back",
+  "net-mqtt-host", "net-mqtt-port", "net-mqtt-user", "net-mqtt-password",
+  "net-mqtt-base-topic", "net-mqtt-prefix", "net-mqtt-period",
+  "net-mqtt-ha-discovery", "net-mqtt-qos"
 ]);
 
 const kept = dataset.screens.filter((s) => !generatedIds.has(s.id) && !RETIRED.has(s.id));

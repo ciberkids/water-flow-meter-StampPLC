@@ -14,6 +14,35 @@ const DEFAULT_METRICS: Record<ScreenElement["kind"], { charWidth: number; height
 
 const clampValue = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
+/** The panel's long edge in pixels, which is its WIDTH in the landscape rotation the device uses. */
+export const PANEL_WIDTH_PX = 240;
+
+/**
+ * Clip a rendered string to what the panel can hold, marking the cut with a trailing `~`.
+ *
+ * Mirrors `UiRenderer::drawTextElement` (`ui_renderer.cpp`). The device's text buffer is 96
+ * characters and the panel is 40, so a long text setting used to draw straight off the edge:
+ * `config.mqtt.host` holds 64 bytes, which from x=80 is 384 px on a 240 px panel. The screen specs
+ * hid it by declaring those rows' worst case as `?` — one character — so the geometry audit was
+ * checking a fiction rather than the bound.
+ *
+ * Truncation is the only honest option, because 240 px at 6 px per glyph is 40 characters and no
+ * layout can make a 64-byte hostname fit. The marker matters as much as the clip: a silently
+ * shortened hostname reads as the whole one, which would send somebody debugging a broker address
+ * that is actually correct.
+ */
+export function clipToPanel(text: string, charWidth: number, x: number, width?: number): string {
+  if (charWidth <= 0) {
+    return text;
+  }
+  const available = width && width > 0 ? width : PANEL_WIDTH_PX - x;
+  const maxChars = Math.floor(available / charWidth);
+  if (maxChars <= 1 || text.length <= maxChars) {
+    return text;
+  }
+  return `${text.slice(0, maxChars - 1)}~`;
+}
+
 export interface LayoutBounds {
   width: number;
   height: number;

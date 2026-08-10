@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import type { FirmwareValueDefinition } from "../../src/types/firmwareActions";
 import { sampleValueFor } from "../../src/utils/sampleValues";
 import { formatSetting, pendingRawFor, rangeHintFor, settingOfScreen } from "../../src/utils/settingHints";
+import { clipToPanel } from "../../src/utils/layout";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const mockupRoot = path.resolve(here, "..", "..");
@@ -237,18 +238,20 @@ export function renderScreen(screen: Screen, useWorst: boolean): string {
 
     const advance = element.kind === "value" ? GLYPH_VALUE : GLYPH_TEXT;
     const size = element.kind === "value" ? 10 : 8.5;
+    // Clipped exactly as UiRenderer clips, so the gallery cannot show a hostname the panel can't.
+    const shown = element.kind === "badge" ? text : clipToPanel(text, advance, element.x, element.width);
 
     if (element.kind === "badge") {
-      const bw = text.length * advance + BADGE_PAD_X * 2;
+      const bw = shown.length * advance + BADGE_PAD_X * 2;
       body.push(
         `<rect x="${element.x}" y="${element.y}" width="${bw}" height="${8 + BADGE_PAD_Y * 2}" ` +
           `fill="${theme.colors.badgeBackground}" stroke="${theme.colors.badgeBorder}" stroke-width="0.5"/>`
       );
-      body.push(glyphRun(text, element.x + BADGE_PAD_X, element.y + BADGE_PAD_Y, advance, size, theme.colors.textPrimary, false));
+      body.push(glyphRun(shown, element.x + BADGE_PAD_X, element.y + BADGE_PAD_Y, advance, size, theme.colors.textPrimary, false));
       continue;
     }
 
-    body.push(glyphRun(text, element.x, element.y, advance, size, colorFor(element), element.emphasis === "strong"));
+    body.push(glyphRun(shown, element.x, element.y, advance, size, colorFor(element), element.emphasis === "strong"));
   }
 
   return (

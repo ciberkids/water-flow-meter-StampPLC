@@ -15,6 +15,14 @@ namespace {
 
 constexpr int kGlyphWidthBase = 6;
 constexpr int kGlyphWidthValue = 7;
+
+/**
+ * The panel, in pixels. 240 x 135 — the StampPLC's built-in display.
+ *
+ * Named because the width is now needed in two places (clipping overlong text, and the full-width
+ * warning banner), and a second bare `240` is how the two would come to disagree.
+ */
+constexpr int kPanelWidth = 240;
 constexpr uint16_t kCountdownOverlayColor = 0x39E7;
 
 /**
@@ -276,6 +284,35 @@ void UiRenderer::drawTextElement(const ui_exporter::Element& element,
     return;
   }
 
+  /**
+   * CLIP to what the panel can actually hold, marking the cut with a trailing `~`.
+   *
+   * The buffer is 96 characters and the panel is 40, so a long text setting rendered straight off
+   * the end of the display: `config.mqtt.host` holds 64 bytes, which from x=80 draws 384 px on a
+   * 240 px panel — over the scrollbar, over nothing, gone. The screen specs hid it by declaring
+   * those rows' worst case as `?`, one character, so the geometry audit was checking a fiction.
+   *
+   * Truncation is the only honest option: 240 px at 6 px per glyph is 40 characters, so a 64-byte
+   * broker host CANNOT be shown in full and no layout can change that. The `~` says so, rather than
+   * letting a clipped hostname read as the whole one — which would send somebody debugging a broker
+   * they are actually pointed at correctly.
+   *
+   * Badges are exempt: they size their own box to their content, so they clip nothing.
+   */
+  if (!isBadge) {
+    const int advance = element.type == ui_exporter::ElementType::Value ? kGlyphWidthValue : kGlyphWidthBase;
+    const int available = (element.width > 0 ? element.width : kPanelWidth - element.x);
+    const int maxChars = available / advance;
+    if (maxChars > 1 && static_cast<int>(std::strlen(text)) > maxChars) {
+      if (text != buffer) {
+        std::snprintf(buffer, sizeof(buffer), "%s", text);
+      }
+      buffer[maxChars - 1] = '~';
+      buffer[maxChars] = '\0';
+      text = buffer;
+    }
+  }
+
   if (isBadge) {
     // Size the badge box to its rendered text plus padding. drawBoxElement's
     // fallback is an opaque 40x12 fillRect, and no badge in the dataset carries an
@@ -426,7 +463,7 @@ void UiRenderer::drawWarningBanner(const UiRenderContext& context) {
   auto& display = M5StamPLC.Display;
   const int16_t bannerY = 34;
   const int16_t bannerH = 18;
-  display.fillRect(0, bannerY, 240, bannerH, warningColor_);
+  display.fillRect(0, bannerY, kPanelWidth, bannerH, warningColor_);
   display.setTextColor(WHITE, warningColor_);
   display.setCursor(4, bannerY + 4);
   display.print("!");

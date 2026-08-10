@@ -3,371 +3,182 @@
 namespace ui_exporter {
 
 static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusHdrTitle_Text = { "System Status", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowLabel_Text = { "Total Flow (L/s):", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowLabel_Text = { "Total Current Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusFooterHint_Text = { "UP/DN pages   UP+DN display off", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusLegendLed_Text = { "LED: Red=Pulse Grn=Ready Blu=Flow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusNetStatus_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusSessionTotalLabel_Text = { "Since reset (m3)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusSessionTotalValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusMaxFlow_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusNetLedStatus_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusFooterHint_Text = { "UP/DN pages   UP+DN off", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP0GlobalStatusElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusHdrTitle_Text, nullptr, nullptr },
-    { "total-flow-label", ui_exporter::ElementType::Text, 2, 20, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowLabel_Text, nullptr, nullptr },
-    { "total-flow-value", ui_exporter::ElementType::Text, 2, 32, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowValue_Text, nullptr, "telemetry.total" },
-    { "flow-dots", ui_exporter::ElementType::Icon, 40, 70, 55, 55, nullptr, "flow-dots", nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr },
-    { "legend-led", ui_exporter::ElementType::Text, 8, 112, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusLegendLed_Text, nullptr, "legend.led" },
-    { "net-status", ui_exporter::ElementType::Value, 8, 98, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusNetStatus_Text, nullptr, "net.status" }
+    { "total-flow-label", ui_exporter::ElementType::Text, 2, 14, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowLabel_Text, nullptr, nullptr },
+    { "total-flow-value", ui_exporter::ElementType::Value, 152, 14, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowValue_Text, nullptr, "telemetry.totalFlowLpm" },
+    { "flow-dots", ui_exporter::ElementType::Icon, 60, 30, 120, 40, nullptr, "flow-dots", nullptr },
+    { "session-total-label", ui_exporter::ElementType::Text, 2, 80, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusSessionTotalLabel_Text, nullptr, nullptr },
+    { "session-total-value", ui_exporter::ElementType::Value, 153, 80, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusSessionTotalValue_Text, nullptr, "telemetry.totalVolumeM3" },
+    { "max-flow", ui_exporter::ElementType::Text, 2, 92, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusMaxFlow_Text, nullptr, "telemetry.maxFlowLpm" },
+    { "net-led-status", ui_exporter::ElementType::Text, 2, 108, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusNetLedStatus_Text, nullptr, "legend.status" },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusFooterHint_Text, nullptr, nullptr }
 };
 
 
 static constexpr ui_exporter::Flow kInfoP0GlobalStatusFlows[] = {
     { "f-next", "Next page", "info-p1-instant-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Prev page", "net-mqtt-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-prev", "Previous page", "net-mqtt-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowHdrTitle_Text = { "Instant Flow (L/s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS1Label_Text = { "S1", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowHdrTitle_Text = { "Instant Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS1Status_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS2Label_Text = { "S2", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS2Status_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS3Label_Text = { "S3", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS3Status_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS4Label_Text = { "S4", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS4Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS4Status_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS5Label_Text = { "S5", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS5Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS5Status_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS6Label_Text = { "S6", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS6Status_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS7Label_Text = { "S7", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS7Status_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS8Label_Text = { "S8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS8Status_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowFooterHint_Text = { "UP/DN pages   UP+DN display off", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowFooterHint_Text = { "UP/DN pages   UP+DN off", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP1InstantFlowElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowHdrTitle_Text, nullptr, nullptr },
-    { "s1-label", ui_exporter::ElementType::Text, 2, 18, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS1Label_Text, nullptr, nullptr },
-    { "s1-value", ui_exporter::ElementType::Value, 14, 18, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS1Value_Text, nullptr, "sensor.1.instantFlow" },
-    { "s1-status", ui_exporter::ElementType::Badge, 60, 18, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS1Status_Text, nullptr, "sensor.1.status" },
-    { "s2-label", ui_exporter::ElementType::Text, 2, 30, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS2Label_Text, nullptr, nullptr },
-    { "s2-value", ui_exporter::ElementType::Value, 14, 30, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS2Value_Text, nullptr, "sensor.2.instantFlow" },
-    { "s2-status", ui_exporter::ElementType::Badge, 60, 30, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS2Status_Text, nullptr, "sensor.2.status" },
-    { "s3-label", ui_exporter::ElementType::Text, 2, 42, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS3Label_Text, nullptr, nullptr },
-    { "s3-value", ui_exporter::ElementType::Value, 14, 42, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS3Value_Text, nullptr, "sensor.3.instantFlow" },
-    { "s3-status", ui_exporter::ElementType::Badge, 60, 42, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS3Status_Text, nullptr, "sensor.3.status" },
-    { "s4-label", ui_exporter::ElementType::Text, 2, 54, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS4Label_Text, nullptr, nullptr },
-    { "s4-value", ui_exporter::ElementType::Value, 14, 54, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS4Value_Text, nullptr, "sensor.4.instantFlow" },
-    { "s4-status", ui_exporter::ElementType::Badge, 60, 54, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS4Status_Text, nullptr, "sensor.4.status" },
-    { "s5-label", ui_exporter::ElementType::Text, 69, 18, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS5Label_Text, nullptr, nullptr },
-    { "s5-value", ui_exporter::ElementType::Value, 81, 18, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS5Value_Text, nullptr, "sensor.5.instantFlow" },
-    { "s5-status", ui_exporter::ElementType::Badge, 120, 18, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS5Status_Text, nullptr, "sensor.5.status" },
-    { "s6-label", ui_exporter::ElementType::Text, 69, 30, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS6Label_Text, nullptr, nullptr },
-    { "s6-value", ui_exporter::ElementType::Value, 81, 30, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS6Value_Text, nullptr, "sensor.6.instantFlow" },
-    { "s6-status", ui_exporter::ElementType::Badge, 120, 30, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS6Status_Text, nullptr, "sensor.6.status" },
-    { "s7-label", ui_exporter::ElementType::Text, 69, 42, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS7Label_Text, nullptr, nullptr },
-    { "s7-value", ui_exporter::ElementType::Value, 81, 42, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS7Value_Text, nullptr, "sensor.7.instantFlow" },
-    { "s7-status", ui_exporter::ElementType::Badge, 120, 42, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS7Status_Text, nullptr, "sensor.7.status" },
-    { "s8-label", ui_exporter::ElementType::Text, 69, 54, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS8Label_Text, nullptr, nullptr },
-    { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS8Value_Text, nullptr, "sensor.8.instantFlow" },
-    { "s8-status", ui_exporter::ElementType::Badge, 120, 54, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS8Status_Text, nullptr, "sensor.8.status" },
-    { "divider-1", ui_exporter::ElementType::Box, 0, 65, 240, 1, nullptr, nullptr, nullptr },
-    { "divider-2", ui_exporter::ElementType::Box, 0, 124, 240, 1, nullptr, nullptr, nullptr },
+    { "s1-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS1Value_Text, nullptr, "sensor.1.instantFlow" },
+    { "s2-value", ui_exporter::ElementType::Value, 2, 44, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS2Value_Text, nullptr, "sensor.2.instantFlow" },
+    { "s3-value", ui_exporter::ElementType::Value, 2, 64, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS3Value_Text, nullptr, "sensor.3.instantFlow" },
+    { "s4-value", ui_exporter::ElementType::Value, 2, 84, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS4Value_Text, nullptr, "sensor.4.instantFlow" },
+    { "s5-value", ui_exporter::ElementType::Value, 114, 24, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS5Value_Text, nullptr, "sensor.5.instantFlow" },
+    { "s6-value", ui_exporter::ElementType::Value, 114, 44, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS6Value_Text, nullptr, "sensor.6.instantFlow" },
+    { "s7-value", ui_exporter::ElementType::Value, 114, 64, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS7Value_Text, nullptr, "sensor.7.instantFlow" },
+    { "s8-value", ui_exporter::ElementType::Value, 114, 84, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS8Value_Text, nullptr, "sensor.8.instantFlow" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
 static constexpr ui_exporter::Flow kInfoP1InstantFlowFlows[] = {
-    { "f-next", "Next page", "info-p2-cumulative-liters", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Prev page", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-next", "Next page", "info-p2-cumulative-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous page", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersHdrTitle_Text = { "Cumulative (L)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS1Label_Text = { "S1", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS2Label_Text = { "S2", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS3Label_Text = { "S3", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS4Label_Text = { "S4", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS4Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS5Label_Text = { "S5", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS5Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS6Label_Text = { "S6", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS7Label_Text = { "S7", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS8Label_Text = { "S8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersS8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersFooterHint_Text = { "ENTER reset totals (hold 3s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeLiters_InfoP2CumulativeLitersUndersamplingBadge_Text = { "! Undersampling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3HdrTitle_Text = { "Cumulative (m3)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S4Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S5Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3FooterHint_Text = { "ENTER reset totals (hold 3s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
-static constexpr ui_exporter::Element kInfoP2CumulativeLitersElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersHdrTitle_Text, nullptr, nullptr },
-    { "s1-label", ui_exporter::ElementType::Text, 2, 18, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS1Label_Text, nullptr, nullptr },
-    { "s1-value", ui_exporter::ElementType::Value, 14, 18, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS1Value_Text, nullptr, "sensor.1.cumulativeLiters" },
-    { "s2-label", ui_exporter::ElementType::Text, 2, 30, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS2Label_Text, nullptr, nullptr },
-    { "s2-value", ui_exporter::ElementType::Value, 14, 30, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS2Value_Text, nullptr, "sensor.2.cumulativeLiters" },
-    { "s3-label", ui_exporter::ElementType::Text, 2, 42, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS3Label_Text, nullptr, nullptr },
-    { "s3-value", ui_exporter::ElementType::Value, 14, 42, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS3Value_Text, nullptr, "sensor.3.cumulativeLiters" },
-    { "s4-label", ui_exporter::ElementType::Text, 2, 54, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS4Label_Text, nullptr, nullptr },
-    { "s4-value", ui_exporter::ElementType::Value, 14, 54, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS4Value_Text, nullptr, "sensor.4.cumulativeLiters" },
-    { "s5-label", ui_exporter::ElementType::Text, 69, 18, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS5Label_Text, nullptr, nullptr },
-    { "s5-value", ui_exporter::ElementType::Value, 81, 18, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS5Value_Text, nullptr, "sensor.5.cumulativeLiters" },
-    { "s6-label", ui_exporter::ElementType::Text, 69, 30, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS6Label_Text, nullptr, nullptr },
-    { "s6-value", ui_exporter::ElementType::Value, 81, 30, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS6Value_Text, nullptr, "sensor.6.cumulativeLiters" },
-    { "s7-label", ui_exporter::ElementType::Text, 69, 42, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS7Label_Text, nullptr, nullptr },
-    { "s7-value", ui_exporter::ElementType::Value, 81, 42, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS7Value_Text, nullptr, "sensor.7.cumulativeLiters" },
-    { "s8-label", ui_exporter::ElementType::Text, 69, 54, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS8Label_Text, nullptr, nullptr },
-    { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersS8Value_Text, nullptr, "sensor.8.cumulativeLiters" },
-    { "divider-1", ui_exporter::ElementType::Box, 0, 65, 240, 1, nullptr, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersFooterHint_Text, nullptr, nullptr },
-    { "undersampling-badge", ui_exporter::ElementType::Badge, 176, 4, 0, 0, &kInfoP2CumulativeLiters_InfoP2CumulativeLitersUndersamplingBadge_Text, nullptr, "diagnostics.undersampling" },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+static constexpr ui_exporter::Element kInfoP2CumulativeM3Elements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3HdrTitle_Text, nullptr, nullptr },
+    { "s1-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S1Value_Text, nullptr, "sensor.1.cumulativeM3" },
+    { "s2-value", ui_exporter::ElementType::Value, 2, 44, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S2Value_Text, nullptr, "sensor.2.cumulativeM3" },
+    { "s3-value", ui_exporter::ElementType::Value, 2, 64, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S3Value_Text, nullptr, "sensor.3.cumulativeM3" },
+    { "s4-value", ui_exporter::ElementType::Value, 2, 84, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S4Value_Text, nullptr, "sensor.4.cumulativeM3" },
+    { "s5-value", ui_exporter::ElementType::Value, 114, 24, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S5Value_Text, nullptr, "sensor.5.cumulativeM3" },
+    { "s6-value", ui_exporter::ElementType::Value, 114, 44, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S6Value_Text, nullptr, "sensor.6.cumulativeM3" },
+    { "s7-value", ui_exporter::ElementType::Value, 114, 64, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S7Value_Text, nullptr, "sensor.7.cumulativeM3" },
+    { "s8-value", ui_exporter::ElementType::Value, 114, 84, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S8Value_Text, nullptr, "sensor.8.cumulativeM3" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3FooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
-static constexpr ui_exporter::Flow kInfoP2CumulativeLitersFlows[] = {
-    { "f-next", "Next page", "info-p3-cumulative-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Prev page", "info-p1-instant-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+static constexpr ui_exporter::Flow kInfoP2CumulativeM3Flows[] = {
+    { "f-next", "Next page", "info-p3-session-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous page", "info-p1-instant-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-enter", "Open", "confirm-reset-totals", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3HdrTitle_Text = { "Cumulative (m3)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S1Label_Text = { "S1", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S2Label_Text = { "S2", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S3Label_Text = { "S3", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S4Label_Text = { "S4", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S4Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S5Label_Text = { "S5", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S5Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S6Label_Text = { "S6", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S7Label_Text = { "S7", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S8Label_Text = { "S8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3S8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3FooterHint_Text = { "ENTER reset totals (hold 3s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP3CumulativeM3_InfoP3CumulativeM3UndersamplingBadge_Text = { "! Undersampling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3HdrTitle_Text = { "Session (m3)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S4Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S5Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3FooterHint_Text = { "ENTER reset session (hold 3s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
-static constexpr ui_exporter::Element kInfoP3CumulativeM3Elements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3HdrTitle_Text, nullptr, nullptr },
-    { "s1-label", ui_exporter::ElementType::Text, 2, 18, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S1Label_Text, nullptr, nullptr },
-    { "s1-value", ui_exporter::ElementType::Value, 14, 18, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S1Value_Text, nullptr, "sensor.1.cumulativeM3" },
-    { "s2-label", ui_exporter::ElementType::Text, 2, 30, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S2Label_Text, nullptr, nullptr },
-    { "s2-value", ui_exporter::ElementType::Value, 14, 30, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S2Value_Text, nullptr, "sensor.2.cumulativeM3" },
-    { "s3-label", ui_exporter::ElementType::Text, 2, 42, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S3Label_Text, nullptr, nullptr },
-    { "s3-value", ui_exporter::ElementType::Value, 14, 42, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S3Value_Text, nullptr, "sensor.3.cumulativeM3" },
-    { "s4-label", ui_exporter::ElementType::Text, 2, 54, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S4Label_Text, nullptr, nullptr },
-    { "s4-value", ui_exporter::ElementType::Value, 14, 54, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S4Value_Text, nullptr, "sensor.4.cumulativeM3" },
-    { "s5-label", ui_exporter::ElementType::Text, 69, 18, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S5Label_Text, nullptr, nullptr },
-    { "s5-value", ui_exporter::ElementType::Value, 81, 18, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S5Value_Text, nullptr, "sensor.5.cumulativeM3" },
-    { "s6-label", ui_exporter::ElementType::Text, 69, 30, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S6Label_Text, nullptr, nullptr },
-    { "s6-value", ui_exporter::ElementType::Value, 81, 30, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S6Value_Text, nullptr, "sensor.6.cumulativeM3" },
-    { "s7-label", ui_exporter::ElementType::Text, 69, 42, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S7Label_Text, nullptr, nullptr },
-    { "s7-value", ui_exporter::ElementType::Value, 81, 42, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S7Value_Text, nullptr, "sensor.7.cumulativeM3" },
-    { "s8-label", ui_exporter::ElementType::Text, 69, 54, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S8Label_Text, nullptr, nullptr },
-    { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3S8Value_Text, nullptr, "sensor.8.cumulativeM3" },
-    { "divider-1", ui_exporter::ElementType::Box, 0, 65, 240, 1, nullptr, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3FooterHint_Text, nullptr, nullptr },
-    { "undersampling-badge", ui_exporter::ElementType::Badge, 176, 4, 0, 0, &kInfoP3CumulativeM3_InfoP3CumulativeM3UndersamplingBadge_Text, nullptr, "diagnostics.undersampling" },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+static constexpr ui_exporter::Element kInfoP3SessionM3Elements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3HdrTitle_Text, nullptr, nullptr },
+    { "s1-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S1Value_Text, nullptr, "sensor.1.sessionM3" },
+    { "s2-value", ui_exporter::ElementType::Value, 2, 44, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S2Value_Text, nullptr, "sensor.2.sessionM3" },
+    { "s3-value", ui_exporter::ElementType::Value, 2, 64, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S3Value_Text, nullptr, "sensor.3.sessionM3" },
+    { "s4-value", ui_exporter::ElementType::Value, 2, 84, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S4Value_Text, nullptr, "sensor.4.sessionM3" },
+    { "s5-value", ui_exporter::ElementType::Value, 114, 24, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S5Value_Text, nullptr, "sensor.5.sessionM3" },
+    { "s6-value", ui_exporter::ElementType::Value, 114, 44, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S6Value_Text, nullptr, "sensor.6.sessionM3" },
+    { "s7-value", ui_exporter::ElementType::Value, 114, 64, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S7Value_Text, nullptr, "sensor.7.sessionM3" },
+    { "s8-value", ui_exporter::ElementType::Value, 114, 84, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S8Value_Text, nullptr, "sensor.8.sessionM3" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3FooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
-static constexpr ui_exporter::Flow kInfoP3CumulativeM3Flows[] = {
-    { "f-next", "Next page", "info-p4-session-liters", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Prev page", "info-p2-cumulative-liters", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open", "confirm-reset-totals", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersHdrTitle_Text = { "Session (L)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS1Label_Text = { "S1", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS2Label_Text = { "S2", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS3Label_Text = { "S3", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS4Label_Text = { "S4", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS4Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS5Label_Text = { "S5", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS5Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS6Label_Text = { "S6", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS7Label_Text = { "S7", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS8Label_Text = { "S8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersS8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersUndersamplingDiag_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kInfoP4SessionLiters_InfoP4SessionLitersFooterHint_Text = { "ENTER reset session", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kInfoP4SessionLitersElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersHdrTitle_Text, nullptr, nullptr },
-    { "s1-label", ui_exporter::ElementType::Text, 2, 18, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS1Label_Text, nullptr, nullptr },
-    { "s1-value", ui_exporter::ElementType::Value, 14, 18, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS1Value_Text, nullptr, "sensor.1.sessionLiters" },
-    { "s2-label", ui_exporter::ElementType::Text, 2, 30, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS2Label_Text, nullptr, nullptr },
-    { "s2-value", ui_exporter::ElementType::Value, 14, 30, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS2Value_Text, nullptr, "sensor.2.sessionLiters" },
-    { "s3-label", ui_exporter::ElementType::Text, 2, 42, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS3Label_Text, nullptr, nullptr },
-    { "s3-value", ui_exporter::ElementType::Value, 14, 42, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS3Value_Text, nullptr, "sensor.3.sessionLiters" },
-    { "s4-label", ui_exporter::ElementType::Text, 2, 54, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS4Label_Text, nullptr, nullptr },
-    { "s4-value", ui_exporter::ElementType::Value, 14, 54, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS4Value_Text, nullptr, "sensor.4.sessionLiters" },
-    { "s5-label", ui_exporter::ElementType::Text, 69, 18, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS5Label_Text, nullptr, nullptr },
-    { "s5-value", ui_exporter::ElementType::Value, 81, 18, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS5Value_Text, nullptr, "sensor.5.sessionLiters" },
-    { "s6-label", ui_exporter::ElementType::Text, 69, 30, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS6Label_Text, nullptr, nullptr },
-    { "s6-value", ui_exporter::ElementType::Value, 81, 30, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS6Value_Text, nullptr, "sensor.6.sessionLiters" },
-    { "s7-label", ui_exporter::ElementType::Text, 69, 42, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS7Label_Text, nullptr, nullptr },
-    { "s7-value", ui_exporter::ElementType::Value, 81, 42, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS7Value_Text, nullptr, "sensor.7.sessionLiters" },
-    { "s8-label", ui_exporter::ElementType::Text, 69, 54, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS8Label_Text, nullptr, nullptr },
-    { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersS8Value_Text, nullptr, "sensor.8.sessionLiters" },
-    { "undersampling-diag", ui_exporter::ElementType::Badge, 2, 66, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersUndersamplingDiag_Text, nullptr, "diagnostics.undersampling" },
-    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP4SessionLiters_InfoP4SessionLitersFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kInfoP4SessionLitersFlows[] = {
-    { "f-next", "Next page", "info-p5-session-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Prev page", "info-p3-cumulative-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+static constexpr ui_exporter::Flow kInfoP3SessionM3Flows[] = {
+    { "f-next", "Next page", "info-p4-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous page", "info-p2-cumulative-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-enter", "Open", "confirm-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3HdrTitle_Text = { "Session (m3)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S1Label_Text = { "S1", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S2Label_Text = { "S2", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S3Label_Text = { "S3", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S4Label_Text = { "S4", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S4Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S5Label_Text = { "S5", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S5Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S6Label_Text = { "S6", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S7Label_Text = { "S7", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S8Label_Text = { "S8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3S8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3FooterHint_Text = { "ENTER reset session", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP5SessionM3_InfoP5SessionM3UndersamplingBadge_Text = { "! Undersampling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowHdrTitle_Text = { "Max Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS4Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS5Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowFooterHint_Text = { "MAX = at sensor ceiling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
-static constexpr ui_exporter::Element kInfoP5SessionM3Elements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3HdrTitle_Text, nullptr, nullptr },
-    { "s1-label", ui_exporter::ElementType::Text, 2, 18, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S1Label_Text, nullptr, nullptr },
-    { "s1-value", ui_exporter::ElementType::Value, 14, 18, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S1Value_Text, nullptr, "sensor.1.sessionM3" },
-    { "s2-label", ui_exporter::ElementType::Text, 2, 30, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S2Label_Text, nullptr, nullptr },
-    { "s2-value", ui_exporter::ElementType::Value, 14, 30, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S2Value_Text, nullptr, "sensor.2.sessionM3" },
-    { "s3-label", ui_exporter::ElementType::Text, 2, 42, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S3Label_Text, nullptr, nullptr },
-    { "s3-value", ui_exporter::ElementType::Value, 14, 42, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S3Value_Text, nullptr, "sensor.3.sessionM3" },
-    { "s4-label", ui_exporter::ElementType::Text, 2, 54, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S4Label_Text, nullptr, nullptr },
-    { "s4-value", ui_exporter::ElementType::Value, 14, 54, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S4Value_Text, nullptr, "sensor.4.sessionM3" },
-    { "s5-label", ui_exporter::ElementType::Text, 69, 18, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S5Label_Text, nullptr, nullptr },
-    { "s5-value", ui_exporter::ElementType::Value, 81, 18, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S5Value_Text, nullptr, "sensor.5.sessionM3" },
-    { "s6-label", ui_exporter::ElementType::Text, 69, 30, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S6Label_Text, nullptr, nullptr },
-    { "s6-value", ui_exporter::ElementType::Value, 81, 30, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S6Value_Text, nullptr, "sensor.6.sessionM3" },
-    { "s7-label", ui_exporter::ElementType::Text, 69, 42, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S7Label_Text, nullptr, nullptr },
-    { "s7-value", ui_exporter::ElementType::Value, 81, 42, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S7Value_Text, nullptr, "sensor.7.sessionM3" },
-    { "s8-label", ui_exporter::ElementType::Text, 69, 54, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S8Label_Text, nullptr, nullptr },
-    { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3S8Value_Text, nullptr, "sensor.8.sessionM3" },
-    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3FooterHint_Text, nullptr, nullptr },
-    { "undersampling-badge", ui_exporter::ElementType::Badge, 176, 4, 0, 0, &kInfoP5SessionM3_InfoP5SessionM3UndersamplingBadge_Text, nullptr, "diagnostics.undersampling" },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+static constexpr ui_exporter::Element kInfoP4MaxFlowElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowHdrTitle_Text, nullptr, nullptr },
+    { "s1-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS1Value_Text, nullptr, "sensor.1.maxFlowSinceReset" },
+    { "s2-value", ui_exporter::ElementType::Value, 2, 44, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS2Value_Text, nullptr, "sensor.2.maxFlowSinceReset" },
+    { "s3-value", ui_exporter::ElementType::Value, 2, 64, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS3Value_Text, nullptr, "sensor.3.maxFlowSinceReset" },
+    { "s4-value", ui_exporter::ElementType::Value, 2, 84, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS4Value_Text, nullptr, "sensor.4.maxFlowSinceReset" },
+    { "s5-value", ui_exporter::ElementType::Value, 114, 24, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS5Value_Text, nullptr, "sensor.5.maxFlowSinceReset" },
+    { "s6-value", ui_exporter::ElementType::Value, 114, 44, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS6Value_Text, nullptr, "sensor.6.maxFlowSinceReset" },
+    { "s7-value", ui_exporter::ElementType::Value, 114, 64, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS7Value_Text, nullptr, "sensor.7.maxFlowSinceReset" },
+    { "s8-value", ui_exporter::ElementType::Value, 114, 84, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS8Value_Text, nullptr, "sensor.8.maxFlowSinceReset" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
-static constexpr ui_exporter::Flow kInfoP5SessionM3Flows[] = {
-    { "f-next", "Next page", "info-p6-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Prev page", "info-p4-session-liters", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+static constexpr ui_exporter::Flow kInfoP4MaxFlowFlows[] = {
+    { "f-next", "Next page", "info-p5-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous page", "info-p3-session-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-enter", "Open", "confirm-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowHdrTitle_Text = { "Max Flow (L/s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS1Label_Text = { "S1", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS2Label_Text = { "S2", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS3Label_Text = { "S3", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS4Label_Text = { "S4", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS4Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS5Label_Text = { "S5", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS5Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS6Label_Text = { "S6", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS7Label_Text = { "S7", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS8Label_Text = { "S8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowS8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowFooterHint_Text = { "ENTER reset session", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP6MaxFlow_InfoP6MaxFlowUndersamplingBadge_Text = { "! Undersampling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP5EnterConfig_InfoP5EnterConfigHdrTitle_Text = { "Configuration", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP5EnterConfig_InfoP5EnterConfigBody1_Text = { "Sensor calibration, Modbus", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP5EnterConfig_InfoP5EnterConfigBody2_Text = { "link, LED pulses, network.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP5EnterConfig_InfoP5EnterConfigFooterHint_Text = { "ENTER opens Configuration", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
-static constexpr ui_exporter::Element kInfoP6MaxFlowElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowHdrTitle_Text, nullptr, nullptr },
-    { "s1-label", ui_exporter::ElementType::Text, 2, 18, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS1Label_Text, nullptr, nullptr },
-    { "s1-value", ui_exporter::ElementType::Value, 14, 18, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS1Value_Text, nullptr, "sensor.1.maxFlowSinceReset" },
-    { "s2-label", ui_exporter::ElementType::Text, 2, 30, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS2Label_Text, nullptr, nullptr },
-    { "s2-value", ui_exporter::ElementType::Value, 14, 30, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS2Value_Text, nullptr, "sensor.2.maxFlowSinceReset" },
-    { "s3-label", ui_exporter::ElementType::Text, 2, 42, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS3Label_Text, nullptr, nullptr },
-    { "s3-value", ui_exporter::ElementType::Value, 14, 42, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS3Value_Text, nullptr, "sensor.3.maxFlowSinceReset" },
-    { "s4-label", ui_exporter::ElementType::Text, 2, 54, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS4Label_Text, nullptr, nullptr },
-    { "s4-value", ui_exporter::ElementType::Value, 14, 54, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS4Value_Text, nullptr, "sensor.4.maxFlowSinceReset" },
-    { "s5-label", ui_exporter::ElementType::Text, 69, 18, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS5Label_Text, nullptr, nullptr },
-    { "s5-value", ui_exporter::ElementType::Value, 81, 18, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS5Value_Text, nullptr, "sensor.5.maxFlowSinceReset" },
-    { "s6-label", ui_exporter::ElementType::Text, 69, 30, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS6Label_Text, nullptr, nullptr },
-    { "s6-value", ui_exporter::ElementType::Value, 81, 30, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS6Value_Text, nullptr, "sensor.6.maxFlowSinceReset" },
-    { "s7-label", ui_exporter::ElementType::Text, 69, 42, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS7Label_Text, nullptr, nullptr },
-    { "s7-value", ui_exporter::ElementType::Value, 81, 42, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS7Value_Text, nullptr, "sensor.7.maxFlowSinceReset" },
-    { "s8-label", ui_exporter::ElementType::Text, 69, 54, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS8Label_Text, nullptr, nullptr },
-    { "s8-value", ui_exporter::ElementType::Value, 81, 54, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowS8Value_Text, nullptr, "sensor.8.maxFlowSinceReset" },
-    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowFooterHint_Text, nullptr, nullptr },
-    { "undersampling-badge", ui_exporter::ElementType::Badge, 176, 4, 0, 0, &kInfoP6MaxFlow_InfoP6MaxFlowUndersamplingBadge_Text, nullptr, "diagnostics.undersampling" },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+static constexpr ui_exporter::Element kInfoP5EnterConfigElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP5EnterConfig_InfoP5EnterConfigHdrTitle_Text, nullptr, nullptr },
+    { "body-1", ui_exporter::ElementType::Text, 2, 28, 0, 0, &kInfoP5EnterConfig_InfoP5EnterConfigBody1_Text, nullptr, nullptr },
+    { "body-2", ui_exporter::ElementType::Text, 2, 40, 0, 0, &kInfoP5EnterConfig_InfoP5EnterConfigBody2_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP5EnterConfig_InfoP5EnterConfigFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
-static constexpr ui_exporter::Flow kInfoP6MaxFlowFlows[] = {
-    { "f-next", "Next page", "info-p7-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Prev page", "info-p5-session-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open", "confirm-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kInfoP7EnterConfig_InfoP7EnterConfigHdrTitle_Text = { "Configuration", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kInfoP7EnterConfig_InfoP7EnterConfigPromptLine1_Text = { "Press ENTER to open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP7EnterConfig_InfoP7EnterConfigPromptLine2_Text = { "Configuration.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP7EnterConfig_InfoP7EnterConfigFooterHint_Text = { "ENTER opens Configuration", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kInfoP7EnterConfigElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigHdrTitle_Text, nullptr, nullptr },
-    { "prompt-line1", ui_exporter::ElementType::Text, 10, 100, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigPromptLine1_Text, nullptr, nullptr },
-    { "prompt-line2", ui_exporter::ElementType::Text, 10, 112, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigPromptLine2_Text, nullptr, nullptr },
-    { "divider-1", ui_exporter::ElementType::Box, 20, 120, 95, 1, nullptr, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP7EnterConfig_InfoP7EnterConfigFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kInfoP7EnterConfigFlows[] = {
-    { "f-next", "Next page", "info-p8-factory-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Prev page", "info-p6-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+static constexpr ui_exporter::Flow kInfoP5EnterConfigFlows[] = {
+    { "f-next", "Next page", "info-p6-factory-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous page", "info-p4-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-enter", "Open", "config-c1-modbus-id", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
@@ -410,17 +221,17 @@ static constexpr ui_exporter::Flow kStateIdleFlows[] = {
     { "f-wake-down", "Wake to info", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigC1ModbusId_ConfigC1ModbusIdHdrTitle_Text = { "Config > Modbus ID", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigC1ModbusId_ConfigC1ModbusIdFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC1ModbusId_ConfigC1ModbusIdHdrTitle_Text = { "Config > Modbus ID", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC1ModbusId_ConfigC1ModbusIdFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigC1ModbusId_ConfigC1ModbusIdFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC1ModbusId_ConfigC1ModbusIdRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC1ModbusId_ConfigC1ModbusIdFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC1ModbusIdElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC1ModbusId_ConfigC1ModbusIdHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC1ModbusId_ConfigC1ModbusIdFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC1ModbusId_ConfigC1ModbusIdFieldValue_Text, nullptr, "config.modbusSlaveId" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC1ModbusId_ConfigC1ModbusIdFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC1ModbusId_ConfigC1ModbusIdHdrTitle_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kConfigC1ModbusId_ConfigC1ModbusIdFieldValue_Text, nullptr, "config.modbusSlaveId" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigC1ModbusId_ConfigC1ModbusIdRangeHint_Text, nullptr, "config.editor.range" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC1ModbusId_ConfigC1ModbusIdFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -431,17 +242,17 @@ static constexpr ui_exporter::Flow kConfigC1ModbusIdFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigC2BaudRate_ConfigC2BaudRateHdrTitle_Text = { "Config > Baud Rate", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigC2BaudRate_ConfigC2BaudRateFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC2BaudRate_ConfigC2BaudRateHdrTitle_Text = { "Config > Baud Rate", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC2BaudRate_ConfigC2BaudRateFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigC2BaudRate_ConfigC2BaudRateFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC2BaudRate_ConfigC2BaudRateRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC2BaudRate_ConfigC2BaudRateFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC2BaudRateElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC2BaudRate_ConfigC2BaudRateHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC2BaudRate_ConfigC2BaudRateFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC2BaudRate_ConfigC2BaudRateFieldValue_Text, nullptr, "config.baudRate" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC2BaudRate_ConfigC2BaudRateFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC2BaudRate_ConfigC2BaudRateHdrTitle_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kConfigC2BaudRate_ConfigC2BaudRateFieldValue_Text, nullptr, "config.baudRate" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigC2BaudRate_ConfigC2BaudRateRangeHint_Text, nullptr, "config.editor.range" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC2BaudRate_ConfigC2BaudRateFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -452,17 +263,17 @@ static constexpr ui_exporter::Flow kConfigC2BaudRateFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigC3Parity_ConfigC3ParityHdrTitle_Text = { "Config > Parity", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigC3Parity_ConfigC3ParityFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC3Parity_ConfigC3ParityHdrTitle_Text = { "Config > Parity", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC3Parity_ConfigC3ParityFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigC3Parity_ConfigC3ParityFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC3Parity_ConfigC3ParityRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC3Parity_ConfigC3ParityFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC3ParityElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC3Parity_ConfigC3ParityHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC3Parity_ConfigC3ParityFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC3Parity_ConfigC3ParityFieldValue_Text, nullptr, "config.parity" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC3Parity_ConfigC3ParityFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC3Parity_ConfigC3ParityHdrTitle_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kConfigC3Parity_ConfigC3ParityFieldValue_Text, nullptr, "config.parity" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigC3Parity_ConfigC3ParityRangeHint_Text, nullptr, "config.editor.range" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC3Parity_ConfigC3ParityFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -473,17 +284,17 @@ static constexpr ui_exporter::Flow kConfigC3ParityFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigC4StopBits_ConfigC4StopBitsHdrTitle_Text = { "Config > Stop Bits", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigC4StopBits_ConfigC4StopBitsFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC4StopBits_ConfigC4StopBitsHdrTitle_Text = { "Config > Stop Bits", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC4StopBits_ConfigC4StopBitsFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigC4StopBits_ConfigC4StopBitsFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC4StopBits_ConfigC4StopBitsRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC4StopBits_ConfigC4StopBitsFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC4StopBitsElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC4StopBits_ConfigC4StopBitsHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC4StopBits_ConfigC4StopBitsFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC4StopBits_ConfigC4StopBitsFieldValue_Text, nullptr, "config.stopBits" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC4StopBits_ConfigC4StopBitsFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC4StopBits_ConfigC4StopBitsHdrTitle_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kConfigC4StopBits_ConfigC4StopBitsFieldValue_Text, nullptr, "config.stopBits" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigC4StopBits_ConfigC4StopBitsRangeHint_Text, nullptr, "config.editor.range" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC4StopBits_ConfigC4StopBitsFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -494,17 +305,17 @@ static constexpr ui_exporter::Flow kConfigC4StopBitsFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigC5LedPulseVol_ConfigC5LedPulseVolHdrTitle_Text = { "Config > LED Pulse Volume", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigC5LedPulseVol_ConfigC5LedPulseVolFieldLabel_Text = { "Current L", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC5LedPulseVol_ConfigC5LedPulseVolHdrTitle_Text = { "Config > LED Pulse Volume", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC5LedPulseVol_ConfigC5LedPulseVolFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigC5LedPulseVol_ConfigC5LedPulseVolFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC5LedPulseVol_ConfigC5LedPulseVolRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC5LedPulseVol_ConfigC5LedPulseVolFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC5LedPulseVolElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC5LedPulseVol_ConfigC5LedPulseVolHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC5LedPulseVol_ConfigC5LedPulseVolFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC5LedPulseVol_ConfigC5LedPulseVolFieldValue_Text, nullptr, "config.ledPulseVolume" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC5LedPulseVol_ConfigC5LedPulseVolFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC5LedPulseVol_ConfigC5LedPulseVolHdrTitle_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kConfigC5LedPulseVol_ConfigC5LedPulseVolFieldValue_Text, nullptr, "config.ledPulseVolume" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigC5LedPulseVol_ConfigC5LedPulseVolRangeHint_Text, nullptr, "config.editor.range" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC5LedPulseVol_ConfigC5LedPulseVolFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -515,17 +326,17 @@ static constexpr ui_exporter::Flow kConfigC5LedPulseVolFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodHdrTitle_Text = { "Config > LED Pulse Period", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodFieldLabel_Text = { "Current ms", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodHdrTitle_Text = { "Config > LED Pulse Period", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC6LedPulsePeriodElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodFieldValue_Text, nullptr, "config.ledPulsePeriod" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodHdrTitle_Text, nullptr, nullptr },
+    { "field-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodFieldValue_Text, nullptr, "config.ledPulsePeriod" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodRangeHint_Text, nullptr, "config.editor.range" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -536,17 +347,13 @@ static constexpr ui_exporter::Flow kConfigC6LedPulsePeriodFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectHdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectFieldLabel_Text = { "Select a sensor", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectFieldValue_Text = { "Sensors 1-8 >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectFooterHint_Text = { "UP/DN page  ENTER open  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectHdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectFooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC7SensorSelectElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectFieldValue_Text, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectHdrTitle_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -557,15 +364,15 @@ static constexpr ui_exporter::Flow kConfigC7SensorSelectFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigRootBack_ConfigRootBackHdrTitle_Text = { "Config", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigRootBack_ConfigRootBackHdrTitle_Text = { "Config", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigRootBack_ConfigRootBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigRootBack_ConfigRootBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigRootBackElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigRootBack_ConfigRootBackHdrTitle_Text, nullptr, nullptr },
-    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfigRootBack_ConfigRootBackBackLabel_Text, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigRootBack_ConfigRootBackFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigRootBack_ConfigRootBackHdrTitle_Text, nullptr, nullptr },
+    { "back-label", ui_exporter::ElementType::Text, 2, 24, 0, 0, &kConfigRootBack_ConfigRootBackBackLabel_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigRootBack_ConfigRootBackFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -576,22 +383,25 @@ static constexpr ui_exporter::Flow kConfigRootBackFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditHdrTitle_Text = { "Edit > Modbus ID", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditRangeHint_Text = { "1 to 247", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditHdrTitle_Text = { "Edit > Modbus ID", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditPendingLabel_Text = { "New", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold=cancel", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC1ModbusIdEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditSavedValue_Text, nullptr, "config.modbusSlaveId" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditFooterHint_Text, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditHdrTitle_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 44, 26, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 44, 44, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditSavedValue_Text, nullptr, "config.modbusSlaveId" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 86, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -602,22 +412,24 @@ static constexpr ui_exporter::Flow kConfigC1ModbusIdEditFlows[] = {
     { "f-discard", "Discard and go back", "config-c1-modbus-id", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigC2BaudRateEdit_ConfigC2BaudRateEditHdrTitle_Text = { "Edit > Baud Rate", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigC2BaudRateEdit_ConfigC2BaudRateEditRangeHint_Text = { "1200 / 2400 / 4800 / 9600 / 19200 / 38400 / 57600 / 115200", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC2BaudRateEdit_ConfigC2BaudRateEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC2BaudRateEdit_ConfigC2BaudRateEditHdrTitle_Text = { "Edit > Baud Rate", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC2BaudRateEdit_ConfigC2BaudRateEditPendingLabel_Text = { "New", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigC2BaudRateEdit_ConfigC2BaudRateEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC2BaudRateEdit_ConfigC2BaudRateEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC2BaudRateEdit_ConfigC2BaudRateEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC2BaudRateEdit_ConfigC2BaudRateEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC2BaudRateEdit_ConfigC2BaudRateEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigC2BaudRateEdit_ConfigC2BaudRateEditRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC2BaudRateEdit_ConfigC2BaudRateEditNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC2BaudRateEdit_ConfigC2BaudRateEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold=cancel", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC2BaudRateEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditSavedValue_Text, nullptr, "config.baudRate" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditFooterHint_Text, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditHdrTitle_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 44, 26, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 44, 44, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditSavedValue_Text, nullptr, "config.baudRate" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 86, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC2BaudRateEdit_ConfigC2BaudRateEditFooterHint_Text, nullptr, nullptr }
 };
 
 
@@ -628,22 +440,24 @@ static constexpr ui_exporter::Flow kConfigC2BaudRateEditFlows[] = {
     { "f-discard", "Discard and go back", "config-c2-baud-rate", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigC3ParityEdit_ConfigC3ParityEditHdrTitle_Text = { "Edit > Parity", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigC3ParityEdit_ConfigC3ParityEditRangeHint_Text = { "None / Even / Odd", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC3ParityEdit_ConfigC3ParityEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC3ParityEdit_ConfigC3ParityEditHdrTitle_Text = { "Edit > Parity", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC3ParityEdit_ConfigC3ParityEditPendingLabel_Text = { "New", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigC3ParityEdit_ConfigC3ParityEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC3ParityEdit_ConfigC3ParityEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC3ParityEdit_ConfigC3ParityEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC3ParityEdit_ConfigC3ParityEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC3ParityEdit_ConfigC3ParityEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigC3ParityEdit_ConfigC3ParityEditRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC3ParityEdit_ConfigC3ParityEditNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC3ParityEdit_ConfigC3ParityEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold=cancel", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC3ParityEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditSavedValue_Text, nullptr, "config.parity" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditFooterHint_Text, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditHdrTitle_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 44, 26, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 44, 44, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditSavedValue_Text, nullptr, "config.parity" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 86, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC3ParityEdit_ConfigC3ParityEditFooterHint_Text, nullptr, nullptr }
 };
 
 
@@ -654,22 +468,24 @@ static constexpr ui_exporter::Flow kConfigC3ParityEditFlows[] = {
     { "f-discard", "Discard and go back", "config-c3-parity", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigC4StopBitsEdit_ConfigC4StopBitsEditHdrTitle_Text = { "Edit > Stop Bits", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigC4StopBitsEdit_ConfigC4StopBitsEditRangeHint_Text = { "1 / 2", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC4StopBitsEdit_ConfigC4StopBitsEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC4StopBitsEdit_ConfigC4StopBitsEditHdrTitle_Text = { "Edit > Stop Bits", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC4StopBitsEdit_ConfigC4StopBitsEditPendingLabel_Text = { "New", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigC4StopBitsEdit_ConfigC4StopBitsEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC4StopBitsEdit_ConfigC4StopBitsEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC4StopBitsEdit_ConfigC4StopBitsEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC4StopBitsEdit_ConfigC4StopBitsEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC4StopBitsEdit_ConfigC4StopBitsEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigC4StopBitsEdit_ConfigC4StopBitsEditRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC4StopBitsEdit_ConfigC4StopBitsEditNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC4StopBitsEdit_ConfigC4StopBitsEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold=cancel", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC4StopBitsEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditSavedValue_Text, nullptr, "config.stopBits" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditFooterHint_Text, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditHdrTitle_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 44, 26, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 44, 44, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditSavedValue_Text, nullptr, "config.stopBits" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 86, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC4StopBitsEdit_ConfigC4StopBitsEditFooterHint_Text, nullptr, nullptr }
 };
 
 
@@ -680,22 +496,24 @@ static constexpr ui_exporter::Flow kConfigC4StopBitsEditFlows[] = {
     { "f-discard", "Discard and go back", "config-c4-stop-bits", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditHdrTitle_Text = { "Edit > LED Pulse Volume", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditRangeHint_Text = { "1 / 10 / 100 L", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditHdrTitle_Text = { "Edit > LED Pulse Volume", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditPendingLabel_Text = { "New", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold=cancel", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC5LedPulseVolEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditSavedValue_Text, nullptr, "config.ledPulseVolume" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditFooterHint_Text, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditHdrTitle_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 44, 26, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 44, 44, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditSavedValue_Text, nullptr, "config.ledPulseVolume" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 86, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC5LedPulseVolEdit_ConfigC5LedPulseVolEditFooterHint_Text, nullptr, nullptr }
 };
 
 
@@ -706,22 +524,24 @@ static constexpr ui_exporter::Flow kConfigC5LedPulseVolEditFlows[] = {
     { "f-discard", "Discard and go back", "config-c5-led-pulse-vol", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditHdrTitle_Text = { "Edit > LED Pulse Period", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditRangeHint_Text = { "100 to 2000 ms", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditHdrTitle_Text = { "Edit > LED Pulse Period", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditPendingLabel_Text = { "New", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold=cancel", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC6LedPulsePeriodEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditSavedValue_Text, nullptr, "config.ledPulsePeriod" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditFooterHint_Text, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditHdrTitle_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 44, 26, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 44, 44, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditSavedValue_Text, nullptr, "config.ledPulsePeriod" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 86, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC6LedPulsePeriodEdit_ConfigC6LedPulsePeriodEditFooterHint_Text, nullptr, nullptr }
 };
 
 
@@ -732,19 +552,15 @@ static constexpr ui_exporter::Flow kConfigC6LedPulsePeriodEditFlows[] = {
     { "f-discard", "Discard and go back", "config-c6-led-pulse-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1FieldLabel_Text = { "Sensor", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1FieldValue_Text = { "1 >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1FooterHint_Text = { "UP/DN sensor  ENTER open  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1FooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor1Elements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigSensor1_ConfigSensor1HdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigSensor1_ConfigSensor1FieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfigSensor1_ConfigSensor1FieldValue_Text, nullptr, nullptr },
-    { "status-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigSensor1_ConfigSensor1StatusValue_Text, nullptr, "sensor.1.status" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigSensor1_ConfigSensor1FooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor1_ConfigSensor1HdrTitle_Text, nullptr, nullptr },
+    { "status-value", ui_exporter::ElementType::Value, 44, 24, 0, 0, &kConfigSensor1_ConfigSensor1StatusValue_Text, nullptr, "sensor.1.status" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor1_ConfigSensor1FooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -755,19 +571,15 @@ static constexpr ui_exporter::Flow kConfigSensor1Flows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2FieldLabel_Text = { "Sensor", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2FieldValue_Text = { "2 >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2FooterHint_Text = { "UP/DN sensor  ENTER open  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2FooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor2Elements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigSensor2_ConfigSensor2HdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigSensor2_ConfigSensor2FieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfigSensor2_ConfigSensor2FieldValue_Text, nullptr, nullptr },
-    { "status-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigSensor2_ConfigSensor2StatusValue_Text, nullptr, "sensor.2.status" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigSensor2_ConfigSensor2FooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor2_ConfigSensor2HdrTitle_Text, nullptr, nullptr },
+    { "status-value", ui_exporter::ElementType::Value, 44, 24, 0, 0, &kConfigSensor2_ConfigSensor2StatusValue_Text, nullptr, "sensor.2.status" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor2_ConfigSensor2FooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -778,19 +590,15 @@ static constexpr ui_exporter::Flow kConfigSensor2Flows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3FieldLabel_Text = { "Sensor", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3FieldValue_Text = { "3 >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3FooterHint_Text = { "UP/DN sensor  ENTER open  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3FooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor3Elements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigSensor3_ConfigSensor3HdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigSensor3_ConfigSensor3FieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfigSensor3_ConfigSensor3FieldValue_Text, nullptr, nullptr },
-    { "status-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigSensor3_ConfigSensor3StatusValue_Text, nullptr, "sensor.3.status" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigSensor3_ConfigSensor3FooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor3_ConfigSensor3HdrTitle_Text, nullptr, nullptr },
+    { "status-value", ui_exporter::ElementType::Value, 44, 24, 0, 0, &kConfigSensor3_ConfigSensor3StatusValue_Text, nullptr, "sensor.3.status" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor3_ConfigSensor3FooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -801,19 +609,15 @@ static constexpr ui_exporter::Flow kConfigSensor3Flows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4FieldLabel_Text = { "Sensor", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4FieldValue_Text = { "4 >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4FooterHint_Text = { "UP/DN sensor  ENTER open  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4FooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor4Elements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigSensor4_ConfigSensor4HdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigSensor4_ConfigSensor4FieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfigSensor4_ConfigSensor4FieldValue_Text, nullptr, nullptr },
-    { "status-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigSensor4_ConfigSensor4StatusValue_Text, nullptr, "sensor.4.status" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigSensor4_ConfigSensor4FooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor4_ConfigSensor4HdrTitle_Text, nullptr, nullptr },
+    { "status-value", ui_exporter::ElementType::Value, 44, 24, 0, 0, &kConfigSensor4_ConfigSensor4StatusValue_Text, nullptr, "sensor.4.status" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor4_ConfigSensor4FooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -824,19 +628,15 @@ static constexpr ui_exporter::Flow kConfigSensor4Flows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5FieldLabel_Text = { "Sensor", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5FieldValue_Text = { "5 >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5FooterHint_Text = { "UP/DN sensor  ENTER open  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5FooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor5Elements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigSensor5_ConfigSensor5HdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigSensor5_ConfigSensor5FieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfigSensor5_ConfigSensor5FieldValue_Text, nullptr, nullptr },
-    { "status-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigSensor5_ConfigSensor5StatusValue_Text, nullptr, "sensor.5.status" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigSensor5_ConfigSensor5FooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor5_ConfigSensor5HdrTitle_Text, nullptr, nullptr },
+    { "status-value", ui_exporter::ElementType::Value, 44, 24, 0, 0, &kConfigSensor5_ConfigSensor5StatusValue_Text, nullptr, "sensor.5.status" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor5_ConfigSensor5FooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -847,19 +647,15 @@ static constexpr ui_exporter::Flow kConfigSensor5Flows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6FieldLabel_Text = { "Sensor", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6FieldValue_Text = { "6 >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6FooterHint_Text = { "UP/DN sensor  ENTER open  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6FooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor6Elements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigSensor6_ConfigSensor6HdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigSensor6_ConfigSensor6FieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfigSensor6_ConfigSensor6FieldValue_Text, nullptr, nullptr },
-    { "status-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigSensor6_ConfigSensor6StatusValue_Text, nullptr, "sensor.6.status" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigSensor6_ConfigSensor6FooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor6_ConfigSensor6HdrTitle_Text, nullptr, nullptr },
+    { "status-value", ui_exporter::ElementType::Value, 44, 24, 0, 0, &kConfigSensor6_ConfigSensor6StatusValue_Text, nullptr, "sensor.6.status" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor6_ConfigSensor6FooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -870,19 +666,15 @@ static constexpr ui_exporter::Flow kConfigSensor6Flows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7FieldLabel_Text = { "Sensor", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7FieldValue_Text = { "7 >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7FooterHint_Text = { "UP/DN sensor  ENTER open  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7FooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor7Elements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigSensor7_ConfigSensor7HdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigSensor7_ConfigSensor7FieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfigSensor7_ConfigSensor7FieldValue_Text, nullptr, nullptr },
-    { "status-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigSensor7_ConfigSensor7StatusValue_Text, nullptr, "sensor.7.status" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigSensor7_ConfigSensor7FooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor7_ConfigSensor7HdrTitle_Text, nullptr, nullptr },
+    { "status-value", ui_exporter::ElementType::Value, 44, 24, 0, 0, &kConfigSensor7_ConfigSensor7StatusValue_Text, nullptr, "sensor.7.status" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor7_ConfigSensor7FooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -893,19 +685,15 @@ static constexpr ui_exporter::Flow kConfigSensor7Flows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8FieldLabel_Text = { "Sensor", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8FieldValue_Text = { "8 >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8FooterHint_Text = { "UP/DN sensor  ENTER open  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8FooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor8Elements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigSensor8_ConfigSensor8HdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigSensor8_ConfigSensor8FieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfigSensor8_ConfigSensor8FieldValue_Text, nullptr, nullptr },
-    { "status-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigSensor8_ConfigSensor8StatusValue_Text, nullptr, "sensor.8.status" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigSensor8_ConfigSensor8FooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor8_ConfigSensor8HdrTitle_Text, nullptr, nullptr },
+    { "status-value", ui_exporter::ElementType::Value, 44, 24, 0, 0, &kConfigSensor8_ConfigSensor8StatusValue_Text, nullptr, "sensor.8.status" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor8_ConfigSensor8FooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -916,15 +704,15 @@ static constexpr ui_exporter::Flow kConfigSensor8Flows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigSensorBack_ConfigSensorBackHdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensorBack_ConfigSensorBackHdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigSensorBack_ConfigSensorBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigSensorBack_ConfigSensorBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensorBackElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigSensorBack_ConfigSensorBackHdrTitle_Text, nullptr, nullptr },
-    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfigSensorBack_ConfigSensorBackBackLabel_Text, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigSensorBack_ConfigSensorBackFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensorBack_ConfigSensorBackHdrTitle_Text, nullptr, nullptr },
+    { "back-label", ui_exporter::ElementType::Text, 2, 24, 0, 0, &kConfigSensorBack_ConfigSensorBackBackLabel_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensorBack_ConfigSensorBackFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -935,21 +723,21 @@ static constexpr ui_exporter::Flow kConfigSensorBackFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedHdrTitle_Text = { "Sensor > Connected", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedSensorIndex_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedHdrTitle_Text = { "Sensor > Connected", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedSensorIndex_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigS1ConnectedElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigS1Connected_ConfigS1ConnectedHdrTitle_Text, nullptr, nullptr },
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigS1Connected_ConfigS1ConnectedHdrTitle_Text, nullptr, nullptr },
     { "sensor-index", ui_exporter::ElementType::Value, 200, 2, 0, 0, &kConfigS1Connected_ConfigS1ConnectedSensorIndex_Text, nullptr, "config.selectedSensor" },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigS1Connected_ConfigS1ConnectedFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS1Connected_ConfigS1ConnectedFieldValue_Text, nullptr, "config.sensor.connected" },
-    { "nyquist-warning", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigS1Connected_ConfigS1ConnectedNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigS1Connected_ConfigS1ConnectedFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "field-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kConfigS1Connected_ConfigS1ConnectedFieldValue_Text, nullptr, "config.sensor.connected" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigS1Connected_ConfigS1ConnectedRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigS1Connected_ConfigS1ConnectedNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigS1Connected_ConfigS1ConnectedFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -960,22 +748,24 @@ static constexpr ui_exporter::Flow kConfigS1ConnectedFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditHdrTitle_Text = { "Edit > Connected", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditRangeHint_Text = { "Off / On", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditHdrTitle_Text = { "Edit > Connected", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditPendingLabel_Text = { "New", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold=cancel", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigS1ConnectedEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditSavedValue_Text, nullptr, "config.sensor.connected" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditFooterHint_Text, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditHdrTitle_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 44, 26, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 44, 44, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditSavedValue_Text, nullptr, "config.sensor.connected" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 86, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigS1ConnectedEdit_ConfigS1ConnectedEditFooterHint_Text, nullptr, nullptr }
 };
 
 
@@ -986,21 +776,21 @@ static constexpr ui_exporter::Flow kConfigS1ConnectedEditFlows[] = {
     { "f-discard", "Discard and go back", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigS2Multiplier_ConfigS2MultiplierHdrTitle_Text = { "Sensor > Multiplier (F)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigS2Multiplier_ConfigS2MultiplierSensorIndex_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS2Multiplier_ConfigS2MultiplierFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS2Multiplier_ConfigS2MultiplierHdrTitle_Text = { "Sensor > Multiplier (F)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS2Multiplier_ConfigS2MultiplierSensorIndex_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kConfigS2Multiplier_ConfigS2MultiplierFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigS2Multiplier_ConfigS2MultiplierNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS2Multiplier_ConfigS2MultiplierFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS2Multiplier_ConfigS2MultiplierRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS2Multiplier_ConfigS2MultiplierNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS2Multiplier_ConfigS2MultiplierFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigS2MultiplierElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigS2Multiplier_ConfigS2MultiplierHdrTitle_Text, nullptr, nullptr },
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigS2Multiplier_ConfigS2MultiplierHdrTitle_Text, nullptr, nullptr },
     { "sensor-index", ui_exporter::ElementType::Value, 200, 2, 0, 0, &kConfigS2Multiplier_ConfigS2MultiplierSensorIndex_Text, nullptr, "config.selectedSensor" },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigS2Multiplier_ConfigS2MultiplierFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS2Multiplier_ConfigS2MultiplierFieldValue_Text, nullptr, "config.sensor.multiplier" },
-    { "nyquist-warning", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigS2Multiplier_ConfigS2MultiplierNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigS2Multiplier_ConfigS2MultiplierFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "field-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kConfigS2Multiplier_ConfigS2MultiplierFieldValue_Text, nullptr, "config.sensor.multiplier" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigS2Multiplier_ConfigS2MultiplierRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigS2Multiplier_ConfigS2MultiplierNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigS2Multiplier_ConfigS2MultiplierFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -1011,22 +801,24 @@ static constexpr ui_exporter::Flow kConfigS2MultiplierFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigS2MultiplierEdit_ConfigS2MultiplierEditHdrTitle_Text = { "Edit > Multiplier (F)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigS2MultiplierEdit_ConfigS2MultiplierEditRangeHint_Text = { "-32768 to 32767", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS2MultiplierEdit_ConfigS2MultiplierEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS2MultiplierEdit_ConfigS2MultiplierEditHdrTitle_Text = { "Edit > Multiplier (F)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS2MultiplierEdit_ConfigS2MultiplierEditPendingLabel_Text = { "New", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS2MultiplierEdit_ConfigS2MultiplierEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigS2MultiplierEdit_ConfigS2MultiplierEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS2MultiplierEdit_ConfigS2MultiplierEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS2MultiplierEdit_ConfigS2MultiplierEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS2MultiplierEdit_ConfigS2MultiplierEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigS2MultiplierEdit_ConfigS2MultiplierEditRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS2MultiplierEdit_ConfigS2MultiplierEditNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS2MultiplierEdit_ConfigS2MultiplierEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold=cancel", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigS2MultiplierEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditSavedValue_Text, nullptr, "config.sensor.multiplier" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditFooterHint_Text, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditHdrTitle_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 44, 26, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 44, 44, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditSavedValue_Text, nullptr, "config.sensor.multiplier" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 86, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigS2MultiplierEdit_ConfigS2MultiplierEditFooterHint_Text, nullptr, nullptr }
 };
 
 
@@ -1037,21 +829,21 @@ static constexpr ui_exporter::Flow kConfigS2MultiplierEditFlows[] = {
     { "f-discard", "Discard and go back", "config-s2-multiplier", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigS3Adjust_ConfigS3AdjustHdrTitle_Text = { "Sensor > Adjust", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigS3Adjust_ConfigS3AdjustSensorIndex_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS3Adjust_ConfigS3AdjustFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS3Adjust_ConfigS3AdjustHdrTitle_Text = { "Sensor > Adjust", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS3Adjust_ConfigS3AdjustSensorIndex_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kConfigS3Adjust_ConfigS3AdjustFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigS3Adjust_ConfigS3AdjustNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS3Adjust_ConfigS3AdjustFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS3Adjust_ConfigS3AdjustRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS3Adjust_ConfigS3AdjustNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS3Adjust_ConfigS3AdjustFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigS3AdjustElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigS3Adjust_ConfigS3AdjustHdrTitle_Text, nullptr, nullptr },
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigS3Adjust_ConfigS3AdjustHdrTitle_Text, nullptr, nullptr },
     { "sensor-index", ui_exporter::ElementType::Value, 200, 2, 0, 0, &kConfigS3Adjust_ConfigS3AdjustSensorIndex_Text, nullptr, "config.selectedSensor" },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigS3Adjust_ConfigS3AdjustFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS3Adjust_ConfigS3AdjustFieldValue_Text, nullptr, "config.sensor.adjust" },
-    { "nyquist-warning", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigS3Adjust_ConfigS3AdjustNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigS3Adjust_ConfigS3AdjustFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "field-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kConfigS3Adjust_ConfigS3AdjustFieldValue_Text, nullptr, "config.sensor.adjust" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigS3Adjust_ConfigS3AdjustRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigS3Adjust_ConfigS3AdjustNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigS3Adjust_ConfigS3AdjustFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -1062,22 +854,24 @@ static constexpr ui_exporter::Flow kConfigS3AdjustFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigS3AdjustEdit_ConfigS3AdjustEditHdrTitle_Text = { "Edit > Adjust", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigS3AdjustEdit_ConfigS3AdjustEditRangeHint_Text = { "-32768 to 32767", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS3AdjustEdit_ConfigS3AdjustEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS3AdjustEdit_ConfigS3AdjustEditHdrTitle_Text = { "Edit > Adjust", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS3AdjustEdit_ConfigS3AdjustEditPendingLabel_Text = { "New", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS3AdjustEdit_ConfigS3AdjustEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigS3AdjustEdit_ConfigS3AdjustEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS3AdjustEdit_ConfigS3AdjustEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS3AdjustEdit_ConfigS3AdjustEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS3AdjustEdit_ConfigS3AdjustEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigS3AdjustEdit_ConfigS3AdjustEditRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS3AdjustEdit_ConfigS3AdjustEditNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS3AdjustEdit_ConfigS3AdjustEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold=cancel", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigS3AdjustEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditSavedValue_Text, nullptr, "config.sensor.adjust" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditFooterHint_Text, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditHdrTitle_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 44, 26, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 44, 44, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditSavedValue_Text, nullptr, "config.sensor.adjust" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 86, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigS3AdjustEdit_ConfigS3AdjustEditFooterHint_Text, nullptr, nullptr }
 };
 
 
@@ -1088,21 +882,21 @@ static constexpr ui_exporter::Flow kConfigS3AdjustEditFlows[] = {
     { "f-discard", "Discard and go back", "config-s3-adjust", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigS4MaxFlow_ConfigS4MaxFlowHdrTitle_Text = { "Sensor > Max Flow (Q)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigS4MaxFlow_ConfigS4MaxFlowSensorIndex_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS4MaxFlow_ConfigS4MaxFlowFieldLabel_Text = { "Current L/min", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS4MaxFlow_ConfigS4MaxFlowHdrTitle_Text = { "Sensor > Max Flow (Q)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS4MaxFlow_ConfigS4MaxFlowSensorIndex_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kConfigS4MaxFlow_ConfigS4MaxFlowFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigS4MaxFlow_ConfigS4MaxFlowNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS4MaxFlow_ConfigS4MaxFlowFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS4MaxFlow_ConfigS4MaxFlowRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS4MaxFlow_ConfigS4MaxFlowNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS4MaxFlow_ConfigS4MaxFlowFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigS4MaxFlowElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigS4MaxFlow_ConfigS4MaxFlowHdrTitle_Text, nullptr, nullptr },
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigS4MaxFlow_ConfigS4MaxFlowHdrTitle_Text, nullptr, nullptr },
     { "sensor-index", ui_exporter::ElementType::Value, 200, 2, 0, 0, &kConfigS4MaxFlow_ConfigS4MaxFlowSensorIndex_Text, nullptr, "config.selectedSensor" },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigS4MaxFlow_ConfigS4MaxFlowFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS4MaxFlow_ConfigS4MaxFlowFieldValue_Text, nullptr, "config.sensor.maxFlow" },
-    { "nyquist-warning", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigS4MaxFlow_ConfigS4MaxFlowNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigS4MaxFlow_ConfigS4MaxFlowFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "field-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kConfigS4MaxFlow_ConfigS4MaxFlowFieldValue_Text, nullptr, "config.sensor.maxFlow" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigS4MaxFlow_ConfigS4MaxFlowRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigS4MaxFlow_ConfigS4MaxFlowNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigS4MaxFlow_ConfigS4MaxFlowFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -1113,22 +907,24 @@ static constexpr ui_exporter::Flow kConfigS4MaxFlowFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditHdrTitle_Text = { "Edit > Max Flow (Q)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditRangeHint_Text = { "0 to 65535 L/min", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditHdrTitle_Text = { "Edit > Max Flow (Q)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditPendingLabel_Text = { "New", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold=cancel", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigS4MaxFlowEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditSavedValue_Text, nullptr, "config.sensor.maxFlow" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditFooterHint_Text, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditHdrTitle_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 44, 26, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 44, 44, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditSavedValue_Text, nullptr, "config.sensor.maxFlow" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 86, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigS4MaxFlowEdit_ConfigS4MaxFlowEditFooterHint_Text, nullptr, nullptr }
 };
 
 
@@ -1139,15 +935,15 @@ static constexpr ui_exporter::Flow kConfigS4MaxFlowEditFlows[] = {
     { "f-discard", "Discard and go back", "config-s4-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigSensorSettingsBack_ConfigSensorSettingsBackHdrTitle_Text = { "Sensor", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensorSettingsBack_ConfigSensorSettingsBackHdrTitle_Text = { "Sensor", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigSensorSettingsBack_ConfigSensorSettingsBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigSensorSettingsBack_ConfigSensorSettingsBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensorSettingsBackElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfigSensorSettingsBack_ConfigSensorSettingsBackHdrTitle_Text, nullptr, nullptr },
-    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfigSensorSettingsBack_ConfigSensorSettingsBackBackLabel_Text, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfigSensorSettingsBack_ConfigSensorSettingsBackFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensorSettingsBack_ConfigSensorSettingsBackHdrTitle_Text, nullptr, nullptr },
+    { "back-label", ui_exporter::ElementType::Text, 2, 24, 0, 0, &kConfigSensorSettingsBack_ConfigSensorSettingsBackBackLabel_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensorSettingsBack_ConfigSensorSettingsBackFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -1158,688 +954,306 @@ static constexpr ui_exporter::Flow kConfigSensorSettingsBackFlows[] = {
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootHdrTitle_Text = { "WIFI", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootLine1_Text = { "Radio, network name and", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootLine2_Text = { "passphrase.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootPrompt_Text = { "ENTER to open >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootFooterHint_Text = { "UP/DN page  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootHdrTitle_Text = { "WiFi", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootLine1_Text = { "Radio, network name and", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootLine2_Text = { "passphrase.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootFooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kNetWifiRootElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiRoot_NetWifiRootHdrTitle_Text, nullptr, nullptr },
-    { "line-1", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetWifiRoot_NetWifiRootLine1_Text, nullptr, nullptr },
-    { "line-2", ui_exporter::ElementType::Text, 8, 42, 0, 0, &kNetWifiRoot_NetWifiRootLine2_Text, nullptr, nullptr },
-    { "prompt", ui_exporter::ElementType::Text, 8, 64, 0, 0, &kNetWifiRoot_NetWifiRootPrompt_Text, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiRoot_NetWifiRootFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetWifiRoot_NetWifiRootHdrTitle_Text, nullptr, nullptr },
+    { "line-1", ui_exporter::ElementType::Text, 2, 28, 0, 0, &kNetWifiRoot_NetWifiRootLine1_Text, nullptr, nullptr },
+    { "line-2", ui_exporter::ElementType::Text, 2, 40, 0, 0, &kNetWifiRoot_NetWifiRootLine2_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kNetWifiRoot_NetWifiRootFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
 static constexpr ui_exporter::Flow kNetWifiRootFlows[] = {
     { "f-next", "Next page", "net-mqtt-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous page", "info-p8-factory-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open WiFi settings", "net-wifi-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-prev", "Previous page", "info-p6-factory-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Open WiFi settings", "net-wifi-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootHdrTitle_Text = { "MQTT", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootLine1_Text = { "Broker, credentials and", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootLine2_Text = { "Home Assistant discovery.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootPrompt_Text = { "ENTER to open >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootFooterHint_Text = { "UP/DN page  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootHdrTitle_Text = { "MQTT", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootLine1_Text = { "Broker, credentials and", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootLine2_Text = { "Home Assistant discovery.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootFooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kNetMqttRootElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttRoot_NetMqttRootHdrTitle_Text, nullptr, nullptr },
-    { "line-1", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttRoot_NetMqttRootLine1_Text, nullptr, nullptr },
-    { "line-2", ui_exporter::ElementType::Text, 8, 42, 0, 0, &kNetMqttRoot_NetMqttRootLine2_Text, nullptr, nullptr },
-    { "prompt", ui_exporter::ElementType::Text, 8, 64, 0, 0, &kNetMqttRoot_NetMqttRootPrompt_Text, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttRoot_NetMqttRootFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetMqttRoot_NetMqttRootHdrTitle_Text, nullptr, nullptr },
+    { "line-1", ui_exporter::ElementType::Text, 2, 28, 0, 0, &kNetMqttRoot_NetMqttRootLine1_Text, nullptr, nullptr },
+    { "line-2", ui_exporter::ElementType::Text, 2, 40, 0, 0, &kNetMqttRoot_NetMqttRootLine2_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kNetMqttRoot_NetMqttRootFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
 static constexpr ui_exporter::Flow kNetMqttRootFlows[] = {
     { "f-next", "Next page", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous page", "net-wifi-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open MQTT settings", "net-mqtt-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
+    { "f-enter", "Open MQTT settings", "net-mqtt-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetWifiEnabled_NetWifiEnabledHdrTitle_Text = { "WiFi > Enabled", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetWifiEnabled_NetWifiEnabledFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiEnabled_NetWifiEnabledFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetWifiEnabled_NetWifiEnabledFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoHdrTitle_Text = { "WiFi > WiFi", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow0Label_Text = { "State", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow0Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow1Label_Text = { "Enabled", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow2Label_Text = { "Network", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow3Label_Text = { "Passphrase", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoFooterHint_Text = { "UP/DN pages  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
-static constexpr ui_exporter::Element kNetWifiEnabledElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiEnabled_NetWifiEnabledHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetWifiEnabled_NetWifiEnabledFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetWifiEnabled_NetWifiEnabledFieldValue_Text, nullptr, "config.wifi.enabled" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiEnabled_NetWifiEnabledFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+static constexpr ui_exporter::Element kNetWifiInfoElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetWifiInfo_NetWifiInfoHdrTitle_Text, nullptr, nullptr },
+    { "row0-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kNetWifiInfo_NetWifiInfoRow0Label_Text, nullptr, nullptr },
+    { "row0-value", ui_exporter::ElementType::Text, 84, 26, 0, 0, &kNetWifiInfo_NetWifiInfoRow0Value_Text, nullptr, "net.wifi.state" },
+    { "row1-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kNetWifiInfo_NetWifiInfoRow1Label_Text, nullptr, nullptr },
+    { "row1-value", ui_exporter::ElementType::Text, 84, 44, 0, 0, &kNetWifiInfo_NetWifiInfoRow1Value_Text, nullptr, "config.wifi.enabled" },
+    { "row2-label", ui_exporter::ElementType::Text, 2, 62, 0, 0, &kNetWifiInfo_NetWifiInfoRow2Label_Text, nullptr, nullptr },
+    { "row2-value", ui_exporter::ElementType::Text, 84, 62, 0, 0, &kNetWifiInfo_NetWifiInfoRow2Value_Text, nullptr, "config.wifi.ssid" },
+    { "row3-label", ui_exporter::ElementType::Text, 2, 80, 0, 0, &kNetWifiInfo_NetWifiInfoRow3Label_Text, nullptr, nullptr },
+    { "row3-value", ui_exporter::ElementType::Text, 84, 80, 0, 0, &kNetWifiInfo_NetWifiInfoRow3Value_Text, nullptr, "config.wifi.psk" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kNetWifiInfo_NetWifiInfoFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
-static constexpr ui_exporter::Flow kNetWifiEnabledFlows[] = {
-    { "f-next", "Next entry", "net-wifi-ssid", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+static constexpr ui_exporter::Flow kNetWifiInfoFlows[] = {
+    { "f-next", "Next entry", "net-wifi-info-2", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "net-wifi-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "net-wifi-enabled-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetWifiEnabledEdit_NetWifiEnabledEditHdrTitle_Text = { "Edit > Enabled", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetWifiEnabledEdit_NetWifiEnabledEditRangeHint_Text = { "Off / On", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiEnabledEdit_NetWifiEnabledEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiEnabledEdit_NetWifiEnabledEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetWifiEnabledEdit_NetWifiEnabledEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiEnabledEdit_NetWifiEnabledEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiEnabledEdit_NetWifiEnabledEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiInfo2_NetWifiInfo2HdrTitle_Text = { "WiFi > WiFi link", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiInfo2_NetWifiInfo2Row0Label_Text = { "Address", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiInfo2_NetWifiInfo2Row0Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiInfo2_NetWifiInfo2Row1Label_Text = { "Signal (dBm)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiInfo2_NetWifiInfo2Row1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiInfo2_NetWifiInfo2FooterHint_Text = { "UP/DN pages  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
-static constexpr ui_exporter::Element kNetWifiEnabledEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiEnabledEdit_NetWifiEnabledEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetWifiEnabledEdit_NetWifiEnabledEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetWifiEnabledEdit_NetWifiEnabledEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetWifiEnabledEdit_NetWifiEnabledEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetWifiEnabledEdit_NetWifiEnabledEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetWifiEnabledEdit_NetWifiEnabledEditSavedValue_Text, nullptr, "config.wifi.enabled" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiEnabledEdit_NetWifiEnabledEditFooterHint_Text, nullptr, nullptr }
+static constexpr ui_exporter::Element kNetWifiInfo2Elements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetWifiInfo2_NetWifiInfo2HdrTitle_Text, nullptr, nullptr },
+    { "row0-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kNetWifiInfo2_NetWifiInfo2Row0Label_Text, nullptr, nullptr },
+    { "row0-value", ui_exporter::ElementType::Text, 84, 26, 0, 0, &kNetWifiInfo2_NetWifiInfo2Row0Value_Text, nullptr, "net.wifi.ip" },
+    { "row1-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kNetWifiInfo2_NetWifiInfo2Row1Label_Text, nullptr, nullptr },
+    { "row1-value", ui_exporter::ElementType::Text, 84, 44, 0, 0, &kNetWifiInfo2_NetWifiInfo2Row1Value_Text, nullptr, "net.wifi.rssi" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kNetWifiInfo2_NetWifiInfo2FooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
-static constexpr ui_exporter::Flow kNetWifiEnabledEditFlows[] = {
-    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
-    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
-    { "f-commit", "Save and go back", "net-wifi-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
-    { "f-discard", "Discard and go back", "net-wifi-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetWifiSsid_NetWifiSsidHdrTitle_Text = { "WiFi > Network (SSID)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetWifiSsid_NetWifiSsidFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiSsid_NetWifiSsidFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetWifiSsid_NetWifiSsidFooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetWifiSsidElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiSsid_NetWifiSsidHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetWifiSsid_NetWifiSsidFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetWifiSsid_NetWifiSsidFieldValue_Text, nullptr, "config.wifi.ssid" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiSsid_NetWifiSsidFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetWifiSsidFlows[] = {
-    { "f-next", "Next entry", "net-wifi-psk", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-wifi-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetWifiPsk_NetWifiPskHdrTitle_Text = { "WiFi > Passphrase", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetWifiPsk_NetWifiPskFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiPsk_NetWifiPskFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetWifiPsk_NetWifiPskFooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetWifiPskElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiPsk_NetWifiPskHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetWifiPsk_NetWifiPskFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetWifiPsk_NetWifiPskFieldValue_Text, nullptr, "config.wifi.psk" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiPsk_NetWifiPskFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetWifiPskFlows[] = {
+static constexpr ui_exporter::Flow kNetWifiInfo2Flows[] = {
     { "f-next", "Next entry", "net-wifi-portal-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-wifi-ssid", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-wifi-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetWifiPortalReset_NetWifiPortalResetHdrTitle_Text = { "WiFi > Reset portal login", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetWifiPortalReset_NetWifiPortalResetFieldLabel_Text = { "Open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiPortalReset_NetWifiPortalResetFieldValue_Text = { "Settings >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetWifiPortalReset_NetWifiPortalResetFooterHint_Text = { "UP/DN page  ENTER open  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiPortalReset_NetWifiPortalResetHdrTitle_Text = { "WiFi > Reset portal login", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiPortalReset_NetWifiPortalResetFooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kNetWifiPortalResetElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiPortalReset_NetWifiPortalResetHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetWifiPortalReset_NetWifiPortalResetFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kNetWifiPortalReset_NetWifiPortalResetFieldValue_Text, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiPortalReset_NetWifiPortalResetFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetWifiPortalReset_NetWifiPortalResetHdrTitle_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kNetWifiPortalReset_NetWifiPortalResetFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
 static constexpr ui_exporter::Flow kNetWifiPortalResetFlows[] = {
-    { "f-next", "Next entry", "net-wifi-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-wifi-psk", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-next", "Next entry", "net-wifi-ap-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-wifi-info-2", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-enter", "Open Reset portal login", "confirm-reset-portal-login", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetWifiBack_NetWifiBackHdrTitle_Text = { "WiFi", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiBack_NetWifiBackHdrTitle_Text = { "WiFi", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetWifiBack_NetWifiBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetWifiBack_NetWifiBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kNetWifiBackElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiBack_NetWifiBackHdrTitle_Text, nullptr, nullptr },
-    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kNetWifiBack_NetWifiBackBackLabel_Text, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiBack_NetWifiBackFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetWifiBack_NetWifiBackHdrTitle_Text, nullptr, nullptr },
+    { "back-label", ui_exporter::ElementType::Text, 2, 24, 0, 0, &kNetWifiBack_NetWifiBackBackLabel_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kNetWifiBack_NetWifiBackFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
 static constexpr ui_exporter::Flow kNetWifiBackFlows[] = {
-    { "f-next", "Next entry", "net-wifi-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-next", "Next entry", "net-wifi-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "net-wifi-ap-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttEnabled_NetMqttEnabledHdrTitle_Text = { "MQTT > Enabled", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttEnabled_NetMqttEnabledFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttEnabled_NetMqttEnabledFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttEnabled_NetMqttEnabledFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttEnabledElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttEnabled_NetMqttEnabledHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttEnabled_NetMqttEnabledFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttEnabled_NetMqttEnabledFieldValue_Text, nullptr, "config.mqtt.enabled" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttEnabled_NetMqttEnabledFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttEnabledFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-setup", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "net-mqtt-enabled-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttEnabledEdit_NetMqttEnabledEditHdrTitle_Text = { "Edit > Enabled", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttEnabledEdit_NetMqttEnabledEditRangeHint_Text = { "Off / On", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttEnabledEdit_NetMqttEnabledEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttEnabledEdit_NetMqttEnabledEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttEnabledEdit_NetMqttEnabledEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttEnabledEdit_NetMqttEnabledEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttEnabledEdit_NetMqttEnabledEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttEnabledEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttEnabledEdit_NetMqttEnabledEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttEnabledEdit_NetMqttEnabledEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttEnabledEdit_NetMqttEnabledEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttEnabledEdit_NetMqttEnabledEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttEnabledEdit_NetMqttEnabledEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttEnabledEdit_NetMqttEnabledEditSavedValue_Text, nullptr, "config.mqtt.enabled" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttEnabledEdit_NetMqttEnabledEditFooterHint_Text, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttEnabledEditFlows[] = {
-    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
-    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
-    { "f-commit", "Save and go back", "net-mqtt-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
-    { "f-discard", "Discard and go back", "net-mqtt-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttSetup_NetMqttSetupHdrTitle_Text = { "MQTT > Broker", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttSetup_NetMqttSetupFieldLabel_Text = { "Open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttSetup_NetMqttSetupFieldValue_Text = { "Settings >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttSetup_NetMqttSetupFooterHint_Text = { "UP/DN page  ENTER open  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttSetupElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttSetup_NetMqttSetupHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttSetup_NetMqttSetupFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kNetMqttSetup_NetMqttSetupFieldValue_Text, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttSetup_NetMqttSetupFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttSetupFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open Broker", "net-mqtt-host", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttBack_NetMqttBackHdrTitle_Text = { "MQTT", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttBack_NetMqttBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttBack_NetMqttBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttBackElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttBack_NetMqttBackHdrTitle_Text, nullptr, nullptr },
-    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kNetMqttBack_NetMqttBackBackLabel_Text, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttBack_NetMqttBackFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttBackFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-enabled", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoHdrTitle_Text = { "WiFi > WiFi info", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow0Label_Text = { "State", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow0Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow1Label_Text = { "Network", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow2Label_Text = { "Address", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow3Label_Text = { "Signal (dBm)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoFooterHint_Text = { "UP/DN page  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetWifiInfoElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiInfo_NetWifiInfoHdrTitle_Text, nullptr, nullptr },
-    { "row0-label", ui_exporter::ElementType::Text, 8, 24, 0, 0, &kNetWifiInfo_NetWifiInfoRow0Label_Text, nullptr, nullptr },
-    { "row0-value", ui_exporter::ElementType::Value, 8, 34, 0, 0, &kNetWifiInfo_NetWifiInfoRow0Value_Text, nullptr, "net.wifi.state" },
-    { "row1-label", ui_exporter::ElementType::Text, 8, 46, 0, 0, &kNetWifiInfo_NetWifiInfoRow1Label_Text, nullptr, nullptr },
-    { "row1-value", ui_exporter::ElementType::Value, 8, 56, 0, 0, &kNetWifiInfo_NetWifiInfoRow1Value_Text, nullptr, "net.wifi.ssid" },
-    { "row2-label", ui_exporter::ElementType::Text, 8, 68, 0, 0, &kNetWifiInfo_NetWifiInfoRow2Label_Text, nullptr, nullptr },
-    { "row2-value", ui_exporter::ElementType::Value, 8, 78, 0, 0, &kNetWifiInfo_NetWifiInfoRow2Value_Text, nullptr, "net.wifi.ip" },
-    { "row3-label", ui_exporter::ElementType::Text, 8, 90, 0, 0, &kNetWifiInfo_NetWifiInfoRow3Label_Text, nullptr, nullptr },
-    { "row3-value", ui_exporter::ElementType::Value, 8, 100, 0, 0, &kNetWifiInfo_NetWifiInfoRow3Value_Text, nullptr, "net.wifi.rssi" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiInfo_NetWifiInfoFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetWifiInfoFlows[] = {
-    { "f-next", "Next entry", "net-wifi-ap-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-wifi-portal-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoHdrTitle_Text = { "WiFi > AP info", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoHdrTitle_Text = { "WiFi > AP info", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow0Label_Text = { "AP network", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow0Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow0Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow1Label_Text = { "AP key", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow2Label_Text = { "Browse to", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow3Label_Text = { "Closes in (s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoFooterHint_Text = { "Join the AP and browse to the address", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoFooterHint_Text = { "UP/DN pages  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kNetWifiApInfoElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetWifiApInfo_NetWifiApInfoHdrTitle_Text, nullptr, nullptr },
-    { "row0-label", ui_exporter::ElementType::Text, 8, 24, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow0Label_Text, nullptr, nullptr },
-    { "row0-value", ui_exporter::ElementType::Value, 8, 34, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow0Value_Text, nullptr, "net.ap.ssid" },
-    { "row1-label", ui_exporter::ElementType::Text, 8, 46, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow1Label_Text, nullptr, nullptr },
-    { "row1-value", ui_exporter::ElementType::Value, 8, 56, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow1Value_Text, nullptr, "net.ap.password" },
-    { "row2-label", ui_exporter::ElementType::Text, 8, 68, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow2Label_Text, nullptr, nullptr },
-    { "row2-value", ui_exporter::ElementType::Value, 8, 78, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow2Value_Text, nullptr, "net.ap.ip" },
-    { "row3-label", ui_exporter::ElementType::Text, 8, 90, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow3Label_Text, nullptr, nullptr },
-    { "row3-value", ui_exporter::ElementType::Value, 8, 100, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow3Value_Text, nullptr, "net.portal.remaining" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetWifiApInfo_NetWifiApInfoFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetWifiApInfo_NetWifiApInfoHdrTitle_Text, nullptr, nullptr },
+    { "row0-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow0Label_Text, nullptr, nullptr },
+    { "row0-value", ui_exporter::ElementType::Text, 84, 26, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow0Value_Text, nullptr, "net.ap.ssid" },
+    { "row1-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow1Label_Text, nullptr, nullptr },
+    { "row1-value", ui_exporter::ElementType::Text, 84, 44, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow1Value_Text, nullptr, "net.ap.password" },
+    { "row2-label", ui_exporter::ElementType::Text, 2, 62, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow2Label_Text, nullptr, nullptr },
+    { "row2-value", ui_exporter::ElementType::Text, 84, 62, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow2Value_Text, nullptr, "net.ap.ip" },
+    { "row3-label", ui_exporter::ElementType::Text, 2, 80, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow3Label_Text, nullptr, nullptr },
+    { "row3-value", ui_exporter::ElementType::Text, 84, 80, 0, 0, &kNetWifiApInfo_NetWifiApInfoRow3Value_Text, nullptr, "net.portal.remaining" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kNetWifiApInfo_NetWifiApInfoFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
 static constexpr ui_exporter::Flow kNetWifiApInfoFlows[] = {
     { "f-next", "Next entry", "net-wifi-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-wifi-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-wifi-portal-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoHdrTitle_Text = { "MQTT > MQTT info", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoHdrTitle_Text = { "MQTT > MQTT", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow0Label_Text = { "State", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow0Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow1Label_Text = { "Broker", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow1Label_Text = { "Enabled", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow2Label_Text = { "Port", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow2Label_Text = { "Broker", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow3Label_Text = { "Topic", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow3Label_Text = { "Port", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoRow3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoFooterHint_Text = { "UP/DN page  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoFooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kNetMqttInfoElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttInfo_NetMqttInfoHdrTitle_Text, nullptr, nullptr },
-    { "row0-label", ui_exporter::ElementType::Text, 8, 24, 0, 0, &kNetMqttInfo_NetMqttInfoRow0Label_Text, nullptr, nullptr },
-    { "row0-value", ui_exporter::ElementType::Value, 8, 34, 0, 0, &kNetMqttInfo_NetMqttInfoRow0Value_Text, nullptr, "net.mqtt.state" },
-    { "row1-label", ui_exporter::ElementType::Text, 8, 46, 0, 0, &kNetMqttInfo_NetMqttInfoRow1Label_Text, nullptr, nullptr },
-    { "row1-value", ui_exporter::ElementType::Value, 8, 56, 0, 0, &kNetMqttInfo_NetMqttInfoRow1Value_Text, nullptr, "config.mqtt.host" },
-    { "row2-label", ui_exporter::ElementType::Text, 8, 68, 0, 0, &kNetMqttInfo_NetMqttInfoRow2Label_Text, nullptr, nullptr },
-    { "row2-value", ui_exporter::ElementType::Value, 8, 78, 0, 0, &kNetMqttInfo_NetMqttInfoRow2Value_Text, nullptr, "config.mqtt.port" },
-    { "row3-label", ui_exporter::ElementType::Text, 8, 90, 0, 0, &kNetMqttInfo_NetMqttInfoRow3Label_Text, nullptr, nullptr },
-    { "row3-value", ui_exporter::ElementType::Value, 8, 100, 0, 0, &kNetMqttInfo_NetMqttInfoRow3Value_Text, nullptr, "config.mqtt.baseTopic" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttInfo_NetMqttInfoFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetMqttInfo_NetMqttInfoHdrTitle_Text, nullptr, nullptr },
+    { "row0-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kNetMqttInfo_NetMqttInfoRow0Label_Text, nullptr, nullptr },
+    { "row0-value", ui_exporter::ElementType::Text, 84, 26, 0, 0, &kNetMqttInfo_NetMqttInfoRow0Value_Text, nullptr, "net.mqtt.state" },
+    { "row1-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kNetMqttInfo_NetMqttInfoRow1Label_Text, nullptr, nullptr },
+    { "row1-value", ui_exporter::ElementType::Text, 84, 44, 0, 0, &kNetMqttInfo_NetMqttInfoRow1Value_Text, nullptr, "config.mqtt.enabled" },
+    { "row2-label", ui_exporter::ElementType::Text, 2, 62, 0, 0, &kNetMqttInfo_NetMqttInfoRow2Label_Text, nullptr, nullptr },
+    { "row2-value", ui_exporter::ElementType::Text, 84, 62, 0, 0, &kNetMqttInfo_NetMqttInfoRow2Value_Text, nullptr, "config.mqtt.host" },
+    { "row3-label", ui_exporter::ElementType::Text, 2, 80, 0, 0, &kNetMqttInfo_NetMqttInfoRow3Label_Text, nullptr, nullptr },
+    { "row3-value", ui_exporter::ElementType::Text, 84, 80, 0, 0, &kNetMqttInfo_NetMqttInfoRow3Value_Text, nullptr, "config.mqtt.port" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kNetMqttInfo_NetMqttInfoFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
 static constexpr ui_exporter::Flow kNetMqttInfoFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-info-2", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttInfo2_NetMqttInfo2HdrTitle_Text = { "MQTT > MQTT broker", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttInfo2_NetMqttInfo2Row0Label_Text = { "Username", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo2_NetMqttInfo2Row0Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttInfo2_NetMqttInfo2Row1Label_Text = { "Password", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo2_NetMqttInfo2Row1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttInfo2_NetMqttInfo2Row2Label_Text = { "Topic", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo2_NetMqttInfo2Row2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttInfo2_NetMqttInfo2Row3Label_Text = { "HA prefix", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo2_NetMqttInfo2Row3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttInfo2_NetMqttInfo2FooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttInfo2Elements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetMqttInfo2_NetMqttInfo2HdrTitle_Text, nullptr, nullptr },
+    { "row0-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kNetMqttInfo2_NetMqttInfo2Row0Label_Text, nullptr, nullptr },
+    { "row0-value", ui_exporter::ElementType::Text, 84, 26, 0, 0, &kNetMqttInfo2_NetMqttInfo2Row0Value_Text, nullptr, "config.mqtt.user" },
+    { "row1-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kNetMqttInfo2_NetMqttInfo2Row1Label_Text, nullptr, nullptr },
+    { "row1-value", ui_exporter::ElementType::Text, 84, 44, 0, 0, &kNetMqttInfo2_NetMqttInfo2Row1Value_Text, nullptr, "config.mqtt.password" },
+    { "row2-label", ui_exporter::ElementType::Text, 2, 62, 0, 0, &kNetMqttInfo2_NetMqttInfo2Row2Label_Text, nullptr, nullptr },
+    { "row2-value", ui_exporter::ElementType::Text, 84, 62, 0, 0, &kNetMqttInfo2_NetMqttInfo2Row2Value_Text, nullptr, "config.mqtt.baseTopic" },
+    { "row3-label", ui_exporter::ElementType::Text, 2, 80, 0, 0, &kNetMqttInfo2_NetMqttInfo2Row3Label_Text, nullptr, nullptr },
+    { "row3-value", ui_exporter::ElementType::Text, 84, 80, 0, 0, &kNetMqttInfo2_NetMqttInfo2Row3Value_Text, nullptr, "config.mqtt.discoveryPrefix" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kNetMqttInfo2_NetMqttInfo2FooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttInfo2Flows[] = {
+    { "f-next", "Next entry", "net-mqtt-info-3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3HdrTitle_Text = { "MQTT > MQTT publish", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3Row0Label_Text = { "HA discovery", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3Row0Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3Row1Label_Text = { "Period", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3Row1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3Row2Label_Text = { "QoS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3Row2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3FooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kNetMqttInfo3Elements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetMqttInfo3_NetMqttInfo3HdrTitle_Text, nullptr, nullptr },
+    { "row0-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kNetMqttInfo3_NetMqttInfo3Row0Label_Text, nullptr, nullptr },
+    { "row0-value", ui_exporter::ElementType::Text, 84, 26, 0, 0, &kNetMqttInfo3_NetMqttInfo3Row0Value_Text, nullptr, "config.mqtt.haDiscovery" },
+    { "row1-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kNetMqttInfo3_NetMqttInfo3Row1Label_Text, nullptr, nullptr },
+    { "row1-value", ui_exporter::ElementType::Text, 84, 44, 0, 0, &kNetMqttInfo3_NetMqttInfo3Row1Value_Text, nullptr, "config.mqtt.publishPeriod" },
+    { "row2-label", ui_exporter::ElementType::Text, 2, 62, 0, 0, &kNetMqttInfo3_NetMqttInfo3Row2Label_Text, nullptr, nullptr },
+    { "row2-value", ui_exporter::ElementType::Text, 84, 62, 0, 0, &kNetMqttInfo3_NetMqttInfo3Row2Value_Text, nullptr, "config.mqtt.qos" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kNetMqttInfo3_NetMqttInfo3FooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kNetMqttInfo3Flows[] = {
     { "f-next", "Next entry", "net-mqtt-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-setup", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-info-2", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNetMqttHost_NetMqttHostHdrTitle_Text = { "MQTT Broker > Broker host", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttHost_NetMqttHostFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttHost_NetMqttHostFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttHost_NetMqttHostFooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttBack_NetMqttBackHdrTitle_Text = { "MQTT", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttBack_NetMqttBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttBack_NetMqttBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
-static constexpr ui_exporter::Element kNetMqttHostElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttHost_NetMqttHostHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttHost_NetMqttHostFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttHost_NetMqttHostFieldValue_Text, nullptr, "config.mqtt.host" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttHost_NetMqttHostFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+static constexpr ui_exporter::Element kNetMqttBackElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetMqttBack_NetMqttBackHdrTitle_Text, nullptr, nullptr },
+    { "back-label", ui_exporter::ElementType::Text, 2, 24, 0, 0, &kNetMqttBack_NetMqttBackBackLabel_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kNetMqttBack_NetMqttBackFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
-static constexpr ui_exporter::Flow kNetMqttHostFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-port", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-setup-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttPort_NetMqttPortHdrTitle_Text = { "MQTT Broker > Port", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttPort_NetMqttPortFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttPort_NetMqttPortFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttPort_NetMqttPortFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttPortElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttPort_NetMqttPortHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttPort_NetMqttPortFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttPort_NetMqttPortFieldValue_Text, nullptr, "config.mqtt.port" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttPort_NetMqttPortFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttPortFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-user", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-host", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "net-mqtt-port-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttPortEdit_NetMqttPortEditHdrTitle_Text = { "Edit > Port", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttPortEdit_NetMqttPortEditRangeHint_Text = { "1 to 65535", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttPortEdit_NetMqttPortEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttPortEdit_NetMqttPortEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttPortEdit_NetMqttPortEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttPortEdit_NetMqttPortEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttPortEdit_NetMqttPortEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttPortEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttPortEdit_NetMqttPortEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttPortEdit_NetMqttPortEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttPortEdit_NetMqttPortEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttPortEdit_NetMqttPortEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttPortEdit_NetMqttPortEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttPortEdit_NetMqttPortEditSavedValue_Text, nullptr, "config.mqtt.port" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttPortEdit_NetMqttPortEditFooterHint_Text, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttPortEditFlows[] = {
-    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
-    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
-    { "f-commit", "Save and go back", "net-mqtt-port", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
-    { "f-discard", "Discard and go back", "net-mqtt-port", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttUser_NetMqttUserHdrTitle_Text = { "MQTT Broker > Username", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttUser_NetMqttUserFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttUser_NetMqttUserFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttUser_NetMqttUserFooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttUserElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttUser_NetMqttUserHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttUser_NetMqttUserFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttUser_NetMqttUserFieldValue_Text, nullptr, "config.mqtt.user" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttUser_NetMqttUserFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttUserFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-password", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-port", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttPassword_NetMqttPasswordHdrTitle_Text = { "MQTT Broker > Password", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttPassword_NetMqttPasswordFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttPassword_NetMqttPasswordFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttPassword_NetMqttPasswordFooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttPasswordElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttPassword_NetMqttPasswordHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttPassword_NetMqttPasswordFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttPassword_NetMqttPasswordFieldValue_Text, nullptr, "config.mqtt.password" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttPassword_NetMqttPasswordFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttPasswordFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-base-topic", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-user", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttBaseTopic_NetMqttBaseTopicHdrTitle_Text = { "MQTT Broker > Base topic", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttBaseTopic_NetMqttBaseTopicFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttBaseTopic_NetMqttBaseTopicFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttBaseTopic_NetMqttBaseTopicFooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttBaseTopicElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttBaseTopic_NetMqttBaseTopicHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttBaseTopic_NetMqttBaseTopicFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttBaseTopic_NetMqttBaseTopicFieldValue_Text, nullptr, "config.mqtt.baseTopic" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttBaseTopic_NetMqttBaseTopicFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttBaseTopicFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-prefix", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-password", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttPrefix_NetMqttPrefixHdrTitle_Text = { "MQTT Broker > HA prefix", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttPrefix_NetMqttPrefixFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttPrefix_NetMqttPrefixFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttPrefix_NetMqttPrefixFooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttPrefixElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttPrefix_NetMqttPrefixHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttPrefix_NetMqttPrefixFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttPrefix_NetMqttPrefixFieldValue_Text, nullptr, "config.mqtt.discoveryPrefix" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttPrefix_NetMqttPrefixFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttPrefixFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-base-topic", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttPeriod_NetMqttPeriodHdrTitle_Text = { "MQTT Broker > Publish period", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttPeriod_NetMqttPeriodFieldLabel_Text = { "Current s", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttPeriod_NetMqttPeriodFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttPeriod_NetMqttPeriodFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttPeriodElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttPeriod_NetMqttPeriodHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttPeriod_NetMqttPeriodFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttPeriod_NetMqttPeriodFieldValue_Text, nullptr, "config.mqtt.publishPeriod" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttPeriod_NetMqttPeriodFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttPeriodFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-ha-discovery", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-prefix", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "net-mqtt-period-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttPeriodEdit_NetMqttPeriodEditHdrTitle_Text = { "Edit > Publish period", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttPeriodEdit_NetMqttPeriodEditRangeHint_Text = { "1 to 3600 s", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttPeriodEdit_NetMqttPeriodEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttPeriodEdit_NetMqttPeriodEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttPeriodEdit_NetMqttPeriodEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttPeriodEdit_NetMqttPeriodEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttPeriodEdit_NetMqttPeriodEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttPeriodEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttPeriodEdit_NetMqttPeriodEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttPeriodEdit_NetMqttPeriodEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttPeriodEdit_NetMqttPeriodEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttPeriodEdit_NetMqttPeriodEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttPeriodEdit_NetMqttPeriodEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttPeriodEdit_NetMqttPeriodEditSavedValue_Text, nullptr, "config.mqtt.publishPeriod" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttPeriodEdit_NetMqttPeriodEditFooterHint_Text, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttPeriodEditFlows[] = {
-    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
-    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
-    { "f-commit", "Save and go back", "net-mqtt-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
-    { "f-discard", "Discard and go back", "net-mqtt-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttHaDiscovery_NetMqttHaDiscoveryHdrTitle_Text = { "MQTT Broker > HA discovery", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttHaDiscovery_NetMqttHaDiscoveryFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttHaDiscovery_NetMqttHaDiscoveryFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttHaDiscovery_NetMqttHaDiscoveryFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttHaDiscoveryElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttHaDiscovery_NetMqttHaDiscoveryHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttHaDiscovery_NetMqttHaDiscoveryFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttHaDiscovery_NetMqttHaDiscoveryFieldValue_Text, nullptr, "config.mqtt.haDiscovery" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttHaDiscovery_NetMqttHaDiscoveryFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttHaDiscoveryFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-qos", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "net-mqtt-ha-discovery-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditHdrTitle_Text = { "Edit > HA discovery", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditRangeHint_Text = { "Off / On", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttHaDiscoveryEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditSavedValue_Text, nullptr, "config.mqtt.haDiscovery" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttHaDiscoveryEdit_NetMqttHaDiscoveryEditFooterHint_Text, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttHaDiscoveryEditFlows[] = {
-    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
-    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
-    { "f-commit", "Save and go back", "net-mqtt-ha-discovery", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
-    { "f-discard", "Discard and go back", "net-mqtt-ha-discovery", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosHdrTitle_Text = { "MQTT Broker > QoS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosFieldLabel_Text = { "Current", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttQos_NetMqttQosFooterHint_Text = { "UP/DN page  ENTER edit  hold ENTER exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttQosElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttQos_NetMqttQosHdrTitle_Text, nullptr, nullptr },
-    { "field-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttQos_NetMqttQosFieldLabel_Text, nullptr, nullptr },
-    { "field-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttQos_NetMqttQosFieldValue_Text, nullptr, "config.mqtt.qos" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttQos_NetMqttQosFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttQosFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-setup-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-ha-discovery", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "net-mqtt-qos-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttQosEdit_NetMqttQosEditHdrTitle_Text = { "Edit > QoS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttQosEdit_NetMqttQosEditRangeHint_Text = { "0 / 1", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttQosEdit_NetMqttQosEditPendingLabel_Text = { "New value", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttQosEdit_NetMqttQosEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttQosEdit_NetMqttQosEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttQosEdit_NetMqttQosEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetMqttQosEdit_NetMqttQosEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold ENTER discard", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttQosEditElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttQosEdit_NetMqttQosEditHdrTitle_Text, nullptr, nullptr },
-    { "range-hint", ui_exporter::ElementType::Text, 8, 16, 0, 0, &kNetMqttQosEdit_NetMqttQosEditRangeHint_Text, nullptr, nullptr },
-    { "pending-label", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kNetMqttQosEdit_NetMqttQosEditPendingLabel_Text, nullptr, nullptr },
-    { "pending-value", ui_exporter::ElementType::Value, 8, 50, 0, 0, &kNetMqttQosEdit_NetMqttQosEditPendingValue_Text, nullptr, "config.editor.pending" },
-    { "saved-label", ui_exporter::ElementType::Text, 8, 78, 0, 0, &kNetMqttQosEdit_NetMqttQosEditSavedLabel_Text, nullptr, nullptr },
-    { "saved-value", ui_exporter::ElementType::Value, 8, 92, 0, 0, &kNetMqttQosEdit_NetMqttQosEditSavedValue_Text, nullptr, "config.mqtt.qos" },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttQosEdit_NetMqttQosEditFooterHint_Text, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttQosEditFlows[] = {
-    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
-    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
-    { "f-commit", "Save and go back", "net-mqtt-qos", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
-    { "f-discard", "Discard and go back", "net-mqtt-qos", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
-};
-
-static constexpr ui_exporter::TextPayload kNetMqttSetupBack_NetMqttSetupBackHdrTitle_Text = { "MQTT Broker", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttSetupBack_NetMqttSetupBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetMqttSetupBack_NetMqttSetupBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNetMqttSetupBackElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kNetMqttSetupBack_NetMqttSetupBackHdrTitle_Text, nullptr, nullptr },
-    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kNetMqttSetupBack_NetMqttSetupBackBackLabel_Text, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kNetMqttSetupBack_NetMqttSetupBackFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNetMqttSetupBackFlows[] = {
-    { "f-next", "Next entry", "net-mqtt-host", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-qos", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+static constexpr ui_exporter::Flow kNetMqttBackFlows[] = {
+    { "f-next", "Next entry", "net-mqtt-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "net-mqtt-info-3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
     { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kInfoP8FactoryReset_InfoP8FactoryResetHdrTitle_Text = { "P8 FACTORY RESET", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP8FactoryReset_InfoP8FactoryResetWarning1_Text = { "Erases all totals, sensor", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP8FactoryReset_InfoP8FactoryResetWarning2_Text = { "config and LED settings.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kInfoP8FactoryReset_InfoP8FactoryResetPrompt_Text = { "ENTER to continue >", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kInfoP8FactoryReset_InfoP8FactoryResetFooterHint_Text = { "UP/DN page  ENTER confirm screen", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP6FactoryReset_InfoP6FactoryResetHdrTitle_Text = { "Factory Reset", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP6FactoryReset_InfoP6FactoryResetWarning1_Text = { "Erases totals, calibration,", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP6FactoryReset_InfoP6FactoryResetWarning2_Text = { "LED, Modbus link and WiFi", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP6FactoryReset_InfoP6FactoryResetWarning3_Text = { "and MQTT credentials.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP6FactoryReset_InfoP6FactoryResetWarning4_Text = { "Re-provisioning needs the AP", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP6FactoryReset_InfoP6FactoryResetWarning5_Text = { "portal, at the device.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP6FactoryReset_InfoP6FactoryResetFooterHint_Text = { "ENTER opens confirm screen", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
-static constexpr ui_exporter::Element kInfoP8FactoryResetElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kInfoP8FactoryReset_InfoP8FactoryResetHdrTitle_Text, nullptr, nullptr },
-    { "warning-1", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kInfoP8FactoryReset_InfoP8FactoryResetWarning1_Text, nullptr, nullptr },
-    { "warning-2", ui_exporter::ElementType::Text, 8, 42, 0, 0, &kInfoP8FactoryReset_InfoP8FactoryResetWarning2_Text, nullptr, nullptr },
-    { "prompt", ui_exporter::ElementType::Text, 8, 64, 0, 0, &kInfoP8FactoryReset_InfoP8FactoryResetPrompt_Text, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kInfoP8FactoryReset_InfoP8FactoryResetFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+static constexpr ui_exporter::Element kInfoP6FactoryResetElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP6FactoryReset_InfoP6FactoryResetHdrTitle_Text, nullptr, nullptr },
+    { "warning-1", ui_exporter::ElementType::Text, 2, 28, 0, 0, &kInfoP6FactoryReset_InfoP6FactoryResetWarning1_Text, nullptr, nullptr },
+    { "warning-2", ui_exporter::ElementType::Text, 2, 40, 0, 0, &kInfoP6FactoryReset_InfoP6FactoryResetWarning2_Text, nullptr, nullptr },
+    { "warning-3", ui_exporter::ElementType::Text, 2, 52, 0, 0, &kInfoP6FactoryReset_InfoP6FactoryResetWarning3_Text, nullptr, nullptr },
+    { "warning-4", ui_exporter::ElementType::Text, 2, 72, 0, 0, &kInfoP6FactoryReset_InfoP6FactoryResetWarning4_Text, nullptr, nullptr },
+    { "warning-5", ui_exporter::ElementType::Text, 2, 84, 0, 0, &kInfoP6FactoryReset_InfoP6FactoryResetWarning5_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP6FactoryReset_InfoP6FactoryResetFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
-static constexpr ui_exporter::Flow kInfoP8FactoryResetFlows[] = {
+static constexpr ui_exporter::Flow kInfoP6FactoryResetFlows[] = {
     { "f-next", "Next page", "net-wifi-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous page", "info-p7-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-prev", "Previous page", "info-p5-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-enter", "Open confirm screen", "confirm-factory-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
     { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
 };
@@ -1973,12 +1387,10 @@ static constexpr ui_exporter::Flow kToastPortalLoginResetFlows[] = {
 const ui_exporter::Screen kGeneratedScreens[] = {
     { "info-p0-global-status", "P0 — Global Status", kInfoP0GlobalStatusElements, sizeof(kInfoP0GlobalStatusElements) / sizeof(kInfoP0GlobalStatusElements[0]), kInfoP0GlobalStatusFlows, sizeof(kInfoP0GlobalStatusFlows) / sizeof(kInfoP0GlobalStatusFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "info-p1-instant-flow", "P1 — Instant Flow", kInfoP1InstantFlowElements, sizeof(kInfoP1InstantFlowElements) / sizeof(kInfoP1InstantFlowElements[0]), kInfoP1InstantFlowFlows, sizeof(kInfoP1InstantFlowFlows) / sizeof(kInfoP1InstantFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "info-p2-cumulative-liters", "P2 — Cumulative Liters", kInfoP2CumulativeLitersElements, sizeof(kInfoP2CumulativeLitersElements) / sizeof(kInfoP2CumulativeLitersElements[0]), kInfoP2CumulativeLitersFlows, sizeof(kInfoP2CumulativeLitersFlows) / sizeof(kInfoP2CumulativeLitersFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "info-p3-cumulative-m3", "P3 — Cumulative m³", kInfoP3CumulativeM3Elements, sizeof(kInfoP3CumulativeM3Elements) / sizeof(kInfoP3CumulativeM3Elements[0]), kInfoP3CumulativeM3Flows, sizeof(kInfoP3CumulativeM3Flows) / sizeof(kInfoP3CumulativeM3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "info-p4-session-liters", "P4 — Session Liters", kInfoP4SessionLitersElements, sizeof(kInfoP4SessionLitersElements) / sizeof(kInfoP4SessionLitersElements[0]), kInfoP4SessionLitersFlows, sizeof(kInfoP4SessionLitersFlows) / sizeof(kInfoP4SessionLitersFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "info-p5-session-m3", "P5 — Session m³", kInfoP5SessionM3Elements, sizeof(kInfoP5SessionM3Elements) / sizeof(kInfoP5SessionM3Elements[0]), kInfoP5SessionM3Flows, sizeof(kInfoP5SessionM3Flows) / sizeof(kInfoP5SessionM3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "info-p6-max-flow", "P6 — Max Flow Since Reset", kInfoP6MaxFlowElements, sizeof(kInfoP6MaxFlowElements) / sizeof(kInfoP6MaxFlowElements[0]), kInfoP6MaxFlowFlows, sizeof(kInfoP6MaxFlowFlows) / sizeof(kInfoP6MaxFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "info-p7-enter-config", "P7 — Enter Configuration", kInfoP7EnterConfigElements, sizeof(kInfoP7EnterConfigElements) / sizeof(kInfoP7EnterConfigElements[0]), kInfoP7EnterConfigFlows, sizeof(kInfoP7EnterConfigFlows) / sizeof(kInfoP7EnterConfigFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "info-p2-cumulative-m3", "P2 — Cumulative Volume", kInfoP2CumulativeM3Elements, sizeof(kInfoP2CumulativeM3Elements) / sizeof(kInfoP2CumulativeM3Elements[0]), kInfoP2CumulativeM3Flows, sizeof(kInfoP2CumulativeM3Flows) / sizeof(kInfoP2CumulativeM3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "info-p3-session-m3", "P3 — Session Volume", kInfoP3SessionM3Elements, sizeof(kInfoP3SessionM3Elements) / sizeof(kInfoP3SessionM3Elements[0]), kInfoP3SessionM3Flows, sizeof(kInfoP3SessionM3Flows) / sizeof(kInfoP3SessionM3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "info-p4-max-flow", "P4 — Max Flow Since Reset", kInfoP4MaxFlowElements, sizeof(kInfoP4MaxFlowElements) / sizeof(kInfoP4MaxFlowElements[0]), kInfoP4MaxFlowFlows, sizeof(kInfoP4MaxFlowFlows) / sizeof(kInfoP4MaxFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "info-p5-enter-config", "P5 — Enter Configuration", kInfoP5EnterConfigElements, sizeof(kInfoP5EnterConfigElements) / sizeof(kInfoP5EnterConfigElements[0]), kInfoP5EnterConfigFlows, sizeof(kInfoP5EnterConfigFlows) / sizeof(kInfoP5EnterConfigFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "nyquist-warning", "Nyquist Validation Warning", kNyquistWarningElements, sizeof(kNyquistWarningElements) / sizeof(kNyquistWarningElements[0]), kNyquistWarningFlows, sizeof(kNyquistWarningFlows) / sizeof(kNyquistWarningFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "state-idle", "Idle (display off)", kStateIdleElements, sizeof(kStateIdleElements) / sizeof(kStateIdleElements[0]), kStateIdleFlows, sizeof(kStateIdleFlows) / sizeof(kStateIdleFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-c1-modbus-id", "C1 — Modbus ID", kConfigC1ModbusIdElements, sizeof(kConfigC1ModbusIdElements) / sizeof(kConfigC1ModbusIdElements[0]), kConfigC1ModbusIdFlows, sizeof(kConfigC1ModbusIdFlows) / sizeof(kConfigC1ModbusIdFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
@@ -2015,34 +1427,16 @@ const ui_exporter::Screen kGeneratedScreens[] = {
     { "config-sensor-settings-back", "S.BACK — Back", kConfigSensorSettingsBackElements, sizeof(kConfigSensorSettingsBackElements) / sizeof(kConfigSensorSettingsBackElements[0]), kConfigSensorSettingsBackFlows, sizeof(kConfigSensorSettingsBackFlows) / sizeof(kConfigSensorSettingsBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-wifi-root", "WIFI — WiFi", kNetWifiRootElements, sizeof(kNetWifiRootElements) / sizeof(kNetWifiRootElements[0]), kNetWifiRootFlows, sizeof(kNetWifiRootFlows) / sizeof(kNetWifiRootFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-root", "MQTT — MQTT", kNetMqttRootElements, sizeof(kNetMqttRootElements) / sizeof(kNetMqttRootElements[0]), kNetMqttRootFlows, sizeof(kNetMqttRootFlows) / sizeof(kNetMqttRootFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-wifi-enabled", "W1 — Enabled", kNetWifiEnabledElements, sizeof(kNetWifiEnabledElements) / sizeof(kNetWifiEnabledElements[0]), kNetWifiEnabledFlows, sizeof(kNetWifiEnabledFlows) / sizeof(kNetWifiEnabledFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-wifi-enabled-edit", "W1.V — Edit Enabled", kNetWifiEnabledEditElements, sizeof(kNetWifiEnabledEditElements) / sizeof(kNetWifiEnabledEditElements[0]), kNetWifiEnabledEditFlows, sizeof(kNetWifiEnabledEditFlows) / sizeof(kNetWifiEnabledEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-wifi-ssid", "W2 — Network (SSID)", kNetWifiSsidElements, sizeof(kNetWifiSsidElements) / sizeof(kNetWifiSsidElements[0]), kNetWifiSsidFlows, sizeof(kNetWifiSsidFlows) / sizeof(kNetWifiSsidFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-wifi-psk", "W3 — Passphrase", kNetWifiPskElements, sizeof(kNetWifiPskElements) / sizeof(kNetWifiPskElements[0]), kNetWifiPskFlows, sizeof(kNetWifiPskFlows) / sizeof(kNetWifiPskFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-info", "W.I1 — WiFi", kNetWifiInfoElements, sizeof(kNetWifiInfoElements) / sizeof(kNetWifiInfoElements[0]), kNetWifiInfoFlows, sizeof(kNetWifiInfoFlows) / sizeof(kNetWifiInfoFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-info-2", "W.I2 — WiFi link", kNetWifiInfo2Elements, sizeof(kNetWifiInfo2Elements) / sizeof(kNetWifiInfo2Elements[0]), kNetWifiInfo2Flows, sizeof(kNetWifiInfo2Flows) / sizeof(kNetWifiInfo2Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-wifi-portal-reset", "W4 — Reset portal login", kNetWifiPortalResetElements, sizeof(kNetWifiPortalResetElements) / sizeof(kNetWifiPortalResetElements[0]), kNetWifiPortalResetFlows, sizeof(kNetWifiPortalResetFlows) / sizeof(kNetWifiPortalResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-wifi-back", "W.BACK — Back", kNetWifiBackElements, sizeof(kNetWifiBackElements) / sizeof(kNetWifiBackElements[0]), kNetWifiBackFlows, sizeof(kNetWifiBackFlows) / sizeof(kNetWifiBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-enabled", "M1 — Enabled", kNetMqttEnabledElements, sizeof(kNetMqttEnabledElements) / sizeof(kNetMqttEnabledElements[0]), kNetMqttEnabledFlows, sizeof(kNetMqttEnabledFlows) / sizeof(kNetMqttEnabledFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-enabled-edit", "M1.V — Edit Enabled", kNetMqttEnabledEditElements, sizeof(kNetMqttEnabledEditElements) / sizeof(kNetMqttEnabledEditElements[0]), kNetMqttEnabledEditFlows, sizeof(kNetMqttEnabledEditFlows) / sizeof(kNetMqttEnabledEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-setup", "M2 — Broker", kNetMqttSetupElements, sizeof(kNetMqttSetupElements) / sizeof(kNetMqttSetupElements[0]), kNetMqttSetupFlows, sizeof(kNetMqttSetupFlows) / sizeof(kNetMqttSetupFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-back", "M.BACK — Back", kNetMqttBackElements, sizeof(kNetMqttBackElements) / sizeof(kNetMqttBackElements[0]), kNetMqttBackFlows, sizeof(kNetMqttBackFlows) / sizeof(kNetMqttBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-wifi-info", "W5 — WiFi info", kNetWifiInfoElements, sizeof(kNetWifiInfoElements) / sizeof(kNetWifiInfoElements[0]), kNetWifiInfoFlows, sizeof(kNetWifiInfoFlows) / sizeof(kNetWifiInfoFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-wifi-ap-info", "W6 — AP info", kNetWifiApInfoElements, sizeof(kNetWifiApInfoElements) / sizeof(kNetWifiApInfoElements[0]), kNetWifiApInfoFlows, sizeof(kNetWifiApInfoFlows) / sizeof(kNetWifiApInfoFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-info", "M3 — MQTT info", kNetMqttInfoElements, sizeof(kNetMqttInfoElements) / sizeof(kNetMqttInfoElements[0]), kNetMqttInfoFlows, sizeof(kNetMqttInfoFlows) / sizeof(kNetMqttInfoFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-host", "B1 — Broker host", kNetMqttHostElements, sizeof(kNetMqttHostElements) / sizeof(kNetMqttHostElements[0]), kNetMqttHostFlows, sizeof(kNetMqttHostFlows) / sizeof(kNetMqttHostFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-port", "B2 — Port", kNetMqttPortElements, sizeof(kNetMqttPortElements) / sizeof(kNetMqttPortElements[0]), kNetMqttPortFlows, sizeof(kNetMqttPortFlows) / sizeof(kNetMqttPortFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-port-edit", "B2.V — Edit Port", kNetMqttPortEditElements, sizeof(kNetMqttPortEditElements) / sizeof(kNetMqttPortEditElements[0]), kNetMqttPortEditFlows, sizeof(kNetMqttPortEditFlows) / sizeof(kNetMqttPortEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-user", "B3 — Username", kNetMqttUserElements, sizeof(kNetMqttUserElements) / sizeof(kNetMqttUserElements[0]), kNetMqttUserFlows, sizeof(kNetMqttUserFlows) / sizeof(kNetMqttUserFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-password", "B4 — Password", kNetMqttPasswordElements, sizeof(kNetMqttPasswordElements) / sizeof(kNetMqttPasswordElements[0]), kNetMqttPasswordFlows, sizeof(kNetMqttPasswordFlows) / sizeof(kNetMqttPasswordFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-base-topic", "B5 — Base topic", kNetMqttBaseTopicElements, sizeof(kNetMqttBaseTopicElements) / sizeof(kNetMqttBaseTopicElements[0]), kNetMqttBaseTopicFlows, sizeof(kNetMqttBaseTopicFlows) / sizeof(kNetMqttBaseTopicFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-prefix", "B6 — HA prefix", kNetMqttPrefixElements, sizeof(kNetMqttPrefixElements) / sizeof(kNetMqttPrefixElements[0]), kNetMqttPrefixFlows, sizeof(kNetMqttPrefixFlows) / sizeof(kNetMqttPrefixFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-period", "B7 — Publish period", kNetMqttPeriodElements, sizeof(kNetMqttPeriodElements) / sizeof(kNetMqttPeriodElements[0]), kNetMqttPeriodFlows, sizeof(kNetMqttPeriodFlows) / sizeof(kNetMqttPeriodFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-period-edit", "B7.V — Edit Publish period", kNetMqttPeriodEditElements, sizeof(kNetMqttPeriodEditElements) / sizeof(kNetMqttPeriodEditElements[0]), kNetMqttPeriodEditFlows, sizeof(kNetMqttPeriodEditFlows) / sizeof(kNetMqttPeriodEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-ha-discovery", "B8 — HA discovery", kNetMqttHaDiscoveryElements, sizeof(kNetMqttHaDiscoveryElements) / sizeof(kNetMqttHaDiscoveryElements[0]), kNetMqttHaDiscoveryFlows, sizeof(kNetMqttHaDiscoveryFlows) / sizeof(kNetMqttHaDiscoveryFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-ha-discovery-edit", "B8.V — Edit HA discovery", kNetMqttHaDiscoveryEditElements, sizeof(kNetMqttHaDiscoveryEditElements) / sizeof(kNetMqttHaDiscoveryEditElements[0]), kNetMqttHaDiscoveryEditFlows, sizeof(kNetMqttHaDiscoveryEditFlows) / sizeof(kNetMqttHaDiscoveryEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-qos", "B9 — QoS", kNetMqttQosElements, sizeof(kNetMqttQosElements) / sizeof(kNetMqttQosElements[0]), kNetMqttQosFlows, sizeof(kNetMqttQosFlows) / sizeof(kNetMqttQosFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-qos-edit", "B9.V — Edit QoS", kNetMqttQosEditElements, sizeof(kNetMqttQosEditElements) / sizeof(kNetMqttQosEditElements[0]), kNetMqttQosEditFlows, sizeof(kNetMqttQosEditFlows) / sizeof(kNetMqttQosEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-setup-back", "B.BACK — Back", kNetMqttSetupBackElements, sizeof(kNetMqttSetupBackElements) / sizeof(kNetMqttSetupBackElements[0]), kNetMqttSetupBackFlows, sizeof(kNetMqttSetupBackFlows) / sizeof(kNetMqttSetupBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "info-p8-factory-reset", "P8 — Factory Reset", kInfoP8FactoryResetElements, sizeof(kInfoP8FactoryResetElements) / sizeof(kInfoP8FactoryResetElements[0]), kInfoP8FactoryResetFlows, sizeof(kInfoP8FactoryResetFlows) / sizeof(kInfoP8FactoryResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-info", "M.I1 — MQTT", kNetMqttInfoElements, sizeof(kNetMqttInfoElements) / sizeof(kNetMqttInfoElements[0]), kNetMqttInfoFlows, sizeof(kNetMqttInfoFlows) / sizeof(kNetMqttInfoFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-info-2", "M.I2 — MQTT broker", kNetMqttInfo2Elements, sizeof(kNetMqttInfo2Elements) / sizeof(kNetMqttInfo2Elements[0]), kNetMqttInfo2Flows, sizeof(kNetMqttInfo2Flows) / sizeof(kNetMqttInfo2Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-info-3", "M.I3 — MQTT publish", kNetMqttInfo3Elements, sizeof(kNetMqttInfo3Elements) / sizeof(kNetMqttInfo3Elements[0]), kNetMqttInfo3Flows, sizeof(kNetMqttInfo3Flows) / sizeof(kNetMqttInfo3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-back", "M.BACK — Back", kNetMqttBackElements, sizeof(kNetMqttBackElements) / sizeof(kNetMqttBackElements[0]), kNetMqttBackFlows, sizeof(kNetMqttBackFlows) / sizeof(kNetMqttBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "info-p6-factory-reset", "P6 — Factory Reset", kInfoP6FactoryResetElements, sizeof(kInfoP6FactoryResetElements) / sizeof(kInfoP6FactoryResetElements[0]), kInfoP6FactoryResetFlows, sizeof(kInfoP6FactoryResetFlows) / sizeof(kInfoP6FactoryResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-reset-totals", "Reset totals?", kConfirmResetTotalsElements, sizeof(kConfirmResetTotalsElements) / sizeof(kConfirmResetTotalsElements[0]), kConfirmResetTotalsFlows, sizeof(kConfirmResetTotalsFlows) / sizeof(kConfirmResetTotalsFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-reset-session", "Reset session?", kConfirmResetSessionElements, sizeof(kConfirmResetSessionElements) / sizeof(kConfirmResetSessionElements[0]), kConfirmResetSessionFlows, sizeof(kConfirmResetSessionFlows) / sizeof(kConfirmResetSessionFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-factory-reset", "Factory reset?", kConfirmFactoryResetElements, sizeof(kConfirmFactoryResetElements) / sizeof(kConfirmFactoryResetElements[0]), kConfirmFactoryResetFlows, sizeof(kConfirmFactoryResetFlows) / sizeof(kConfirmFactoryResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
@@ -2073,7 +1467,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-05T08:29:24.521Z", 79, 560
+    "2026-08-10T09:11:18.277Z", 59, 376
 };
 
 }  // namespace ui_exporter

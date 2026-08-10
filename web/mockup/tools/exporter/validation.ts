@@ -114,12 +114,32 @@ const validationChecks: Array<
           /^(diagnostics|telemetry)\./i.test(element.binding)
       );
       if (!diagElement) {
+        /**
+         * WARNING, not a failure — the owner's ruling, recorded rather than hidden.
+         *
+         * This check was written when P0 carried `telemetry.status` ("3 warnings" / "All sensors
+         * ready"). The §3 redesign dropped that row to give the walking dots their space, so no
+         * dataset element surfaces a fault any more and this check found nothing.
+         *
+         * The undersampling warning still reaches the operator, but through a path no dataset
+         * element can declare: `drawWarningBanner` paints it edge to edge over the footer row
+         * (§2c), from `context.warningFlags`, on whatever screen is showing. Asked whether the
+         * summary row should come back, the owner's answer was that the banner is enough FOR NOW.
+         *
+         * So this stays as a standing note rather than being deleted: "for now" is not "never", and
+         * a check quietly removed is a decision nobody can find again. It does not block the export,
+         * and it was NOT rewritten to pass on something it does not actually verify.
+         */
         return {
           id: "diagnostics-banner",
           title: "Diagnostics banner is available",
-          status: "fail",
-          message: "Add a badge element bound to telemetry.* or diagnostics.* to surface faults.",
-          recommendation: "Bind a badge/banner element to telemetry.status or diagnostics.summary."
+          status: "warning",
+          message:
+            "No dataset element surfaces a fault summary; undersampling reaches the operator only via " +
+            "the firmware-drawn banner over the footer row (§2c).",
+          recommendation:
+            "Accepted by the owner for now. To put the summary back on the panel, bind a badge to " +
+            "telemetry.status — P0 carried it before the §3 redesign."
         };
       }
       return {

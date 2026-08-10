@@ -4087,7 +4087,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "net-wifi-enabled",
+          "targetScreenId": "net-wifi-info",
           "actionId": "ui.action.nav.descend"
         },
         {
@@ -4178,7 +4178,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "net-mqtt-enabled",
+          "targetScreenId": "net-mqtt-info",
           "actionId": "ui.action.nav.descend"
         },
         {
@@ -4195,33 +4195,88 @@
       ]
     },
     {
-      "id": "net-wifi-enabled",
-      "name": "W1 — Enabled",
-      "description": "WiFi entry W1. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
+      "id": "net-wifi-info",
+      "name": "W.I1 — WiFi",
+      "description": "WiFi information, page 1 of 2. Read-only: the panel reads WiFi, it does not set it.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
           "x": 2,
           "y": 2,
-          "emphasis": "strong",
-          "content": "WiFi > Enabled"
+          "content": "WiFi > WiFi"
         },
         {
-          "id": "field-value",
-          "kind": "value",
+          "id": "row0-label",
+          "kind": "text",
           "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.wifi.enabled"
+          "y": 26,
+          "content": "State",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row0-value",
+          "kind": "text",
+          "x": 84,
+          "y": 26,
+          "binding": "net.wifi.state",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row1-label",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "content": "Enabled",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row1-value",
+          "kind": "text",
+          "x": 84,
+          "y": 44,
+          "binding": "config.wifi.enabled",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row2-label",
+          "kind": "text",
+          "x": 2,
+          "y": 62,
+          "content": "Network",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row2-value",
+          "kind": "text",
+          "x": 84,
+          "y": 62,
+          "binding": "config.wifi.ssid",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row3-label",
+          "kind": "text",
+          "x": 2,
+          "y": 80,
+          "content": "Passphrase",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row3-value",
+          "kind": "text",
+          "x": 84,
+          "y": 80,
+          "binding": "config.wifi.psk",
+          "emphasis": "strong"
         },
         {
           "id": "footer-hint",
           "kind": "text",
           "x": 2,
           "y": 124,
-          "emphasis": "muted",
-          "content": "Set via web portal or RS485"
+          "content": "UP/DN pages  hold=exit",
+          "emphasis": "muted"
         },
         {
           "id": "level-position",
@@ -4241,7 +4296,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "net-wifi-ssid",
+          "targetScreenId": "net-wifi-info-2",
           "actionId": "ui.action.page.next"
         },
         {
@@ -4269,107 +4324,56 @@
       ]
     },
     {
-      "id": "net-wifi-ssid",
-      "name": "W2 — Network (SSID)",
-      "description": "WiFi entry W2. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
+      "id": "net-wifi-info-2",
+      "name": "W.I2 — WiFi link",
+      "description": "WiFi information, page 2 of 2 — the live link, which only exists once associated.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
           "x": 2,
           "y": 2,
-          "emphasis": "strong",
-          "content": "WiFi > Network (SSID)"
+          "content": "WiFi > WiFi link"
         },
         {
-          "id": "field-value",
-          "kind": "value",
+          "id": "row0-label",
+          "kind": "text",
           "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.wifi.ssid"
+          "y": 26,
+          "content": "Address",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row0-value",
+          "kind": "text",
+          "x": 84,
+          "y": 26,
+          "binding": "net.wifi.ip",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row1-label",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "content": "Signal (dBm)",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row1-value",
+          "kind": "text",
+          "x": 84,
+          "y": 44,
+          "binding": "net.wifi.rssi",
+          "emphasis": "strong"
         },
         {
           "id": "footer-hint",
           "kind": "text",
           "x": 2,
           "y": 124,
-          "emphasis": "muted",
-          "content": "Set via web portal or RS485"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-wifi-psk",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-wifi-enabled",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-wifi-psk",
-      "name": "W3 — Passphrase",
-      "description": "WiFi entry W3. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "WiFi > Passphrase"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.wifi.psk"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "Set via web portal or RS485"
+          "content": "UP/DN pages  hold=exit",
+          "emphasis": "muted"
         },
         {
           "id": "level-position",
@@ -4400,7 +4404,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "net-wifi-ssid",
+          "targetScreenId": "net-wifi-info",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -4455,7 +4459,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "net-wifi-info",
+          "targetScreenId": "net-wifi-ap-info",
           "actionId": "ui.action.page.next"
         },
         {
@@ -4466,7 +4470,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "net-wifi-psk",
+          "targetScreenId": "net-wifi-info-2",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -4540,7 +4544,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "net-wifi-enabled",
+          "targetScreenId": "net-wifi-info",
           "actionId": "ui.action.page.next"
         },
         {
@@ -4563,367 +4567,6 @@
             "gesture": "short"
           },
           "actionId": "ui.action.nav.back"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-enabled",
-      "name": "M1 — Enabled",
-      "description": "MQTT entry M1. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "MQTT > Enabled"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.mqtt.enabled"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "Set via web portal or RS485"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-setup",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-back",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-setup",
-      "name": "M2 — Broker",
-      "description": "MQTT entry M2. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "MQTT > Broker"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "UP/DN pages  ENTER open  hold=exit"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-info",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-enabled",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-enter",
-          "label": "Open Broker",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-host",
-          "actionId": "ui.action.nav.descend"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-back",
-      "name": "M.BACK — Back",
-      "description": "Ascends one level, out of MQTT. — laid out to the §7 back template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "MQTT"
-        },
-        {
-          "id": "back-label",
-          "kind": "text",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "content": "< BACK"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "ENTER go back"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-enabled",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-info",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-back",
-          "label": "Back one level",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "actionId": "ui.action.nav.back"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-wifi-info",
-      "name": "W5 — WiFi info",
-      "description": "TEMPLATE for a read-only info table. One row per fact: label at x=2, value at x=78 as 6px text. Values are diagnostics rather than measurements, which is why they are text and not `value`.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "WiFi > WiFi info"
-        },
-        {
-          "id": "row0-label",
-          "kind": "text",
-          "x": 2,
-          "y": 26,
-          "emphasis": "muted",
-          "content": "State"
-        },
-        {
-          "id": "row0-value",
-          "kind": "text",
-          "x": 84,
-          "y": 26,
-          "binding": "net.wifi.state"
-        },
-        {
-          "id": "row1-label",
-          "kind": "text",
-          "x": 2,
-          "y": 44,
-          "emphasis": "muted",
-          "content": "Network"
-        },
-        {
-          "id": "row1-value",
-          "kind": "text",
-          "x": 84,
-          "y": 44,
-          "binding": "net.wifi.ssid"
-        },
-        {
-          "id": "row2-label",
-          "kind": "text",
-          "x": 2,
-          "y": 62,
-          "emphasis": "muted",
-          "content": "Address"
-        },
-        {
-          "id": "row2-value",
-          "kind": "text",
-          "x": 84,
-          "y": 62,
-          "binding": "net.wifi.ip"
-        },
-        {
-          "id": "row3-label",
-          "kind": "text",
-          "x": 2,
-          "y": 80,
-          "emphasis": "muted",
-          "content": "Signal (dBm)"
-        },
-        {
-          "id": "row3-value",
-          "kind": "text",
-          "x": 84,
-          "y": 80,
-          "binding": "net.wifi.rssi"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "UP/DN pages  hold=exit"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-wifi-ap-info",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-wifi-portal-reset",
-          "actionId": "ui.action.page.previous"
         },
         {
           "id": "f-escape",
@@ -5048,7 +4691,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "net-wifi-info",
+          "targetScreenId": "net-wifi-portal-reset",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -5066,84 +4709,329 @@
     },
     {
       "id": "net-mqtt-info",
-      "name": "M3 — MQTT info",
-      "description": "MQTT information page. Read-only; the values come from the live radio and broker. — laid out to the §7 info template.",
+      "name": "M.I1 — MQTT",
+      "description": "MQTT information, page 1 of 3. Read-only; every value it shows was its own screen before.",
       "elements": [
         {
           "id": "hdr-title",
           "kind": "text",
           "x": 2,
           "y": 2,
-          "emphasis": "strong",
-          "content": "MQTT > MQTT info"
+          "content": "MQTT > MQTT"
         },
         {
           "id": "row0-label",
           "kind": "text",
           "x": 2,
           "y": 26,
-          "emphasis": "muted",
-          "content": "State"
+          "content": "State",
+          "emphasis": "muted"
         },
         {
           "id": "row0-value",
           "kind": "text",
           "x": 84,
           "y": 26,
-          "binding": "net.mqtt.state"
+          "binding": "net.mqtt.state",
+          "emphasis": "strong"
         },
         {
           "id": "row1-label",
           "kind": "text",
           "x": 2,
           "y": 44,
-          "emphasis": "muted",
-          "content": "Broker"
+          "content": "Enabled",
+          "emphasis": "muted"
         },
         {
           "id": "row1-value",
           "kind": "text",
           "x": 84,
           "y": 44,
-          "binding": "config.mqtt.host"
+          "binding": "config.mqtt.enabled",
+          "emphasis": "strong"
         },
         {
           "id": "row2-label",
           "kind": "text",
           "x": 2,
           "y": 62,
-          "emphasis": "muted",
-          "content": "Port"
+          "content": "Broker",
+          "emphasis": "muted"
         },
         {
           "id": "row2-value",
           "kind": "text",
           "x": 84,
           "y": 62,
-          "binding": "config.mqtt.port"
+          "binding": "config.mqtt.host",
+          "emphasis": "strong"
         },
         {
           "id": "row3-label",
           "kind": "text",
           "x": 2,
           "y": 80,
-          "emphasis": "muted",
-          "content": "Topic"
+          "content": "Port",
+          "emphasis": "muted"
         },
         {
           "id": "row3-value",
           "kind": "text",
           "x": 84,
           "y": 80,
-          "binding": "config.mqtt.baseTopic"
+          "binding": "config.mqtt.port",
+          "emphasis": "strong"
         },
         {
           "id": "footer-hint",
           "kind": "text",
           "x": 2,
           "y": 124,
-          "emphasis": "muted",
-          "content": "UP/DN pages  hold=exit"
+          "content": "Set via web portal or RS485",
+          "emphasis": "muted"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-mqtt-info-2",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-mqtt-back",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ]
+    },
+    {
+      "id": "net-mqtt-info-2",
+      "name": "M.I2 — MQTT broker",
+      "description": "MQTT information, page 2 of 3 — credentials and topics. Was B3, B4, B5 and B6.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "content": "MQTT > MQTT broker"
+        },
+        {
+          "id": "row0-label",
+          "kind": "text",
+          "x": 2,
+          "y": 26,
+          "content": "Username",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row0-value",
+          "kind": "text",
+          "x": 84,
+          "y": 26,
+          "binding": "config.mqtt.user",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row1-label",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "content": "Password",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row1-value",
+          "kind": "text",
+          "x": 84,
+          "y": 44,
+          "binding": "config.mqtt.password",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row2-label",
+          "kind": "text",
+          "x": 2,
+          "y": 62,
+          "content": "Topic",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row2-value",
+          "kind": "text",
+          "x": 84,
+          "y": 62,
+          "binding": "config.mqtt.baseTopic",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row3-label",
+          "kind": "text",
+          "x": 2,
+          "y": 80,
+          "content": "HA prefix",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row3-value",
+          "kind": "text",
+          "x": 84,
+          "y": 80,
+          "binding": "config.mqtt.discoveryPrefix",
+          "emphasis": "strong"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "content": "Set via web portal or RS485",
+          "emphasis": "muted"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-mqtt-info-3",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "net-mqtt-info",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ]
+    },
+    {
+      "id": "net-mqtt-info-3",
+      "name": "M.I3 — MQTT publish",
+      "description": "MQTT information, page 3 of 3 — publish behaviour. Was B7, B8 and B9.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "content": "MQTT > MQTT publish"
+        },
+        {
+          "id": "row0-label",
+          "kind": "text",
+          "x": 2,
+          "y": 26,
+          "content": "HA discovery",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row0-value",
+          "kind": "text",
+          "x": 84,
+          "y": 26,
+          "binding": "config.mqtt.haDiscovery",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row1-label",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "content": "Period",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row1-value",
+          "kind": "text",
+          "x": 84,
+          "y": 44,
+          "binding": "config.mqtt.publishPeriod",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row2-label",
+          "kind": "text",
+          "x": 2,
+          "y": 62,
+          "content": "QoS",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row2-value",
+          "kind": "text",
+          "x": 84,
+          "y": 62,
+          "binding": "config.mqtt.qos",
+          "emphasis": "strong"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "content": "Set via web portal or RS485",
+          "emphasis": "muted"
         },
         {
           "id": "level-position",
@@ -5174,7 +5062,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "net-mqtt-setup",
+          "targetScreenId": "net-mqtt-info-2",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -5191,9 +5079,9 @@
       ]
     },
     {
-      "id": "net-mqtt-host",
-      "name": "B1 — Broker host",
-      "description": "MQTT Broker entry B1. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
+      "id": "net-mqtt-back",
+      "name": "M.BACK — Back",
+      "description": "Ascends one level, out of MQTT. — laid out to the §7 back template.",
       "elements": [
         {
           "id": "hdr-title",
@@ -5201,673 +5089,7 @@
           "x": 2,
           "y": 2,
           "emphasis": "strong",
-          "content": "MQTT Broker > Broker host"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.mqtt.host"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "Set via web portal or RS485"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-port",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-setup-back",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-port",
-      "name": "B2 — Port",
-      "description": "MQTT Broker entry B2. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "MQTT Broker > Port"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.mqtt.port"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "Set via web portal or RS485"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-user",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-host",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-user",
-      "name": "B3 — Username",
-      "description": "MQTT Broker entry B3. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "MQTT Broker > Username"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.mqtt.user"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "Set via web portal or RS485"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-password",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-port",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-password",
-      "name": "B4 — Password",
-      "description": "MQTT Broker entry B4. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "MQTT Broker > Password"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.mqtt.password"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "Set via web portal or RS485"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-base-topic",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-user",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-base-topic",
-      "name": "B5 — Base topic",
-      "description": "MQTT Broker entry B5. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "MQTT Broker > Base topic"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.mqtt.baseTopic"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "Set via web portal or RS485"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-prefix",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-password",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-prefix",
-      "name": "B6 — HA prefix",
-      "description": "MQTT Broker entry B6. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "MQTT Broker > HA prefix"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.mqtt.discoveryPrefix"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "Set via web portal or RS485"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-period",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-base-topic",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-period",
-      "name": "B7 — Publish period",
-      "description": "MQTT Broker entry B7. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "MQTT Broker > Publish period"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.mqtt.publishPeriod"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "Set via web portal or RS485"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-ha-discovery",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-prefix",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-ha-discovery",
-      "name": "B8 — HA discovery",
-      "description": "MQTT Broker entry B8. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "MQTT Broker > HA discovery"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.mqtt.haDiscovery"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "Set via web portal or RS485"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-qos",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-period",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-qos",
-      "name": "B9 — QoS",
-      "description": "MQTT Broker entry B9. ENTER edits; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "MQTT Broker > QoS"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.mqtt.qos"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "Set via web portal or RS485"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-setup-back",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "net-mqtt-ha-discovery",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-escape",
-          "label": "Exit to main screen",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "long"
-          },
-          "targetScreenId": "info-p0-global-status",
-          "actionId": "ui.action.nav.escape"
-        }
-      ]
-    },
-    {
-      "id": "net-mqtt-setup-back",
-      "name": "B.BACK — Back",
-      "description": "Ascends one level, out of MQTT Broker. — laid out to the §7 back template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "MQTT Broker"
+          "content": "MQTT"
         },
         {
           "id": "back-label",
@@ -5903,7 +5125,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "net-mqtt-host",
+          "targetScreenId": "net-mqtt-info",
           "actionId": "ui.action.page.next"
         },
         {
@@ -5914,7 +5136,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "net-mqtt-qos",
+          "targetScreenId": "net-mqtt-info-3",
           "actionId": "ui.action.page.previous"
         },
         {

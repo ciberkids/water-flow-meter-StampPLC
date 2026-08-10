@@ -28,6 +28,7 @@ import { fileURLToPath } from "node:url";
 import type { FirmwareValueDefinition } from "../../src/types/firmwareActions";
 import { sampleValueFor } from "../../src/utils/sampleValues";
 import { formatSetting, pendingRawFor, rangeHintFor, settingOfScreen } from "../../src/utils/settingHints";
+import { clipToPanel } from "../../src/utils/layout";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
@@ -64,6 +65,7 @@ const kMemoryOwned = (binding: string) =>
   binding === "legend.status";
 
 const problems: string[] = [];
+const truncations: string[] = [];
 const rows: string[][] = [];
 const showAll = process.argv.includes("--all");
 
@@ -109,12 +111,21 @@ for (const screen of dataset.screens) {
       }
     }
 
-    // 5. the resolved string must still fit the panel
+    // 5. the resolved string must still fit the panel — AFTER the clip the renderer applies, and
+    //    reported when the clip actually bites, because a row that can only ever show a truncated
+    //    hostname is a layout decision somebody should have made on purpose.
     const advance = element.kind === "value" ? kGlyphValue : kGlyphText;
-    const right = element.x + rendered.length * advance;
+    const clipped = clipToPanel(rendered, advance, element.x);
+    if (clipped !== rendered) {
+      truncations.push(
+        `${screen.id}/${element.id} (${element.binding}) needs ${rendered.length} ch but the row holds ` +
+          `${clipped.length}; the panel shows "${clipped}"`
+      );
+    }
+    const right = element.x + clipped.length * advance;
     if (right > kPanelW) {
       problems.push(
-        `${screen.id}/${element.id} renders ${rendered.length} ch reaching x=${right}, past the ${kPanelW} px panel`
+        `${screen.id}/${element.id} renders ${clipped.length} ch reaching x=${right}, past the ${kPanelW} px panel`
       );
     }
 
@@ -147,6 +158,10 @@ if (rows.length > 0) {
 }
 
 console.log(`\n${dataset.screens.length} screens, ${rows.length} config binding(s) shown.`);
+if (truncations.length > 0) {
+  console.log(`\n${truncations.length} row(s) the panel must TRUNCATE (not a failure — see clipToPanel):`);
+  for (const t of truncations) console.log(`- ${t}`);
+}
 if (problems.length === 0) {
   console.log("No unresolved placeholders, no value outside its descriptor, no dead editor, nothing past the panel.");
 } else {
