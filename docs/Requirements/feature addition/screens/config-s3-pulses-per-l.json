@@ -1,7 +1,7 @@
 {
-  "id": "config-s2-multiplier",
-  "name": "S2 \u2014 Multiplier (F)",
-  "description": "Sensor settings entry S2, scoped to the sensor of the current level. \u2014 laid out to the \u00a77 persensor template.",
+  "id": "config-s3-pulses-per-l",
+  "name": "S3 \u2014 Pulses per litre",
+  "description": "Sensor settings entry S3, scoped to the sensor of the current level. \u2014 laid out to the \u00a77 per-sensor template.",
   "elements": [
     {
       "id": "hdr-title",
@@ -9,8 +9,8 @@
       "x": 2,
       "y": 2,
       "emphasis": "strong",
-      "content": "Sensor > Multiplier (F)",
-      "worst": "Sensor > Multiplier (F)",
+      "content": "Sensor > Pulses per litre",
+      "worst": "Sensor > Pulses per litre",
       "bound": "fixed literal"
     },
     {
@@ -28,9 +28,9 @@
       "x": 2,
       "y": 24,
       "emphasis": "strong",
-      "binding": "config.sensor.multiplier",
-      "worst": "-32768",
-      "bound": "descriptor min, the widest signed value"
+      "binding": "config.sensor.pulsesPerLiter",
+      "worst": "65535 p/L",
+      "bound": "uint16 domain 1..65535 with unit p/L"
     },
     {
       "id": "range-hint",
@@ -39,14 +39,24 @@
       "y": 44,
       "emphasis": "muted",
       "binding": "config.editor.range",
-      "worst": "8 rates: 1200..115200",
-      "bound": "derived from the descriptor \u2014 see 7.2"
+      "worst": "None / Even / Odd",
+      "bound": "derived from the descriptor - see 7.2; widest is parity"
+    },
+    {
+      "id": "context-note",
+      "kind": "text",
+      "x": 2,
+      "y": 66,
+      "emphasis": "muted",
+      "content": "Used when Calibration is Pulses/L.",
+      "worst": "Used when Calibration is Pulses/L.",
+      "bound": "fixed literal"
     },
     {
       "id": "nyquist-warning",
       "kind": "text",
       "x": 2,
-      "y": 66,
+      "y": 88,
       "emphasis": "strong",
       "binding": "config.sensor.nyquistWarning",
       "worst": "Write refused. UP=Back",

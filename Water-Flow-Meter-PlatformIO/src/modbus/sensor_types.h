@@ -5,13 +5,29 @@
 #include <algorithm>
 #include <cstdlib>
 
+/**
+ * How a channel's meter is specified — the two forms real datasheets use.
+ *
+ * `Formula` is `F = f_multiplier * Q + adjust`, the linear fit printed on turbine meters.
+ * `PulsesPerLitre` is a single K figure, which is the more common form and which the formula fields
+ * cannot represent: K = 450 needs a multiplier of 7.5 and `f_multiplier` is an integer.
+ */
+enum class CalibrationType : uint16_t {
+  Formula = 0,
+  PulsesPerLitre = 1
+};
+
 struct SensorCharacteristics {
   uint16_t q_max = 0;
   int16_t f_multiplier = 0;
   int16_t adjust = 0;
+  CalibrationType calibration = CalibrationType::Formula;
+  /** Pulses per litre, used only when `calibration` is PulsesPerLitre. Exact, not scaled. */
+  uint16_t pulses_per_litre = 0;
 
   bool operator==(const SensorCharacteristics& other) const {
-    return q_max == other.q_max && f_multiplier == other.f_multiplier && adjust == other.adjust;
+    return q_max == other.q_max && f_multiplier == other.f_multiplier && adjust == other.adjust &&
+           calibration == other.calibration && pulses_per_litre == other.pulses_per_litre;
   }
 
   bool operator!=(const SensorCharacteristics& other) const {
@@ -34,7 +50,18 @@ struct SensorCharacteristics {
  * the correction would dominate the measurement.
  */
 inline bool configIsValid(const SensorCharacteristics& cfg) {
-  if (cfg.q_max == 0 || cfg.f_multiplier == 0) {
+  // Common to both forms: without a nominal maximum there is nothing to clamp a reading to, and the
+  // Nyquist check has no ceiling frequency to test.
+  if (cfg.q_max == 0) {
+    return false;
+  }
+  // The pulses-per-litre form needs only K. There is no offset to sanity-check, because a
+  // pulses-per-litre spec has none — that is the whole reason it is a separate form and not a
+  // formula with adjust set to zero.
+  if (cfg.calibration == CalibrationType::PulsesPerLitre) {
+    return cfg.pulses_per_litre != 0;
+  }
+  if (cfg.f_multiplier == 0) {
     return false;
   }
   const int32_t multiplier = std::max<int32_t>(std::abs(static_cast<int32_t>(cfg.f_multiplier)), 1);

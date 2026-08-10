@@ -29,7 +29,23 @@ void SensorStateEngine::update(float elapsedSeconds) {
       // second clause was redundant as well as insufficient.
       if (configIsValid(config)) {
         const float frequency = static_cast<float>(pulses) / elapsedSeconds;
-        float flowRateLpm = (frequency - config.adjust) / config.f_multiplier;
+        /**
+         * Two calibration forms, inverted from how a datasheet states them.
+         *
+         * Formula: the sheet gives `F = m*Q + a`, so flow is `(F - a) / m`.
+         * Pulses per litre: the sheet gives K pulses per litre, so K*Q/60 pulses per second, so flow
+         * is `F * 60 / K`.
+         *
+         * The second is not the first with `a = 0`. Expressing K = 450 as a multiplier needs 7.5, and
+         * `f_multiplier` is an integer — 7 or 8, a 6% error on every reading. That is why the form has
+         * its own field rather than being folded into the formula.
+         */
+        float flowRateLpm;
+        if (config.calibration == CalibrationType::PulsesPerLitre) {
+          flowRateLpm = frequency * 60.0f / static_cast<float>(config.pulses_per_litre);
+        } else {
+          flowRateLpm = (frequency - config.adjust) / config.f_multiplier;
+        }
         if (flowRateLpm < 0.0f) {
           flowRateLpm = 0.0f;
         }

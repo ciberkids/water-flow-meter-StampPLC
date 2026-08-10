@@ -57,6 +57,15 @@ export interface SimulatedSensor {
   multiplier: number;
   /** `SensorCharacteristics::adjust` (modbus/sensor_types.h:8). Integer on the device. */
   adjust: number;
+  /**
+   * `SensorCharacteristics::calibration` — 0 Formula, 1 Pulses/L.
+   *
+   * Which of the two forms the meter's datasheet uses. They are not interchangeable: a K of 450
+   * needs a multiplier of 7.5, which an integer field cannot hold.
+   */
+  calibration: number;
+  /** `SensorCharacteristics::pulses_per_litre`. Exact, used only when `calibration` is 1. */
+  pulsesPerLitre: number;
   /** `SensorData::instantFlow_L_s` (modbus/sensor_types.h:23). */
   instantFlowLps: number;
   /** `SensorData::cumulativeLiters` (modbus/sensor_types.h:24). */
@@ -108,6 +117,8 @@ const kDefaultSensor: Omit<SimulatedSensor, "number"> = {
   qMaxLpm: 150,
   multiplier: 10,
   adjust: 0,
+  calibration: 0,
+  pulsesPerLitre: 450,
   instantFlowLps: 2.34,
   cumulativeLiters: 123.45,
   sessionLiters: 123.45,
@@ -130,7 +141,11 @@ const kDefaultSensor: Omit<SimulatedSensor, "number"> = {
  * is not mirrored.
  */
 function normalizeSensor(sensor: SimulatedSensor): SimulatedSensor {
-  const flowing = sensor.connected && sensor.ready && sensor.multiplier !== 0;
+  // Which field has to be non-zero depends on the calibration form, exactly as `configIsValid`
+  // branches (modbus/sensor_types.h). Testing the multiplier on a pulses-per-litre channel would
+  // report a correctly configured channel as unable to produce a reading.
+  const calibrated = sensor.calibration === 1 ? sensor.pulsesPerLitre !== 0 : sensor.multiplier !== 0;
+  const flowing = sensor.connected && sensor.ready && calibrated;
   return {
     ...sensor,
     instantFlowLps: flowing ? sensor.instantFlowLps : 0,
@@ -255,7 +270,7 @@ function formatFixed6(value: number): string {
   return value.toFixed(2).padStart(6, " ");
 }
 
-type SettingField = "connected" | "multiplier" | "adjust" | "qMaxLpm";
+type SettingField = "connected" | "multiplier" | "adjust" | "qMaxLpm" | "calibration" | "pulsesPerLitre";
 
 interface PerSensorSettingDescriptor {
   field: SettingField;
@@ -266,11 +281,16 @@ interface PerSensorSettingDescriptor {
 }
 
 /**
- * The four per-sensor settings, with the unit and option labels the device formats them with.
+ * The SIX per-sensor settings, with the unit and option labels the device formats them with.
  *
  * Taken from the firmware's setting table, not from the manifest: these are the strings
- * `formatSetting` prints (ui/core/ui_settings_types.cpp:48-56, and `kBoolOptions` =
- * {"Off", 0}, {"On", 1} at ui/core/ui_settings_types.cpp:21).
+ * `formatSetting` prints (ui/core/ui_settings_types.cpp, and `kBoolOptions` =
+ * {"Off", 0}, {"On", 1} there too).
+ *
+ * Calibration type and pulses per litre joined the four when the calibration branch landed. A
+ * unit test enumerates this against the manifest's `perSensor` descriptors, which is what caught
+ * them missing here — without it the two new rows would have silently fallen through to the
+ * generic sample path and stopped tracking the simulated sensor table.
  */
 const kPerSensorSettings: Record<string, PerSensorSettingDescriptor> = {
   "config.sensor.connected": {
@@ -282,7 +302,15 @@ const kPerSensorSettings: Record<string, PerSensorSettingDescriptor> = {
   },
   "config.sensor.multiplier": { field: "multiplier" },
   "config.sensor.adjust": { field: "adjust" },
-  "config.sensor.maxFlow": { field: "qMaxLpm", unit: "L/min" }
+  "config.sensor.maxFlow": { field: "qMaxLpm", unit: "L/min" },
+  "config.sensor.calibrationType": {
+    field: "calibration",
+    options: [
+      { label: "Formula", value: 0 },
+      { label: "Pulses/L", value: 1 }
+    ]
+  },
+  "config.sensor.pulsesPerLiter": { field: "pulsesPerLitre", unit: "p/L" }
 };
 
 /** `formatSetting` — option label if one matches the value, else the integer; unit appended. */

@@ -43,6 +43,10 @@ const kByBinding: Record<string, string> = {
   "config.selectedSensor": "3",
   "config.uartFrameSummary": "8N1",
   "config.sensor.nyquistWarning": "",
+  // The formula line's two derived pieces (§7.8). Both read "--" on a channel calibrated by pulses
+  // per litre, which is how the calibration choice becomes visible on the rows it disables.
+  "config.sensor.adjustTerm": "- 8",
+  "config.sensor.formulaQ": "Q 0..150 L/m",
   "page.title": "System Status",
   "legend.led": "G ready  R volume  B card",
   "countdown.value": "3"

@@ -19,6 +19,11 @@ constexpr SettingOption kParityOptions[] = {{"None", 0}, {"Even", 1}, {"Odd", 2}
 constexpr SettingOption kStopBitOptions[] = {{"1", 1}, {"2", 2}};
 constexpr SettingOption kLedVolumeOptions[] = {{"1", 1}, {"10", 10}, {"100", 100}};
 constexpr SettingOption kBoolOptions[] = {{"Off", 0}, {"On", 1}};
+/**
+ * The two calibration forms. Labels kept short because they share a 40-column row with their label,
+ * and `Pulses/L` is what the datasheet itself says.
+ */
+constexpr SettingOption kCalibrationOptions[] = {{"Formula", 0}, {"Pulses/L", 1}};
 // §4.2 implements QoS 0 and 1. QoS 2 is deliberately absent rather than present-and-rejected:
 // an option the wheel can land on but the client refuses is a worse experience than one that
 // was never offered.
@@ -67,6 +72,28 @@ constexpr SettingDescriptor kSettings[] = {
      -32768, 32767, 1, nullptr, 0, nullptr, true, kNoRegister, plc::OFF_CFG_ADJUST, "Frequency offset Adjust", 0, false},
     {"config.sensor.maxFlow", SettingTarget::SensorMaxFlow, SettingKind::Numeric,
      0, 65535, 1, nullptr, 0, "L/min", true, kNoRegister, plc::OFF_CFG_Q_MAX, "Nominal max flow Q", 0, false},
+    /**
+     * Which of the two calibration forms this channel uses.
+     *
+     * Meters are specified one way or the other and never both: a datasheet prints either
+     * `F = 6*Q - 8` or `450 pulses/L`. Making the operator say which removes the guesswork from
+     * every other calibration row — and makes it visible WHY Multiplier reads `--` on a channel
+     * calibrated by pulses.
+     */
+    {"config.sensor.calibrationType", SettingTarget::SensorCalibrationType, SettingKind::Enum,
+     0, 1, 1, kCalibrationOptions,
+     static_cast<uint8_t>(sizeof(kCalibrationOptions) / sizeof(kCalibrationOptions[0])), nullptr, true,
+     kNoRegister, plc::OFF_CFG_CAL_TYPE, "How this channel is calibrated", 0, false},
+    /**
+     * Pulses per litre, exact. Lower bound 1, because zero fails `configIsValid` and is a divisor.
+     *
+     * This exists because `f_multiplier` cannot hold it. A meter rated 450 pulses/L needs a
+     * multiplier of 7.5, and an int16_t offers 7 or 8 — a 6% error on every reading, on the form
+     * most meters are actually sold with.
+     */
+    {"config.sensor.pulsesPerLiter", SettingTarget::SensorPulsesPerLitre, SettingKind::Numeric,
+     1, 65535, 1, nullptr, 0, "p/L", true, kNoRegister, plc::OFF_CFG_PULSES_PER_L,
+     "Pulses per litre, when calibrated that way", 0, false},
 
     // ── Network: WiFi_MQTT_Connectivity.md §6.1, fourteen settings of which seven are text ──
     //

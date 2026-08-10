@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-10T09:11:18.277Z",
-  "screenCount": 59,
-  "elementCount": 376,
+  "generatedAt": "2026-08-10T09:23:16.895Z",
+  "screenCount": 63,
+  "elementCount": 486,
   "dataset": [
     {
       "id": "info-p0-global-status",
@@ -2304,7 +2304,7 @@
     {
       "id": "config-c7-sensor-select",
       "name": "C7 — Sensors",
-      "description": "Config root entry C7. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
+      "description": "Config root entry C7. ENTER opens the sensor selector, where UP/DOWN pages through the eight channels and ENTER opens the settings of the one shown.",
       "elements": [
         {
           "id": "hdr-title",
@@ -2317,6 +2317,51 @@
             "payload": {
               "text": "Config > Sensors",
               "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "body-1",
+          "position": {
+            "x": 2,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Channels 1-8",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "body-2",
+          "position": {
+            "x": 2,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Connection and calibration,",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "body-3",
+          "position": {
+            "x": 2,
+            "y": 62
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "per channel.",
+              "emphasis": "muted",
               "align": "left"
             }
           }
@@ -3620,7 +3665,7 @@
     {
       "id": "config-sensor-1",
       "name": "SEN1 — Sensor 1",
-      "description": "Sensor list entry. ENTER descends into sensor 1's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
+      "description": "Sensor selector, channel 1 of 8. UP/DOWN pages the channels; ENTER opens this one's settings. The status row is why you would pick it.",
       "elements": [
         {
           "id": "hdr-title",
@@ -3638,10 +3683,86 @@
           }
         },
         {
+          "id": "channel-of",
+          "position": {
+            "x": 170,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "1 of 8",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "channel-label",
+          "position": {
+            "x": 2,
+            "y": 28
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "Sensor 1",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-label",
+          "position": {
+            "x": 2,
+            "y": 56
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Status",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
           "id": "status-value",
           "position": {
-            "x": 44,
-            "y": 24
+            "x": 62,
+            "y": 56
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.1.status"
+        },
+        {
+          "id": "flow-label",
+          "position": {
+            "x": 2,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Flow (L/m)",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "flow-value",
+          "position": {
+            "x": 68,
+            "y": 78
           },
           "kind": {
             "type": "value",
@@ -3651,7 +3772,7 @@
               "align": "left"
             }
           },
-          "binding": "sensor.1.status"
+          "binding": "sensor.1.instantFlow"
         },
         {
           "id": "footer-hint",
@@ -3662,7 +3783,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "UP/DN pages  ENTER open  hold=exit",
+              "text": "UP/DN channels  ENTER open  hold=exit",
               "emphasis": "muted",
               "align": "left"
             }
@@ -3741,7 +3862,7 @@
     {
       "id": "config-sensor-2",
       "name": "SEN2 — Sensor 2",
-      "description": "Sensor list entry. ENTER descends into sensor 2's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
+      "description": "Sensor selector, channel 2 of 8. UP/DOWN pages the channels; ENTER opens this one's settings. The status row is why you would pick it.",
       "elements": [
         {
           "id": "hdr-title",
@@ -3759,10 +3880,86 @@
           }
         },
         {
+          "id": "channel-of",
+          "position": {
+            "x": 170,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "2 of 8",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "channel-label",
+          "position": {
+            "x": 2,
+            "y": 28
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "Sensor 2",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-label",
+          "position": {
+            "x": 2,
+            "y": 56
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Status",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
           "id": "status-value",
           "position": {
-            "x": 44,
-            "y": 24
+            "x": 62,
+            "y": 56
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.2.status"
+        },
+        {
+          "id": "flow-label",
+          "position": {
+            "x": 2,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Flow (L/m)",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "flow-value",
+          "position": {
+            "x": 68,
+            "y": 78
           },
           "kind": {
             "type": "value",
@@ -3772,7 +3969,7 @@
               "align": "left"
             }
           },
-          "binding": "sensor.2.status"
+          "binding": "sensor.2.instantFlow"
         },
         {
           "id": "footer-hint",
@@ -3783,7 +3980,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "UP/DN pages  ENTER open  hold=exit",
+              "text": "UP/DN channels  ENTER open  hold=exit",
               "emphasis": "muted",
               "align": "left"
             }
@@ -3862,7 +4059,7 @@
     {
       "id": "config-sensor-3",
       "name": "SEN3 — Sensor 3",
-      "description": "Sensor list entry. ENTER descends into sensor 3's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
+      "description": "Sensor selector, channel 3 of 8. UP/DOWN pages the channels; ENTER opens this one's settings. The status row is why you would pick it.",
       "elements": [
         {
           "id": "hdr-title",
@@ -3880,10 +4077,86 @@
           }
         },
         {
+          "id": "channel-of",
+          "position": {
+            "x": 170,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "3 of 8",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "channel-label",
+          "position": {
+            "x": 2,
+            "y": 28
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "Sensor 3",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-label",
+          "position": {
+            "x": 2,
+            "y": 56
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Status",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
           "id": "status-value",
           "position": {
-            "x": 44,
-            "y": 24
+            "x": 62,
+            "y": 56
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.3.status"
+        },
+        {
+          "id": "flow-label",
+          "position": {
+            "x": 2,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Flow (L/m)",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "flow-value",
+          "position": {
+            "x": 68,
+            "y": 78
           },
           "kind": {
             "type": "value",
@@ -3893,7 +4166,7 @@
               "align": "left"
             }
           },
-          "binding": "sensor.3.status"
+          "binding": "sensor.3.instantFlow"
         },
         {
           "id": "footer-hint",
@@ -3904,7 +4177,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "UP/DN pages  ENTER open  hold=exit",
+              "text": "UP/DN channels  ENTER open  hold=exit",
               "emphasis": "muted",
               "align": "left"
             }
@@ -3983,7 +4256,7 @@
     {
       "id": "config-sensor-4",
       "name": "SEN4 — Sensor 4",
-      "description": "Sensor list entry. ENTER descends into sensor 4's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
+      "description": "Sensor selector, channel 4 of 8. UP/DOWN pages the channels; ENTER opens this one's settings. The status row is why you would pick it.",
       "elements": [
         {
           "id": "hdr-title",
@@ -4001,10 +4274,86 @@
           }
         },
         {
+          "id": "channel-of",
+          "position": {
+            "x": 170,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "4 of 8",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "channel-label",
+          "position": {
+            "x": 2,
+            "y": 28
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "Sensor 4",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-label",
+          "position": {
+            "x": 2,
+            "y": 56
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Status",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
           "id": "status-value",
           "position": {
-            "x": 44,
-            "y": 24
+            "x": 62,
+            "y": 56
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.4.status"
+        },
+        {
+          "id": "flow-label",
+          "position": {
+            "x": 2,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Flow (L/m)",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "flow-value",
+          "position": {
+            "x": 68,
+            "y": 78
           },
           "kind": {
             "type": "value",
@@ -4014,7 +4363,7 @@
               "align": "left"
             }
           },
-          "binding": "sensor.4.status"
+          "binding": "sensor.4.instantFlow"
         },
         {
           "id": "footer-hint",
@@ -4025,7 +4374,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "UP/DN pages  ENTER open  hold=exit",
+              "text": "UP/DN channels  ENTER open  hold=exit",
               "emphasis": "muted",
               "align": "left"
             }
@@ -4104,7 +4453,7 @@
     {
       "id": "config-sensor-5",
       "name": "SEN5 — Sensor 5",
-      "description": "Sensor list entry. ENTER descends into sensor 5's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
+      "description": "Sensor selector, channel 5 of 8. UP/DOWN pages the channels; ENTER opens this one's settings. The status row is why you would pick it.",
       "elements": [
         {
           "id": "hdr-title",
@@ -4122,10 +4471,86 @@
           }
         },
         {
+          "id": "channel-of",
+          "position": {
+            "x": 170,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "5 of 8",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "channel-label",
+          "position": {
+            "x": 2,
+            "y": 28
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "Sensor 5",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-label",
+          "position": {
+            "x": 2,
+            "y": 56
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Status",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
           "id": "status-value",
           "position": {
-            "x": 44,
-            "y": 24
+            "x": 62,
+            "y": 56
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.5.status"
+        },
+        {
+          "id": "flow-label",
+          "position": {
+            "x": 2,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Flow (L/m)",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "flow-value",
+          "position": {
+            "x": 68,
+            "y": 78
           },
           "kind": {
             "type": "value",
@@ -4135,7 +4560,7 @@
               "align": "left"
             }
           },
-          "binding": "sensor.5.status"
+          "binding": "sensor.5.instantFlow"
         },
         {
           "id": "footer-hint",
@@ -4146,7 +4571,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "UP/DN pages  ENTER open  hold=exit",
+              "text": "UP/DN channels  ENTER open  hold=exit",
               "emphasis": "muted",
               "align": "left"
             }
@@ -4225,7 +4650,7 @@
     {
       "id": "config-sensor-6",
       "name": "SEN6 — Sensor 6",
-      "description": "Sensor list entry. ENTER descends into sensor 6's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
+      "description": "Sensor selector, channel 6 of 8. UP/DOWN pages the channels; ENTER opens this one's settings. The status row is why you would pick it.",
       "elements": [
         {
           "id": "hdr-title",
@@ -4243,10 +4668,86 @@
           }
         },
         {
+          "id": "channel-of",
+          "position": {
+            "x": 170,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "6 of 8",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "channel-label",
+          "position": {
+            "x": 2,
+            "y": 28
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "Sensor 6",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-label",
+          "position": {
+            "x": 2,
+            "y": 56
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Status",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
           "id": "status-value",
           "position": {
-            "x": 44,
-            "y": 24
+            "x": 62,
+            "y": 56
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.6.status"
+        },
+        {
+          "id": "flow-label",
+          "position": {
+            "x": 2,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Flow (L/m)",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "flow-value",
+          "position": {
+            "x": 68,
+            "y": 78
           },
           "kind": {
             "type": "value",
@@ -4256,7 +4757,7 @@
               "align": "left"
             }
           },
-          "binding": "sensor.6.status"
+          "binding": "sensor.6.instantFlow"
         },
         {
           "id": "footer-hint",
@@ -4267,7 +4768,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "UP/DN pages  ENTER open  hold=exit",
+              "text": "UP/DN channels  ENTER open  hold=exit",
               "emphasis": "muted",
               "align": "left"
             }
@@ -4346,7 +4847,7 @@
     {
       "id": "config-sensor-7",
       "name": "SEN7 — Sensor 7",
-      "description": "Sensor list entry. ENTER descends into sensor 7's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
+      "description": "Sensor selector, channel 7 of 8. UP/DOWN pages the channels; ENTER opens this one's settings. The status row is why you would pick it.",
       "elements": [
         {
           "id": "hdr-title",
@@ -4364,10 +4865,86 @@
           }
         },
         {
+          "id": "channel-of",
+          "position": {
+            "x": 170,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "7 of 8",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "channel-label",
+          "position": {
+            "x": 2,
+            "y": 28
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "Sensor 7",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-label",
+          "position": {
+            "x": 2,
+            "y": 56
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Status",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
           "id": "status-value",
           "position": {
-            "x": 44,
-            "y": 24
+            "x": 62,
+            "y": 56
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.7.status"
+        },
+        {
+          "id": "flow-label",
+          "position": {
+            "x": 2,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Flow (L/m)",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "flow-value",
+          "position": {
+            "x": 68,
+            "y": 78
           },
           "kind": {
             "type": "value",
@@ -4377,7 +4954,7 @@
               "align": "left"
             }
           },
-          "binding": "sensor.7.status"
+          "binding": "sensor.7.instantFlow"
         },
         {
           "id": "footer-hint",
@@ -4388,7 +4965,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "UP/DN pages  ENTER open  hold=exit",
+              "text": "UP/DN channels  ENTER open  hold=exit",
               "emphasis": "muted",
               "align": "left"
             }
@@ -4467,7 +5044,7 @@
     {
       "id": "config-sensor-8",
       "name": "SEN8 — Sensor 8",
-      "description": "Sensor list entry. ENTER descends into sensor 8's settings; the level carries the sensor index, so no selectedSensor state exists. — laid out to the §7 sensor template.",
+      "description": "Sensor selector, channel 8 of 8. UP/DOWN pages the channels; ENTER opens this one's settings. The status row is why you would pick it.",
       "elements": [
         {
           "id": "hdr-title",
@@ -4485,10 +5062,86 @@
           }
         },
         {
+          "id": "channel-of",
+          "position": {
+            "x": 170,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "8 of 8",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "channel-label",
+          "position": {
+            "x": 2,
+            "y": 28
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "Sensor 8",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "status-label",
+          "position": {
+            "x": 2,
+            "y": 56
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Status",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
           "id": "status-value",
           "position": {
-            "x": 44,
-            "y": 24
+            "x": 62,
+            "y": 56
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "sensor.8.status"
+        },
+        {
+          "id": "flow-label",
+          "position": {
+            "x": 2,
+            "y": 78
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Flow (L/m)",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "flow-value",
+          "position": {
+            "x": 68,
+            "y": 78
           },
           "kind": {
             "type": "value",
@@ -4498,7 +5151,7 @@
               "align": "left"
             }
           },
-          "binding": "sensor.8.status"
+          "binding": "sensor.8.instantFlow"
         },
         {
           "id": "footer-hint",
@@ -4509,7 +5162,7 @@
           "kind": {
             "type": "text",
             "payload": {
-              "text": "UP/DN pages  ENTER open  hold=exit",
+              "text": "UP/DN channels  ENTER open  hold=exit",
               "emphasis": "muted",
               "align": "left"
             }
@@ -4832,7 +5485,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "config-s2-multiplier",
+          "targetScreenId": "config-s2-calibration",
           "actionId": "ui.action.page.next"
         },
         {
@@ -5053,9 +5706,771 @@
       "submenus": []
     },
     {
-      "id": "config-s2-multiplier",
-      "name": "S2 — Multiplier (F)",
-      "description": "Sensor settings entry S2, scoped to the sensor of the current level. — laid out to the §7 persensor template.",
+      "id": "config-s2-calibration",
+      "name": "S2 — Calibration",
+      "description": "Sensor settings entry S2, scoped to the sensor of the current level. — laid out to the §7 per-sensor template.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 2,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Sensor > Calibration",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "sensor-index",
+          "position": {
+            "x": 200,
+            "y": 2
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "config.selectedSensor"
+        },
+        {
+          "id": "field-value",
+          "position": {
+            "x": 2,
+            "y": 24
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.calibrationType"
+        },
+        {
+          "id": "range-hint",
+          "position": {
+            "x": 2,
+            "y": 44
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "context-note",
+          "position": {
+            "x": 2,
+            "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Formula: F = m*Q + a.  Pulses/L: K p/L.",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "nyquist-warning",
+          "position": {
+            "x": 2,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.nyquistWarning"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 2,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN pages  ENTER edit  hold=exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 100
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 100
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s3-pulses-per-l",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s1-connected",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Edit value",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s2-calibration-edit",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-s2-calibration-edit",
+      "name": "S2.V — Edit Calibration",
+      "description": "Value editor for S2. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 2,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Edit > Calibration",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-label",
+          "position": {
+            "x": 2,
+            "y": 26
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "New",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-value",
+          "position": {
+            "x": 44,
+            "y": 26
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.editor.pending"
+        },
+        {
+          "id": "saved-label",
+          "position": {
+            "x": 2,
+            "y": 44
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Saved",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "saved-value",
+          "position": {
+            "x": 44,
+            "y": 44
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.calibrationType"
+        },
+        {
+          "id": "range-hint",
+          "position": {
+            "x": 2,
+            "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "nyquist-warning",
+          "position": {
+            "x": 2,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.nyquistWarning"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 2,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN adjust  ENTER save  hold=cancel",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 100
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 100
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-inc",
+          "label": "Increase",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.increment"
+        },
+        {
+          "id": "f-dec",
+          "label": "Decrease",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.decrement"
+        },
+        {
+          "id": "f-commit",
+          "label": "Save and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s2-calibration",
+          "actionId": "config.action.value.commit"
+        },
+        {
+          "id": "f-discard",
+          "label": "Discard and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "config-s2-calibration",
+          "actionId": "config.action.value.discard"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-s3-pulses-per-l",
+      "name": "S3 — Pulses per litre",
+      "description": "Sensor settings entry S3, scoped to the sensor of the current level. — laid out to the §7 per-sensor template.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 2,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Sensor > Pulses per litre",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "sensor-index",
+          "position": {
+            "x": 200,
+            "y": 2
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "config.selectedSensor"
+        },
+        {
+          "id": "field-value",
+          "position": {
+            "x": 2,
+            "y": 24
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.pulsesPerLiter"
+        },
+        {
+          "id": "range-hint",
+          "position": {
+            "x": 2,
+            "y": 44
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "context-note",
+          "position": {
+            "x": 2,
+            "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Used when Calibration is Pulses/L.",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "nyquist-warning",
+          "position": {
+            "x": 2,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.nyquistWarning"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 2,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN pages  ENTER edit  hold=exit",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 100
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 100
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s4-multiplier",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s2-calibration",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Edit value",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s3-pulses-per-l-edit",
+          "actionId": "ui.action.nav.descend"
+        },
+        {
+          "id": "f-escape",
+          "label": "Exit to main screen",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "info-p0-global-status",
+          "actionId": "ui.action.nav.escape"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-s3-pulses-per-l-edit",
+      "name": "S3.V — Edit Pulses per litre",
+      "description": "Value editor for S3. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 2,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Edit > Pulses per litre",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-label",
+          "position": {
+            "x": 2,
+            "y": 26
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "New",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "pending-value",
+          "position": {
+            "x": 44,
+            "y": 26
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.editor.pending"
+        },
+        {
+          "id": "saved-label",
+          "position": {
+            "x": 2,
+            "y": 44
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Saved",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "saved-value",
+          "position": {
+            "x": 44,
+            "y": 44
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.pulsesPerLiter"
+        },
+        {
+          "id": "range-hint",
+          "position": {
+            "x": 2,
+            "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "nyquist-warning",
+          "position": {
+            "x": 2,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.nyquistWarning"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 2,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN adjust  ENTER save  hold=cancel",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 100
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 100
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-inc",
+          "label": "Increase",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.increment"
+        },
+        {
+          "id": "f-dec",
+          "label": "Decrease",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.decrement"
+        },
+        {
+          "id": "f-commit",
+          "label": "Save and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s3-pulses-per-l",
+          "actionId": "config.action.value.commit"
+        },
+        {
+          "id": "f-discard",
+          "label": "Discard and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "config-s3-pulses-per-l",
+          "actionId": "config.action.value.discard"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "config-s4-multiplier",
+      "name": "S4 — Multiplier (F)",
+      "description": "Sensor settings entry S4, scoped to the sensor of the current level. — laid out to the §7 per-sensor template.",
       "elements": [
         {
           "id": "hdr-title",
@@ -5121,10 +6536,88 @@
           "binding": "config.editor.range"
         },
         {
-          "id": "nyquist-warning",
+          "id": "f-eq",
           "position": {
             "x": 2,
             "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "F =",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "f-mult",
+          "position": {
+            "x": 24,
+            "y": 66
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.multiplier"
+        },
+        {
+          "id": "f-q",
+          "position": {
+            "x": 62,
+            "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "*Q",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "f-adj",
+          "position": {
+            "x": 80,
+            "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.adjustTerm"
+        },
+        {
+          "id": "f-range",
+          "position": {
+            "x": 128,
+            "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.formulaQ"
+        },
+        {
+          "id": "nyquist-warning",
+          "position": {
+            "x": 2,
+            "y": 88
           },
           "kind": {
             "type": "text",
@@ -5180,7 +6673,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "config-s3-adjust",
+          "targetScreenId": "config-s5-adjust",
           "actionId": "ui.action.page.next"
         },
         {
@@ -5191,7 +6684,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-s1-connected",
+          "targetScreenId": "config-s3-pulses-per-l",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -5202,7 +6695,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-s2-multiplier-edit",
+          "targetScreenId": "config-s4-multiplier-edit",
           "actionId": "ui.action.nav.descend"
         },
         {
@@ -5222,9 +6715,9 @@
       "submenus": []
     },
     {
-      "id": "config-s2-multiplier-edit",
-      "name": "S2.V — Edit Multiplier (F)",
-      "description": "Value editor for S2. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
+      "id": "config-s4-multiplier-edit",
+      "name": "S4.V — Edit Multiplier (F)",
+      "description": "Value editor for S4. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
           "id": "hdr-title",
@@ -5320,10 +6813,88 @@
           "binding": "config.editor.range"
         },
         {
+          "id": "f-eq",
+          "position": {
+            "x": 2,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "F =",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "f-mult",
+          "position": {
+            "x": 24,
+            "y": 88
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.multiplier"
+        },
+        {
+          "id": "f-q",
+          "position": {
+            "x": 62,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "*Q",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "f-adj",
+          "position": {
+            "x": 80,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.adjustTerm"
+        },
+        {
+          "id": "f-range",
+          "position": {
+            "x": 128,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.formulaQ"
+        },
+        {
           "id": "nyquist-warning",
           "position": {
             "x": 2,
-            "y": 86
+            "y": 106
           },
           "kind": {
             "type": "text",
@@ -5348,6 +6919,24 @@
               "emphasis": "muted",
               "align": "left"
             }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 100
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 100
           }
         }
       ],
@@ -5381,7 +6970,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-s2-multiplier",
+          "targetScreenId": "config-s4-multiplier",
           "actionId": "config.action.value.commit"
         },
         {
@@ -5392,7 +6981,7 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "config-s2-multiplier",
+          "targetScreenId": "config-s4-multiplier",
           "actionId": "config.action.value.discard"
         }
       ],
@@ -5401,9 +6990,9 @@
       "submenus": []
     },
     {
-      "id": "config-s3-adjust",
-      "name": "S3 — Adjust",
-      "description": "Sensor settings entry S3, scoped to the sensor of the current level. — laid out to the §7 persensor template.",
+      "id": "config-s5-adjust",
+      "name": "S5 — Adjust",
+      "description": "Sensor settings entry S5, scoped to the sensor of the current level. — laid out to the §7 per-sensor template.",
       "elements": [
         {
           "id": "hdr-title",
@@ -5469,10 +7058,88 @@
           "binding": "config.editor.range"
         },
         {
-          "id": "nyquist-warning",
+          "id": "f-eq",
           "position": {
             "x": 2,
             "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "F =",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "f-mult",
+          "position": {
+            "x": 24,
+            "y": 66
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.multiplier"
+        },
+        {
+          "id": "f-q",
+          "position": {
+            "x": 62,
+            "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "*Q",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "f-adj",
+          "position": {
+            "x": 80,
+            "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.adjustTerm"
+        },
+        {
+          "id": "f-range",
+          "position": {
+            "x": 128,
+            "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.formulaQ"
+        },
+        {
+          "id": "nyquist-warning",
+          "position": {
+            "x": 2,
+            "y": 88
           },
           "kind": {
             "type": "text",
@@ -5528,7 +7195,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "config-s4-max-flow",
+          "targetScreenId": "config-s6-max-flow",
           "actionId": "ui.action.page.next"
         },
         {
@@ -5539,7 +7206,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-s2-multiplier",
+          "targetScreenId": "config-s4-multiplier",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -5550,7 +7217,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-s3-adjust-edit",
+          "targetScreenId": "config-s5-adjust-edit",
           "actionId": "ui.action.nav.descend"
         },
         {
@@ -5570,9 +7237,9 @@
       "submenus": []
     },
     {
-      "id": "config-s3-adjust-edit",
-      "name": "S3.V — Edit Adjust",
-      "description": "Value editor for S3. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
+      "id": "config-s5-adjust-edit",
+      "name": "S5.V — Edit Adjust",
+      "description": "Value editor for S5. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
           "id": "hdr-title",
@@ -5668,10 +7335,88 @@
           "binding": "config.editor.range"
         },
         {
+          "id": "f-eq",
+          "position": {
+            "x": 2,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "F =",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "f-mult",
+          "position": {
+            "x": 24,
+            "y": 88
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.multiplier"
+        },
+        {
+          "id": "f-q",
+          "position": {
+            "x": 62,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "*Q",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "f-adj",
+          "position": {
+            "x": 80,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.adjustTerm"
+        },
+        {
+          "id": "f-range",
+          "position": {
+            "x": 128,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.formulaQ"
+        },
+        {
           "id": "nyquist-warning",
           "position": {
             "x": 2,
-            "y": 86
+            "y": 106
           },
           "kind": {
             "type": "text",
@@ -5696,6 +7441,24 @@
               "emphasis": "muted",
               "align": "left"
             }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 100
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 100
           }
         }
       ],
@@ -5729,7 +7492,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-s3-adjust",
+          "targetScreenId": "config-s5-adjust",
           "actionId": "config.action.value.commit"
         },
         {
@@ -5740,7 +7503,7 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "config-s3-adjust",
+          "targetScreenId": "config-s5-adjust",
           "actionId": "config.action.value.discard"
         }
       ],
@@ -5749,9 +7512,9 @@
       "submenus": []
     },
     {
-      "id": "config-s4-max-flow",
-      "name": "S4 — Max Flow (Q)",
-      "description": "Sensor settings entry S4, scoped to the sensor of the current level. — laid out to the §7 persensor template.",
+      "id": "config-s6-max-flow",
+      "name": "S6 — Max Flow (Q)",
+      "description": "Sensor settings entry S6, scoped to the sensor of the current level. — laid out to the §7 per-sensor template.",
       "elements": [
         {
           "id": "hdr-title",
@@ -5817,10 +7580,88 @@
           "binding": "config.editor.range"
         },
         {
-          "id": "nyquist-warning",
+          "id": "f-eq",
           "position": {
             "x": 2,
             "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "F =",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "f-mult",
+          "position": {
+            "x": 24,
+            "y": 66
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.multiplier"
+        },
+        {
+          "id": "f-q",
+          "position": {
+            "x": 62,
+            "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "*Q",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "f-adj",
+          "position": {
+            "x": 80,
+            "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.adjustTerm"
+        },
+        {
+          "id": "f-range",
+          "position": {
+            "x": 128,
+            "y": 66
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.formulaQ"
+        },
+        {
+          "id": "nyquist-warning",
+          "position": {
+            "x": 2,
+            "y": 88
           },
           "kind": {
             "type": "text",
@@ -5887,7 +7728,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-s3-adjust",
+          "targetScreenId": "config-s5-adjust",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -5898,7 +7739,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-s4-max-flow-edit",
+          "targetScreenId": "config-s6-max-flow-edit",
           "actionId": "ui.action.nav.descend"
         },
         {
@@ -5918,9 +7759,9 @@
       "submenus": []
     },
     {
-      "id": "config-s4-max-flow-edit",
-      "name": "S4.V — Edit Max Flow (Q)",
-      "description": "Value editor for S4. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
+      "id": "config-s6-max-flow-edit",
+      "name": "S6.V — Edit Max Flow (Q)",
+      "description": "Value editor for S6. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
           "id": "hdr-title",
@@ -6016,10 +7857,88 @@
           "binding": "config.editor.range"
         },
         {
+          "id": "f-eq",
+          "position": {
+            "x": 2,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "F =",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "f-mult",
+          "position": {
+            "x": 24,
+            "y": 88
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.multiplier"
+        },
+        {
+          "id": "f-q",
+          "position": {
+            "x": 62,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "*Q",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "f-adj",
+          "position": {
+            "x": 80,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.adjustTerm"
+        },
+        {
+          "id": "f-range",
+          "position": {
+            "x": 128,
+            "y": 88
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "config.sensor.formulaQ"
+        },
+        {
           "id": "nyquist-warning",
           "position": {
             "x": 2,
-            "y": 86
+            "y": 106
           },
           "kind": {
             "type": "text",
@@ -6044,6 +7963,24 @@
               "emphasis": "muted",
               "align": "left"
             }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 100
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 100
           }
         }
       ],
@@ -6077,7 +8014,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-s4-max-flow",
+          "targetScreenId": "config-s6-max-flow",
           "actionId": "config.action.value.commit"
         },
         {
@@ -6088,7 +8025,7 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "config-s4-max-flow",
+          "targetScreenId": "config-s6-max-flow",
           "actionId": "config.action.value.discard"
         }
       ],
@@ -6186,7 +8123,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-s4-max-flow",
+          "targetScreenId": "config-s6-max-flow",
           "actionId": "ui.action.page.previous"
         },
         {

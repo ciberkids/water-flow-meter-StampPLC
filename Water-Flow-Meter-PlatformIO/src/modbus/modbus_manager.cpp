@@ -51,6 +51,8 @@ bool ModbusManager::isWritableAddress(uint16_t address) const {
     case OFF_CFG_Q_MAX:
     case OFF_CFG_F_MULT:
     case OFF_CFG_ADJUST:
+    case OFF_CFG_CAL_TYPE:
+    case OFF_CFG_PULSES_PER_L:
       return true;
     default:
       return false;
@@ -304,6 +306,37 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
       evaluateSensorDiagnostics();
       return true;
     }
+    // The two calibration-form registers go through the SAME prepareConfigUpdate path as the three
+    // above. That matters: a master must not be able to install a configuration the panel's own
+    // editor would refuse — switching a channel to Pulses/L while its pulses-per-litre figure is
+    // still zero would leave it silently unable to produce a reading.
+    case OFF_CFG_CAL_TYPE: {
+      if (value > static_cast<uint16_t>(CalibrationType::PulsesPerLitre)) {
+        return false;
+      }
+      SensorCharacteristics candidate = deps_.configs[sensorIndex];
+      candidate.calibration = static_cast<CalibrationType>(value);
+      bool overrideAccepted = false;
+      if (!prepareConfigUpdate(sensorIndex, candidate, &overrideAccepted)) {
+        return false;
+      }
+      deps_.configs[sensorIndex] = candidate;
+      syncSensorToHolding(sensorIndex);
+      evaluateSensorDiagnostics();
+      return true;
+    }
+    case OFF_CFG_PULSES_PER_L: {
+      SensorCharacteristics candidate = deps_.configs[sensorIndex];
+      candidate.pulses_per_litre = value;
+      bool overrideAccepted = false;
+      if (!prepareConfigUpdate(sensorIndex, candidate, &overrideAccepted)) {
+        return false;
+      }
+      deps_.configs[sensorIndex] = candidate;
+      syncSensorToHolding(sensorIndex);
+      evaluateSensorDiagnostics();
+      return true;
+    }
     default:
       return false;
   }
@@ -347,6 +380,9 @@ void ModbusManager::syncSensorToHolding(std::size_t sensorIndex) {
   deps_.registers->setUint16(base + OFF_CFG_Q_MAX, deps_.configs[sensorIndex].q_max);
   deps_.registers->setUint16(base + OFF_CFG_F_MULT, static_cast<uint16_t>(deps_.configs[sensorIndex].f_multiplier));
   deps_.registers->setUint16(base + OFF_CFG_ADJUST, static_cast<uint16_t>(deps_.configs[sensorIndex].adjust));
+  deps_.registers->setUint16(base + OFF_CFG_CAL_TYPE,
+                             static_cast<uint16_t>(deps_.configs[sensorIndex].calibration));
+  deps_.registers->setUint16(base + OFF_CFG_PULSES_PER_L, deps_.configs[sensorIndex].pulses_per_litre);
 }
 
 void ModbusManager::syncGlobalRegisters() {

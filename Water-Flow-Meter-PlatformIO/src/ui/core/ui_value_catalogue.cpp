@@ -122,6 +122,26 @@ constexpr SimpleValue kSimpleValues[] = {
     {"config.selectedSensor", ValueCategory::Derived, ValueType::Number, nullptr, kNoRegister,
      ValueSource::UiState, false,
      "Index (1-8) of the sensor implied by the current navigation level"},
+    /**
+     * The `adjust` term WITH its sign, for the formula line on the calibration screens.
+     *
+     * `F = 6*Q - 8` has to read as arithmetic, and `config.sensor.adjust` renders `-8` for a negative
+     * but a bare `8` for a positive — which would print `F = 6*Q 8`. This renders `- 8` or `+ 8`, so
+     * the row is a formula rather than two numbers next to each other.
+     *
+     * A separate id rather than a format change on `adjust`, because `adjust` is also the value the
+     * S3 editor shows and steps, where a leading `+` would be noise.
+     */
+    {"config.sensor.adjustTerm", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
+     ValueSource::UiState, true, "The adjust term with its sign, for the formula line"},
+    /**
+     * The formula's Q range, e.g. `Q 0..150 L/m` — the variable the formula is in.
+     *
+     * Reads `--` on a channel calibrated by pulses per litre, because that form has no formula for
+     * the term to belong to.
+     */
+    {"config.sensor.formulaQ", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
+     ValueSource::UiState, true, "The formula's Q range for the current sensor"},
     {"config.sensor.undersamplingFlag", ValueCategory::Derived, ValueType::Boolean, nullptr,
      kNoRegister, ValueSource::UiState, true,
      "Whether the current sensor failed its last Nyquist validation"},

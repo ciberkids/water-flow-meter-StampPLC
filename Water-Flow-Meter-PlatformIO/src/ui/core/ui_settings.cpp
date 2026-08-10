@@ -44,6 +44,8 @@ bool isNetworkTarget(SettingTarget target) {
     case SettingTarget::SensorMultiplier:
     case SettingTarget::SensorAdjust:
     case SettingTarget::SensorMaxFlow:
+    case SettingTarget::SensorCalibrationType:
+    case SettingTarget::SensorPulsesPerLitre:
       return false;
   }
   return false;
@@ -128,6 +130,10 @@ int32_t readSetting(const SettingDescriptor& setting,
       return access.configs ? access.configs[slot].adjust : 0;
     case SettingTarget::SensorMaxFlow:
       return access.configs ? access.configs[slot].q_max : 0;
+    case SettingTarget::SensorCalibrationType:
+      return access.configs ? static_cast<int32_t>(access.configs[slot].calibration) : 0;
+    case SettingTarget::SensorPulsesPerLitre:
+      return access.configs ? access.configs[slot].pulses_per_litre : 0;
     default:
       return 0;
   }
@@ -254,6 +260,10 @@ bool writeSetting(const SettingDescriptor& setting,
       return access.modbus->applyHoldingWrite(base + plc::OFF_CFG_ADJUST, word);
     case SettingTarget::SensorMaxFlow:
       return access.modbus->applyHoldingWrite(base + plc::OFF_CFG_Q_MAX, word);
+    case SettingTarget::SensorCalibrationType:
+      return access.modbus->applyHoldingWrite(base + plc::OFF_CFG_CAL_TYPE, word);
+    case SettingTarget::SensorPulsesPerLitre:
+      return access.modbus->applyHoldingWrite(base + plc::OFF_CFG_PULSES_PER_L, word);
     default:
       return false;
   }

@@ -1,7 +1,7 @@
 {
-  "id": "config-s3-adjust-edit",
-  "name": "S3.V \u2014 Edit Adjust",
-  "description": "Value editor for S3. ENTER commits and ascends; hold ENTER discards. \u2014 laid out to the \u00a77 editor template.",
+  "id": "config-s2-calibration-edit",
+  "name": "S2.V \u2014 Edit Calibration",
+  "description": "Value editor for S2. ENTER commits and ascends; hold ENTER discards. \u2014 laid out to the \u00a77 editor template.",
   "elements": [
     {
       "id": "hdr-title",
@@ -9,8 +9,8 @@
       "x": 2,
       "y": 2,
       "emphasis": "strong",
-      "content": "Edit > Adjust",
-      "worst": "Edit > Adjust",
+      "content": "Edit > Calibration",
+      "worst": "Edit > Calibration",
       "bound": "fixed literal"
     },
     {
@@ -30,8 +30,8 @@
       "y": 26,
       "emphasis": "strong",
       "binding": "config.editor.pending",
-      "worst": "115200",
-      "bound": "widest formatted setting value in the config tree"
+      "worst": "Pulses/L",
+      "bound": "the pending value, formatted by the same descriptor as the saved one"
     },
     {
       "id": "saved-label",
@@ -48,9 +48,9 @@
       "kind": "value",
       "x": 44,
       "y": 44,
-      "binding": "config.sensor.adjust",
-      "worst": "-32768",
-      "bound": "descriptor min, the widest signed value"
+      "binding": "config.sensor.calibrationType",
+      "worst": "Pulses/L",
+      "bound": "widest calibration option"
     },
     {
       "id": "range-hint",
@@ -59,14 +59,14 @@
       "y": 66,
       "emphasis": "muted",
       "binding": "config.editor.range",
-      "worst": "8 rates: 1200..115200",
-      "bound": "derived from the descriptor \u2014 see 7.2"
+      "worst": "None / Even / Odd",
+      "bound": "derived from the descriptor - see 7.2; widest is parity"
     },
     {
       "id": "nyquist-warning",
       "kind": "text",
       "x": 2,
-      "y": 86,
+      "y": 88,
       "emphasis": "strong",
       "binding": "config.sensor.nyquistWarning",
       "worst": "Write refused. UP=Back",
@@ -82,6 +82,15 @@
       "worst": "UP/DN adjust  ENTER save  hold=cancel",
       "bound": "shared footer vocabulary, see 7.1",
       "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "id": "config-c7-sensor-select",
   "name": "C7 \u2014 Sensors",
-  "description": "Config root entry C7. ENTER descends; UP/DOWN move within the level. \u2014 laid out to the \u00a77 setting template.",
+  "description": "Config root entry C7. ENTER opens the sensor selector, where UP/DOWN pages through the eight channels and ENTER opens the settings of the one shown.",
   "elements": [
     {
       "id": "hdr-title",
@@ -11,6 +11,36 @@
       "emphasis": "strong",
       "content": "Config > Sensors",
       "worst": "Config > Sensors",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "body-1",
+      "kind": "text",
+      "x": 2,
+      "y": 30,
+      "emphasis": "strong",
+      "content": "Channels 1-8",
+      "worst": "Channels 1-8",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "body-2",
+      "kind": "text",
+      "x": 2,
+      "y": 50,
+      "emphasis": "muted",
+      "content": "Connection and calibration,",
+      "worst": "Connection and calibration,",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "body-3",
+      "kind": "text",
+      "x": 2,
+      "y": 62,
+      "emphasis": "muted",
+      "content": "per channel.",
+      "worst": "per channel.",
       "bound": "fixed literal"
     },
     {

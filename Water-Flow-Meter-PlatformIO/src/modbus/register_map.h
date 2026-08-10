@@ -57,6 +57,24 @@ inline constexpr uint16_t OFF_CMD_RESET_CONFIG = 19;
 inline constexpr uint16_t OFF_CFG_Q_MAX = 20;
 inline constexpr uint16_t OFF_CFG_F_MULT = 21;
 inline constexpr uint16_t OFF_CFG_ADJUST = 22;
+/**
+ * How this channel is calibrated, and the pulses-per-litre figure when that is how.
+ *
+ * Meters are specified one of two ways. Some print a formula — `F = 6*Q - 8, Q = L/min +/-5%` — which
+ * is what OFF_CFG_F_MULT and OFF_CFG_ADJUST already hold. Others print a single pulses-per-litre
+ * number, and that is the more common form.
+ *
+ * The existing fields CANNOT express the second. `f_multiplier` is an int16_t used as a divisor, so a
+ * meter rated 450 pulses/L needs 7.5 and there is no way to store it: the nearest integers are 7 and
+ * 8, a 6% error on every reading. Pulses per litre therefore gets its own register at its own scale,
+ * where 450 is exactly 450.
+ *
+ * ADDITIVE. Offsets 20-22 keep their meaning and their units, so no Modbus master that already reads
+ * a formula-calibrated channel sees any change. `SENSOR_BLOCK_SIZE` is 40 and only 22 offsets were in
+ * use, so this needed no block resize either.
+ */
+inline constexpr uint16_t OFF_CFG_CAL_TYPE = 23;
+inline constexpr uint16_t OFF_CFG_PULSES_PER_L = 24;
 
 inline constexpr uint16_t sensorBaseAddress(std::size_t index) {
   return SENSOR_1_BASE_ADDR + static_cast<uint16_t>(index) * SENSOR_BLOCK_SIZE;

@@ -1,7 +1,7 @@
 {
-  "id": "config-s3-adjust",
-  "name": "S3 \u2014 Adjust",
-  "description": "Sensor settings entry S3, scoped to the sensor of the current level. \u2014 laid out to the \u00a77 persensor template.",
+  "id": "config-s2-calibration",
+  "name": "S2 \u2014 Calibration",
+  "description": "Sensor settings entry S2, scoped to the sensor of the current level. \u2014 laid out to the \u00a77 per-sensor template.",
   "elements": [
     {
       "id": "hdr-title",
@@ -9,8 +9,8 @@
       "x": 2,
       "y": 2,
       "emphasis": "strong",
-      "content": "Sensor > Adjust",
-      "worst": "Sensor > Adjust",
+      "content": "Sensor > Calibration",
+      "worst": "Sensor > Calibration",
       "bound": "fixed literal"
     },
     {
@@ -28,9 +28,9 @@
       "x": 2,
       "y": 24,
       "emphasis": "strong",
-      "binding": "config.sensor.adjust",
-      "worst": "-32768",
-      "bound": "descriptor min, the widest signed value"
+      "binding": "config.sensor.calibrationType",
+      "worst": "Pulses/L",
+      "bound": "widest calibration option"
     },
     {
       "id": "range-hint",
@@ -39,14 +39,24 @@
       "y": 44,
       "emphasis": "muted",
       "binding": "config.editor.range",
-      "worst": "8 rates: 1200..115200",
-      "bound": "derived from the descriptor \u2014 see 7.2"
+      "worst": "None / Even / Odd",
+      "bound": "derived from the descriptor - see 7.2; widest is parity"
+    },
+    {
+      "id": "context-note",
+      "kind": "text",
+      "x": 2,
+      "y": 66,
+      "emphasis": "muted",
+      "content": "Formula: F = m*Q + a.  Pulses/L: K p/L.",
+      "worst": "Formula: F = m*Q + a.  Pulses/L: K p/L.",
+      "bound": "fixed literal"
     },
     {
       "id": "nyquist-warning",
       "kind": "text",
       "x": 2,
-      "y": 66,
+      "y": 88,
       "emphasis": "strong",
       "binding": "config.sensor.nyquistWarning",
       "worst": "Write refused. UP=Back",

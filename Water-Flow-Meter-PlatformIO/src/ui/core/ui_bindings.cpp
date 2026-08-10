@@ -505,6 +505,31 @@ bool UiBindingResolver::resolveConfigBinding(const UiRenderContext& context,
     return copyLiteral(frame, buffer, bufferSize);
   }
 
+  /**
+   * The formula line's two derived pieces (spec §7.8).
+   *
+   * Both read `--` on a channel calibrated by pulses per litre: that form has no formula, so a term
+   * of one is not "zero", it is not applicable. Saying `--` is what makes the calibration choice
+   * legible on the very rows it disables.
+   */
+  if (binding == "config.sensor.adjustTerm" || binding == "config.sensor.formulaQ") {
+    if (sensor == 0 || !settings_ || !settings_->configs) {
+      return copyLiteral("--", buffer, bufferSize);
+    }
+    const auto& cfg = settings_->configs[sensor - 1];
+    if (cfg.calibration != CalibrationType::Formula) {
+      return copyLiteral("--", buffer, bufferSize);
+    }
+    if (binding == "config.sensor.adjustTerm") {
+      const int32_t adjust = static_cast<int32_t>(cfg.adjust);
+      std::snprintf(buffer, bufferSize, "%c %ld", adjust < 0 ? '-' : '+',
+                    static_cast<long>(std::abs(adjust)));
+      return true;
+    }
+    std::snprintf(buffer, bufferSize, "Q 0..%u L/m", static_cast<unsigned>(cfg.q_max));
+    return true;
+  }
+
   if (binding == "config.sensor.undersamplingFlag") {
     if (sensor == 0) {
       return copyLiteral("-", buffer, bufferSize);

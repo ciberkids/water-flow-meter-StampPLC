@@ -1,7 +1,7 @@
 {
-  "id": "config-s4-max-flow",
-  "name": "S4 \u2014 Max Flow (Q)",
-  "description": "Sensor settings entry S4, scoped to the sensor of the current level. \u2014 laid out to the \u00a77 persensor template.",
+  "id": "config-s6-max-flow",
+  "name": "S6 \u2014 Max Flow (Q)",
+  "description": "Sensor settings entry S6, scoped to the sensor of the current level. \u2014 laid out to the \u00a77 per-sensor template.",
   "elements": [
     {
       "id": "hdr-title",
@@ -30,7 +30,7 @@
       "emphasis": "strong",
       "binding": "config.sensor.maxFlow",
       "worst": "65535 L/min",
-      "bound": "descriptor max with its unit"
+      "bound": "uint16 domain with unit L/min"
     },
     {
       "id": "range-hint",
@@ -39,14 +39,64 @@
       "y": 44,
       "emphasis": "muted",
       "binding": "config.editor.range",
-      "worst": "8 rates: 1200..115200",
-      "bound": "derived from the descriptor \u2014 see 7.2"
+      "worst": "None / Even / Odd",
+      "bound": "derived from the descriptor - see 7.2; widest is parity"
+    },
+    {
+      "id": "f-eq",
+      "kind": "text",
+      "x": 2,
+      "y": 66,
+      "emphasis": "muted",
+      "content": "F =",
+      "worst": "F =",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "f-mult",
+      "kind": "value",
+      "x": 24,
+      "y": 66,
+      "emphasis": "muted",
+      "binding": "config.sensor.multiplier",
+      "worst": "32767",
+      "bound": "multiplier domain 1..32767; reads -- when calibrated by pulses per litre"
+    },
+    {
+      "id": "f-q",
+      "kind": "text",
+      "x": 62,
+      "y": 66,
+      "emphasis": "strong",
+      "content": "*Q",
+      "worst": "*Q",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "f-adj",
+      "kind": "text",
+      "x": 80,
+      "y": 66,
+      "emphasis": "muted",
+      "binding": "config.sensor.adjustTerm",
+      "worst": "- 32768",
+      "bound": "signed adjust term; reads -- when calibrated by pulses per litre"
+    },
+    {
+      "id": "f-range",
+      "kind": "text",
+      "x": 128,
+      "y": 66,
+      "emphasis": "strong",
+      "binding": "config.sensor.formulaQ",
+      "worst": "Q 0..65535 L/m",
+      "bound": "q_max is a uint16; reads -- when calibrated by pulses per litre"
     },
     {
       "id": "nyquist-warning",
       "kind": "text",
       "x": 2,
-      "y": 66,
+      "y": 88,
       "emphasis": "strong",
       "binding": "config.sensor.nyquistWarning",
       "worst": "Write refused. UP=Back",

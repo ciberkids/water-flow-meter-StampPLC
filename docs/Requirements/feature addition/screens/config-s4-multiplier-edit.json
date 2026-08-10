@@ -1,0 +1,146 @@
+{
+  "id": "config-s4-multiplier-edit",
+  "name": "S4.V \u2014 Edit Multiplier (F)",
+  "description": "Value editor for S4. ENTER commits and ascends; hold ENTER discards. \u2014 laid out to the \u00a77 editor template.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "Edit > Multiplier (F)",
+      "worst": "Edit > Multiplier (F)",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "pending-label",
+      "kind": "text",
+      "x": 2,
+      "y": 26,
+      "emphasis": "muted",
+      "content": "New",
+      "worst": "New",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "pending-value",
+      "kind": "value",
+      "x": 44,
+      "y": 26,
+      "emphasis": "strong",
+      "binding": "config.editor.pending",
+      "worst": "32767",
+      "bound": "the pending value, formatted by the same descriptor as the saved one"
+    },
+    {
+      "id": "saved-label",
+      "kind": "text",
+      "x": 2,
+      "y": 44,
+      "emphasis": "muted",
+      "content": "Saved",
+      "worst": "Saved",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "saved-value",
+      "kind": "value",
+      "x": 44,
+      "y": 44,
+      "binding": "config.sensor.multiplier",
+      "worst": "32767",
+      "bound": "multiplier domain 1..32767"
+    },
+    {
+      "id": "range-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 66,
+      "emphasis": "muted",
+      "binding": "config.editor.range",
+      "worst": "None / Even / Odd",
+      "bound": "derived from the descriptor - see 7.2; widest is parity"
+    },
+    {
+      "id": "f-eq",
+      "kind": "text",
+      "x": 2,
+      "y": 88,
+      "emphasis": "muted",
+      "content": "F =",
+      "worst": "F =",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "f-mult",
+      "kind": "value",
+      "x": 24,
+      "y": 88,
+      "emphasis": "strong",
+      "binding": "config.sensor.multiplier",
+      "worst": "32767",
+      "bound": "multiplier domain 1..32767; reads -- when calibrated by pulses per litre"
+    },
+    {
+      "id": "f-q",
+      "kind": "text",
+      "x": 62,
+      "y": 88,
+      "emphasis": "muted",
+      "content": "*Q",
+      "worst": "*Q",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "f-adj",
+      "kind": "text",
+      "x": 80,
+      "y": 88,
+      "emphasis": "muted",
+      "binding": "config.sensor.adjustTerm",
+      "worst": "- 32768",
+      "bound": "signed adjust term; reads -- when calibrated by pulses per litre"
+    },
+    {
+      "id": "f-range",
+      "kind": "text",
+      "x": 128,
+      "y": 88,
+      "emphasis": "muted",
+      "binding": "config.sensor.formulaQ",
+      "worst": "Q 0..65535 L/m",
+      "bound": "q_max is a uint16; reads -- when calibrated by pulses per litre"
+    },
+    {
+      "id": "nyquist-warning",
+      "kind": "text",
+      "x": 2,
+      "y": 106,
+      "emphasis": "strong",
+      "binding": "config.sensor.nyquistWarning",
+      "worst": "Write refused. UP=Back",
+      "bound": "editor state; empty in the normal case"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN adjust  ENTER save  hold=cancel",
+      "worst": "UP/DN adjust  ENTER save  hold=cancel",
+      "bound": "shared footer vocabulary, see 7.1",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
+    }
+  ]
+}

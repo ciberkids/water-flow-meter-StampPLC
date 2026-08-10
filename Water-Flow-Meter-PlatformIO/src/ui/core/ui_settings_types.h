@@ -34,6 +34,8 @@ enum class SettingTarget : uint8_t {
   SensorMultiplier,
   SensorAdjust,
   SensorMaxFlow,
+  SensorCalibrationType,
+  SensorPulsesPerLitre,
   // ── Network (WiFi_MQTT_Connectivity.md §6.1) ───────────────────────────────────
   //
   // One target per setting even where several share a register: kMqttFlags packs HA discovery,

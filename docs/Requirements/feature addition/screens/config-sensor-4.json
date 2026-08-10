@@ -1,7 +1,7 @@
 {
   "id": "config-sensor-4",
   "name": "SEN4 \u2014 Sensor 4",
-  "description": "Sensor list entry. ENTER descends into sensor 4's settings; the level carries the sensor index, so no selectedSensor state exists. \u2014 laid out to the \u00a77 sensor template.",
+  "description": "Sensor selector, channel 4 of 8. UP/DOWN pages the channels; ENTER opens this one's settings. The status row is why you would pick it.",
   "elements": [
     {
       "id": "hdr-title",
@@ -14,13 +14,63 @@
       "bound": "fixed literal"
     },
     {
+      "id": "channel-of",
+      "kind": "text",
+      "x": 170,
+      "y": 2,
+      "emphasis": "muted",
+      "content": "4 of 8",
+      "worst": "8 of 8",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "channel-label",
+      "kind": "value",
+      "x": 2,
+      "y": 28,
+      "emphasis": "strong",
+      "content": "Sensor 4",
+      "worst": "Sensor 8",
+      "bound": "fixed literal, 1..8"
+    },
+    {
+      "id": "status-label",
+      "kind": "text",
+      "x": 2,
+      "y": 56,
+      "emphasis": "muted",
+      "content": "Status",
+      "worst": "Status",
+      "bound": "fixed literal"
+    },
+    {
       "id": "status-value",
       "kind": "value",
-      "x": 44,
-      "y": 24,
+      "x": 62,
+      "y": 56,
+      "emphasis": "strong",
       "binding": "sensor.4.status",
-      "worst": "WAIT",
-      "bound": "the widest per-sensor status word"
+      "worst": "SET?",
+      "bound": "-- disconnected, SET? uncalibrated, OK otherwise"
+    },
+    {
+      "id": "flow-label",
+      "kind": "text",
+      "x": 2,
+      "y": 78,
+      "emphasis": "muted",
+      "content": "Flow (L/m)",
+      "worst": "Flow (L/m)",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "flow-value",
+      "kind": "value",
+      "x": 68,
+      "y": 78,
+      "binding": "sensor.4.instantFlow",
+      "worst": "4: 65535.00",
+      "bound": "one channel clamped to q_max=65535 L/min"
     },
     {
       "id": "footer-hint",
@@ -28,8 +78,8 @@
       "x": 2,
       "y": 124,
       "emphasis": "muted",
-      "content": "UP/DN pages  ENTER open  hold=exit",
-      "worst": "UP/DN pages  ENTER open  hold=exit",
+      "content": "UP/DN channels  ENTER open  hold=exit",
+      "worst": "UP/DN channels  ENTER open  hold=exit",
       "bound": "shared footer vocabulary, see 7.1",
       "bannerReplaces": true
     },

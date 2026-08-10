@@ -196,6 +196,30 @@
       "description": "Nominal max flow Q"
     },
     {
+      "id": "config.sensor.calibrationType",
+      "category": "setting",
+      "type": "number",
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "options": [{"label": "Formula", "value": 0}, {"label": "Pulses/L", "value": 1}],
+      "perSensor": true,
+      "registerOffset": 23,
+      "description": "How this channel is calibrated"
+    },
+    {
+      "id": "config.sensor.pulsesPerLiter",
+      "category": "setting",
+      "type": "number",
+      "unit": "p/L",
+      "min": 1,
+      "max": 65535,
+      "step": 1,
+      "perSensor": true,
+      "registerOffset": 24,
+      "description": "Pulses per litre, when calibrated that way"
+    },
+    {
       "id": "config.wifi.enabled",
       "category": "setting",
       "type": "boolean",
@@ -1041,6 +1065,22 @@
       "type": "number",
       "readOnly": true,
       "description": "Index (1-8) of the sensor implied by the current navigation level"
+    },
+    {
+      "id": "config.sensor.adjustTerm",
+      "category": "derived",
+      "type": "string",
+      "perSensor": true,
+      "readOnly": true,
+      "description": "The adjust term with its sign, for the formula line"
+    },
+    {
+      "id": "config.sensor.formulaQ",
+      "category": "derived",
+      "type": "string",
+      "perSensor": true,
+      "readOnly": true,
+      "description": "The formula's Q range for the current sensor"
     },
     {
       "id": "config.sensor.undersamplingFlag",

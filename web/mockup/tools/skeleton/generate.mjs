@@ -343,11 +343,27 @@ screens.push({
 });
 
 // ── L3 Sensor settings: S1..S4 + BACK, and L4 their editors ─────────────────
+/**
+ * The per-sensor settings, with BOTH calibration forms present.
+ *
+ * A meter is specified one of two ways and never both — a datasheet prints either `F = 6*Q - 8` or
+ * `450 pulses/L` — so S2 asks which, and the rows for the other form report `--` rather than
+ * disappearing.
+ *
+ * They do not disappear because R7.3 forbids it: a row hidden by a runtime condition makes the
+ * completeness rule (every settable value has a reachable editor) undecidable, which is the same
+ * reason guarded editors were rejected. `Flow.guard` exists in the schema and is emitted into
+ * GeneratedUi, but nothing evaluates it, so hiding is not implemented anyway. Showing `--` is also
+ * the more informative failure: an operator who set Pulses/L can SEE that Multiplier no longer
+ * applies, where a vanished row just looks like a menu that lost an entry.
+ */
 const SENSOR_SETTINGS = [
   { page: "S1", id: "config-s1-connected", title: "Connected", binding: "config.sensor.connected" },
-  { page: "S2", id: "config-s2-multiplier", title: "Multiplier (F)", binding: "config.sensor.multiplier" },
-  { page: "S3", id: "config-s3-adjust", title: "Adjust", binding: "config.sensor.adjust" },
-  { page: "S4", id: "config-s4-max-flow", title: "Max Flow (Q)", binding: "config.sensor.maxFlow" }
+  { page: "S2", id: "config-s2-calibration", title: "Calibration", binding: "config.sensor.calibrationType" },
+  { page: "S3", id: "config-s3-pulses-per-l", title: "Pulses per litre", binding: "config.sensor.pulsesPerLiter" },
+  { page: "S4", id: "config-s4-multiplier", title: "Multiplier (F)", binding: "config.sensor.multiplier" },
+  { page: "S5", id: "config-s5-adjust", title: "Adjust", binding: "config.sensor.adjust" },
+  { page: "S6", id: "config-s6-max-flow", title: "Max Flow (Q)", binding: "config.sensor.maxFlow" }
 ];
 const S_RING = [...SENSOR_SETTINGS.map((s) => s.id), "config-sensor-settings-back"];
 
@@ -856,7 +872,14 @@ const RETIRED = new Set([
   "net-mqtt-enabled", "net-mqtt-setup", "net-mqtt-setup-back",
   "net-mqtt-host", "net-mqtt-port", "net-mqtt-user", "net-mqtt-password",
   "net-mqtt-base-topic", "net-mqtt-prefix", "net-mqtt-period",
-  "net-mqtt-ha-discovery", "net-mqtt-qos"
+  "net-mqtt-ha-discovery", "net-mqtt-qos",
+  // The old sensor-settings numbering. S2..S4 were Multiplier/Adjust/Max Flow; the calibration
+  // branch inserts Calibration at S2 and Pulses per litre at S3, so the three formula rows moved to
+  // S4..S6. Same settings, new ids — retired explicitly so the old ids do not survive in `kept` as
+  // duplicates bound to the same settings.
+  "config-s2-multiplier", "config-s2-multiplier-edit",
+  "config-s3-adjust", "config-s3-adjust-edit",
+  "config-s4-max-flow", "config-s4-max-flow-edit"
 ]);
 
 const kept = dataset.screens.filter((s) => !generatedIds.has(s.id) && !RETIRED.has(s.id));
