@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import { SimulatedButton } from "../types/buttonSimulation";
 import { ArmedCombo } from "../utils/comboGestures";
@@ -44,6 +45,24 @@ interface ButtonPanelProps {
  * both controls were byte-identical in effect and the recovery gesture could not be performed by ANY
  * route. Timings and semantics below come from interaction_handler.h:91 and :93.
  */
+/**
+ * How long the long-ENTER control holds for.
+ *
+ * `useSimulatedButtons` fires at LONG_PRESS_MS = 1500 on a real timer; the extra 150 ms makes sure
+ * that timer has run before the release, so the control cannot intermittently produce a short press.
+ */
+const LONG_PRESS_HOLD_MS = 1650;
+
+/**
+ * The confirm-screen holds. `confirm-reset-totals` and `confirm-reset-portal-login` ask for 3 s,
+ * `confirm-reset-session` for 1.5 s — so the 1.5 s control cannot complete the 3 s ones, and holding
+ * a pad by hand for three seconds while watching the counter is exactly the thing worth automating.
+ *
+ * `confirm-factory-reset` wants 30 s and deliberately has NO control: a button that performs a
+ * factory reset in one click is not a convenience.
+ */
+const CONFIRM_HOLD_MS = 3200;
+
 const COMBOS: { id: string; label: string; hint: string; buttons: PhysicalButton[] }[] = [
   {
     id: "display-off",
@@ -87,6 +106,7 @@ export function ButtonPanel({
   onPressStart,
   onPressEnd
 }: ButtonPanelProps) {
+  const [enterHeld, setEnterHeld] = useState<string | null>(null);
   const status = statusFor(armedCombo, displayOn, selectorOpen);
 
   /**
@@ -180,6 +200,54 @@ export function ButtonPanel({
       </div>
 
       <div className="button-panel__combos">
+        <p className="button-panel__combos-title">Held presses</p>
+        <div className="button-panel__combo-row">
+          {/**
+            * BtnC held past the long-press threshold, released for you.
+            *
+            * Holding a pad with a pointer for a second and a half works, but nothing said so and it
+            * is easy to release early and get a SHORT press instead — which on a setting page
+            * descends into the editor rather than escaping, so the gesture silently did the opposite
+            * of what was wanted. This presses and releases on a real timer, so the machine sees a
+            * genuine long press rather than a synthesised event.
+            */}
+          {[
+            {
+              id: "hold-long",
+              ms: LONG_PRESS_HOLD_MS,
+              label: "BtnC — hold 1.5 s",
+              hint: "Long ENTER: ascends one level, or discards an open editor."
+            },
+            {
+              id: "hold-confirm",
+              ms: CONFIRM_HOLD_MS,
+              label: "BtnC — hold 3 s",
+              hint: "Completes a 3 s hold-to-confirm. Watch the counter run down on the panel."
+            }
+          ].map((hold) => (
+            <button
+              key={hold.id}
+              type="button"
+              className={enterHeld === hold.id ? "combo active" : "combo"}
+              aria-pressed={enterHeld === hold.id}
+              onClick={(event) => {
+                event.preventDefault();
+                if (enterHeld) return;
+                setEnterHeld(hold.id);
+                onPressStart("enter");
+                window.setTimeout(() => {
+                  onPressEnd("enter");
+                  setEnterHeld(null);
+                }, hold.ms);
+              }}
+            >
+              <span className="combo__label">{hold.label}</span>
+              <span className="combo__hint">
+                {enterHeld === hold.id ? "Holding ENTER…" : hold.hint}
+              </span>
+            </button>
+          ))}
+        </div>
         <p className="button-panel__combos-title">Two- and three-button gestures</p>
         <div className="button-panel__combo-row">
           {COMBOS.map((combo) => {

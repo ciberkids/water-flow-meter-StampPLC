@@ -34,15 +34,16 @@ import {
   ClampCorrection
 } from "./utils/datasetClamp";
 import {
+  adjustSettingRaw,
   formatSetting,
   pendingRawFor,
   rangeHintFor,
+  sampleRawFor,
   settingOfScreen
 } from "./utils/settingHints";
 import { SchemaValidationError, validateDataset } from "./schema/validation";
 import { ExporterPanel } from "./components/ExporterPanel";
 import { SimulationTracePanel } from "./components/SimulationTracePanel";
-import { ValuePlaceholderPanel } from "./components/ValuePlaceholderPanel";
 import { SimulationTraceEntry } from "./types/simulationTrace";
 import { FirmwareActionManifest, FirmwareActionDefinition, FirmwareValueDefinition } from "./types/firmwareActions";
 import { TransitionEffect, TransitionPreviewState } from "./types/transitionPreview";
@@ -64,7 +65,9 @@ import {
   pulsesForFlow,
   resolveSensorBinding,
   sensorIndexForScreen,
+  readSensorSettingRaw,
   setSensor,
+  writeSensorSetting,
   warningSensorNumbers
 } from "./utils/sensorConfig";
 
@@ -330,7 +333,6 @@ export function App() {
   const [traceEntries, setTraceEntries] = useState<SimulationTraceEntry[]>([]);
   const [traceFilter, setTraceFilter] = useState<string>("");
   const [transitionPreview, setTransitionPreview] = useState<TransitionPreviewState | null>(null);
-  const [valueOverrides, setValueOverrides] = useState<Record<string, Record<string, string>>>({});
   const [activePanel, setActivePanel] = useState<"simulation" | "design" | "importExport" | "help">("simulation");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const manifestInputRef = useRef<HTMLInputElement | null>(null);
@@ -381,7 +383,6 @@ export function App() {
     [screens, selectedScreenId]
   );
   const totalScreens = screens.length;
-  const selectedScreenOverrides = selectedScreen ? valueOverrides[selectedScreen.id] ?? {} : {};
 
   /* ---- Simulated device memory ------------------------------------------------------------------
    *
@@ -1117,77 +1118,6 @@ export function App() {
     setTraceEntries([]);
   }, []);
 
-  const handleValueChange = useCallback(
-    (screenId: string, element: ScreenElement, nextValue: string) => {
-      const baseValue = element.content ?? "";
-      const currentOverride = valueOverrides[screenId]?.[element.id];
-      const previousValue = currentOverride ?? baseValue;
-      if (previousValue === baseValue && nextValue !== baseValue) {
-        recordTraceEntry({
-          id: "ui.mock.value-edit",
-          label: "Value edited",
-          functionName: actionCatalog.get("ui.mock.value-edit")?.label,
-          trigger: `value.edit.${element.id}`,
-          screenId,
-          screenName: selectedScreen?.name,
-          actionParams: { elementId: element.id, value: nextValue }
-        });
-      }
-      setValueOverrides((current) => {
-        const existing = current[screenId] ?? {};
-        return {
-          ...current,
-          [screenId]: {
-            ...existing,
-            [element.id]: nextValue
-          }
-        };
-      });
-    },
-    [actionCatalog, recordTraceEntry, selectedScreen?.name, valueOverrides]
-  );
-
-  const handleValueRevert = useCallback((screenId: string, element: ScreenElement) => {
-    setValueOverrides((current) => {
-      const existing = current[screenId];
-      if (!existing) {
-        return current;
-      }
-      const { [element.id]: _removed, ...rest } = existing;
-      const next = { ...current };
-      if (Object.keys(rest).length === 0) {
-        delete next[screenId];
-      } else {
-        next[screenId] = rest;
-      }
-      return next;
-    });
-  }, []);
-
-  const handleValueSave = useCallback(
-    (screenId: string, element: ScreenElement, value: string) => {
-      recordTraceEntry({
-        id: "ui.mock.value-save",
-        label: "Value saved",
-        functionName: actionCatalog.get("ui.mock.value-save")?.label,
-        trigger: `value.save.${element.id}`,
-        screenId,
-        screenName: selectedScreen?.name,
-        actionParams: { elementId: element.id, value }
-      });
-      recordTraceEntry({
-        id: "core.action.save-config",
-        label: "Save configuration",
-        functionName: actionCatalog.get("core.action.save-config")?.label,
-        trigger: `value.save.${element.id}`,
-        screenId,
-        screenName: selectedScreen?.name,
-        actionParams: { elementId: element.id }
-      });
-    },
-    [actionCatalog, recordTraceEntry, selectedScreen?.name]
-  );
-
   const previewTransition = useCallback(
     (payload: {
       targetScreenId?: string;
@@ -1282,6 +1212,47 @@ export function App() {
    * before the first — losing a level while looking like it worked. A ref is read at call time, so
    * neither happens.
    */
+  /**
+   * The open value editor: which setting, and the value dialled up but not yet committed.
+   *
+   * `UiEditorState` (ui_controller.h) in miniature. Without it UP/DOWN on an editor screen did
+   * nothing at all — `config.action.value.increment` and `.decrement` had no handler, so the panel
+   * showed a fixed `New` value that no amount of pressing changed, on every one of the twelve
+   * editors.
+   *
+   * `raw` is the stored integer, not the rendered string, for the same reason the device stores it
+   * that way: stepping has to happen on the number, and `formatSetting` is what turns it into text.
+   */
+  const [editorState, setEditorState] = useState<{ bindingId: string; raw: number } | null>(null);
+  const editorStateRef = useRef<typeof editorState>(null);
+  editorStateRef.current = editorState;
+
+  /**
+   * The live hold countdown, when ENTER is being held on a screen that asks for one.
+   *
+   * Hold-to-confirm was DECLARED and never implemented: `types.ts` documents
+   * `trigger: { type: "timeout", holdButton: "enter", durationMs }`, and nothing in the app looked at
+   * it. So `countdown.value` sat at the static sample `3` — the reported symptom — and, worse, the
+   * confirm screens could not be completed at all: holding ENTER on RESET SESSION? did nothing, and
+   * the only way out was the short press that cancels.
+   *
+   * `remainingMs` rather than whole seconds, because the four confirms run 1.5 s, 3 s and 30 s and a
+   * seconds-only counter cannot show the first one moving.
+   */
+  /**
+   * How many times the simulated loop has repainted.
+   *
+   * The flow-dot chase advances ONE position per repaint, which is the only rate the device can
+   * actually show. `drawFlowDots` derives a step period from the flow — 25 ms at the 10 L/s clamp —
+   * but an info page repaints at 1 Hz, so that counter is sampled far slower than it advances and the
+   * "chase" aliases into apparent randomness. Stepping per repaint makes the motion mean something:
+   * one dot per frame the panel actually draws.
+   */
+  const [repaintCount, setRepaintCount] = useState(0);
+
+  const [holdCountdown, setHoldCountdown] = useState<{ screenId: string; remainingMs: number; totalMs: number } | null>(null);
+  const holdTimerRef = useRef<number | undefined>(undefined);
+
   const navParentsRef = useRef<string[]>([]);
   const pushNavParent = useCallback((parent: string) => {
     navParentsRef.current = [...navParentsRef.current, parent];
@@ -1354,10 +1325,20 @@ export function App() {
    * so while these came from the sample table, disconnecting every sensor left the landing screen
    * cheerfully reporting 1234.56 L.
    */
+  /**
+   * The aggregate flow, hoisted out of the resolver because the flow-dot chase needs it too.
+   *
+   * One computation, not two: the dots and `telemetry.totalFlowLpm` must agree about whether water is
+   * moving, or the panel shows a still chase beside a non-zero reading.
+   */
+  const aggregateFlowLps = useMemo(
+    () => sensors.filter((sensor) => sensor.connected).reduce((sum, s) => sum + s.instantFlowLps, 0),
+    [sensors]
+  );
+
   const resolvedValues = useMemo(() => {
     const out: Record<string, string> = {};
     const inUse = sensors.filter((sensor) => sensor.connected);
-    const aggregateFlowLps = inUse.reduce((sum, sensor) => sum + sensor.instantFlowLps, 0);
     const totalSessionLiters = inUse.reduce((sum, sensor) => sum + sensor.sessionLiters, 0);
     const warnings = warningSensorNumbers(sensors).length;
 
@@ -1402,8 +1383,46 @@ export function App() {
       return `WiFi ${part("net.wifi.state")}  MQTT ${part("net.mqtt.state")}  LED 1p/${led}L`;
     };
 
+    /**
+     * `L2 3/8` — depth, then which entry of the level this is.
+     *
+     * The position comes from the SIBLING ORDER in the screen hierarchy, not from walking the ring.
+     * A ring is cyclic, so walking it from the current screen makes the current screen index 0 every
+     * time — it can count the members but not say where you are among them. The hierarchy has a
+     * canonical order because it is built from the descent that opened the level.
+     *
+     * Depth is the nav stack, mirroring `UiNavigator::depth()`.
+     */
+    const navPosition = (): string => {
+      const depth = navParents.length;
+      const id = selectedScreen?.id;
+      if (!id) {
+        return `L${depth}`;
+      }
+      const parent = hierarchy.parentMap.get(id);
+      if (!parent) {
+        return `L${depth}`;
+      }
+      const siblings = screens
+        .filter((candidate) => hierarchy.parentMap.get(candidate.id) === parent)
+        .map((candidate) => candidate.id);
+      const index = siblings.indexOf(id);
+      if (index < 0 || siblings.length <= 1) {
+        return `L${depth}`;
+      }
+      return `L${depth} ${index + 1}/${siblings.length}`;
+    };
+
     const aggregate = (id: string): string | undefined => {
       switch (id) {
+        case "nav.position":
+          return navPosition();
+        // `%u s` of whole seconds remaining (ui_bindings.cpp). Rounded UP so a 1.5 s hold opens at
+        // "2 s" and reaches "1 s" rather than starting at "1 s" and looking stuck.
+        case "countdown.value":
+          return holdCountdown && holdCountdown.screenId === selectedScreen?.id
+            ? `${Math.ceil(holdCountdown.remainingMs / 1000)} s`
+            : undefined;
         case "telemetry.total":
           return `Total ${totalSessionLiters.toFixed(2)} L | Flow ${aggregateFlowLps.toFixed(2)} L/s`;
         case "telemetry.totalFlowLps":
@@ -1446,6 +1465,12 @@ export function App() {
       if (id === "config.editor.range") {
         return rangeHintFor(screenSetting);
       }
+      // An OPEN editor's dialled-up value wins over the descriptor's sample, which is what makes
+      // UP/DOWN visible on screen. Without this the pending line was a fixed sample and the
+      // increment handler had nothing to show for its work.
+      if (editorState?.bindingId === screenSetting.id) {
+        return formatSetting(screenSetting, editorState.raw);
+      }
       // A text setting has no numeric domain to step, so there is no pending value to invent; the
       // editor for one is a keyboard, which R5.3 does not give this device.
       if (screenSetting.type === "string") {
@@ -1466,7 +1491,49 @@ export function App() {
         sampleValueFor(binding.id, manifestValueById.get(binding.id), "sample");
     }
     return out;
-  }, [manifestValueBindings, manifestValueById, pinnedValues, selectedScreen, selectedSensor, sensors]);
+  }, [aggregateFlowLps, editorState, hierarchy, holdCountdown, manifestValueBindings, manifestValueById, navParents, pinnedValues, screens, selectedScreen, selectedSensor, sensors]);
+
+  /**
+   * The stored integer a setting currently holds, from whichever home owns it.
+   *
+   * Per-sensor settings live in the sensor table; device-wide ones have no simulated store of their
+   * own, so a pin is their memory and the descriptor's sample is the default. Reading through one
+   * function keeps the editor from having to know which is which.
+   */
+  const currentRawFor = useCallback(
+    (definition: FirmwareValueDefinition): number => {
+      if (isPerSensorSetting(definition) && selectedSensor !== 0) {
+        return readSensorSettingRaw(sensors, selectedSensor, definition);
+      }
+      const pinned = pinnedValues[definition.id];
+      if (pinned !== undefined) {
+        const byLabel = definition.options?.find((o) => o.label === pinned.trim());
+        if (byLabel) return byLabel.value;
+        const numeric = Number.parseInt(pinned, 10);
+        if (Number.isFinite(numeric)) return numeric;
+      }
+      return sampleRawFor(definition);
+    },
+    [pinnedValues, selectedSensor, sensors]
+  );
+
+  /** Writes a committed editor value to whichever home owns the setting. */
+  const commitEditorValue = useCallback(
+    (definition: FirmwareValueDefinition, raw: number) => {
+      const text = formatSetting(definition, raw);
+      if (isPerSensorSetting(definition)) {
+        if (selectedSensor === 0) {
+          return;
+        }
+        setSensors((table) => writeSensorSetting(table, selectedSensor, definition, text));
+        return;
+      }
+      // Device-wide settings have no simulated store, so the pin IS their memory. Storing the
+      // FORMATTED string keeps the values panel and the panel itself showing the same text.
+      setPinnedValues((current) => ({ ...current, [definition.id]: text }));
+    },
+    [selectedSensor]
+  );
 
   /** True when device memory answers this binding, so nothing may pin over it. */
   const memoryOwnsBinding = useCallback(
@@ -1519,34 +1586,13 @@ export function App() {
     (bindingId: string, value: string) => {
       const definition = manifestValueById.get(bindingId);
       if (isPerSensorSetting(definition)) {
-        if (selectedSensor === 0) {
-          return;
-        }
-        if (bindingId === "config.sensor.connected") {
-          setSensors((table) =>
-            setSensor(table, selectedSensor, { connected: /^(on|1|true|yes)$/i.test(value.trim()) })
-          );
-          return;
-        }
-        // Clamped to the stored type's range, because the panel must not render a string the device
-        // cannot emit: q_max is a uint16_t and the other two are int16_t (sensor_types.h:6-8).
-        const numeric = Number.parseInt(value, 10);
-        if (!Number.isFinite(numeric)) {
-          return;
-        }
-        if (bindingId === "config.sensor.multiplier" || bindingId === "config.sensor.adjust") {
-          const field = bindingId === "config.sensor.multiplier" ? "multiplier" : "adjust";
-          setSensors((table) =>
-            setSensor(table, selectedSensor, { [field]: clamp(numeric, -32768, 32767) })
-          );
-          return;
-        }
-        if (bindingId === "config.sensor.maxFlow") {
-          setSensors((table) => setSensor(table, selectedSensor, { qMaxLpm: clamp(numeric, 0, 65535) }));
-        }
-        // No trailing else: an unrecognised per-sensor setting is DROPPED rather than being written to
-        // whichever field the chain happened to end on. A fifth entry in the manifest would otherwise
-        // silently land in qMaxLpm.
+        // Descriptor-driven, in sensorConfig. This used to be a chain naming four bindings by hand,
+        // and its own comment predicted what went wrong: "a fifth entry in the manifest would
+        // otherwise silently land in qMaxLpm". The calibration branch added a fifth and a sixth, so
+        // typing Pulses/L into Calibration did nothing at all — silently, while the input kept
+        // showing the typed text. Adding a per-sensor setting to the firmware catalogue now makes it
+        // writable here with no change to this file.
+        setSensors((table) => writeSensorSetting(table, selectedSensor, definition, value));
         return;
       }
       if (memoryOwnsBinding(bindingId)) {
@@ -1565,6 +1611,8 @@ export function App() {
    * zeroes its instant flow and leaves its totals frozen, and seeing frozen totals is the point.
    */
   const handleLoopTick = useCallback(() => {
+    // One repaint per tick, which is what paces the flow-dot chase. See the note on `repaintCount`.
+    setRepaintCount((count) => count + 1);
     setSensors((table) =>
       table.map((sensor) => {
         // Inside the channel's OWN ceiling. A flat 0..4 L/s target exceeded the default q_max of
@@ -1712,6 +1760,13 @@ export function App() {
 
           // Dispatch on the ACTION first. Following targetScreenId alone is what made BACK dead: the
           // firmware resolves "one level up" from its stack, so the dataset has no target to follow.
+          // Any navigation out of an editor abandons its pending value. Leaving it set would let a
+          // value dialled up on one screen reappear as the pending value of the next editor opened.
+          if (action === "ui.action.nav.back" || action === "ui.action.nav.escape") {
+            editorStateRef.current = null;
+            setEditorState(null);
+          }
+
           if (action === "ui.action.nav.back") {
             // ascend(): pop one level. A no-op at the root, exactly as UiNavigator::ascend returns
             // false there rather than underflowing.
@@ -1723,14 +1778,62 @@ export function App() {
               }
             }
           } else if (action === "ui.action.nav.escape") {
-            // escape(): clear the stack and land on P0, whatever the depth.
-            clearNavParents();
-            const resolvedId = selectById(flow.targetScreenId ?? kRootScreenId);
-            if (resolvedId) {
-              activeScreenId = resolvedId;
+            /**
+             * Long ENTER ascends ONE level, not all of them.
+             *
+             * It used to clear the stack and land on P0 from any depth, so holding ENTER three levels
+             * deep in the sensor settings threw the operator all the way out to the status page and
+             * they had to walk back down to see the change they had just made. One level up is what a
+             * hold means everywhere else in the tree — it is what the editor's `hold=cancel` already
+             * did — and repeated holds still walk out to the top for anyone who wants that.
+             *
+             * The display-off gesture is unaffected: BtnA+BtnB resets navigation to P0 by its own
+             * path (§3.1), which is a different thing and still resets fully.
+             */
+            const parent = popNavParent();
+            if (parent !== undefined) {
+              const resolvedId = selectById(parent);
+              if (resolvedId) {
+                activeScreenId = resolvedId;
+              }
+            }
+            // At depth 0 there is nowhere to ascend to, so the press is deliberately a no-op rather
+            // than a jump to a page the operator is already on.
+          } else if (action === "config.action.value.increment" ||
+                     action === "config.action.value.decrement") {
+            /**
+             * UP/DOWN step the PENDING value; they do not navigate.
+             *
+             * Neither action had a handler, so on every editor screen UP/DOWN fell through to the
+             * ring and the `New` line never moved. `adjustSettingRaw` mirrors the firmware:
+             * numerics clamp at their ends, enums cycle through their option list.
+             */
+            const setting = settingOfScreen(selectedScreen, manifestValueById);
+            if (setting) {
+              const delta = action === "config.action.value.increment" ? (setting.step ?? 1) : -(setting.step ?? 1);
+              const current = editorStateRef.current?.bindingId === setting.id
+                ? editorStateRef.current.raw
+                : currentRawFor(setting);
+              const next = adjustSettingRaw(setting, current, delta);
+              editorStateRef.current = { bindingId: setting.id, raw: next };
+              setEditorState(editorStateRef.current);
             }
           } else if (action === "config.action.value.commit" ||
                      action === "config.action.value.discard") {
+            /**
+             * COMMIT writes the pending value into memory; DISCARD throws it away.
+             *
+             * Both then ascend, which is what the firmware does — and which is why this used to
+             * "work" while doing nothing: the navigation half was implemented and the value half
+             * was not, so an editor always looked like it had saved.
+             */
+            const setting = settingOfScreen(selectedScreen, manifestValueById);
+            const pending = editorStateRef.current;
+            if (action === "config.action.value.commit" && setting && pending?.bindingId === setting.id) {
+              commitEditorValue(setting, pending.raw);
+            }
+            editorStateRef.current = null;
+            setEditorState(null);
             // Both ascend in the firmware. The dataset also names the parent, so following either
             // lands in the same place — popping keeps the DEPTH right, which following would not.
             const parent = popNavParent();
@@ -1744,6 +1847,34 @@ export function App() {
               if (resolvedId) {
                 activeScreenId = resolvedId;
               }
+            }
+          } else if (action === "core.action.reset-session" || action === "core.action.reset-all-measured") {
+            /**
+             * A reset performed from level 0 RETURNS TO WHERE IT WAS STARTED — and actually resets.
+             *
+             * Two defects, one flow. The values never reset in the simulation at all: neither action
+             * had a handler, so the confirm screen and its acknowledgement toast played out over
+             * completely unchanged numbers. And the navigation left you nowhere useful — the toast
+             * dismisses with `nav.back`, which pops ONE level and lands back on the confirm screen,
+             * so the operator had to page out and back in to see whether anything had happened.
+             *
+             * The rule is the owner's: a reset invoked from a level-0 page stays at that page. It
+             * cannot be a fixed target, because `confirm-reset-session` is reached from both P3 and
+             * P4 and a fixed one would send a P4 operator to P3. So the stack is unwound to depth 0,
+             * whose bottom frame IS the page the descent started from.
+             */
+            setSensors((table) =>
+              table.map((sensor) =>
+                action === "core.action.reset-session"
+                  ? { ...sensor, sessionLiters: 0 }
+                  : { ...sensor, sessionLiters: 0, cumulativeLiters: 0, maxFlowLps: 0 }
+              )
+            );
+            const origin = navParentsRef.current[0];
+            clearNavParents();
+            const resolvedId = selectById(origin ?? kRootScreenId);
+            if (resolvedId) {
+              activeScreenId = resolvedId;
             }
           } else if (action === "ui.action.nav.descend" && flow.targetScreenId) {
             // descend(): push, and REFUSE past the cap rather than silently going deeper than the
@@ -1760,6 +1891,29 @@ export function App() {
                 targetScreenId: flow.targetScreenId
               });
               return;
+            }
+            /**
+             * Descending into an EDITOR starts its pending value at the value in force.
+             *
+             * `UiEditorState::pending = saved` on open (`beginEdit`), so `New` and `Saved` agree until
+             * the operator moves something. The panel used to show the static sample here — a
+             * deliberately DIFFERENT value — so an editor looked like it had already been changed
+             * before a single button was pressed, and the first UP appeared to do nothing because it
+             * landed on the number already displayed.
+             */
+            {
+              const target = screens.find((candidate) => candidate.id === flow.targetScreenId);
+              const targetSetting = settingOfScreen(target, manifestValueById);
+              const opensEditor = target?.elements.some(
+                (element) => element.binding === "config.editor.pending"
+              );
+              if (opensEditor && targetSetting) {
+                editorStateRef.current = {
+                  bindingId: targetSetting.id,
+                  raw: currentRawFor(targetSetting)
+                };
+                setEditorState(editorStateRef.current);
+              }
             }
             if (from) {
               pushNavParent(from);
@@ -1833,7 +1987,129 @@ export function App() {
     [actionCatalog, appendLog, previewTransition, recordTraceEntry, selectById, selectByOffset, selectedScreen, screens, pushNavParent, popNavParent, clearNavParents, setDisplay, setSelector]
   );
 
+  /**
+   * The screen's hold-to-confirm flow, if it has one.
+   *
+   * A `timeout` trigger with `holdButton` is a HOLD; one without is an auto-dismiss and must not be
+   * started by a button press (that is what the toasts use).
+   */
+  const holdFlowFor = useCallback(
+    (screen: ScreenDefinition | undefined) =>
+      screen?.flows?.find(
+        (flow) => flow.trigger.type === "timeout" && (flow.trigger as { holdButton?: string }).holdButton === "enter"
+      ),
+    []
+  );
+
+  const clearHoldTimer = useCallback(() => {
+    if (holdTimerRef.current !== undefined) {
+      window.clearInterval(holdTimerRef.current);
+      holdTimerRef.current = undefined;
+    }
+  }, []);
+
+  /** Fires the flow's action and target the way a button flow would, once the hold completes. */
+  const fireHoldFlow = useCallback(
+    (screen: ScreenDefinition, flow: ScreenFlow) => {
+      recordTraceEntry({
+        id: flow.actionId ?? "timeout",
+        label: flow.label,
+        functionName: flow.actionId ? actionCatalog.get(flow.actionId)?.label : undefined,
+        trigger: `enter.hold ${(flow.trigger as { durationMs?: number }).durationMs ?? 0}ms`,
+        screenId: screen.id,
+        screenName: screen.name,
+        actionParams: flow.actionParams ?? null,
+        targetScreenId: flow.targetScreenId
+      });
+      if (flow.actionId === "core.action.reset-session" || flow.actionId === "core.action.reset-all-measured") {
+        setSensors((table) =>
+          table.map((sensor) =>
+            flow.actionId === "core.action.reset-session"
+              ? { ...sensor, sessionLiters: 0 }
+              : { ...sensor, sessionLiters: 0, cumulativeLiters: 0, maxFlowLps: 0 }
+          )
+        );
+      }
+      if (flow.actionId === "core.action.factory-reset") {
+        setSensors(createSensorTable());
+        setPinnedValues({});
+      }
+      // The owner's rule: a reset started from a level-0 page returns to that page rather than
+      // dropping the operator at the root to re-navigate. The stack's bottom frame IS that page.
+      const origin = navParentsRef.current[0];
+      clearNavParents();
+      const resolved = selectById(origin ?? kRootScreenId);
+      if (resolved) {
+        setSelectedScreenId(resolved);
+      }
+    },
+    [actionCatalog, clearNavParents, recordTraceEntry, selectById]
+  );
+
+  /**
+   * Jumping straight to a screen ADOPTS ITS ANCESTRY, instead of leaving the stack as it was.
+   *
+   * Picking from the list only set `selectedScreenId`, so the nav stack kept whatever the last real
+   * navigation had left on it. The depth was then a fiction — `nav.position` reported L2 on a page
+   * reached by one click — and anything reading the stack's bottom frame got the wrong answer: a
+   * reset performed after jumping around returned the operator to a page from a previous descent
+   * rather than the one they were on. Now the stack says what the tree says.
+   */
+  const jumpToScreen = useCallback(
+    (id: string) => {
+      const ancestors: string[] = [];
+      let cursor = hierarchy.parentMap.get(id) ?? null;
+      const guard = new Set<string>();
+      while (cursor && !guard.has(cursor)) {
+        guard.add(cursor);
+        ancestors.unshift(cursor);
+        cursor = hierarchy.parentMap.get(cursor) ?? null;
+      }
+      setNavParents(ancestors);
+      navParentsRef.current = ancestors;
+      setSelectedScreenId(id);
+    },
+    [hierarchy]
+  );
+
   const { pressed, armedCombo, press, release, cancelAll } = useSimulatedButtons(handleButtonEvent);
+
+  const handleButtonPressStart = useCallback(
+    (button: "up" | "down" | "enter") => {
+      press(button);
+      if (button !== "enter") return;
+      const flow = holdFlowFor(selectedScreen);
+      if (!flow || !selectedScreen) return;
+      const totalMs = (flow.trigger as { durationMs?: number }).durationMs ?? 3000;
+      clearHoldTimer();
+      setHoldCountdown({ screenId: selectedScreen.id, remainingMs: totalMs, totalMs });
+      const startedAt = performance.now();
+      holdTimerRef.current = window.setInterval(() => {
+        const remaining = totalMs - (performance.now() - startedAt);
+        if (remaining <= 0) {
+          clearHoldTimer();
+          setHoldCountdown(null);
+          fireHoldFlow(selectedScreen, flow);
+          return;
+        }
+        setHoldCountdown({ screenId: selectedScreen.id, remainingMs: remaining, totalMs });
+      }, 100);
+    },
+    [clearHoldTimer, fireHoldFlow, holdFlowFor, press, selectedScreen]
+  );
+
+  const handleButtonPressEnd = useCallback(
+    (button: "up" | "down" | "enter") => {
+      if (button === "enter") {
+        // Released early: the hold is abandoned, which is the whole point of a hold gesture.
+        clearHoldTimer();
+        setHoldCountdown(null);
+      }
+      release(button);
+    },
+    [clearHoldTimer, release]
+  );
+
 
   const mapKeyToButton = useCallback((key: string): "up" | "down" | "enter" | undefined => {
     switch (key) {
@@ -1955,7 +2231,7 @@ export function App() {
             screens={screens}
             activeId={selectedScreen?.id ?? ""}
             previewId={transitionPreview?.screenId}
-            onSelect={setSelectedScreenId}
+            onSelect={jumpToScreen}
           />
         </section>
       )}
@@ -2059,9 +2335,14 @@ export function App() {
                       layout={layoutReport}
                       zoomPercent={zoom}
                       showGrid={showGrid}
-                      valueOverrides={selectedScreenOverrides}
                       boundValues={resolvedValues}
                       powered={displayOn}
+                      // The dots chase at the rate the aggregate flow implies, and only while the
+                      // loop is advancing — on the device they are driven by millis(), so a stopped
+                      // loop is a stopped panel.
+                      aggregateFlowLps={aggregateFlowLps}
+                      animating={loopRunning && displayOn}
+                      repaintCount={repaintCount}
                       // The transition overlay is OFF. It faded a miniature of the incoming screen
                       // over the panel on every UP/DOWN, which on a device whose whole navigation IS
                       // UP/DOWN meant an animation over almost every press — and it obscured the
@@ -2094,16 +2375,8 @@ export function App() {
                   armedCombo={armedCombo}
                   displayOn={displayOn}
                   selectorOpen={selectorOpen}
-                  onPressStart={press}
-                  onPressEnd={release}
-                />
-
-                <ValuePlaceholderPanel
-                  screen={selectedScreen}
-                  overrides={selectedScreenOverrides}
-                  onChange={handleValueChange}
-                  onRevert={handleValueRevert}
-                  onSave={handleValueSave}
+                  onPressStart={handleButtonPressStart}
+                  onPressEnd={handleButtonPressEnd}
                 />
 
                 {/* Controls only. The value editors are under the Function trace — see the trace

@@ -212,6 +212,18 @@ bool UiBindingResolver::resolvePageBinding(const UiRenderContext& context,
   if (binding == "page.title") {
     return copyLiteral(pageTitle(context.page), buffer, bufferSize);
   }
+  if (binding == "nav.position") {
+    const unsigned depth = controller_ ? controller_->navigator().depth() : 0;
+    // Depth alone when the ring size is unknown: `ringCount` is 0 before the navigator has resolved
+    // a level, and printing `3/0` would state a position that does not exist.
+    if (context.ringCount == 0) {
+      std::snprintf(buffer, bufferSize, "L%u", depth);
+      return true;
+    }
+    std::snprintf(buffer, bufferSize, "L%u %u/%u", depth,
+                  static_cast<unsigned>(context.ringIndex), static_cast<unsigned>(context.ringCount));
+    return true;
+  }
   return false;
 }
 

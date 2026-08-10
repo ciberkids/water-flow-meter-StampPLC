@@ -134,13 +134,34 @@ for (const screen of dataset.screens) {
     }
   }
 
-  // 3. an editor must show New against Saved, or it hides the only thing it is for
+  /**
+   * 3. an editor's pending value must RENDER, and must be one the setting could hold.
+   *
+   * This used to assert New differs from Saved, which encoded a false requirement: the device sets
+   * pending = saved when an editor opens (`beginEdit`), so they agree until something is pressed.
+   * The gallery still draws them differently on purpose — a static render showing one number twice
+   * cannot demonstrate what the screen is for — but "they differ" is not a property of the device and
+   * had no business being checked as one. What DID need checking is the reported defect: `New 19200`
+   * on Modbus ID, a value 78 times its ceiling.
+   */
   const pending = screen.elements.find((e) => e.binding === "config.editor.pending");
   if (pending && setting && setting.type !== "string") {
-    const newValue = formatSetting(setting, pendingRawFor(setting));
-    const savedValue = sampleValueFor(setting.id, setting, "sample");
-    if (newValue === savedValue) {
-      problems.push(`${screen.id} shows the same value as New and Saved (${newValue}) — the editor demonstrates nothing`);
+    const raw = pendingRawFor(setting);
+    const rendered = formatSetting(setting, raw);
+    if (!rendered) {
+      problems.push(`${screen.id} has a pending-value element that renders nothing`);
+    }
+    if (setting.options) {
+      if (!setting.options.some((option) => option.value === raw)) {
+        problems.push(`${screen.id} offers New ${rendered}, which is not one of ${setting.id}'s options`);
+      }
+    } else if (
+      (setting.min !== undefined && raw < setting.min) ||
+      (setting.max !== undefined && raw > setting.max)
+    ) {
+      problems.push(
+        `${screen.id} offers New ${raw} for ${setting.id}, outside its domain ${setting.min}..${setting.max}`
+      );
     }
   }
 

@@ -887,6 +887,14 @@
           "content": "Config > Modbus ID"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "field-value",
           "kind": "value",
           "x": 2,
@@ -978,6 +986,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "Config > Baud Rate"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "field-value",
@@ -1073,6 +1089,14 @@
           "content": "Config > Parity"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "field-value",
           "kind": "value",
           "x": 2,
@@ -1164,6 +1188,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "Config > Stop Bits"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "field-value",
@@ -1259,6 +1291,14 @@
           "content": "Config > LED Pulse Volume"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "field-value",
           "kind": "value",
           "x": 2,
@@ -1352,6 +1392,14 @@
           "content": "Config > LED Pulse Period"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "field-value",
           "kind": "value",
           "x": 2,
@@ -1443,6 +1491,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "Config > Sensors"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "body-1",
@@ -1546,6 +1602,14 @@
           "content": "Config"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "back-label",
           "kind": "text",
           "x": 2,
@@ -1628,6 +1692,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "Edit > Modbus ID"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "pending-label",
@@ -1752,6 +1824,14 @@
           "content": "Edit > Baud Rate"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "pending-label",
           "kind": "text",
           "x": 2,
@@ -1864,6 +1944,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "Edit > Parity"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "pending-label",
@@ -1980,6 +2068,14 @@
           "content": "Edit > Stop Bits"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "pending-label",
           "kind": "text",
           "x": 2,
@@ -2092,6 +2188,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "Edit > LED Pulse Volume"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "pending-label",
@@ -2208,6 +2312,14 @@
           "content": "Edit > LED Pulse Period"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "pending-label",
           "kind": "text",
           "x": 2,
@@ -2322,12 +2434,12 @@
           "content": "Config > Sensors"
         },
         {
-          "id": "channel-of",
+          "id": "nav-position",
           "kind": "text",
-          "x": 170,
+          "x": 168,
           "y": 2,
           "emphasis": "muted",
-          "content": "1 of 8"
+          "binding": "nav.position"
         },
         {
           "id": "channel-label",
@@ -2446,12 +2558,12 @@
           "content": "Config > Sensors"
         },
         {
-          "id": "channel-of",
+          "id": "nav-position",
           "kind": "text",
-          "x": 170,
+          "x": 168,
           "y": 2,
           "emphasis": "muted",
-          "content": "2 of 8"
+          "binding": "nav.position"
         },
         {
           "id": "channel-label",
@@ -2570,12 +2682,12 @@
           "content": "Config > Sensors"
         },
         {
-          "id": "channel-of",
+          "id": "nav-position",
           "kind": "text",
-          "x": 170,
+          "x": 168,
           "y": 2,
           "emphasis": "muted",
-          "content": "3 of 8"
+          "binding": "nav.position"
         },
         {
           "id": "channel-label",
@@ -2694,12 +2806,12 @@
           "content": "Config > Sensors"
         },
         {
-          "id": "channel-of",
+          "id": "nav-position",
           "kind": "text",
-          "x": 170,
+          "x": 168,
           "y": 2,
           "emphasis": "muted",
-          "content": "4 of 8"
+          "binding": "nav.position"
         },
         {
           "id": "channel-label",
@@ -2818,12 +2930,12 @@
           "content": "Config > Sensors"
         },
         {
-          "id": "channel-of",
+          "id": "nav-position",
           "kind": "text",
-          "x": 170,
+          "x": 168,
           "y": 2,
           "emphasis": "muted",
-          "content": "5 of 8"
+          "binding": "nav.position"
         },
         {
           "id": "channel-label",
@@ -2942,12 +3054,12 @@
           "content": "Config > Sensors"
         },
         {
-          "id": "channel-of",
+          "id": "nav-position",
           "kind": "text",
-          "x": 170,
+          "x": 168,
           "y": 2,
           "emphasis": "muted",
-          "content": "6 of 8"
+          "binding": "nav.position"
         },
         {
           "id": "channel-label",
@@ -3066,12 +3178,12 @@
           "content": "Config > Sensors"
         },
         {
-          "id": "channel-of",
+          "id": "nav-position",
           "kind": "text",
-          "x": 170,
+          "x": 168,
           "y": 2,
           "emphasis": "muted",
-          "content": "7 of 8"
+          "binding": "nav.position"
         },
         {
           "id": "channel-label",
@@ -3190,12 +3302,12 @@
           "content": "Config > Sensors"
         },
         {
-          "id": "channel-of",
+          "id": "nav-position",
           "kind": "text",
-          "x": 170,
+          "x": 168,
           "y": 2,
           "emphasis": "muted",
-          "content": "8 of 8"
+          "binding": "nav.position"
         },
         {
           "id": "channel-label",
@@ -3314,6 +3426,14 @@
           "content": "Config > Sensors"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "back-label",
           "kind": "text",
           "x": 2,
@@ -3398,9 +3518,17 @@
           "content": "Sensor > Connected"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "sensor-index",
           "kind": "value",
-          "x": 200,
+          "x": 210,
           "y": 2,
           "binding": "config.selectedSensor"
         },
@@ -3504,6 +3632,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "Edit > Connected"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "pending-label",
@@ -3620,9 +3756,17 @@
           "content": "Sensor > Calibration"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "sensor-index",
           "kind": "value",
-          "x": 200,
+          "x": 210,
           "y": 2,
           "binding": "config.selectedSensor"
         },
@@ -3734,6 +3878,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "Edit > Calibration"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "pending-label",
@@ -3858,9 +4010,17 @@
           "content": "Sensor > Pulses per litre"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "sensor-index",
           "kind": "value",
-          "x": 200,
+          "x": 210,
           "y": 2,
           "binding": "config.selectedSensor"
         },
@@ -3972,6 +4132,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "Edit > Pulses per litre"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "pending-label",
@@ -4096,9 +4264,17 @@
           "content": "Sensor > Multiplier (F)"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "sensor-index",
           "kind": "value",
-          "x": 200,
+          "x": 210,
           "y": 2,
           "binding": "config.selectedSensor"
         },
@@ -4242,6 +4418,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "Edit > Multiplier (F)"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "pending-label",
@@ -4406,9 +4590,17 @@
           "content": "Sensor > Adjust"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "sensor-index",
           "kind": "value",
-          "x": 200,
+          "x": 210,
           "y": 2,
           "binding": "config.selectedSensor"
         },
@@ -4552,6 +4744,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "Edit > Adjust"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "pending-label",
@@ -4716,9 +4916,17 @@
           "content": "Sensor > Max Flow (Q)"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "sensor-index",
           "kind": "value",
-          "x": 200,
+          "x": 210,
           "y": 2,
           "binding": "config.selectedSensor"
         },
@@ -4862,6 +5070,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "Edit > Max Flow (Q)"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "pending-label",
@@ -5026,6 +5242,14 @@
           "content": "Sensor"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "back-label",
           "kind": "text",
           "x": 2,
@@ -5108,6 +5332,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "WiFi"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "line-1",
@@ -5201,6 +5433,14 @@
           "content": "MQTT"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "line-1",
           "kind": "text",
           "x": 2,
@@ -5289,6 +5529,14 @@
           "x": 2,
           "y": 2,
           "content": "WiFi > WiFi"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "row0-label",
@@ -5420,6 +5668,14 @@
           "content": "WiFi > WiFi link"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "row0-label",
           "kind": "text",
           "x": 2,
@@ -5518,6 +5774,14 @@
           "content": "WiFi > Reset portal login"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "footer-hint",
           "kind": "text",
           "x": 2,
@@ -5593,6 +5857,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "WiFi"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "back-label",
@@ -5677,6 +5949,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "WiFi > AP info"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "row0-label",
@@ -5802,6 +6082,14 @@
           "x": 2,
           "y": 2,
           "content": "MQTT > MQTT"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "row0-label",
@@ -5933,6 +6221,14 @@
           "content": "MQTT > MQTT broker"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "row0-label",
           "kind": "text",
           "x": 2,
@@ -6062,6 +6358,14 @@
           "content": "MQTT > MQTT publish"
         },
         {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
           "id": "row0-label",
           "kind": "text",
           "x": 2,
@@ -6174,6 +6478,14 @@
           "y": 2,
           "emphasis": "strong",
           "content": "MQTT"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
         },
         {
           "id": "back-label",

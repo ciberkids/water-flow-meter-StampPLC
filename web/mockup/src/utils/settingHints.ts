@@ -216,6 +216,37 @@ export function stepWithin(saved: number, step: number, min?: number, max?: numb
 }
 
 /**
+ * `adjustSetting` (`ui_settings_types.cpp:176-202`), in TypeScript.
+ *
+ * Numerics CLAMP at their ends and enums CYCLE — the §5.4 distinction, and it matters in both
+ * directions: holding UP on a max flow of 65535 must not roll it round to zero, while Parity must
+ * come back to None after Odd or the third option is unreachable without going backwards.
+ *
+ * Enums step through the option LIST rather than arithmetic on the value, because the stored numbers
+ * need not be contiguous — LED pulse volume is 1 / 10 / 100.
+ */
+export function adjustSettingRaw(
+  definition: FirmwareValueDefinition,
+  raw: number,
+  delta: number
+): number {
+  // A NUMBER with options (baud, stop bits, QoS, LED volume) still CYCLES: the firmware decides by
+  // SettingKind, where those are Enum rather than Numeric. The manifest flattens kind to `type`, so
+  // the presence of an option list is what stands in for it — a numeric with a fixed set is an enum.
+  const options = definition.options;
+  if (options && options.length > 0) {
+    let index = options.findIndex((option) => option.value === raw);
+    if (index < 0) index = 0;
+    const count = options.length;
+    const step = delta >= 0 ? 1 : -1;
+    return options[(((index + step) % count) + count) % count].value;
+  }
+  const min = definition.min ?? Number.NEGATIVE_INFINITY;
+  const max = definition.max ?? Number.POSITIVE_INFINITY;
+  return Math.min(Math.max(raw + delta, min), max);
+}
+
+/**
  * The setting a screen is about, or undefined for a screen that edits nothing.
  *
  * Found by ASKING THE MANIFEST which of the screen's bindings is a setting, rather than by

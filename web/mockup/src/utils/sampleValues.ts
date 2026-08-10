@@ -43,10 +43,10 @@ const kByBinding: Record<string, string> = {
   "config.selectedSensor": "3",
   "config.uartFrameSummary": "8N1",
   "config.sensor.nyquistWarning": "",
-  // The formula line's two derived pieces (§7.8). Both read "--" on a channel calibrated by pulses
-  // per litre, which is how the calibration choice becomes visible on the rows it disables.
-  "config.sensor.adjustTerm": "- 8",
-  "config.sensor.formulaQ": "Q 0..150 L/m",
+  // `L2 3/8` — depth, then entry within the level. Six characters is also the declared worst case,
+  // which matters: with no sample this fell back to the generic string "(not set)", nine characters,
+  // and the geometry audit correctly reported it colliding with the sensor number beside it.
+  "nav.position": "L2 3/8",
   "page.title": "System Status",
   "legend.led": "G ready  R volume  B card",
   "countdown.value": "3"

@@ -1031,6 +1031,13 @@
       "description": "Active sampling-warning summary"
     },
     {
+      "id": "nav.position",
+      "category": "derived",
+      "type": "string",
+      "readOnly": true,
+      "description": "Navigation depth and position within the current level"
+    },
+    {
       "id": "page.title",
       "category": "derived",
       "type": "string",

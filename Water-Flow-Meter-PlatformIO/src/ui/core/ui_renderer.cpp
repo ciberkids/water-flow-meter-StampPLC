@@ -363,36 +363,62 @@ void UiRenderer::drawIconElement(const ui_exporter::Element& element,
   }
 }
 
+/**
+ * FOUR dots in a chase, at a rate set by the aggregate flow.
+ *
+ * It drew TWO, alternating left/right, while the agreed design (and the mockup, and the spec's
+ * rendered gallery) had four advancing. The panel and the requirement had drifted, and the panel was
+ * the one an operator would see.
+ *
+ * Geometry is derived from the element rather than from its ends: `spacing = width / 4` and
+ * `radius = min(spacing, height) / 3`, so four dots fit whatever box the dataset gives them. The old
+ * version placed dots at `x + radius` and `x + width - radius` with `radius = min(w,h)/4`, which only
+ * ever described two.
+ *
+ * Colour comes from the palette, not from literals. The previous code hardcoded 0xF800 and 0x001F,
+ * so a theme change moved every other element and left these two dots behind.
+ */
 void UiRenderer::drawFlowDots(const ui_exporter::Element& element,
                               const UiRenderContext& context) {
   auto& display = M5StamPLC.Display;
+  constexpr int kDotCount = 4;
+  const int spacing = (element.width > 0 ? element.width : 40) / kDotCount;
+  const int height = element.height > 0 ? element.height : 12;
+  const int radius = std::max(1, std::min(spacing, height) / 3);
+  const int16_t centerY = static_cast<int16_t>(element.y + height / 2);
   const bool active = context.aggregateFlowLps > 0.001;
-  const int16_t centerY = element.y + (element.height / 2);
-  const int16_t radius = std::min(element.width, element.height) / 4;
-  const int16_t leftX = element.x + radius;
-  const int16_t rightX = element.x + element.width - radius;
 
-  if (!active) {
-    // Single red dot when no flow
-    display.fillCircle(leftX, centerY, radius, 0xF800); // Red
-    display.fillCircle(rightX, centerY, radius, badgeBackgroundColor_); // Clear second dot
+  /**
+   * ONE STEP PER REPAINT, not a rate derived from the flow.
+   *
+   * The obvious version computes a step period from the flow — 25 ms at the 10 L/s clamp — and reads
+   * `millis()` against it. That cannot work here: an info page repaints at 1 Hz
+   * (kRefreshIntervalMs), so a 25 ms counter is sampled forty times slower than it advances and the
+   * "chase" arrives as a different arbitrary dot each second. It looks like noise because it IS
+   * noise — the phase is aliased past recognition.
+   *
+   * Advancing once per painted frame makes the motion mean what it appears to mean: each frame the
+   * panel draws moves the chase one place. Flow decides WHETHER it moves, and the repaint rate
+   * decides how fast — which is the only rate a viewer can actually perceive.
+   */
+  int litIndex = -1;
+  if (active) {
+    litIndex = static_cast<int>(flowDotPhase_ % kDotCount);
+    flowDotPhase_ += 1;
   } else {
-    // Alternating blue dots based on flow rate
-    const uint32_t nowMs = millis();
-    float flow = context.aggregateFlowLps;
-    if (flow < 0.1f) flow = 0.1f;
-    if (flow > 10.0f) flow = 10.0f;
-    
-    const uint32_t periodMs = static_cast<uint32_t>(1000.0f / flow);
-    const bool phase = (nowMs % periodMs) < (periodMs / 2);
-    
-    uint16_t blueColor = 0x001F; // Blue in RGB565
-    if (phase) {
-      display.fillCircle(leftX, centerY, radius, blueColor);
-      display.fillCircle(rightX, centerY, radius, badgeBackgroundColor_);
+    // Reset so flow always restarts the chase at the first dot rather than wherever it stopped.
+    flowDotPhase_ = 0;
+  }
+
+  for (int i = 0; i < kDotCount; ++i) {
+    const int16_t cx = static_cast<int16_t>(element.x + spacing / 2 + i * spacing);
+    if (i == litIndex) {
+      display.fillCircle(cx, centerY, radius, highlightColor_);
     } else {
-      display.fillCircle(leftX, centerY, radius, badgeBackgroundColor_);
-      display.fillCircle(rightX, centerY, radius, blueColor);
+      // An OUTLINE for the unlit dots rather than a filled background circle. Filling them with the
+      // badge background painted four opaque discs over whatever the screen had there, which on a
+      // themed background read as four holes.
+      display.drawCircle(cx, centerY, radius, legendColor_);
     }
   }
 }

@@ -175,9 +175,24 @@ void handleNavBack(const UiActionContext& ctx, const ui_exporter::Flow&) {
   }
 }
 
+/**
+ * Long ENTER ascends ONE level, not all of them.
+ *
+ * It called `escape()`, which clears the whole stack and lands on P0 from any depth — so holding
+ * ENTER three levels deep in the sensor settings threw the operator out to the status page, and they
+ * had to walk back down to see the change they had just made. One level up is what a hold means
+ * everywhere else in the tree; it is already what the editor's `hold=cancel` does. Repeated holds
+ * still walk out to the top for anyone who wants that.
+ *
+ * `escape()` itself stays and keeps its meaning — the BtnA+BtnB display-off gesture resets
+ * navigation to P0 by that path (§3.1), which is a different thing and still resets fully.
+ *
+ * `endEdit()` first, unconditionally: a hold over an open editor discards the pending value, which is
+ * what the editor footer promises, and it must happen whether or not there is a level to ascend to.
+ */
 void handleNavEscape(const UiActionContext& ctx, const ui_exporter::Flow&) {
   ctx.controller.endEdit();
-  ctx.controller.navigator().escape();
+  ctx.controller.navigator().ascend();
   ctx.controller.setMode(UiMode::Info, ctx.nowMs);
   ctx.controller.syncPageFromScreen(ctx.controller.navigator().current(), ctx.nowMs);
 }

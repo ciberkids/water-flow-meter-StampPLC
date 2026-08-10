@@ -13,6 +13,16 @@
       "bound": "fixed literal"
     },
     {
+      "id": "nav-position",
+      "kind": "text",
+      "x": 168,
+      "y": 2,
+      "emphasis": "muted",
+      "binding": "nav.position",
+      "worst": "L3 8/8",
+      "bound": "depth 0..3 (UiNavigator::kMaxDepth) and position within a ring of at most 8"
+    },
+    {
       "id": "row0-label",
       "kind": "text",
       "x": 2,

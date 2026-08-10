@@ -122,6 +122,14 @@ class UiRenderer {
    * is dark, so there is nothing to see.
    */
   bool idlePainted_ = false;
+  /**
+   * Which flow dot is lit, advanced once per painted frame (see drawFlowDots).
+   *
+   * Mutable from a const draw path, so it is `mutable`: the phase is presentation state, not device
+   * state, and threading it through UiRenderContext would put a renderer detail into the snapshot
+   * every other consumer reads.
+   */
+  mutable uint32_t flowDotPhase_ = 0;
   const ui::UiScreenRouter* screenRouter_ = nullptr;
   const ui::UiBindingResolver* bindingResolver_ = nullptr;
   plc::SpiArbiter* spiArbiter_ = nullptr;

@@ -1658,13 +1658,41 @@ select {
 .screen-selector {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  /* Tighter than the old 0.5rem: the list is a TREE now, and generous gaps between rows fight the
+     indentation by making siblings look as separated as cousins. */
+  gap: 0.2rem;
+}
+
+/* The path label — `6-7-1-2` — so the nesting is readable even where indentation runs out of room. */
+.screen-selector__row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.screen-selector__path {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  opacity: 0.55;
+  font-variant-numeric: tabular-nums;
+}
+
+.screen-selector__desc {
+  font-size: 0.72rem;
+  opacity: 0.62;
+  /* Two lines at most. A 63-row tree whose descriptions run to four lines each cannot be scanned,
+     and the description is context rather than the thing being chosen. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .screen-selector button {
   text-align: left;
   border: 0;
-  padding: 0.6rem 0.75rem;
+  /* Left padding is set inline, from the node's depth. */
+  padding: 0.4rem 0.6rem;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.05);
   color: inherit;

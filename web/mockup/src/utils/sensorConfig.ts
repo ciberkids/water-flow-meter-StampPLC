@@ -313,6 +313,89 @@ const kPerSensorSettings: Record<string, PerSensorSettingDescriptor> = {
   "config.sensor.pulsesPerLiter": { field: "pulsesPerLitre", unit: "p/L" }
 };
 
+/**
+ * The integer a per-sensor setting currently holds, for the sensor selected.
+ *
+ * The read counterpart of `writeSensorSetting`, and descriptor-driven for the same reason: an editor
+ * has to start from the value in force, and a hard-coded field chain would start the two newest
+ * settings from nothing.
+ */
+export function readSensorSettingRaw(
+  table: readonly SimulatedSensor[],
+  sensorNumber: number,
+  definition: FirmwareValueDefinition
+): number {
+  const descriptor = kPerSensorSettings[definition.id];
+  if (!descriptor) {
+    return 0;
+  }
+  return readSettingValue(descriptor, table, sensorNumber);
+}
+
+/**
+ * Parses a typed string into the integer the device would store, and writes it.
+ *
+ * DESCRIPTOR-DRIVEN, deliberately. This replaced a hard-coded chain in App.tsx that named four
+ * bindings and dropped anything else — and whose own comment predicted the failure: "a fifth entry
+ * in the manifest would otherwise silently land in qMaxLpm". The calibration branch added a fifth
+ * and a sixth, so setting Calibration to Pulses/L in the values panel did nothing at all, silently,
+ * while the input went on showing the typed text.
+ *
+ * An OPTION is matched by its label first, because that is what the panel displays: the row reads
+ * `Pulses/L`, so `Pulses/L` is what a person types back. Matching only the stored number would make
+ * the field unwritable by anyone reading it.
+ *
+ * Returns the table unchanged when the binding is not a per-sensor setting, when no sensor is
+ * selected, or when the text parses to nothing — a write that cannot be honoured must not guess.
+ */
+export function writeSensorSetting(
+  table: readonly SimulatedSensor[],
+  sensorNumber: number,
+  definition: FirmwareValueDefinition | undefined,
+  text: string
+): SimulatedSensor[] {
+  const base = [...table];
+  if (!definition || !isPerSensorSetting(definition)) {
+    return base;
+  }
+  const descriptor = kPerSensorSettings[definition.id];
+  if (!descriptor || !sensorAt(table, sensorNumber)) {
+    return base;
+  }
+
+  const trimmed = text.trim();
+  let raw: number | undefined;
+
+  const options = definition.options ?? descriptor.options;
+  if (options && options.length > 0) {
+    const byLabel = options.find((o) => o.label.toLowerCase() === trimmed.toLowerCase());
+    if (byLabel) {
+      raw = byLabel.value;
+    } else {
+      const numeric = Number.parseInt(trimmed, 10);
+      raw = options.find((o) => o.value === numeric)?.value;
+    }
+  } else {
+    const numeric = Number.parseInt(trimmed, 10);
+    if (Number.isFinite(numeric)) {
+      // Clamped to the DESCRIPTOR's domain, not the storage type's. The panel must not hold a value
+      // the device's own editor would refuse — a multiplier of 0 is an int16 but not a legal
+      // multiplier, and it would leave the channel unable to produce a reading.
+      const min = definition.min ?? Number.NEGATIVE_INFINITY;
+      const max = definition.max ?? Number.POSITIVE_INFINITY;
+      raw = Math.min(Math.max(numeric, min), max);
+    }
+  }
+  if (raw === undefined || !Number.isFinite(raw)) {
+    return base;
+  }
+
+  if (descriptor.field === "connected") {
+    return setSensor(table, sensorNumber, { connected: raw !== 0 });
+  }
+  return setSensor(table, sensorNumber, { [descriptor.field]: raw });
+}
+
 /** `formatSetting` — option label if one matches the value, else the integer; unit appended. */
 function formatSettingValue(descriptor: PerSensorSettingDescriptor, value: number): string {
   // ui/core/ui_settings_types.cpp:164-188. `%ld` of an int32_t, so no decimals: every stored
@@ -450,6 +533,28 @@ export function resolveSensorBinding(
   if (binding === "config.selectedSensor") {
     // "-" for none, the number otherwise (ui/core/ui_bindings.cpp:386-392).
     return sensorAt(table, sensorIndex) ? `${sensorIndex}` : "-";
+  }
+
+  /**
+   * The formula line's two derived pieces, mirroring `ui_bindings.cpp`'s arm exactly.
+   *
+   * They were served from the static sample table, which made them the ONLY per-sensor values on
+   * the screen that ignored the selected sensor: S4 showed `F = 0 *Q - 8  Q 0..150 L/m` — a
+   * multiplier read from memory beside an adjust and a range read from nowhere. Both now follow
+   * memory, so the whole row moves together.
+   *
+   * `--` in two cases, both the firmware's: no sensor implied by the navigation, and a channel
+   * calibrated by pulses per litre, which has no formula for a term to belong to.
+   */
+  if (binding === "config.sensor.adjustTerm" || binding === "config.sensor.formulaQ") {
+    const sensor = sensorAt(table, sensorIndex);
+    if (!sensor || sensor.calibration !== 0) {
+      return "--";
+    }
+    if (binding === "config.sensor.adjustTerm") {
+      return `${sensor.adjust < 0 ? "-" : "+"} ${Math.abs(Math.trunc(sensor.adjust))}`;
+    }
+    return `Q 0..${Math.trunc(sensor.qMaxLpm)} L/m`;
   }
 
   if (binding === "config.sensor.undersamplingFlag") {

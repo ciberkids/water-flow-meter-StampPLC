@@ -159,18 +159,28 @@ describe("per-sensor settings", () => {
     expect(isPerSensorSetting(undefined)).toBe(false);
   });
 
-  it("resolves the four per-sensor settings plus the derived undersampling flag, and declines the rest", () => {
+  it("resolves every per-sensor setting plus the three derived per-sensor values, and declines the rest", () => {
     // Resolving an id and it being an editable SETTING are different questions, and this test used to
-    // assert they were the same set. They differ by exactly one member: `config.sensor.undersamplingFlag`
-    // is per-sensor and resolvable (it reads a diagnostics bit) but is derived and read-only, which is
-    // what the assertions above already say.
+    // assert they were the same set. They differ by the DERIVED per-sensor values: they read sensor
+    // state and so must resolve, but they are read-only.
+    //
+    // Listing them explicitly is the point. This assertion is what caught `config.sensor.calibrationType`
+    // and `config.sensor.pulsesPerLiter` missing from kPerSensorSettings when the calibration branch
+    // landed — without it both would have fallen through to the static sample path and stopped tracking
+    // the sensor table, which is exactly what `adjustTerm` and `formulaQ` were doing until they were
+    // moved here.
+    const derived = [
+      "config.sensor.undersamplingFlag",
+      "config.sensor.adjustTerm",
+      "config.sensor.formulaQ"
+    ];
     const resolved = values
       .filter((value) => value.id.startsWith("config.sensor."))
       .filter((value) => resolveSensorBinding(value.id, createSensorTable(), 3) !== undefined)
       .map((value) => value.id)
       .sort();
     const settings = values.filter(isPerSensorSetting).map((value) => value.id);
-    expect(resolved).toEqual([...settings, "config.sensor.undersamplingFlag"].sort());
+    expect(resolved).toEqual([...settings, ...derived].sort());
 
     // And the one per-sensor-FLAGGED id that is really editor state must be DECLINED, so the caller
     // falls back instead of being handed sensor state that does not exist.

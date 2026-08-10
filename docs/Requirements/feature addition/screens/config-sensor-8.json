@@ -14,14 +14,14 @@
       "bound": "fixed literal"
     },
     {
-      "id": "channel-of",
+      "id": "nav-position",
       "kind": "text",
-      "x": 170,
+      "x": 168,
       "y": 2,
       "emphasis": "muted",
-      "content": "8 of 8",
-      "worst": "8 of 8",
-      "bound": "fixed literal"
+      "binding": "nav.position",
+      "worst": "L3 8/8",
+      "bound": "depth 0..3 (UiNavigator::kMaxDepth) and position within a ring of at most 8"
     },
     {
       "id": "channel-label",

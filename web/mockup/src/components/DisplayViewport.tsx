@@ -10,7 +10,6 @@ interface DisplayViewportProps {
   layout: LayoutReport;
   zoomPercent: number;
   showGrid: boolean;
-  valueOverrides?: Record<string, string>;
   /**
    * Every binding's value as resolved from the simulated device memory, keyed by binding id.
    *
@@ -44,6 +43,25 @@ interface DisplayViewportProps {
    * keep rendering.
    */
   powered?: boolean;
+  /**
+   * Aggregate flow in L/s, which sets the flow-dot chase rate exactly as `drawFlowDots` does.
+   *
+   * Undefined or zero leaves the dots unlit, which is what the device shows with no flow.
+   */
+  aggregateFlowLps?: number;
+  /**
+   * Whether the firmware loop is advancing.
+   *
+   * The chase only animates while it is, because the dots are driven by `millis()` on the device —
+   * a stopped loop is a stopped panel, and animating one would show motion the device could not
+   * produce.
+   */
+  animating?: boolean;
+  /**
+   * Repaints so far. The flow-dot chase advances one position per repaint — the only rate the panel
+   * can actually show — rather than on a timer of its own.
+   */
+  repaintCount?: number;
 }
 
 const FRAME_PADDING = 8;
@@ -72,15 +90,36 @@ export function DisplayViewport({
   layout,
   zoomPercent,
   showGrid,
-  valueOverrides,
   boundValues,
   pendingTransition,
   scrollIndicator,
   firmwareValues,
   bindingDisplay = "sample",
-  powered = true
+  powered = true,
+  aggregateFlowLps = 0,
+  animating = false,
+  repaintCount = 0
 }: DisplayViewportProps) {
   const { theme } = useTheme();
+
+  /**
+   * The chase index, advanced on a timer while the loop runs.
+   *
+   * Clamps and period are the firmware's: one full chase per 1/flow seconds, flow pinned to
+   * [0.1, 10] L/s. Below the floor the chase would crawl slower than a repaint can show; above the
+   * ceiling it would step faster than the panel refreshes and read as noise.
+   */
+  /**
+   * Which dot is lit: nothing without flow, the first with flow but a stopped loop, and one step per
+   * repaint while it runs.
+   *
+   * Derived rather than held in state, so there is no timer to fall out of step with the loop and no
+   * second clock in the app. It also means the chase is deterministic: the same tick count always
+   * gives the same frame, which is what makes it reproducible in a screenshot.
+   */
+  const hasFlow = aggregateFlowLps > 0.001;
+  const dotPhase = !hasFlow ? -1 : animating ? repaintCount % 4 : 0;
+
   const orientation = layout.bounds.orientation;
   const scale = useMemo(() => Math.max(zoomPercent / 100, 1), [zoomPercent]);
   const baseWidth = layout.bounds.width;
@@ -159,7 +198,6 @@ export function DisplayViewport({
   const renderElementsForLayout = useCallback(
     (
       layoutToRender: LayoutReport,
-      overrides?: Record<string, string>,
       options?: { scrollIndicator?: string }
     ) =>
       layoutToRender.elements.map((item) => {
@@ -183,14 +221,13 @@ export function DisplayViewport({
           style.display = "block";
         }
 
-        const overrideValue = overrides ? overrides[element.id] : undefined;
         let displayContent = element.content;
 
         if (element.binding) {
           // Resolved from the simulated device memory when we have it, so what the panel draws is what
-          // the device's state says — including `3: --` for a disconnected sensor and `3: WAIT` for one
-          // that is enabled but not ready. `sampleValueFor` remains the fallback for bindings memory
-          // does not model, and is the whole story in `id` mode, which the design tab uses.
+          // the device's state says — including `3: --` for a disconnected sensor and `3: SET?` for one
+          // that is enabled but not calibrated. `sampleValueFor` remains the fallback for bindings
+          // memory does not model, and is the whole story in `id` mode, which the design tab uses.
           const definition = firmwareValues?.find((value) => value.id === element.binding);
           displayContent =
             bindingDisplay === "id"
@@ -199,29 +236,14 @@ export function DisplayViewport({
                 sampleValueFor(element.binding, definition, "sample");
         }
 
-        /* A per-element pin, for elements MEMORY DOES NOT ANSWER.
+        /* The per-element PIN is gone, along with the Value placeholders panel that produced it.
          *
-         * Two changes here, and the second reverses a documented decision on purpose:
-         *
-         *  - Values only, because ValuePlaceholderPanel.tsx:13 filters its list to `kind === "value"`:
-         *    a badge can never HAVE a pin, so widening this gate to badges was dead code, and the comment
-         *    that came with it — claiming the widening is what let P1's status badges render `--` — was
-         *    wrong about its own mechanism. Memory resolution above is what drives those badges, and it
-         *    runs for every kind.
-         *  - Memory now WINS over a pin. The pin used to take precedence so a specific case could be
-         *    held for inspection, which was reasonable when the loop was a flat string map — but it
-         *    meant typing one character into a sensor row, then disconnecting that sensor, left the old
-         *    number on screen while the badge beside it read `--`. Two homes for one fact, override
-         *    winning: exactly what this round removes. To vary a modelled value now, edit memory.
-         *
-         * An EMPTY string is treated as no pin, so clearing the field restores the resolved value rather
-         * than blanking the cell with no way back (Revert is disabled when the element has no `content`).
-         */
-        const hasPin = overrideValue !== undefined && overrideValue !== "";
-        const memoryAnswered = Boolean(element.binding) && boundValues?.[element.binding!] !== undefined;
-        if (element.kind === "value" && hasPin && !memoryAnswered) {
-          displayContent = overrideValue as string;
-        }
+         * It was the last of the two-homes-for-one-fact defects in this file: a pin was a second copy
+         * of a value memory already answered, keyed by element id instead of by binding, so it could
+         * not follow the selected sensor and went stale the moment memory moved. Memory had already
+         * been given precedence over it, which left the pin reachable only for values memory does not
+         * model — and with the panel removed, nothing can set one at all. Editing memory is now the
+         * single way to vary what the panel draws. */
 
         /* §4.3.19 — a withheld reading, detected from the string the device actually draws.
          *
@@ -234,17 +256,10 @@ export function DisplayViewport({
           Boolean(element.binding) &&
           (displayContent === "--" || /:\s+--$/.test(displayContent ?? ""));
 
-        const isOverridden =
-          element.kind === "value" &&
-          hasPin &&
-          !memoryAnswered &&
-          displayContent !== element.content;
-
         const className = [
           "display-element",
           `kind-${element.kind}`,
           item.outOfBounds ? "overflow" : "",
-          isOverridden ? "value-overridden" : "",
           isWithheld ? "value-disabled" : ""
         ]
           .filter(Boolean)
@@ -303,18 +318,21 @@ export function DisplayViewport({
             return (
               <div key={element.id} className={className} style={{ ...style, background: "transparent" }}>
                 <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} style={{ display: "block" }}>
-                  {Array.from({ length: count }, (_, i) => (
-                    <circle
-                      key={i}
-                      cx={spacing / 2 + i * spacing}
-                      cy={h / 2}
-                      r={r}
-                      fill={i === 0 ? theme.colors.value : "none"}
-                      stroke={theme.colors.value}
-                      strokeWidth={0.75}
-                      opacity={i === 0 ? 1 : 0.35}
-                    />
-                  ))}
+                  {Array.from({ length: count }, (_, i) => {
+                    const lit = i === dotPhase;
+                    return (
+                      <circle
+                        key={i}
+                        cx={spacing / 2 + i * spacing}
+                        cy={h / 2}
+                        r={r}
+                        fill={lit ? theme.colors.value : "none"}
+                        stroke={lit ? theme.colors.value : theme.colors.textMuted}
+                        strokeWidth={0.75}
+                        opacity={lit ? 1 : 0.5}
+                      />
+                    );
+                  })}
                 </svg>
               </div>
             );
@@ -397,7 +415,7 @@ export function DisplayViewport({
               surface is the faithful render, and any "display off" wording belongs to the chrome outside
               this frame. (The dataset's state-idle screen carries a "- Display off -" label; that label
               is the dataset being unfaithful, and it is not what we draw here.) */}
-          {powered ? renderElementsForLayout(layout, valueOverrides, { scrollIndicator }) : null}
+          {powered ? renderElementsForLayout(layout, { scrollIndicator }) : null}
           {pendingTransition ? (
             <div
               className={`transition-overlay transition-overlay--${pendingTransition.effect}`}

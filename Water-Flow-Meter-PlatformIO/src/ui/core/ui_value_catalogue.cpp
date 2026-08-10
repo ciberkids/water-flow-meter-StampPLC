@@ -111,6 +111,15 @@ constexpr SimpleValue kSimpleValues[] = {
      ValueSource::UiState, false, "Combined WiFi, MQTT and LED-pulse legend for the status page"},
     {"legend.warning", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
      ValueSource::UiState, false, "Active sampling-warning summary"},
+    /**
+     * Where in the tree the operator is: `L2 3/8` — level 2, entry 3 of 8.
+     *
+     * The scrollbar shows the position within a level but says nothing about DEPTH, so three levels
+     * into the sensor settings the panel looked identical to one level into the config root. The
+     * title carries the crumb and this carries the coordinates.
+     */
+    {"nav.position", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
+     ValueSource::UiState, false, "Navigation depth and position within the current level"},
     {"page.title", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
      ValueSource::UiState, false, "Title of the current page"},
     {"countdown.value", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,

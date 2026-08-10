@@ -21,6 +21,8 @@ interface ValueBinding {
   description?: string;
   category?: string;
   perSensor?: boolean;
+  /** The descriptor's fixed set, where it has one — rendered as a dropdown rather than a text box. */
+  options?: { label: string; value: number }[];
 }
 
 /**
@@ -154,6 +156,8 @@ export function FirmwareValuesPanel({
    */
   const renderRow = (binding: ValueBinding) => {
     const editable = canEdit(binding.id);
+    // Every value whose domain is a fixed ring: the enums, and the booleans, which carry Off/On.
+    const options = binding.options ?? [];
     const resolved = values[binding.id] ?? "";
     const editing = draft?.id === binding.id;
     const shown = editing ? draft.text : resolved;
@@ -171,7 +175,26 @@ export function FirmwareValuesPanel({
         <label htmlFor={`value-${binding.id}`} title={binding.description ?? binding.id}>
           {shortLabel(binding.id)}
         </label>
-        {editable ? (
+        {editable && options.length > 0 ? (
+          /**
+           * A SELECT wherever the value has a fixed set, because a free text box for one is a
+           * guessing game. `Pulses/L` has to be typed exactly — including the slash and the case —
+           * and typing it wrong looked identical to typing it right: the box kept the text and the
+           * device ignored it. The list is the descriptor's own options, so it cannot drift from
+           * what the device will accept, and the labels are the ones the panel already displays.
+           */
+          <select
+            id={`value-${binding.id}`}
+            value={options.find((option) => resolved.startsWith(option.label))?.label ?? ""}
+            onChange={(event) => onValueChange(binding.id, event.target.value)}
+          >
+            {options.map((option) => (
+              <option key={option.value} value={option.label}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        ) : editable ? (
           <input
             id={`value-${binding.id}`}
             type="text"
