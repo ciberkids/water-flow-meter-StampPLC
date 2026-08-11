@@ -1,7 +1,7 @@
 {
-  "id": "config-c6-led-pulse-period",
-  "name": "C6 \u2014 LED Pulse Period",
-  "description": "Config root entry C6. ENTER descends; UP/DOWN move within the level. \u2014 laid out to the \u00a77 setting template.",
+  "id": "config-display-led-volume",
+  "name": "D1 \u2014 LED Pulse Volume",
+  "description": "Config root entry C5. ENTER descends; UP/DOWN move within the level. \u2014 laid out to the \u00a77 setting template.",
   "elements": [
     {
       "id": "hdr-title",
@@ -9,8 +9,8 @@
       "x": 2,
       "y": 2,
       "emphasis": "strong",
-      "content": "Config > LED Pulse Period",
-      "worst": "Config > LED Pulse Period",
+      "content": "Display > LED Pulse Volume",
+      "worst": "Display > LED Pulse Volume",
       "bound": "fixed literal"
     },
     {
@@ -29,9 +29,9 @@
       "x": 2,
       "y": 24,
       "emphasis": "strong",
-      "binding": "config.ledPulsePeriod",
-      "worst": "2000 ms",
-      "bound": "descriptor max with its unit"
+      "binding": "config.ledPulseVolume",
+      "worst": "100 L",
+      "bound": "widest volume option with its unit"
     },
     {
       "id": "range-hint",

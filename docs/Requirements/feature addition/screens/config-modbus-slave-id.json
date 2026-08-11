@@ -1,6 +1,6 @@
 {
-  "id": "config-c1-modbus-id",
-  "name": "C1 \u2014 Modbus ID",
+  "id": "config-modbus-slave-id",
+  "name": "M1 \u2014 Modbus ID",
   "description": "TEMPLATE for every setting page. Title names the setting, so the value needs no label; the range gives context before editing.",
   "elements": [
     {
@@ -9,8 +9,8 @@
       "x": 2,
       "y": 2,
       "emphasis": "strong",
-      "content": "Config > Modbus ID",
-      "worst": "Config > LED pulse period",
+      "content": "Modbus > Modbus ID",
+      "worst": "Modbus > Modbus ID",
       "bound": "longest setting name in the config tree, breadcrumbed"
     },
     {

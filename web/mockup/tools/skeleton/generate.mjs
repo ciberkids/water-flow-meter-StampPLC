@@ -148,27 +148,55 @@ const RING_NAMES = {
 
 const screens = [];
 
-// ── L1 Config root: C1..C7 + BACK ───────────────────────────────────────────
-const DEVICE = [
-  { page: "C1", id: "config-c1-modbus-id", title: "Modbus ID", binding: "config.modbusSlaveId" },
-  { page: "C2", id: "config-c2-baud-rate", title: "Baud Rate", binding: "config.baudRate" },
-  { page: "C3", id: "config-c3-parity", title: "Parity", binding: "config.parity" },
-  { page: "C4", id: "config-c4-stop-bits", title: "Stop Bits", binding: "config.stopBits" },
-  { page: "C5", id: "config-c5-led-pulse-vol", title: "LED Pulse Volume", binding: "config.ledPulseVolume" },
-  { page: "C6", id: "config-c6-led-pulse-period", title: "LED Pulse Period", binding: "config.ledPulsePeriod" },
-  /**
-   * How the panel shows flows — a DISPLAY preference (§2a.1: the panel is a view, the wire is the
-   * record). Placed with the LED settings because both are about how the device presents itself,
-   * rather than with the link settings, which describe how it talks.
-   *
-   * Changing it converts what the flow pages draw and moves their header unit with them. It changes
-   * nothing that is stored or published: registers 101 and 115, MQTT, Home Assistant and the
-   * calibration settings all stay in L/min.
-   */
-  { page: "C7", id: "config-c7-flow-unit", title: "Flow unit", binding: "config.flowUnit" },
-  { page: "C8", id: "config-c8-sensor-select", title: "Sensors", binding: null }
+// ── L1 Config root: three GROUPS + BACK ─────────────────────────────────────
+/**
+ * Configuration is three groups, not a flat list of everything.
+ *
+ * It used to be C1..C8: four Modbus settings, two LED settings, the flow unit and a Sensors descent,
+ * all side by side at one level. Eight entries with nothing to say which belonged together, and a
+ * root that mixed leaf settings with a descent — so the operator paged past parity to reach the LED
+ * brightness. The four link settings are one coherent thing, and grouping them is what the WiFi and
+ * MQTT levels already do.
+ *
+ * The three orphans went to DISPLAY rather than staying at the root: two LED indicator settings and
+ * the panel's flow unit are all about how the device PRESENTS itself, as opposed to how it talks
+ * (Modbus) or what it measures (Sensors). Every leaf setting now sits one level below a name that
+ * describes it.
+ *
+ * DEPTH is unchanged at 4, which matters because the navigator caps it. Modbus and Display gain a
+ * level, but the deepest chain was always the sensor one — root, Sensors, channel, settings, editor —
+ * and Sensors was already a descent at the root, so it did not move.
+ *
+ * Ids name their GROUP (`config-modbus-baud-rate`, not `config-c2-baud-rate`). The old scheme
+ * encoded a position, so inserting the flow unit renumbered Sensors from C7 to C8 and every reference
+ * to the old id became quietly wrong. A group name survives a reorder.
+ */
+const CONFIG_GROUPS = [
+  { page: "CFG.M", id: "config-modbus", title: "Modbus", body: "Address, baud, framing",
+    descendTo: "config-modbus-slave-id" },
+  { page: "CFG.D", id: "config-display", title: "Display", body: "LED pulses, flow unit",
+    descendTo: "config-display-led-volume" },
+  { page: "CFG.S", id: "config-sensors", title: "Sensors", body: "Channels 1-8",
+    descendTo: "config-sensor-1" }
 ];
-const CONFIG_RING = [...DEVICE.map((d) => d.id), "config-root-back"];
+const CONFIG_RING = [...CONFIG_GROUPS.map((g) => g.id), "config-root-back"];
+
+/** The serial link: how the device TALKS. */
+const MODBUS_SETTINGS = [
+  { page: "M1", id: "config-modbus-slave-id", title: "Modbus ID", binding: "config.modbusSlaveId" },
+  { page: "M2", id: "config-modbus-baud-rate", title: "Baud Rate", binding: "config.baudRate" },
+  { page: "M3", id: "config-modbus-parity", title: "Parity", binding: "config.parity" },
+  { page: "M4", id: "config-modbus-stop-bits", title: "Stop Bits", binding: "config.stopBits" }
+];
+const MODBUS_RING = [...MODBUS_SETTINGS.map((m) => m.id), "config-modbus-back"];
+
+/** How the device PRESENTS itself: the LED indicator, and the unit the panel shows flows in. */
+const DISPLAY_SETTINGS = [
+  { page: "D1", id: "config-display-led-volume", title: "LED Pulse Volume", binding: "config.ledPulseVolume" },
+  { page: "D2", id: "config-display-led-period", title: "LED Pulse Period", binding: "config.ledPulsePeriod" },
+  { page: "D3", id: "config-display-flow-unit", title: "Flow unit", binding: "config.flowUnit" }
+];
+const DISPLAY_RING = [...DISPLAY_SETTINGS.map((d) => d.id), "config-display-back"];
 
 const editorId = (settingScreenId) => `${settingScreenId}-edit`;
 
@@ -250,38 +278,68 @@ function assertCoversEverySetting(deviceList, sensorList) {
   if (missing.length > 0) {
     throw new Error(
       `the skeleton would violate the completeness rule: no editor screen for ` +
-      `${missing.join(", ")}. Add each to DEVICE (device-wide) or SENSOR_SETTINGS ` +
+      `${missing.join(", ")}. Add each to MODBUS_SETTINGS, DISPLAY_SETTINGS or SENSOR_SETTINGS ` +
       `(per-sensor) in tools/skeleton/generate.mjs, with a title a human can read. ` +
       `(Text and network settings are exempt — they are set via the portal, RS485 or the SD file.)`
     );
   }
 }
 
-DEVICE.forEach((d, i) => {
-  const isDescent = d.binding === null;
-  const target = isDescent ? "config-sensor-1" : editorId(d.id);
-  const v = d.binding ? byId.get(d.binding) : null;
-  const unit = v?.unit ? ` ${v.unit}` : "";
+CONFIG_GROUPS.forEach((g, i) => {
   screens.push({
-    id: d.id,
-    name: `${d.page} — ${d.title}`,
-    description: `Config root entry ${d.page}. ENTER descends; UP/DOWN move within the level.`,
+    id: g.id,
+    name: `${g.page} — ${g.title}`,
+    description: `Config root entry ${g.page}. ENTER descends into the ${g.title} level; ` +
+                 `UP/DOWN move within the root.`,
     elements: [
-      text("hdr-title", L.headerY, `Config > ${d.title}`),
-      text("field-label", L.bodyY, isDescent ? "Select a sensor" : `Current${unit}`, { emphasis: "muted" }),
-      ...(d.binding ? [value("field-value", L.valueY, d.binding, { emphasis: "strong" })]
-                    : [text("field-value", L.valueY, "Sensors 1-8 >", { emphasis: "strong" })]),
-      text("footer-hint", L.footerY,
-        isDescent ? "UP/DN pages  ENTER open" : "UP/DN pages  ENTER edit",
-        { emphasis: "muted" }),
+      text("hdr-title", L.headerY, `Config > ${g.title}`),
+      text("group-body", L.bodyY, g.body, { emphasis: "muted" }),
+      text("group-open", L.valueY, `${g.title} >`, { emphasis: "strong" }),
+      text("footer-hint", L.footerY, "UP/DN pages  ENTER open", { emphasis: "muted" }),
       scrollbar()
     ],
     flows: [
       ...ringFlows(CONFIG_RING, i),
-      btn("f-enter", isDescent ? "Open sensor list" : "Edit value", "enter", "short", A.descend, target)
+      btn("f-enter", `Open ${g.title}`, "enter", "short", A.descend, g.descendTo)
     ]
   });
 });
+
+/**
+ * A level of leaf SETTINGS: a page per setting, each descending into its own editor.
+ *
+ * One emitter for Modbus and Display, because the two levels are the same shape. The old code had
+ * this inline in the config-root loop with an `isDescent` branch threaded through it, which is what
+ * let a descent and a leaf setting share a level in the first place.
+ */
+function emitSettingLevel({ items, ring, crumb, backId, backName }) {
+  items.forEach((item, i) => {
+    const v = byId.get(item.binding);
+    if (!v) throw new Error(`catalogue has no value "${item.binding}"`);
+    const unit = v.unit ? ` ${v.unit}` : "";
+    screens.push({
+      id: item.id,
+      name: `${item.page} — ${item.title}`,
+      description: `${crumb} entry ${item.page}. ENTER edits; UP/DOWN move within the level.`,
+      elements: [
+        text("hdr-title", L.headerY, `${crumb} > ${item.title}`),
+        text("field-label", L.bodyY, `Current${unit}`, { emphasis: "muted" }),
+        value("field-value", L.valueY, item.binding, { emphasis: "strong" }),
+        text("footer-hint", L.footerY, "UP/DN pages  ENTER edit", { emphasis: "muted" }),
+        scrollbar()
+      ],
+      flows: [
+        ...ringFlows(ring, i),
+        btn("f-enter", "Edit value", "enter", "short", A.descend, editorId(item.id))
+      ]
+    });
+    screens.push(editorScreen({
+      page: item.page, screenId: editorId(item.id), title: item.title,
+      binding: item.binding, parentId: item.id
+    }));
+  });
+  emitBackRow({ backId, backName, ring, crumb });
+}
 
 // BACK page for the config root
 screens.push({
@@ -300,7 +358,13 @@ screens.push({
   ]
 });
 
-// ── L2 Value editors for C1..C6 ─────────────────────────────────────────────
+// ── L2 The two leaf-setting levels ──────────────────────────────────────────
+emitSettingLevel({ items: MODBUS_SETTINGS, ring: MODBUS_RING, crumb: "Modbus",
+                   backId: "config-modbus-back", backName: "M.BACK — Back" });
+emitSettingLevel({ items: DISPLAY_SETTINGS, ring: DISPLAY_RING, crumb: "Display",
+                   backId: "config-display-back", backName: "D.BACK — Back" });
+
+// ── L3 Value editors ────────────────────────────────────────────────────────
 function editorScreen({ page, screenId, title, binding, parentId, visibleWhen }) {
   const v = byId.get(binding);
   if (!v) throw new Error(`catalogue has no value "${binding}"`);
@@ -339,13 +403,6 @@ function editorScreen({ page, screenId, title, binding, parentId, visibleWhen })
     ]
   };
 }
-
-DEVICE.filter((d) => d.binding).forEach((d) => {
-  screens.push(editorScreen({
-    page: d.page, screenId: editorId(d.id), title: d.title,
-    binding: d.binding, parentId: d.id
-  }));
-});
 
 // ── L2 Sensor list: Sensor 1..8 + BACK ──────────────────────────────────────
 const SENSOR_IDS = [...Array.from({ length: 8 }, (_, i) => `config-sensor-${i + 1}`), "config-sensor-back"];
@@ -721,7 +778,7 @@ function emitLevel({ items, ring, crumb, backId, backName, ringOffset = 0 }) {
 // above this point. Placed before the emit calls so a missing editor fails before any screen is
 // written rather than after. The network settings are exempt by surface (see the function), so the
 // consolidated info pages do not need to be passed in — they contain no editors at all.
-assertCoversEverySetting(DEVICE, SENSOR_SETTINGS);
+assertCoversEverySetting([...MODBUS_SETTINGS, ...DISPLAY_SETTINGS], SENSOR_SETTINGS);
 
 // The WiFi level: two paginated information pages, the portal action, the AP page, then BACK.
 WIFI_INFO_PAGES.forEach((page, i) => {
@@ -946,6 +1003,18 @@ const RETIRED = new Set([
   // branch inserts Calibration at S2 and Pulses per litre at S3, so the three formula rows moved to
   // S4..S6. Same settings, new ids — retired explicitly so the old ids do not survive in `kept` as
   // duplicates bound to the same settings.
+  // The flat C1..C8 config root, replaced by three grouped levels. Ids named a POSITION, which is
+  // exactly why inserting the flow unit renumbered Sensors from C7 to C8 and every reference to the
+  // old id went quietly wrong; the new ids name their group instead. Retired explicitly because
+  // `kept` preserves anything the generator stops emitting.
+  "config-c1-modbus-id", "config-c1-modbus-id-edit",
+  "config-c2-baud-rate", "config-c2-baud-rate-edit",
+  "config-c3-parity", "config-c3-parity-edit",
+  "config-c4-stop-bits", "config-c4-stop-bits-edit",
+  "config-c5-led-pulse-vol", "config-c5-led-pulse-vol-edit",
+  "config-c6-led-pulse-period", "config-c6-led-pulse-period-edit",
+  "config-c7-flow-unit", "config-c7-flow-unit-edit",
+  "config-c7-sensor-select", "config-c8-sensor-select",
   "config-s2-multiplier", "config-s2-multiplier-edit",
   "config-s3-adjust", "config-s3-adjust-edit",
   "config-s4-max-flow", "config-s4-max-flow-edit"
@@ -1027,7 +1096,7 @@ for (const s of kept) {
   const descend = {
     "info-p2-cumulative-m3": "confirm-reset-totals",
     "info-p3-session-m3": "confirm-reset-session",
-    "info-p5-enter-config": "config-c1-modbus-id"
+    "info-p5-enter-config": "config-modbus"
   }[s.id];
   // Every info page gets its ENTER flows rebuilt, not just those with a descent
   // target. P0 and P1 previously kept 0.1-era `ui.action.mode.idle -> state-idle`

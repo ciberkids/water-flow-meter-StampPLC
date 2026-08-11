@@ -1220,7 +1220,7 @@
       "role": "info-page-5 (UiPage::EnterConfiguration)"
     },
     {
-      "id": "config-c1-modbus-id",
+      "id": "config-modbus",
       "role": "configuration-entry"
     },
     {

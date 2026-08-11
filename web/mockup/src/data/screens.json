@@ -932,7 +932,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-c1-modbus-id",
+          "targetScreenId": "config-modbus",
           "actionId": "ui.action.nav.descend"
         }
       ]
@@ -1077,8 +1077,188 @@
       ]
     },
     {
-      "id": "config-c7-sensor-select",
-      "name": "C7 — Sensors",
+      "id": "config-modbus",
+      "name": "CFG.M — Modbus",
+      "description": "Config root entry CFG.M. ENTER descends into the Modbus level: slave address, baud rate, parity and stop bits.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "emphasis": "strong",
+          "content": "Config > Modbus"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
+          "id": "group-body",
+          "kind": "text",
+          "x": 2,
+          "y": 30,
+          "emphasis": "muted",
+          "content": "Address, baud, framing"
+        },
+        {
+          "id": "group-open",
+          "kind": "text",
+          "x": 2,
+          "y": 50,
+          "emphasis": "strong",
+          "content": "Modbus >"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-display",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-root-back",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open Modbus",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-slave-id",
+          "actionId": "ui.action.nav.descend"
+        }
+      ]
+    },
+    {
+      "id": "config-display",
+      "name": "CFG.D — Display",
+      "description": "Config root entry CFG.D. ENTER descends into the Display level: the LED pulse settings and the unit the panel shows flows in.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "emphasis": "strong",
+          "content": "Config > Display"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
+          "id": "group-body",
+          "kind": "text",
+          "x": 2,
+          "y": 30,
+          "emphasis": "muted",
+          "content": "LED pulses, flow unit"
+        },
+        {
+          "id": "group-open",
+          "kind": "text",
+          "x": 2,
+          "y": 50,
+          "emphasis": "strong",
+          "content": "Display >"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensors",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open Display",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-display-led-volume",
+          "actionId": "ui.action.nav.descend"
+        }
+      ]
+    },
+    {
+      "id": "config-sensors",
+      "name": "CFG.S — Sensors",
       "description": "Config root entry C7. ENTER opens the sensor selector, where UP/DOWN pages through the eight channels and ENTER opens the settings of the one shown.",
       "elements": [
         {
@@ -1158,748 +1338,12 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-c6-led-pulse-period",
+          "targetScreenId": "config-display",
           "actionId": "ui.action.page.previous"
         },
         {
           "id": "f-enter",
-          "label": "Open sensor list",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-sensor-1",
-          "actionId": "ui.action.nav.descend"
-        }
-      ]
-    },
-    {
-      "id": "config-c1-modbus-id",
-      "name": "C1 — Modbus ID",
-      "description": "TEMPLATE for every setting page. Title names the setting, so the value needs no label; the range gives context before editing.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "Config > Modbus ID"
-        },
-        {
-          "id": "nav-position",
-          "kind": "text",
-          "x": 168,
-          "y": 2,
-          "emphasis": "muted",
-          "binding": "nav.position"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.modbusSlaveId"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 44,
-          "emphasis": "muted",
-          "binding": "config.editor.range"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "UP/DN pages  ENTER edit"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c2-baud-rate",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-root-back",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c1-modbus-id-edit",
-          "actionId": "ui.action.nav.descend"
-        }
-      ]
-    },
-    {
-      "id": "config-c2-baud-rate",
-      "name": "C2 — Baud Rate",
-      "description": "Config root entry C2. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "Config > Baud Rate"
-        },
-        {
-          "id": "nav-position",
-          "kind": "text",
-          "x": 168,
-          "y": 2,
-          "emphasis": "muted",
-          "binding": "nav.position"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.baudRate"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 44,
-          "emphasis": "muted",
-          "binding": "config.editor.range"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "UP/DN pages  ENTER edit"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c3-parity",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c1-modbus-id",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c2-baud-rate-edit",
-          "actionId": "ui.action.nav.descend"
-        }
-      ]
-    },
-    {
-      "id": "config-c3-parity",
-      "name": "C3 — Parity",
-      "description": "Config root entry C3. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "Config > Parity"
-        },
-        {
-          "id": "nav-position",
-          "kind": "text",
-          "x": 168,
-          "y": 2,
-          "emphasis": "muted",
-          "binding": "nav.position"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.parity"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 44,
-          "emphasis": "muted",
-          "binding": "config.editor.range"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "UP/DN pages  ENTER edit"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c4-stop-bits",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c2-baud-rate",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c3-parity-edit",
-          "actionId": "ui.action.nav.descend"
-        }
-      ]
-    },
-    {
-      "id": "config-c4-stop-bits",
-      "name": "C4 — Stop Bits",
-      "description": "Config root entry C4. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "Config > Stop Bits"
-        },
-        {
-          "id": "nav-position",
-          "kind": "text",
-          "x": 168,
-          "y": 2,
-          "emphasis": "muted",
-          "binding": "nav.position"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.stopBits"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 44,
-          "emphasis": "muted",
-          "binding": "config.editor.range"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "UP/DN pages  ENTER edit"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c5-led-pulse-vol",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c3-parity",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c4-stop-bits-edit",
-          "actionId": "ui.action.nav.descend"
-        }
-      ]
-    },
-    {
-      "id": "config-c5-led-pulse-vol",
-      "name": "C5 — LED Pulse Volume",
-      "description": "Config root entry C5. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "Config > LED Pulse Volume"
-        },
-        {
-          "id": "nav-position",
-          "kind": "text",
-          "x": 168,
-          "y": 2,
-          "emphasis": "muted",
-          "binding": "nav.position"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.ledPulseVolume"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 44,
-          "emphasis": "muted",
-          "binding": "config.editor.range"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "UP/DN pages  ENTER edit"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c6-led-pulse-period",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c4-stop-bits",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c5-led-pulse-vol-edit",
-          "actionId": "ui.action.nav.descend"
-        }
-      ]
-    },
-    {
-      "id": "config-c6-led-pulse-period",
-      "name": "C6 — LED Pulse Period",
-      "description": "Config root entry C6. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "Config > LED Pulse Period"
-        },
-        {
-          "id": "nav-position",
-          "kind": "text",
-          "x": 168,
-          "y": 2,
-          "emphasis": "muted",
-          "binding": "nav.position"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.ledPulsePeriod"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 44,
-          "emphasis": "muted",
-          "binding": "config.editor.range"
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "UP/DN pages  ENTER edit"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c7-flow-unit",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c5-led-pulse-vol",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c6-led-pulse-period-edit",
-          "actionId": "ui.action.nav.descend"
-        }
-      ]
-    },
-    {
-      "id": "config-c7-flow-unit",
-      "name": "C7 — Flow unit",
-      "description": "Config root entry C7. Which unit the panel shows flows in — a display preference: storage, the registers, MQTT and the calibration settings all stay in L/min.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "Config > Flow unit"
-        },
-        {
-          "id": "nav-position",
-          "kind": "text",
-          "x": 168,
-          "y": 2,
-          "emphasis": "muted",
-          "binding": "nav.position"
-        },
-        {
-          "id": "field-value",
-          "kind": "value",
-          "x": 2,
-          "y": 24,
-          "emphasis": "strong",
-          "binding": "config.flowUnit"
-        },
-        {
-          "id": "range-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 44,
-          "emphasis": "muted",
-          "binding": "config.editor.range"
-        },
-        {
-          "id": "context-note",
-          "kind": "text",
-          "x": 2,
-          "y": 66,
-          "emphasis": "muted",
-          "content": "Display only. Modbus stays L/m."
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "UP/DN pages  ENTER edit"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c8-sensor-select",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c6-led-pulse-period",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-enter",
-          "label": "Edit value",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c7-flow-unit-edit",
-          "actionId": "ui.action.nav.descend"
-        }
-      ]
-    },
-    {
-      "id": "config-c8-sensor-select",
-      "name": "C8 — Sensors",
-      "description": "Config root entry C7. ENTER opens the sensor selector, where UP/DOWN pages through the eight channels and ENTER opens the settings of the one shown.",
-      "elements": [
-        {
-          "id": "hdr-title",
-          "kind": "text",
-          "x": 2,
-          "y": 2,
-          "emphasis": "strong",
-          "content": "Config > Sensors"
-        },
-        {
-          "id": "nav-position",
-          "kind": "text",
-          "x": 168,
-          "y": 2,
-          "emphasis": "muted",
-          "binding": "nav.position"
-        },
-        {
-          "id": "body-1",
-          "kind": "text",
-          "x": 2,
-          "y": 30,
-          "emphasis": "strong",
-          "content": "Channels 1-8"
-        },
-        {
-          "id": "body-2",
-          "kind": "text",
-          "x": 2,
-          "y": 50,
-          "emphasis": "muted",
-          "content": "Connection and calibration,"
-        },
-        {
-          "id": "body-3",
-          "kind": "text",
-          "x": 2,
-          "y": 62,
-          "emphasis": "muted",
-          "content": "per channel."
-        },
-        {
-          "id": "footer-hint",
-          "kind": "text",
-          "x": 2,
-          "y": 124,
-          "emphasis": "muted",
-          "content": "UP/DN pages  ENTER open"
-        },
-        {
-          "id": "level-position",
-          "kind": "scrollbar",
-          "x": 232,
-          "y": 14,
-          "width": 5,
-          "height": 100
-        }
-      ],
-      "flows": [
-        {
-          "id": "f-next",
-          "label": "Next entry",
-          "trigger": {
-            "type": "button",
-            "button": "down",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-root-back",
-          "actionId": "ui.action.page.next"
-        },
-        {
-          "id": "f-prev",
-          "label": "Previous entry",
-          "trigger": {
-            "type": "button",
-            "button": "up",
-            "gesture": "short"
-          },
-          "targetScreenId": "config-c7-flow-unit",
-          "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-enter",
-          "label": "Open sensor list",
+          "label": "Open Sensors",
           "trigger": {
             "type": "button",
             "button": "enter",
@@ -1965,7 +1409,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "config-c1-modbus-id",
+          "targetScreenId": "config-modbus",
           "actionId": "ui.action.page.next"
         },
         {
@@ -1976,7 +1420,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-c8-sensor-select",
+          "targetScreenId": "config-sensors",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -1992,8 +1436,98 @@
       ]
     },
     {
-      "id": "config-c1-modbus-id-edit",
-      "name": "C1.V — Edit Modbus ID",
+      "id": "config-modbus-slave-id",
+      "name": "M1 — Modbus ID",
+      "description": "TEMPLATE for every setting page. Title names the setting, so the value needs no label; the range gives context before editing.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "emphasis": "strong",
+          "content": "Modbus > Modbus ID"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
+          "id": "field-value",
+          "kind": "value",
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.modbusSlaveId"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-baud-rate",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-back",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Edit value",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-slave-id-edit",
+          "actionId": "ui.action.nav.descend"
+        }
+      ]
+    },
+    {
+      "id": "config-modbus-slave-id-edit",
+      "name": "M1.V — Edit Modbus ID",
       "description": "TEMPLATE for every value editor. New above Saved, aligned on one column so the change is directly comparable.",
       "elements": [
         {
@@ -2105,7 +1639,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-c1-modbus-id",
+          "targetScreenId": "config-modbus-slave-id",
           "actionId": "config.action.value.commit"
         },
         {
@@ -2116,14 +1650,104 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "config-c1-modbus-id",
+          "targetScreenId": "config-modbus-slave-id",
           "actionId": "config.action.value.discard"
         }
       ]
     },
     {
-      "id": "config-c2-baud-rate-edit",
-      "name": "C2.V — Edit Baud Rate",
+      "id": "config-modbus-baud-rate",
+      "name": "M2 — Baud Rate",
+      "description": "Config root entry C2. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "emphasis": "strong",
+          "content": "Modbus > Baud Rate"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
+          "id": "field-value",
+          "kind": "value",
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.baudRate"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-parity",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-slave-id",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Edit value",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-baud-rate-edit",
+          "actionId": "ui.action.nav.descend"
+        }
+      ]
+    },
+    {
+      "id": "config-modbus-baud-rate-edit",
+      "name": "M2.V — Edit Baud Rate",
       "description": "Value editor for C2. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
@@ -2227,7 +1851,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-c2-baud-rate",
+          "targetScreenId": "config-modbus-baud-rate",
           "actionId": "config.action.value.commit"
         },
         {
@@ -2238,14 +1862,104 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "config-c2-baud-rate",
+          "targetScreenId": "config-modbus-baud-rate",
           "actionId": "config.action.value.discard"
         }
       ]
     },
     {
-      "id": "config-c3-parity-edit",
-      "name": "C3.V — Edit Parity",
+      "id": "config-modbus-parity",
+      "name": "M3 — Parity",
+      "description": "Config root entry C3. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "emphasis": "strong",
+          "content": "Modbus > Parity"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
+          "id": "field-value",
+          "kind": "value",
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.parity"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-stop-bits",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-baud-rate",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Edit value",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-parity-edit",
+          "actionId": "ui.action.nav.descend"
+        }
+      ]
+    },
+    {
+      "id": "config-modbus-parity-edit",
+      "name": "M3.V — Edit Parity",
       "description": "Value editor for C3. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
@@ -2349,7 +2063,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-c3-parity",
+          "targetScreenId": "config-modbus-parity",
           "actionId": "config.action.value.commit"
         },
         {
@@ -2360,14 +2074,104 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "config-c3-parity",
+          "targetScreenId": "config-modbus-parity",
           "actionId": "config.action.value.discard"
         }
       ]
     },
     {
-      "id": "config-c4-stop-bits-edit",
-      "name": "C4.V — Edit Stop Bits",
+      "id": "config-modbus-stop-bits",
+      "name": "M4 — Stop Bits",
+      "description": "Config root entry C4. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "emphasis": "strong",
+          "content": "Modbus > Stop Bits"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
+          "id": "field-value",
+          "kind": "value",
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.stopBits"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-back",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-parity",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Edit value",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-stop-bits-edit",
+          "actionId": "ui.action.nav.descend"
+        }
+      ]
+    },
+    {
+      "id": "config-modbus-stop-bits-edit",
+      "name": "M4.V — Edit Stop Bits",
       "description": "Value editor for C4. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
@@ -2471,7 +2275,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-c4-stop-bits",
+          "targetScreenId": "config-modbus-stop-bits",
           "actionId": "config.action.value.commit"
         },
         {
@@ -2482,14 +2286,185 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "config-c4-stop-bits",
+          "targetScreenId": "config-modbus-stop-bits",
           "actionId": "config.action.value.discard"
         }
       ]
     },
     {
-      "id": "config-c5-led-pulse-vol-edit",
-      "name": "C5.V — Edit LED Pulse Volume",
+      "id": "config-modbus-back",
+      "name": "M.BACK — Back",
+      "description": "Ascends one level, out of Modbus.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "emphasis": "strong",
+          "content": "Modbus"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
+          "id": "back-label",
+          "kind": "text",
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "content": "< BACK"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "emphasis": "muted",
+          "content": "ENTER go back"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-slave-id",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-modbus-stop-bits",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-back",
+          "label": "Back one level",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.nav.back"
+        }
+      ]
+    },
+    {
+      "id": "config-display-led-volume",
+      "name": "D1 — LED Pulse Volume",
+      "description": "Config root entry C5. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "emphasis": "strong",
+          "content": "Display > LED Pulse Volume"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
+          "id": "field-value",
+          "kind": "value",
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.ledPulseVolume"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-display-led-period",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-display-back",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Edit value",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-display-led-volume-edit",
+          "actionId": "ui.action.nav.descend"
+        }
+      ]
+    },
+    {
+      "id": "config-display-led-volume-edit",
+      "name": "D1.V — Edit LED Pulse Volume",
       "description": "Value editor for C5. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
@@ -2593,7 +2568,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-c5-led-pulse-vol",
+          "targetScreenId": "config-display-led-volume",
           "actionId": "config.action.value.commit"
         },
         {
@@ -2604,14 +2579,104 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "config-c5-led-pulse-vol",
+          "targetScreenId": "config-display-led-volume",
           "actionId": "config.action.value.discard"
         }
       ]
     },
     {
-      "id": "config-c6-led-pulse-period-edit",
-      "name": "C6.V — Edit LED Pulse Period",
+      "id": "config-display-led-period",
+      "name": "D2 — LED Pulse Period",
+      "description": "Config root entry C6. ENTER descends; UP/DOWN move within the level. — laid out to the §7 setting template.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "emphasis": "strong",
+          "content": "Display > LED Pulse Period"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
+          "id": "field-value",
+          "kind": "value",
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.ledPulsePeriod"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-display-flow-unit",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-display-led-volume",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Edit value",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-display-led-period-edit",
+          "actionId": "ui.action.nav.descend"
+        }
+      ]
+    },
+    {
+      "id": "config-display-led-period-edit",
+      "name": "D2.V — Edit LED Pulse Period",
       "description": "Value editor for C6. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
@@ -2715,7 +2780,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-c6-led-pulse-period",
+          "targetScreenId": "config-display-led-period",
           "actionId": "config.action.value.commit"
         },
         {
@@ -2726,14 +2791,112 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "config-c6-led-pulse-period",
+          "targetScreenId": "config-display-led-period",
           "actionId": "config.action.value.discard"
         }
       ]
     },
     {
-      "id": "config-c7-flow-unit-edit",
-      "name": "C7.V — Edit Flow unit",
+      "id": "config-display-flow-unit",
+      "name": "D3 — Flow unit",
+      "description": "Config root entry C7. Which unit the panel shows flows in — a display preference: storage, the registers, MQTT and the calibration settings all stay in L/min.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "emphasis": "strong",
+          "content": "Display > Flow unit"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
+          "id": "field-value",
+          "kind": "value",
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.flowUnit"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "context-note",
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "muted",
+          "content": "Display only. Modbus stays L/m."
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-display-back",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-display-led-period",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Edit value",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-display-flow-unit-edit",
+          "actionId": "ui.action.nav.descend"
+        }
+      ]
+    },
+    {
+      "id": "config-display-flow-unit-edit",
+      "name": "D3.V — Edit Flow unit",
       "description": "Value editor for C7. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
       "elements": [
         {
@@ -2837,7 +3000,7 @@
             "button": "enter",
             "gesture": "short"
           },
-          "targetScreenId": "config-c7-flow-unit",
+          "targetScreenId": "config-display-flow-unit",
           "actionId": "config.action.value.commit"
         },
         {
@@ -2848,8 +3011,89 @@
             "button": "enter",
             "gesture": "long"
           },
-          "targetScreenId": "config-c7-flow-unit",
+          "targetScreenId": "config-display-flow-unit",
           "actionId": "config.action.value.discard"
+        }
+      ]
+    },
+    {
+      "id": "config-display-back",
+      "name": "D.BACK — Back",
+      "description": "Ascends one level, out of Display.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "emphasis": "strong",
+          "content": "Display"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
+          "id": "back-label",
+          "kind": "text",
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "content": "< BACK"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "emphasis": "muted",
+          "content": "ENTER go back"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-display-led-volume",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-display-flow-unit",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-back",
+          "label": "Back one level",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.nav.back"
         }
       ]
     },

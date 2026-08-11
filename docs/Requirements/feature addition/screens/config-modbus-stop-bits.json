@@ -1,7 +1,7 @@
 {
-  "id": "config-c2-baud-rate",
-  "name": "C2 \u2014 Baud Rate",
-  "description": "Config root entry C2. ENTER descends; UP/DOWN move within the level. \u2014 laid out to the \u00a77 setting template.",
+  "id": "config-modbus-stop-bits",
+  "name": "M4 \u2014 Stop Bits",
+  "description": "Config root entry C4. ENTER descends; UP/DOWN move within the level. \u2014 laid out to the \u00a77 setting template.",
   "elements": [
     {
       "id": "hdr-title",
@@ -9,8 +9,8 @@
       "x": 2,
       "y": 2,
       "emphasis": "strong",
-      "content": "Config > Baud Rate",
-      "worst": "Config > Baud Rate",
+      "content": "Modbus > Stop Bits",
+      "worst": "Modbus > Stop Bits",
       "bound": "fixed literal"
     },
     {
@@ -29,9 +29,9 @@
       "x": 2,
       "y": 24,
       "emphasis": "strong",
-      "binding": "config.baudRate",
-      "worst": "115200",
-      "bound": "widest baud option"
+      "binding": "config.stopBits",
+      "worst": "2",
+      "bound": "descriptor max"
     },
     {
       "id": "range-hint",

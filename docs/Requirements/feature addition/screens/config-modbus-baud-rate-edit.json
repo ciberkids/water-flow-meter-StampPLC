@@ -1,7 +1,7 @@
 {
-  "id": "config-c6-led-pulse-period-edit",
-  "name": "C6.V \u2014 Edit LED Pulse Period",
-  "description": "Value editor for C6. ENTER commits and ascends; hold ENTER discards. \u2014 laid out to the \u00a77 editor template.",
+  "id": "config-modbus-baud-rate-edit",
+  "name": "M2.V \u2014 Edit Baud Rate",
+  "description": "Value editor for C2. ENTER commits and ascends; hold ENTER discards. \u2014 laid out to the \u00a77 editor template.",
   "elements": [
     {
       "id": "hdr-title",
@@ -9,8 +9,8 @@
       "x": 2,
       "y": 2,
       "emphasis": "strong",
-      "content": "Edit > LED Pulse Period",
-      "worst": "Edit > LED Pulse Period",
+      "content": "Edit > Baud Rate",
+      "worst": "Edit > Baud Rate",
       "bound": "fixed literal"
     },
     {
@@ -58,9 +58,9 @@
       "kind": "value",
       "x": 44,
       "y": 44,
-      "binding": "config.ledPulsePeriod",
-      "worst": "2000 ms",
-      "bound": "descriptor max with its unit"
+      "binding": "config.baudRate",
+      "worst": "115200",
+      "bound": "widest baud option"
     },
     {
       "id": "range-hint",

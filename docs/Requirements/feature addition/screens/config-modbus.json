@@ -1,7 +1,7 @@
 {
-  "id": "config-c7-flow-unit",
-  "name": "C7 \u2014 Flow unit",
-  "description": "Config root entry C7. Which unit the panel shows flows in \u2014 a display preference: storage, the registers, MQTT and the calibration settings all stay in L/min.",
+  "id": "config-modbus",
+  "name": "CFG.M \u2014 Modbus",
+  "description": "Config root entry CFG.M. ENTER descends into the Modbus level: slave address, baud rate, parity and stop bits.",
   "elements": [
     {
       "id": "hdr-title",
@@ -9,8 +9,8 @@
       "x": 2,
       "y": 2,
       "emphasis": "strong",
-      "content": "Config > Flow unit",
-      "worst": "Config > Flow unit",
+      "content": "Config > Modbus",
+      "worst": "Config > Modbus",
       "bound": "fixed literal"
     },
     {
@@ -24,33 +24,23 @@
       "bound": "depth 0..3 and position within a ring of at most 8"
     },
     {
-      "id": "field-value",
-      "kind": "value",
+      "id": "group-body",
+      "kind": "text",
       "x": 2,
-      "y": 24,
+      "y": 30,
+      "emphasis": "muted",
+      "content": "Address, baud, framing",
+      "worst": "Address, baud, framing",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "group-open",
+      "kind": "text",
+      "x": 2,
+      "y": 50,
       "emphasis": "strong",
-      "binding": "config.flowUnit",
-      "worst": "m3/h",
-      "bound": "widest kFlowUnitOptions label"
-    },
-    {
-      "id": "range-hint",
-      "kind": "text",
-      "x": 2,
-      "y": 44,
-      "emphasis": "muted",
-      "binding": "config.editor.range",
-      "worst": "None / Even / Odd",
-      "bound": "derived from the descriptor - see 7.2"
-    },
-    {
-      "id": "context-note",
-      "kind": "text",
-      "x": 2,
-      "y": 66,
-      "emphasis": "muted",
-      "content": "Display only. Modbus stays L/m.",
-      "worst": "Display only. Modbus stays L/m.",
+      "content": "Modbus >",
+      "worst": "Modbus >",
       "bound": "fixed literal"
     },
     {
@@ -59,8 +49,8 @@
       "x": 2,
       "y": 124,
       "emphasis": "muted",
-      "content": "UP/DN pages  ENTER edit",
-      "worst": "UP/DN pages  ENTER edit",
+      "content": "UP/DN pages  ENTER open",
+      "worst": "UP/DN pages  ENTER open",
       "bound": "shared footer vocabulary, see 7.1",
       "bannerReplaces": true
     },

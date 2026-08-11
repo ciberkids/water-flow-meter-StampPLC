@@ -75,16 +75,17 @@ int main() {
 
   nav.descend(follow(nav.current(), ui_exporter::FlowButton::Enter,
                      ui_exporter::FlowGesture::Short));
-  check(std::strcmp(idOf(nav.current()), "config-c1-modbus-id") == 0 && nav.depth() == 1,
+  check(std::strcmp(idOf(nav.current()), "config-modbus") == 0 && nav.depth() == 1,
         "P5 ENTER descends to config root, depth 1");
-  // Nine, not eight: C7 Flow unit was inserted with the LED settings — both are about how the device
-  // presents itself — which moved Sensors to C8.
-  check(nav.ringPosition(&ri, &rc) && rc == 9, "config ring reports 9 members (C1-C8 + BACK)");
+  // FOUR: the config root is three GROUPS plus BACK. It was a flat list of eight settings and one
+  // descent, which is what the grouping replaced — Modbus, Display and Sensors each own a level now,
+  // so no leaf setting sits at the root beside a descent.
+  check(nav.ringPosition(&ri, &rc) && rc == 4, "config root reports 4 members (3 groups + BACK)");
 
-  for (int i = 0; i < 7; ++i)
+  for (int i = 0; i < 2; ++i)
     nav.goToSibling(follow(nav.current(), ui_exporter::FlowButton::Down,
                            ui_exporter::FlowGesture::Short));
-  check(std::strcmp(idOf(nav.current()), "config-c8-sensor-select") == 0, "paged to C8");
+  check(std::strcmp(idOf(nav.current()), "config-sensors") == 0, "paged to the Sensors group");
 
   nav.descend(follow(nav.current(), ui_exporter::FlowButton::Enter,
                      ui_exporter::FlowGesture::Short));
@@ -117,7 +118,7 @@ int main() {
 
   std::printf("\n[depth cap]\n");
   nav.reset(p0);
-  const auto* any = byId("config-c1-modbus-id");
+  const auto* any = byId("config-modbus");
   for (int i = 0; i < UiNavigator::kMaxDepth; ++i) nav.descend(any);
   check(nav.depth() == UiNavigator::kMaxDepth, "fills to kMaxDepth");
   check(!nav.descend(any), "descend past kMaxDepth is refused");

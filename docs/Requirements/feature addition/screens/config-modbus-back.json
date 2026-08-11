@@ -1,0 +1,57 @@
+{
+  "id": "config-modbus-back",
+  "name": "M.BACK \u2014 Back",
+  "description": "Ascends one level, out of Modbus.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "Modbus",
+      "worst": "Modbus",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "nav-position",
+      "kind": "text",
+      "x": 168,
+      "y": 2,
+      "emphasis": "muted",
+      "binding": "nav.position",
+      "worst": "L3 8/8",
+      "bound": "depth 0..3 (UiNavigator::kMaxDepth) and position within a ring of at most 8"
+    },
+    {
+      "id": "back-label",
+      "kind": "text",
+      "x": 2,
+      "y": 24,
+      "emphasis": "strong",
+      "content": "< BACK",
+      "worst": "< BACK",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "ENTER go back",
+      "worst": "ENTER go back",
+      "bound": "shared footer vocabulary, see 7.1",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
+    }
+  ]
+}

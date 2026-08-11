@@ -55,7 +55,13 @@ static_assert(sizeof(kInfoScreenIds) / sizeof(kInfoScreenIds[0]) ==
                   static_cast<std::size_t>(UiPage::Count),
               "kInfoScreenIds must have one entry per UiPage");
 
-inline constexpr const char* kConfigurationScreenId = "config-c1-modbus-id";
+/**
+ * The screen the Configuration mode resolves to — the config root's FIRST entry.
+ *
+ * Was `config-c1-modbus-id`, a leaf setting, because the root was a flat C1..C8 list. The root is now
+ * three groups, so this is the Modbus group entry: descending lands on a level, not inside one.
+ */
+inline constexpr const char* kConfigurationScreenId = "config-modbus";
 inline constexpr const char* kFactoryResetCountdownScreenId = "confirm-factory-reset";
 
 /** Every screen id the firmware resolves by name, for the generated manifest. */

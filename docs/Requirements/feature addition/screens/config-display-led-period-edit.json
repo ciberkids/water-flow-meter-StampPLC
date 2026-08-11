@@ -1,7 +1,7 @@
 {
-  "id": "config-c5-led-pulse-vol-edit",
-  "name": "C5.V \u2014 Edit LED Pulse Volume",
-  "description": "Value editor for C5. ENTER commits and ascends; hold ENTER discards. \u2014 laid out to the \u00a77 editor template.",
+  "id": "config-display-led-period-edit",
+  "name": "D2.V \u2014 Edit LED Pulse Period",
+  "description": "Value editor for C6. ENTER commits and ascends; hold ENTER discards. \u2014 laid out to the \u00a77 editor template.",
   "elements": [
     {
       "id": "hdr-title",
@@ -9,8 +9,8 @@
       "x": 2,
       "y": 2,
       "emphasis": "strong",
-      "content": "Edit > LED Pulse Volume",
-      "worst": "Edit > LED Pulse Volume",
+      "content": "Edit > LED Pulse Period",
+      "worst": "Edit > LED Pulse Period",
       "bound": "fixed literal"
     },
     {
@@ -58,9 +58,9 @@
       "kind": "value",
       "x": 44,
       "y": 44,
-      "binding": "config.ledPulseVolume",
-      "worst": "100 L",
-      "bound": "widest volume option with its unit"
+      "binding": "config.ledPulsePeriod",
+      "worst": "2000 ms",
+      "bound": "descriptor max with its unit"
     },
     {
       "id": "range-hint",

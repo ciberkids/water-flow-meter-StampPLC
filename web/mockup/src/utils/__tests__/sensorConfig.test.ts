@@ -22,7 +22,7 @@ const valueById = (id: string) => values.find((value) => value.id === id);
 /** The real navigation chain to a per-sensor editor, read off screens.json. */
 const kChainToSensor3 = [
   "info-p7-enter-config",
-  "config-c8-sensor-select",
+  "config-sensors",
   "config-sensor-3",
   "config-s2-multiplier"
 ];
@@ -131,12 +131,12 @@ describe("selected-sensor resolution", () => {
     expect(sensorIndexForScreen("config-s2-multiplier-edit", kChainToSensor3)).toBe(3);
     expect(sensorIndexForScreen("config-s1-connected", kChainToSensor3.slice(0, 3))).toBe(3);
     // Standing ON the list entry implies nothing: the firmware fixes the index while LEAVING it.
-    expect(sensorIndexForScreen("config-sensor-3", ["info-p7-enter-config", "config-c8-sensor-select"])).toBe(0);
+    expect(sensorIndexForScreen("config-sensor-3", ["info-p7-enter-config", "config-sensors"])).toBe(0);
   });
 
   it("reports 0 when no sensor is implied", () => {
     expect(sensorIndexForScreen("info-p0-global-status", [])).toBe(0);
-    expect(sensorIndexForScreen("config-c1-modbus-id", ["info-p7-enter-config"])).toBe(0);
+    expect(sensorIndexForScreen("config-modbus-slave-id", ["info-p7-enter-config"])).toBe(0);
     // A real screen whose id starts with the prefix but names no sensor.
     expect(sensorIndexForScreen("config-s1-connected", ["config-sensor-back"])).toBe(0);
     expect(sensorIndexForScreen("config-s1-connected", ["config-sensor-settings-back"])).toBe(0);

@@ -1,7 +1,7 @@
 {
-  "id": "config-c3-parity",
-  "name": "C3 \u2014 Parity",
-  "description": "Config root entry C3. ENTER descends; UP/DOWN move within the level. \u2014 laid out to the \u00a77 setting template.",
+  "id": "config-display",
+  "name": "CFG.D \u2014 Display",
+  "description": "Config root entry CFG.D. ENTER descends into the Display level: the LED pulse settings and the unit the panel shows flows in.",
   "elements": [
     {
       "id": "hdr-title",
@@ -9,8 +9,8 @@
       "x": 2,
       "y": 2,
       "emphasis": "strong",
-      "content": "Config > Parity",
-      "worst": "Config > Parity",
+      "content": "Config > Display",
+      "worst": "Config > Display",
       "bound": "fixed literal"
     },
     {
@@ -21,27 +21,27 @@
       "emphasis": "muted",
       "binding": "nav.position",
       "worst": "L3 8/8",
-      "bound": "depth 0..3 (UiNavigator::kMaxDepth) and position within a ring of at most 8"
+      "bound": "depth 0..3 and position within a ring of at most 8"
     },
     {
-      "id": "field-value",
-      "kind": "value",
-      "x": 2,
-      "y": 24,
-      "emphasis": "strong",
-      "binding": "config.parity",
-      "worst": "None",
-      "bound": "widest parity option"
-    },
-    {
-      "id": "range-hint",
+      "id": "group-body",
       "kind": "text",
       "x": 2,
-      "y": 44,
+      "y": 30,
       "emphasis": "muted",
-      "binding": "config.editor.range",
-      "worst": "8 rates: 1200..115200",
-      "bound": "derived from the descriptor \u2014 see 7.2"
+      "content": "LED pulses, flow unit",
+      "worst": "LED pulses, flow unit",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "group-open",
+      "kind": "text",
+      "x": 2,
+      "y": 50,
+      "emphasis": "strong",
+      "content": "Display >",
+      "worst": "Display >",
+      "bound": "fixed literal"
     },
     {
       "id": "footer-hint",
@@ -49,8 +49,8 @@
       "x": 2,
       "y": 124,
       "emphasis": "muted",
-      "content": "UP/DN pages  ENTER edit",
-      "worst": "UP/DN pages  ENTER edit",
+      "content": "UP/DN pages  ENTER open",
+      "worst": "UP/DN pages  ENTER open",
       "bound": "shared footer vocabulary, see 7.1",
       "bannerReplaces": true
     },

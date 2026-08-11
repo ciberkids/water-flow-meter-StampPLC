@@ -1,0 +1,77 @@
+{
+  "id": "config-display-flow-unit",
+  "name": "D3 \u2014 Flow unit",
+  "description": "Config root entry C7. Which unit the panel shows flows in \u2014 a display preference: storage, the registers, MQTT and the calibration settings all stay in L/min.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "Display > Flow unit",
+      "worst": "Display > Flow unit",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "nav-position",
+      "kind": "text",
+      "x": 168,
+      "y": 2,
+      "emphasis": "muted",
+      "binding": "nav.position",
+      "worst": "L3 8/8",
+      "bound": "depth 0..3 and position within a ring of at most 8"
+    },
+    {
+      "id": "field-value",
+      "kind": "value",
+      "x": 2,
+      "y": 24,
+      "emphasis": "strong",
+      "binding": "config.flowUnit",
+      "worst": "m3/h",
+      "bound": "widest kFlowUnitOptions label"
+    },
+    {
+      "id": "range-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 44,
+      "emphasis": "muted",
+      "binding": "config.editor.range",
+      "worst": "None / Even / Odd",
+      "bound": "derived from the descriptor - see 7.2"
+    },
+    {
+      "id": "context-note",
+      "kind": "text",
+      "x": 2,
+      "y": 66,
+      "emphasis": "muted",
+      "content": "Display only. Modbus stays L/m.",
+      "worst": "Display only. Modbus stays L/m.",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN pages  ENTER edit",
+      "worst": "UP/DN pages  ENTER edit",
+      "bound": "shared footer vocabulary, see 7.1",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
+    }
+  ]
+}

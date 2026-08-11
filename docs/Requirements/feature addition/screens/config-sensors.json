@@ -1,0 +1,77 @@
+{
+  "id": "config-sensors",
+  "name": "CFG.S \u2014 Sensors",
+  "description": "Config root entry C7. ENTER opens the sensor selector, where UP/DOWN pages through the eight channels and ENTER opens the settings of the one shown.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "Config > Sensors",
+      "worst": "Config > Sensors",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "nav-position",
+      "kind": "text",
+      "x": 168,
+      "y": 2,
+      "emphasis": "muted",
+      "binding": "nav.position",
+      "worst": "L3 8/8",
+      "bound": "depth 0..3 (UiNavigator::kMaxDepth) and position within a ring of at most 8"
+    },
+    {
+      "id": "body-1",
+      "kind": "text",
+      "x": 2,
+      "y": 30,
+      "emphasis": "strong",
+      "content": "Channels 1-8",
+      "worst": "Channels 1-8",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "body-2",
+      "kind": "text",
+      "x": 2,
+      "y": 50,
+      "emphasis": "muted",
+      "content": "Connection and calibration,",
+      "worst": "Connection and calibration,",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "body-3",
+      "kind": "text",
+      "x": 2,
+      "y": 62,
+      "emphasis": "muted",
+      "content": "per channel.",
+      "worst": "per channel.",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN pages  ENTER open",
+      "worst": "UP/DN pages  ENTER open",
+      "bound": "shared footer vocabulary, see 7.1",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
+    }
+  ]
+}

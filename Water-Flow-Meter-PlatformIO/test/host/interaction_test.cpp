@@ -380,7 +380,7 @@ bool descendToASensorEditor(Device& dev) {
   // Cycle the config ring to the Sensors entry, which descends rather than editing.
   for (int i = 0; i < 12; ++i) {
     const auto* screen = dev.controller.navigator().current();
-    if (screen && std::strcmp(screen->id, "config-c8-sensor-select") == 0) break;
+    if (screen && std::strcmp(screen->id, "config-sensors") == 0) break;
     dev.tap(ButtonInputManager::Button::Down);
   }
   dev.tap(ButtonInputManager::Button::Enter);  // sensor list
@@ -662,15 +662,26 @@ bool onScreen(const Device& dev, const char* id) {
 }
 
 /** Pages the info ring to P7 and descends once, landing on the config root ring at C1. */
-bool walkToConfigRoot(Device& dev) {
+/**
+ * Walks to the first MODBUS setting, which is now two descents down rather than one.
+ *
+ * Configuration became three groups — Modbus, Display, Sensors — so P5 lands on the Modbus group
+ * entry and the settings live one level inside it. It used to land directly on a leaf setting because
+ * the root was a flat list of everything.
+ */
+bool walkToModbusSettings(Device& dev) {
   for (int i = 0; i < 16 && dev.controller.page() != UiPage::EnterConfiguration; ++i) {
     dev.tap(ButtonInputManager::Button::Down);
   }
   if (dev.controller.page() != UiPage::EnterConfiguration) {
     return false;
   }
-  dev.tap(ButtonInputManager::Button::Enter);
-  return onScreen(dev, "config-c1-modbus-id");
+  dev.tap(ButtonInputManager::Button::Enter);   // -> config-modbus, the group entry
+  if (!onScreen(dev, "config-modbus")) {
+    return false;
+  }
+  dev.tap(ButtonInputManager::Button::Enter);   // -> config-modbus-slave-id, inside it
+  return onScreen(dev, "config-modbus-slave-id");
 }
 
 void configListPagingTests() {
@@ -678,16 +689,18 @@ void configListPagingTests() {
 
   Device dev;
   dev.boot();
-  check(walkToConfigRoot(dev), "ENTER-short on P7 descends onto the config root ring at C1");
-  check(dev.controller.navigator().depth() == 1, "C1 sits one level below the info ring");
+  check(walkToModbusSettings(dev), "two descents from P5 reach the first Modbus setting");
+  check(dev.controller.navigator().depth() == 2,
+        "M1 sits two levels below the info ring: the root holds groups, not settings");
   check(!dev.controller.editor().active,
-        "descending onto the C1 LIST page does not open a value editor");
+        "descending onto the M1 LIST page does not open a value editor");
 
   // §5.1: "UP/DOWN move within the current level." A 330 ms press is past the 250 ms first
   // acceleration interval, so a live editor eats it; a navigation screen must page.
-  static constexpr const char* kRing[] = {"config-c2-baud-rate", "config-c3-parity",
-                                          "config-c4-stop-bits", "config-c5-led-pulse-vol",
-                                          "config-c6-led-pulse-period"};
+  // The Modbus level is its own ring: four settings then BACK. The LED settings are NOT here any
+  // more — they live under Display, which is the point of the grouping.
+  static constexpr const char* kRing[] = {"config-modbus-baud-rate", "config-modbus-parity",
+                                          "config-modbus-stop-bits", "config-modbus-back"};
   bool paged = true;
   bool everEditing = false;
   for (const char* expected : kRing) {
@@ -698,10 +711,10 @@ void configListPagingTests() {
     }
     if (dev.controller.editor().active) everEditing = true;
   }
-  check(paged, "a 330 ms DOWN pages C1 -> C2 -> C3 -> C4 -> C5 -> C6");
-  check(!everEditing, "no editor is live anywhere along the config root ring");
-  check(dev.controller.navigator().depth() == 1, "paging siblings did not change depth");
-  check(harness::writes.empty(), "paging the config ring wrote no Modbus register");
+  check(paged, "a 330 ms DOWN pages M1 -> M2 -> M3 -> M4 -> BACK");
+  check(!everEditing, "no editor is live anywhere along the Modbus ring");
+  check(dev.controller.navigator().depth() == 2, "paging siblings did not change depth");
+  check(harness::writes.empty(), "paging the Modbus ring wrote no Modbus register");
 }
 
 void configEditorDescentTests() {
@@ -709,11 +722,12 @@ void configEditorDescentTests() {
 
   Device dev;
   dev.boot();
-  check(walkToConfigRoot(dev), "at C1");
+  check(walkToModbusSettings(dev), "at M1");
   dev.tap(ButtonInputManager::Button::Enter);
-  check(onScreen(dev, "config-c1-modbus-id-edit"),
-        "ENTER-short on C1 descends onto its derived editor screen (§5.7)");
-  check(dev.controller.navigator().depth() == 2, "the editor is one level below its list page");
+  check(onScreen(dev, "config-modbus-slave-id-edit"),
+        "ENTER-short on M1 descends onto its derived editor screen (§5.7)");
+  // Three, not two: root -> Modbus -> M1 -> editor. The grouping added a level above the settings.
+  check(dev.controller.navigator().depth() == 3, "the editor is one level below its list page");
   const auto& editor = dev.controller.editor();
   check(editor.active, "descending onto C1.V DOES open the value editor");
   check(editor.setting != nullptr &&
@@ -731,16 +745,22 @@ void sensorEditorDescentTests() {
 
   Device dev;
   dev.boot();
-  check(walkToConfigRoot(dev), "at C1");
-  for (int i = 0; i < 8 && !onScreen(dev, "config-c8-sensor-select"); ++i) {
+  // Reaching the Sensors group means walking the CONFIG ROOT, not the Modbus level — the two are
+  // different rings now. So descend to the root's first entry and page there.
+  for (int i = 0; i < 16 && dev.controller.page() != UiPage::EnterConfiguration; ++i) {
     dev.tap(ButtonInputManager::Button::Down);
   }
-  check(onScreen(dev, "config-c8-sensor-select"), "paged along the config root ring to C7");
+  dev.tap(ButtonInputManager::Button::Enter);
+  check(onScreen(dev, "config-modbus"), "P5 lands on the config root's first group");
+  for (int i = 0; i < 6 && !onScreen(dev, "config-sensors"); ++i) {
+    dev.tap(ButtonInputManager::Button::Down);
+  }
+  check(onScreen(dev, "config-sensors"), "paged along the config root to the Sensors group");
 
   dev.tap(ButtonInputManager::Button::Enter);
-  check(onScreen(dev, "config-sensor-1"), "C7 descends onto the sensor list");
+  check(onScreen(dev, "config-sensor-1"), "the Sensors group descends onto the sensor list");
   check(!dev.controller.editor().active,
-        "C7 carries no value, so the sensor list opens no editor (§5.1)");
+        "the group carries no value, so the sensor list opens no editor (§5.1)");
 
   dev.tap(ButtonInputManager::Button::Enter);
   check(onScreen(dev, "config-s1-connected"), "the sensor list descends onto the S ring");

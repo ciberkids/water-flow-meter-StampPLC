@@ -1,7 +1,7 @@
 {
-  "id": "config-c3-parity-edit",
-  "name": "C3.V \u2014 Edit Parity",
-  "description": "Value editor for C3. ENTER commits and ascends; hold ENTER discards. \u2014 laid out to the \u00a77 editor template.",
+  "id": "config-modbus-slave-id-edit",
+  "name": "M1.V \u2014 Edit Modbus ID",
+  "description": "TEMPLATE for every value editor. New above Saved, aligned on one column so the change is directly comparable.",
   "elements": [
     {
       "id": "hdr-title",
@@ -9,9 +9,9 @@
       "x": 2,
       "y": 2,
       "emphasis": "strong",
-      "content": "Edit > Parity",
-      "worst": "Edit > Parity",
-      "bound": "fixed literal"
+      "content": "Edit > Modbus ID",
+      "worst": "Edit > Modbus ID",
+      "bound": "longest setting name in the config tree, breadcrumbed"
     },
     {
       "id": "nav-position",
@@ -41,7 +41,7 @@
       "emphasis": "strong",
       "binding": "config.editor.pending",
       "worst": "115200",
-      "bound": "widest formatted setting value in the config tree"
+      "bound": "widest formatted setting value across the config tree"
     },
     {
       "id": "saved-label",
@@ -58,9 +58,9 @@
       "kind": "value",
       "x": 44,
       "y": 44,
-      "binding": "config.parity",
-      "worst": "None",
-      "bound": "widest parity option"
+      "binding": "config.modbusSlaveId",
+      "worst": "115200",
+      "bound": "widest formatted setting value across the config tree"
     },
     {
       "id": "range-hint",
@@ -92,6 +92,15 @@
       "worst": "UP/DN adjust  ENTER save  hold=cancel",
       "bound": "shared footer vocabulary, see 7.1",
       "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
-  "id": "config-c4-stop-bits-edit",
-  "name": "C4.V \u2014 Edit Stop Bits",
-  "description": "Value editor for C4. ENTER commits and ascends; hold ENTER discards. \u2014 laid out to the \u00a77 editor template.",
+  "id": "config-modbus-parity-edit",
+  "name": "M3.V \u2014 Edit Parity",
+  "description": "Value editor for C3. ENTER commits and ascends; hold ENTER discards. \u2014 laid out to the \u00a77 editor template.",
   "elements": [
     {
       "id": "hdr-title",
@@ -9,8 +9,8 @@
       "x": 2,
       "y": 2,
       "emphasis": "strong",
-      "content": "Edit > Stop Bits",
-      "worst": "Edit > Stop Bits",
+      "content": "Edit > Parity",
+      "worst": "Edit > Parity",
       "bound": "fixed literal"
     },
     {
@@ -58,9 +58,9 @@
       "kind": "value",
       "x": 44,
       "y": 44,
-      "binding": "config.stopBits",
-      "worst": "2",
-      "bound": "descriptor max"
+      "binding": "config.parity",
+      "worst": "None",
+      "bound": "widest parity option"
     },
     {
       "id": "range-hint",
