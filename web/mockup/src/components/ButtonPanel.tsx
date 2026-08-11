@@ -18,8 +18,25 @@ type PhysicalButton = Exclude<SimulatedButton, "up+down" | "up+down+enter">;
  * not claim to mirror the board's geometry.
  */
 const BUTTON_METADATA: Record<PhysicalButton, { key: string; name: string; role: string; hint: string }> = {
-  up: { key: "↑", name: "BtnA", role: "Up", hint: "Previous page · held, repeats every 250 ms" },
-  down: { key: "↓", name: "BtnB", role: "Down", hint: "Next page · held, repeats every 250 ms" },
+  /**
+   * The hints said "held, repeats every 250 ms", which set the wrong expectation twice over: the ring's
+   * repeats do not begin until 1500 ms, and inside an editor a hold is not a repeat at all but §5.4's
+   * accelerating ramp, which starts at 250 ms and takes the button away from the ring entirely. Someone
+   * holding UP on a setting page to dial a number faster, finding it silent and then watching the menu
+   * page past what they wanted, was reading this line and believing it.
+   */
+  up: {
+    key: "↑",
+    name: "BtnA",
+    role: "Up",
+    hint: "Previous page — held 1.5 s, then pages every 250 ms · in a value editor: ramps ×1 → ×5 → ×25"
+  },
+  down: {
+    key: "↓",
+    name: "BtnB",
+    role: "Down",
+    hint: "Next page — held 1.5 s, then pages every 250 ms · in a value editor: ramps ×1 → ×5 → ×25"
+  },
   enter: { key: "⏎", name: "BtnC", role: "Enter", hint: "Short descends or commits · held 1.5 s escapes" }
 };
 

@@ -1,5 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 import {
+  EditorRampState,
+  RampButton,
+  initialEditorRampState,
+  tickEditorRamp
+} from "../utils/editorRamp";
+import {
   SimulatedButton,
   SimulatedButtonEvent,
   SimulatedButtonEventKind
@@ -22,6 +28,33 @@ import {
 const LONG_PRESS_MS = 1500;
 const REPEAT_INTERVAL_MS = 250;
 
+/**
+ * How often to re-run the editor ramp while it has nothing to do.
+ *
+ * The device's answer is "every loop pass", which is far faster than this; a quarter second is the coarsest
+ * period at which the ramp cannot miss a state change the operator would notice, since the fastest thing it
+ * can do is step once per 150 ms.
+ */
+const RAMP_IDLE_PASS_MS = 250;
+
+/**
+ * How an open editor takes UP/DOWN away from the navigation ring (§5.4).
+ *
+ * The firmware runs `handleEditorRepeat` on EVERY loop pass, before it drains the event queue, and it
+ * reads the button LEVELS rather than queued events — so an editor starts stepping about 250 ms after
+ * the press, accelerates, and swallows everything that button had queued including the release
+ * short-press. The queue's own repeats do not begin until 1500 ms and belong to the ring.
+ *
+ * That distinction is the whole reason a held UP did nothing in an editor here and paged the ring on a
+ * setting screen: the simulator only ever had the queue.
+ */
+export interface EditorRepeatBridge {
+  /** `editor().active && editor().setting` — is an editor open and owning UP/DOWN? */
+  owns: () => boolean;
+  /** One accelerated step: the setting's own `step`, times `multiplier`, signed by the button. */
+  step: (button: "up" | "down", multiplier: number, heldMs: number) => void;
+}
+
 type TimerHandle = ReturnType<typeof setTimeout>;
 type IntervalHandle = ReturnType<typeof setInterval>;
 
@@ -31,6 +64,12 @@ interface ButtonRuntimeState {
   longPressTriggered: boolean;
   longPressTimer?: TimerHandle;
   repeatTimer?: IntervalHandle;
+  /** When the level went high, for the acceleration tier — `state.pressStartMs`. */
+  pressStartMs: number;
+  /** The editor's ramp, which reschedules itself at the current tier's interval. */
+  editorTimer?: TimerHandle;
+  /** Whether the ramp has stepped, which is what makes the release swallow-worthy. */
+  editorStepped: boolean;
 }
 
 export interface UseSimulatedButtonsResult {
@@ -66,7 +105,8 @@ export interface UseSimulatedButtonsResult {
  * for. The visible difference is two trace entries, not a different screen.
  */
 export function useSimulatedButtons(
-  onEvent: (event: SimulatedButtonEvent) => void
+  onEvent: (event: SimulatedButtonEvent) => void,
+  editorRepeat?: EditorRepeatBridge
 ): UseSimulatedButtonsResult {
   const [pressed, setPressed] = useState<Record<SingleButton, boolean>>({
     up: false,
@@ -76,14 +116,20 @@ export function useSimulatedButtons(
   const [armedCombo, setArmedCombo] = useState<ArmedCombo>(null);
 
   const runtimeRef = useRef<Record<SingleButton, ButtonRuntimeState>>({
-    up: { longPressTriggered: false },
-    down: { longPressTriggered: false },
-    enter: { longPressTriggered: false }
+    up: { longPressTriggered: false, pressStartMs: 0, editorStepped: false },
+    down: { longPressTriggered: false, pressStartMs: 0, editorStepped: false },
+    enter: { longPressTriggered: false, pressStartMs: 0, editorStepped: false }
   });
+
+  /** Read through a ref so a re-rendered bridge does not rebuild `press`, which owns live timers. */
+  const editorRepeatRef = useRef<EditorRepeatBridge | undefined>(editorRepeat);
+  editorRepeatRef.current = editorRepeat;
 
   /** The button LEVELS, which is what the machine consumes. */
   const levelsRef = useRef<ComboButtons>({ up: false, down: false, enter: false });
   const comboRef = useRef<ComboState>(initialComboState());
+  /** §5.4's ramp, the other pure machine this file drives. */
+  const rampRef = useRef<EditorRampState>(initialEditorRampState());
   /** Fires the selector, which completes while held and so is marked by no button change. */
   const selectorTimerRef = useRef<TimerHandle | undefined>(undefined);
 
@@ -103,6 +149,10 @@ export function useSimulatedButtons(
     if (runtime.repeatTimer) {
       clearInterval(runtime.repeatTimer);
       runtime.repeatTimer = undefined;
+    }
+    if (runtime.editorTimer) {
+      clearTimeout(runtime.editorTimer);
+      runtime.editorTimer = undefined;
     }
   }, []);
 
@@ -168,6 +218,64 @@ export function useSimulatedButtons(
     [dispatchComboEvents, publishArmed, scheduleSelector]
   );
 
+  /**
+   * One loop pass of the ramp, rescheduling itself for as long as the machine asks.
+   *
+   * All the decisions belong to `tickEditorRamp`; this owns only what the firmware gets for free from
+   * running in a loop — being called again — plus the browser-side halves of `discardEvents`: cancelling
+   * the queue timers that would otherwise page the ring underneath the editor.
+   */
+  const runEditorPass = useCallback(
+    (button: RampButton) => {
+      const runtime = runtimeRef.current[button];
+      runtime.editorTimer = undefined;
+
+      const levels = levelsRef.current;
+      const bridge = editorRepeatRef.current;
+      const result = tickEditorRamp(
+        rampRef.current,
+        {
+          up: levels.up,
+          down: levels.down,
+          // A button the combo machine has consumed is part of a gesture, not an adjustment.
+          editorOwns: Boolean(bridge?.owns()) && !comboConsumed(comboRef.current)[button],
+          pressStartMs: {
+            up: runtimeRef.current.up.pressStartMs,
+            down: runtimeRef.current.down.pressStartMs
+          }
+        },
+        Date.now()
+      );
+      rampRef.current = result.state;
+
+      for (const discarded of result.discard) {
+        // `buttonInput.discardEvents(button)`: the editor owns this button, so the queue's long press and
+        // its 250 ms ring repeats must not also fire. Without this the ramp would step the value AND page
+        // the ring — the two-homes version of the very bug being fixed.
+        clearTimers(discarded);
+        runtimeRef.current[discarded].editorStepped = true;
+      }
+
+      if (result.step) {
+        bridge?.step(result.step.button, result.step.multiplier, result.step.heldMs);
+      }
+
+      /**
+       * Keep passing for as long as the level is high, even when the machine is idle.
+       *
+       * The firmware gets this free: `handleEditorRepeat` runs every loop pass whether or not it has
+       * anything to do, so a ramp that stood down — both buttons briefly held, an editor not open yet —
+       * re-arms on the next pass. Stopping at the first idle result instead would leave the ramp dead for
+       * the rest of the hold, and the operator holding a button that had just worked.
+       */
+      if (levels[button]) {
+        const nextMs = result.nextPassMs ?? RAMP_IDLE_PASS_MS;
+        runtime.editorTimer = setTimeout(() => runEditorPass(button), nextMs);
+      }
+    },
+    [clearTimers]
+  );
+
   const press = useCallback(
     (button: SingleButton) => {
       if (levelsRef.current[button]) {
@@ -177,9 +285,23 @@ export function useSimulatedButtons(
       levelsRef.current = { ...levelsRef.current, [button]: true };
       const runtime = runtimeRef.current[button];
       runtime.longPressTriggered = false;
+      runtime.pressStartMs = nowMs;
+      runtime.editorStepped = false;
       setPressed((current) => ({ ...current, [button]: true }));
 
       applyLevels(nowMs);
+
+      /**
+       * §5.4's ramp is armed for UP/DOWN unconditionally, and decides on its first pass.
+       *
+       * It cannot be decided here: the editor may be opened or closed while the button is already down,
+       * and the firmware re-tests it every loop pass rather than at the press. The first pass lands at
+       * the first tier's 250 ms, which is why a held UP starts moving the value almost at once on the
+       * device while the ring's own repeats wait for 1500 ms.
+       */
+      if (button !== "enter") {
+        runEditorPass(button);
+      }
 
       // A combo that is armed swallows the participating buttons' long press and repeats too — the
       // firmware's clearEvents() drains the queue rather than filtering it by kind.
@@ -193,8 +315,9 @@ export function useSimulatedButtons(
 
         if (button !== "enter") {
           // Display_UI_Requirements §3.1: UP/DOWN held repeat every 250 ms when navigating. Flat, not
-          // accelerating — the accelerating tiers belong to a numeric editor (§5.4), which the mockup
-          // does not preview. ENTER is excluded because held ENTER is a countdown, never a repeat.
+          // accelerating — the accelerating tiers belong to a numeric editor (§5.4) and are driven by
+          // `runEditorPass`, which clears these timers the moment it takes the button. ENTER is excluded
+          // because held ENTER is a countdown, never a repeat.
           runtime.repeatTimer = setInterval(() => {
             if (comboConsumed(comboRef.current)[button]) {
               return;
@@ -204,7 +327,7 @@ export function useSimulatedButtons(
         }
       }, LONG_PRESS_MS);
     },
-    [applyLevels, emit]
+    [applyLevels, emit, runEditorPass]
   );
 
   const release = useCallback(
@@ -222,18 +345,38 @@ export function useSimulatedButtons(
 
       // Order matters: the machine has already reported whether this release belongs to a combo, so the
       // single-button short press is suppressed on exactly the releases the device suppresses.
-      if (!runtime.longPressTriggered && !consumed[button]) {
+      //
+      // `editorStepped` suppresses it too, for the reason interaction_handler.cpp:190 gives: the ramp
+      // discards everything the button had queued INCLUDING the release, so a hold that stepped +25 does
+      // not also land a +1 on the way up. A hold that never stepped — released under 250 ms, or held on a
+      // screen with no editor — still emits its short press, because "a short press is always exactly ±1".
+      if (!runtime.longPressTriggered && !consumed[button] && !runtime.editorStepped) {
         emit(button, "short", nowMs);
       }
       runtime.longPressTriggered = false;
+      runtime.editorStepped = false;
+
+      /**
+       * Releasing one of UP/DOWN hands the ramp back to the other, if it is still down.
+       *
+       * Pressing both ends the ramp — `up == down` is not an adjustment — and ending it discards the
+       * stepping button's queued events, which cancels its pass timer too. Without this kick the surviving
+       * button would stay held with nothing scheduled to notice, so the operator would be leaning on a
+       * button that had just been working. The firmware re-arms on its next loop pass and never notices.
+       */
+      const other: SingleButton | null = button === "up" ? "down" : button === "down" ? "up" : null;
+      if (other && levelsRef.current[other] && !runtimeRef.current[other].editorTimer) {
+        runEditorPass(other);
+      }
     },
-    [applyLevels, clearTimers, emit]
+    [applyLevels, clearTimers, emit, runEditorPass]
   );
 
   const cancelAll = useCallback(() => {
     (Object.keys(runtimeRef.current) as SingleButton[]).forEach((button) => {
       clearTimers(button);
       runtimeRef.current[button].longPressTriggered = false;
+      runtimeRef.current[button].editorStepped = false;
     });
     clearSelectorTimer();
     // A cancel is a lost pointer or a blurred window, not a gesture: the levels drop and the machine

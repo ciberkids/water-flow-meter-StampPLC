@@ -385,6 +385,14 @@ export function App() {
     () => screens.find((screen) => screen.id === selectedScreenId) ?? screens[0],
     [screens, selectedScreenId]
   );
+  /**
+   * The same screen, readable from a live timer.
+   *
+   * §5.4's held ramp is driven by a self-rescheduling timeout inside `useSimulatedButtons`, which must
+   * see the screen the operator is on NOW rather than the one captured when the press began.
+   */
+  const selectedScreenRef = useRef<ScreenDefinition | undefined>(selectedScreen);
+  selectedScreenRef.current = selectedScreen;
   const totalScreens = screens.length;
 
   /* ---- Simulated device memory ------------------------------------------------------------------
@@ -1559,6 +1567,37 @@ export function App() {
   );
 
   /**
+   * One step of an open editor, whether it came from a tap or from §5.4's held ramp.
+   *
+   * Both paths were about to grow their own copy of "find the screen's setting, read the pending value,
+   * clamp or cycle it" — the two-homes shape this codebase keeps having to undo. `multiplier` is the only
+   * difference between them, and it is exactly the difference the firmware expresses:
+   * `magnitude = editor.setting->step * tier.multiplier`, with a tap being tier 1.
+   *
+   * Returns whether it stepped, so the caller can tell "no editor here" from "stepped".
+   */
+  const stepEditorValue = useCallback(
+    (screen: ScreenDefinition | undefined, direction: 1 | -1, multiplier: number): boolean => {
+      const setting = settingOfScreen(screen, manifestValueById);
+      if (!setting) {
+        return false;
+      }
+      const delta = direction * (setting.step ?? 1) * multiplier;
+      const current =
+        editorStateRef.current?.bindingId === setting.id
+          ? editorStateRef.current.raw
+          : currentRawFor(setting);
+      const next = adjustSettingRaw(setting, current, delta);
+      editorStateRef.current = { bindingId: setting.id, raw: next };
+      setEditorState(editorStateRef.current);
+      return true;
+    },
+    [currentRawFor, manifestValueById]
+  );
+  const stepEditorValueRef = useRef(stepEditorValue);
+  stepEditorValueRef.current = stepEditorValue;
+
+  /**
    * Whether a conditional screen is part of its level right now — `UiNavigator::screenVisible`.
    *
    * A screen with no `visibleWhen` is unconditional, which is every screen but the six the
@@ -1913,17 +1952,16 @@ export function App() {
              * Neither action had a handler, so on every editor screen UP/DOWN fell through to the
              * ring and the `New` line never moved. `adjustSettingRaw` mirrors the firmware:
              * numerics clamp at their ends, enums cycle through their option list.
+             *
+             * A TAP is tier one — "a short press is always exactly ±1 step"
+             * (interaction_handler.cpp:148). The held ramp calls the same function with the tier's
+             * multiplier.
              */
-            const setting = settingOfScreen(selectedScreen, manifestValueById);
-            if (setting) {
-              const delta = action === "config.action.value.increment" ? (setting.step ?? 1) : -(setting.step ?? 1);
-              const current = editorStateRef.current?.bindingId === setting.id
-                ? editorStateRef.current.raw
-                : currentRawFor(setting);
-              const next = adjustSettingRaw(setting, current, delta);
-              editorStateRef.current = { bindingId: setting.id, raw: next };
-              setEditorState(editorStateRef.current);
-            }
+            stepEditorValue(
+              selectedScreen,
+              action === "config.action.value.increment" ? 1 : -1,
+              1
+            );
           } else if (action === "config.action.value.commit" ||
                      action === "config.action.value.discard") {
             /**
@@ -2247,7 +2285,58 @@ export function App() {
     [hierarchy]
   );
 
-  const { pressed, armedCombo, press, release, cancelAll } = useSimulatedButtons(handleButtonEvent);
+  /**
+   * §5.4's held ramp: the editor's claim on UP/DOWN, handed to the input adapter.
+   *
+   * This is the half that was missing, and the missing half was the whole reported bug. Holding UP in an
+   * editor did nothing for 1500 ms, and then the queue's ring repeats arrived — `f-inc` has no
+   * targetScreenId so `findMatchingButtonFlows` correctly dropped it, leaving the value frozen; on a
+   * SETTING screen the same repeats hit `f-prev`/`f-next`, which do have targets, so the ring paged and
+   * the operator landed on the next setting. Both symptoms, one cause: nothing here spoke for the editor.
+   *
+   * `owns` is derived from the dataset rather than from a second flag: a screen owns UP/DOWN precisely
+   * when it declares an increment flow AND resolves to a setting, which is the dataset's spelling of
+   * `editor.active && editor.setting`. It also stands down while the pack selector or the blanked display
+   * owns the buttons — the firmware's own `handleEditorRepeat` does not test those, but it cannot step a
+   * value nobody can see, and mirroring that would be mirroring a bug.
+   */
+  const editorRepeatBridge = useMemo(
+    () => ({
+      owns: () => {
+        if (selectorOpenRef.current || !displayOnRef.current) {
+          return false;
+        }
+        const screen = selectedScreenRef.current;
+        const declaresAdjust = screen?.flows?.some(
+          (flow) => flow.actionId === "config.action.value.increment"
+        );
+        if (!declaresAdjust) {
+          return false;
+        }
+        return Boolean(settingOfScreen(screen, manifestValueById));
+      },
+      step: (button: "up" | "down", multiplier: number, heldMs: number) => {
+        const screen = selectedScreenRef.current;
+        const direction = button === "up" ? 1 : -1;
+        if (!stepEditorValueRef.current(screen, direction, multiplier)) {
+          return;
+        }
+        recordTraceEntry({
+          id: direction > 0 ? "config.action.value.increment" : "config.action.value.decrement",
+          trigger: `${button === "up" ? "BtnA" : "BtnB"} held ${(heldMs / 1000).toFixed(1)}s`,
+          screenId: screen?.id ?? "unknown",
+          screenName: screen?.name,
+          notes: `§5.4 ramp: x${multiplier} step (handleEditorRepeat owns the button; the release is swallowed)`
+        });
+      }
+    }),
+    [manifestValueById, recordTraceEntry]
+  );
+
+  const { pressed, armedCombo, press, release, cancelAll } = useSimulatedButtons(
+    handleButtonEvent,
+    editorRepeatBridge
+  );
 
   const handleButtonPressStart = useCallback(
     (button: "up" | "down" | "enter") => {
