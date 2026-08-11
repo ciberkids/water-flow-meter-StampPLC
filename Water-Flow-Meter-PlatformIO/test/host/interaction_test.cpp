@@ -14,6 +14,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <string>
 #include <vector>
 
 #include "input/interaction_handler.h"
@@ -715,6 +716,78 @@ void configListPagingTests() {
   check(!everEditing, "no editor is live anywhere along the Modbus ring");
   check(dev.controller.navigator().depth() == 2, "paging siblings did not change depth");
   check(harness::writes.empty(), "paging the Modbus ring wrote no Modbus register");
+}
+
+/**
+ * A HELD UP/DOWN navigates NOWHERE, and this is where that is written down.
+ *
+ * §3.1 says a held UP/DOWN repeats the navigation step every 250 ms, and `button_input.cpp` faithfully
+ * emits those repeats from the 1.5 s threshold. Nothing answers them. `mapGesture` maps a repeat to
+ * `FlowGesture::Hold`, `matchFlow` requires an exact gesture match with no fallback, and the generated
+ * table declares no hold flow on any screen — so every repeat is popped, matched against nothing, and
+ * dropped. §3.1's repeating step is emitted-but-unimplemented, which is a different thing from absent and
+ * is exactly the kind of gap that survives for months because both halves look present.
+ *
+ * It cost a real bug report. The web simulator invented the missing half — it answered a repeat with the
+ * screen's SHORT flow — so holding UP on a setting page carried the operator several settings away from
+ * the one they were reading, and the panel's own button legend documented that invention as fact. The
+ * preview was corrected to match `matchFlow`; this test is what stops the firmware drifting the other way
+ * without anyone noticing, and what tells the next person that adding a hold flow changes these answers.
+ */
+void heldRepeatScopeTests() {
+  std::printf("\n[a held UP/DOWN navigates nowhere — §3.1 emitted, never answered]\n");
+
+  // The premise first, read off the table the firmware actually runs. Every expectation below follows
+  // from it, so if this ever changes the rest of the suite should be re-read rather than patched.
+  std::size_t holdFlows = 0;
+  std::size_t buttonFlows = 0;
+  for (std::size_t i = 0; i < ui_exporter::kGeneratedScreenCount; ++i) {
+    const auto& screen = ui_exporter::kGeneratedScreens[i];
+    for (std::size_t f = 0; f < screen.flowCount; ++f) {
+      const auto& flow = screen.flows[f];
+      if (flow.trigger != ui_exporter::FlowTrigger::Button) continue;
+      ++buttonFlows;
+      if (flow.gesture == ui_exporter::FlowGesture::Hold) ++holdFlows;
+    }
+  }
+  check(buttonFlows > 100, "the table has button flows at all, so a zero below means something");
+  if (holdFlows != 0) {
+    std::printf("    %zu hold flow(s) now exist — a held UP/DOWN can navigate again\n", holdFlows);
+  }
+  check(holdFlows == 0, "no screen declares a hold flow, so no repeat can ever match");
+
+  // ── On the info ring ───────────────────────────────────────────────────────────────────
+  Device ring;
+  ring.boot();
+  const std::string ringStart = currentId(ring);
+  // 2.1 s: past the 1.5 s long-press threshold, with two 250 ms repeats behind it.
+  ring.hold(ButtonInputManager::Button::Down, 2100);
+  check(currentId(ring) == ringStart,
+        "a 2.1 s DOWN on the info ring moves nowhere: the long press and both repeats match nothing");
+  check(ring.controller.navigator().depth() == 0, "and it did not descend either");
+  ring.tap(ButtonInputManager::Button::Down);
+  check(currentId(ring) != ringStart, "while a TAP pages the ring as it always has");
+
+  // ── Inside a configuration level ───────────────────────────────────────────────────────
+  Device config;
+  config.boot();
+  check(walkToModbusSettings(config), "two descents from P5 reach M1");
+  const std::string settingStart = currentId(config);
+  config.hold(ButtonInputManager::Button::Down, 3000);
+  check(currentId(config) == settingStart,
+        "a 3 s DOWN on a Modbus setting page moves nowhere — the reported 'it brings me to the flow unit'");
+  check(config.controller.navigator().depth() == 2, "and the depth is untouched");
+  check(!config.controller.editor().active, "the hold did not open an editor either");
+  config.tap(ButtonInputManager::Button::Down);
+  check(onScreen(config, "config-modbus-baud-rate"), "a tap still pages M1 -> M2");
+
+  // ── The one place a hold DOES act, and it does not come through the queue ──────────────
+  config.tap(ButtonInputManager::Button::Enter);
+  check(config.controller.editor().active, "ENTER opens the baud-rate editor");
+  const int32_t opened = config.controller.editor().pending;
+  config.hold(ButtonInputManager::Button::Up, 3000);
+  check(config.controller.editor().pending != opened,
+        "holding UP inside the editor ramps: §5.4 reads the button levels, not the event queue");
 }
 
 void configEditorDescentTests() {
@@ -2025,6 +2098,7 @@ int main() {
   selectorCommitTests();
   ledI2cTrafficTests();
   configListPagingTests();
+  heldRepeatScopeTests();
   configEditorDescentTests();
   sensorEditorDescentTests();
   editorDatasetInvariantTests();

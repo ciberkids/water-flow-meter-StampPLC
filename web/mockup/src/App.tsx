@@ -2094,10 +2094,24 @@ export function App() {
           });
         });
       } else {
+        /**
+         * A press the dataset does not answer falls back to browsing the screen LIST.
+         *
+         * That is a design-tool affordance, not device behaviour: `selectByOffset` walks the flat list in
+         * tree order, so it steps onto editor and confirm screens that the current screen has no route to,
+         * and it does not push a navigation parent, so the depth it leaves behind is a fiction.
+         *
+         * It must therefore answer a deliberate TAP and nothing else. It used to answer `kind !== "long"`,
+         * which included REPEAT — so holding UP or DOWN anywhere the dataset had no hold flow (which is
+         * everywhere: the dataset declares zero) walked the operator through the catalogue at 250 ms a
+         * step. From M1 that is M1.V, its own editor, entered without descending. This was the second and
+         * larger half of the reported hold bug, and the harder half to see, because it records no trace
+         * entry naming a flow and the screen it lands on looks plausible.
+         */
         let fallbackDestination: string | undefined;
-        if (event.button === "up" && event.kind !== "long") {
+        if (event.button === "up" && event.kind === "short") {
           fallbackDestination = selectByOffset(-1);
-        } else if (event.button === "down" && event.kind !== "long") {
+        } else if (event.button === "down" && event.kind === "short") {
           fallbackDestination = selectByOffset(1);
         } else if (event.button === "enter" && event.kind === "short") {
           fallbackDestination = selectById("configuration");

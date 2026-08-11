@@ -26,19 +26,26 @@ function buttonFlowsFor(
 /**
  * Resolves a simulated button event to the flows it fires.
  *
- * The `repeat` case mirrors InteractionHandler::matchFlow in the firmware, and has to keep
- * mirroring it — a preview that pages when the device does not (or the reverse) is worse
- * than no preview at all.
+ * This is `InteractionHandler::matchFlow` and must stay it, gesture for gesture. The firmware maps an
+ * event to exactly one `FlowGesture` and then requires an exact match:
  *
- * Display_UI_Requirements §3.1 says a held UP/DOWN repeats the navigation step every
- * 250 ms, and the dataset has no vocabulary for "a repeated step": a repeat is the same
- * transition again. So a repeat prefers an explicit `hold` flow and otherwise re-fires the
- * `short` one — but only when that flow names a target screen.
+ *   `mapGesture`:  !isLongPress -> Short  ·  isRepeat -> Hold  ·  otherwise -> Long
+ *   `matchFlow`:   trigger == Button && flow.button == button && flow.gesture == gesture
  *
- * The target-screen condition is the important half. A target-bearing UP/DOWN short flow is
- * a move to a sibling; a target-less one acts in place, and in-place actions must not
- * auto-fire. In the firmware that protects the §5.4 acceleration ramp, which owns a held
- * UP/DOWN inside a numeric editor, and the §5.5 Nyquist override's "Save anyway".
+ * There is no fallback of any kind. A repeat asks for `hold` and gets `hold` or nothing.
+ *
+ * This file used to answer a repeat by taking the `short` flow instead whenever it named a target
+ * screen, on the theory that "a repeat is the same transition again" and that §3.1's held UP/DOWN pages
+ * the ring every 250 ms. §3.1 does say that, and the firmware does emit the repeats — but NOTHING answers
+ * them: the dataset declares 196 short flows, 13 long, and zero hold. So a held UP/DOWN navigates nowhere
+ * on the device, and that invented fallback was the whole of the reported bug. Holding UP on a setting
+ * page paged the operator several settings away from the one they were reading, which the device never
+ * did, and it also fought the editor: on an editor screen it dropped `f-inc` for having no target, so the
+ * value froze while the ramp was still missing.
+ *
+ * §3.1's repeating navigation step being unimplemented is a real gap, but it is a FIRMWARE gap — closing
+ * it means declaring `hold` flows or making `matchFlow` fall back, in the pipeline, where the host tests
+ * can see it. It is not something the preview may quietly invent on its own.
  */
 export function findMatchingButtonFlows(
   screen: ScreenDefinition | undefined,
@@ -51,12 +58,5 @@ export function findMatchingButtonFlows(
   if (event.kind !== "repeat") {
     return buttonFlowsFor(screen, event.button, event.kind);
   }
-
-  const holdFlows = buttonFlowsFor(screen, event.button, "hold");
-  if (holdFlows.length > 0) {
-    return holdFlows;
-  }
-  return buttonFlowsFor(screen, event.button, DEFAULT_GESTURE).filter(
-    (flow) => Boolean(flow.targetScreenId)
-  );
+  return buttonFlowsFor(screen, event.button, "hold");
 }

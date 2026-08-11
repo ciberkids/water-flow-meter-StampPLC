@@ -19,23 +19,28 @@ type PhysicalButton = Exclude<SimulatedButton, "up+down" | "up+down+enter">;
  */
 const BUTTON_METADATA: Record<PhysicalButton, { key: string; name: string; role: string; hint: string }> = {
   /**
-   * The hints said "held, repeats every 250 ms", which set the wrong expectation twice over: the ring's
-   * repeats do not begin until 1500 ms, and inside an editor a hold is not a repeat at all but §5.4's
-   * accelerating ramp, which starts at 250 ms and takes the button away from the ring entirely. Someone
-   * holding UP on a setting page to dial a number faster, finding it silent and then watching the menu
-   * page past what they wanted, was reading this line and believing it.
+   * The hints said "held, repeats every 250 ms". Nothing about that was true, and it is worth being exact
+   * about why, because two commits have now been needed to get this line right.
+   *
+   * `button_input.cpp` does emit repeats — from 1500 ms, every 250 ms — but `mapGesture` maps them to
+   * `FlowGesture::Hold`, `matchFlow` demands an exact gesture match, and no screen in the dataset declares
+   * a single hold flow. So every repeat is popped, matched against nothing, and dropped: a held UP/DOWN
+   * navigates NOWHERE on the device, at any depth. The one place a hold does something is inside a value
+   * editor, and there it is not a repeat at all but §5.4's ramp, which reads the button levels directly.
+   *
+   * Someone holding UP on a setting page to dial a number faster was reading this line and believing it.
    */
   up: {
     key: "↑",
     name: "BtnA",
     role: "Up",
-    hint: "Previous page — held 1.5 s, then pages every 250 ms · in a value editor: ramps ×1 → ×5 → ×25"
+    hint: "Tap for the previous page · holding acts only in a value editor, where it ramps ×1 → ×5 → ×25"
   },
   down: {
     key: "↓",
     name: "BtnB",
     role: "Down",
-    hint: "Next page — held 1.5 s, then pages every 250 ms · in a value editor: ramps ×1 → ×5 → ×25"
+    hint: "Tap for the next page · holding acts only in a value editor, where it ramps ×1 → ×5 → ×25"
   },
   enter: { key: "⏎", name: "BtnC", role: "Enter", hint: "Short descends or commits · held 1.5 s escapes" }
 };
