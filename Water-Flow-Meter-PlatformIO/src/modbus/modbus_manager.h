@@ -33,7 +33,7 @@ struct ModbusDependencies {
   uint16_t* connectedBitmap = nullptr;
   uint16_t* undersamplingFlags = nullptr;
   double* totalSessionLitersCache = nullptr;
-  double* aggregateFlowLpsCache = nullptr;
+  double* aggregateFlowLpmCache = nullptr;
   bool* allSensorsReadyCache = nullptr;
   volatile float* pollingRateKhz = nullptr;
   plc::LinkSettingsManager* link = nullptr;

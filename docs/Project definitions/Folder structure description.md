@@ -21,7 +21,6 @@
         - `ui/` — UI runtime (`core`), exporter output (`generated`), and theme helpers.
     - ***include*** / ***lib*** / ***test***: PlatformIO headers, libraries, and test scaffolding.
     - ***platformio.ini***: build configuration and environment definitions.
-- ***water-flow-meter-StampPLC_Legacy*** — legacy project snapshot (kept for reference); contains the previous single-file `src/firmware.cpp` and `LICENSE`.
 - ***web*** — React/Vite workspace powering the StampPLC UI mockup and translation exporter.
     - ***mockup***: application source, Playwright/Cypress tests, and Node-based exporter tooling.
 - ***graphics*** — assets used across the project.

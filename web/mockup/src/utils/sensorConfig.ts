@@ -66,14 +66,20 @@ export interface SimulatedSensor {
   calibration: number;
   /** `SensorCharacteristics::pulses_per_litre`. Exact, used only when `calibration` is 1. */
   pulsesPerLitre: number;
-  /** `SensorData::instantFlow_L_s` (modbus/sensor_types.h:23). */
-  instantFlowLps: number;
+  /**
+   * `SensorData::instantFlow_L_min` — LITRES PER MINUTE (§2a).
+   *
+   * The field was `instantFlowLpm` and the device stored L/s. §2a moved storage to L/min, which is
+   * the unit of the meter's datasheet, of `q_max`, of the Nyquist limit, of MQTT and of the panel —
+   * so the conversions this used to need on every one of those paths are gone.
+   */
+  instantFlowLpm: number;
   /** `SensorData::cumulativeLiters` (modbus/sensor_types.h:24). */
   cumulativeLiters: number;
   /** `SensorData::sessionLiters` (modbus/sensor_types.h:25). */
   sessionLiters: number;
-  /** `SensorData::maxFlowSinceReset` (modbus/sensor_types.h:26). */
-  maxFlowLps: number;
+  /** `SensorData::maxFlowSinceReset`, in L/min like the reading it tracks. */
+  maxFlowLpm: number;
   /**
    * Bit n of `REG_UNDERSAMPLING_FLAGS` (modbus/register_map.h:17).
    *
@@ -119,10 +125,10 @@ const kDefaultSensor: Omit<SimulatedSensor, "number"> = {
   adjust: 0,
   calibration: 0,
   pulsesPerLitre: 450,
-  instantFlowLps: 2.34,
+  instantFlowLpm: 140.4,  // was 2.34 L/s
   cumulativeLiters: 123.45,
   sessionLiters: 123.45,
-  maxFlowLps: 2.34,
+  maxFlowLpm: 140.4,
   undersampling: false
 };
 
@@ -148,7 +154,7 @@ function normalizeSensor(sensor: SimulatedSensor): SimulatedSensor {
   const flowing = sensor.connected && sensor.ready && calibrated;
   return {
     ...sensor,
-    instantFlowLps: flowing ? sensor.instantFlowLps : 0,
+    instantFlowLpm: flowing ? sensor.instantFlowLpm : 0,
     undersampling: sensor.connected ? sensor.undersampling : false
   };
 }
@@ -265,9 +271,16 @@ export function isPerSensorSetting(manifestValue: FirmwareValueDefinition | unde
   return manifestValue?.perSensor === true && manifestValue.category === "setting";
 }
 
-/** `%6.2f` — two decimals, right-aligned in a field of six, never truncated. */
-function formatFixed6(value: number): string {
-  return value.toFixed(2).padStart(6, " ");
+/**
+ * `%7.2f` — two decimals, right-aligned in a field of seven, never truncated.
+ *
+ * Seven, not six (§4.3): under §2a a single channel can reach 9999.99 L/m, and `%6.2f` cannot hold
+ * it. A printf field width is a MINIMUM, so a channel clamped to q_max = 65535 still renders all
+ * eight characters of `65535.00` rather than being cut — which is why the declared worst cases come
+ * from the physical bound and not from the format string.
+ */
+function formatFixed7(value: number): string {
+  return value.toFixed(2).padStart(7, " ");
 }
 
 type SettingField = "connected" | "multiplier" | "adjust" | "qMaxLpm" | "calibration" | "pulsesPerLitre";
@@ -441,22 +454,33 @@ function parseSensorMetricBinding(binding: string): [number, string] | undefined
   return [number, match[2] ?? ""];
 }
 
-/** The metrics `resolveSensorBinding` knows, and the unit each renders with. */
-const kMetricUnits: Record<string, string> = {
-  instantFlow: "L/s",
-  cumulativeLiters: "L",
-  cumulativeM3: "m^3",
-  sessionLiters: "L",
-  sessionM3: "m^3",
-  maxFlowSinceReset: "L/s"
-};
+/**
+ * The metrics `resolveSensorBinding` knows. NO UNITS — the unit lives in the header (§4.3).
+ *
+ * This was a unit table, so P1 rendered `1: 2.34 L/s` under a title reading `Instant Flow (L/m)`:
+ * the row contradicting its own header, in the wrong unit, with the L/s number. §4.3 rejected per-row
+ * units because they are impossible on the volume pages — `8: 99999999.99 m^3` is 18 characters and
+ * overflows two columns by 19 px — and put the unit in the title, two rows above and always visible.
+ *
+ * The set is kept as a list so an unknown metric still fails loudly rather than rendering a plausible
+ * wrong number.
+ */
+const kKnownMetrics = new Set([
+  "instantFlow",
+  "cumulativeLiters",
+  "cumulativeM3",
+  "sessionLiters",
+  "sessionM3",
+  "maxFlowSinceReset",
+  "pulsesPerLitre"
+]);
 
 function metricValue(sensor: SimulatedSensor, metric: string): number | undefined {
   // ui/core/ui_bindings.cpp:281-304. The m^3 pair is the litre reading over 1000; there is no
   // separately stored cubic-metre total.
   switch (metric) {
     case "instantFlow":
-      return sensor.instantFlowLps;
+      return sensor.instantFlowLpm;
     case "cumulativeLiters":
       return sensor.cumulativeLiters;
     case "cumulativeM3":
@@ -466,7 +490,16 @@ function metricValue(sensor: SimulatedSensor, metric: string): number | undefine
     case "sessionM3":
       return sensor.sessionLiters / 1000;
     case "maxFlowSinceReset":
-      return sensor.maxFlowLps;
+      return sensor.maxFlowLpm;
+    /**
+     * SET on a pulses-calibrated channel, CALCULATED on a formula-calibrated one.
+     *
+     * `F = m*Q` with Q in L/min means K = 60*m, since F = K*Q/60. The offset is not folded in: `a`
+     * shifts the line rather than scaling it, so no single K expresses a formula with a non-zero
+     * offset — S5 reports the offset on its own row instead.
+     */
+    case "pulsesPerLitre":
+      return sensor.calibration === 1 ? sensor.pulsesPerLitre : sensor.multiplier * 60;
     default:
       return undefined;
   }
@@ -475,34 +508,60 @@ function metricValue(sensor: SimulatedSensor, metric: string): number | undefine
 /**
  * What the device draws for `sensor.<n>.<metric>`, in the order the resolver tests it.
  *
- * ui/core/ui_bindings.cpp:249-307. Four outcomes, and a metric and a status differ in both
- * respects: the status omits the sensor number, and it answers even when no reading is
- * available.
+ * Mirrors `UiBindingResolver::resolveSensorBinding`. Four outcomes, and a metric and a status differ
+ * in both respects: the status omits the sensor number, and it answers even when no reading exists.
  *
- *   status, any state      "--" | "WAIT" | "OK"     (:266-270)
- *   metric, disconnected   `%u: --`   -> "3: --"    (:272-275)
- *   metric, not ready      `%u: WAIT` -> "3: WAIT"  (:276-279)
- *   metric, ready          `%u: %6.2f %s`           (:306)
+ *   status, any state      "--" | "SET?" | "OK"
+ *   metric, disconnected   `%u: --`     -> "3: --"
+ *   metric, uncalibrated   `%u: SET?`   -> "3: SET?"
+ *   metric, ready          `%u: %7.2f` plus " MAX" on the peak page
  *
- * A disconnected row is therefore neither hidden nor zero: it prints its number and "--".
+ * `SET?` not `WAIT` (§4.4): `WAIT` implies warming up, when the real condition is that the channel
+ * has no valid calibration and needs an operator. Neither the firmware nor this had followed the
+ * spec — only the gallery's hand-written sample table did, so all three disagreed about what a
+ * just-wired channel says.
+ *
+ * `--` means NOT IN SERVICE, never "not detected". No presence detection exists and none is possible:
+ * an idle passive pulse sensor is indistinguishable from one whose wire fell off.
+ *
+ * `%7.2f`, not `%6.2f` — a channel can reach 9999.99 L/m, which six characters cannot hold — and no
+ * trailing space when there is no marker, so P1's row is `1: 65535.00` exactly as declared.
  */
 function resolveSensorMetric(sensor: SimulatedSensor, metric: string): string | undefined {
   if (metric === "status") {
-    return !sensor.connected ? "--" : sensor.ready ? "OK" : "WAIT";
+    return !sensor.connected ? "--" : sensor.ready ? "OK" : "SET?";
   }
   if (!sensor.connected) {
     return `${sensor.number}: --`;
   }
   if (!sensor.ready) {
-    return `${sensor.number}: WAIT`;
+    return `${sensor.number}: SET?`;
+  }
+  if (!kKnownMetrics.has(metric)) {
+    // The firmware returns false rather than rendering a plausible-looking wrong number, so does this.
+    return undefined;
   }
   const value = metricValue(sensor, metric);
   if (value === undefined) {
-    // Unknown metric: the firmware returns false rather than rendering a plausible-looking
-    // wrong number (ui/core/ui_bindings.cpp:301-303), and so does this.
     return undefined;
   }
-  return `${sensor.number}: ${formatFixed6(value)} ${kMetricUnits[metric]}`;
+  /**
+   * `MAX` marks a peak that reached the channel's OWN q_max ceiling — the whole point of §5a's page.
+   * A channel pinned at its ceiling is under-dimensioned for the pipe it is on, and the number alone
+   * cannot say so, because a legitimate peak can sit just below the same value.
+   *
+   * Compared in L/min against q_max, which is stored in L/min. Comparing the stored L/s peak against
+   * it would flag nothing, ever.
+   */
+  const marker =
+    metric === "maxFlowSinceReset" && sensor.qMaxLpm > 0 && value >= sensor.qMaxLpm ? " MAX" : "";
+  // Pulses per litre is a COUNT: `360.00 p/L` invites the reader to wonder what the hundredths mean
+  // on a quantity that only ever takes whole values.
+  const text =
+    metric === "pulsesPerLitre"
+      ? String(Math.round(value)).padStart(7, " ")
+      : formatFixed7(value);
+  return `${sensor.number}: ${text}${marker}`;
 }
 
 /**
@@ -603,7 +662,7 @@ export function advanceSensorTick(sensor: SimulatedSensor, input: SensorTickInpu
     return sensor;
   }
   if (!sensor.connected || !sensor.ready || sensor.multiplier === 0) {
-    return normalizeSensor({ ...sensor, instantFlowLps: 0 });
+    return normalizeSensor({ ...sensor, instantFlowLpm: 0 });
   }
 
   const frequency = input.pulses / elapsedSeconds;
@@ -614,19 +673,23 @@ export function advanceSensorTick(sensor: SimulatedSensor, input: SensorTickInpu
   if (flowLpm > sensor.qMaxLpm) {
     flowLpm = sensor.qMaxLpm;
   }
-  const instantFlowLps = flowLpm / 60;
-  const liters = instantFlowLps * elapsedSeconds;
+  // Stored as computed, mirroring the engine after §2a: the q_max clamp above is already in L/min,
+  // so this is where the conversion is REMOVED rather than added. The one division that remains is
+  // the volume one below, and it is unavoidable — volume is a rate times a TIME, and the interval is
+  // in seconds while the rate is per minute.
+  const instantFlowLpm = flowLpm;
+  const liters = (flowLpm * elapsedSeconds) / 60;
   return normalizeSensor({
     ...sensor,
-    instantFlowLps,
-    maxFlowLps: Math.max(sensor.maxFlowLps, instantFlowLps),
+    instantFlowLpm,
+    maxFlowLpm: Math.max(sensor.maxFlowLpm, instantFlowLpm),
     sessionLiters: sensor.sessionLiters + liters,
     cumulativeLiters: sensor.cumulativeLiters + liters
   });
 }
 
 /**
- * The pulse count that makes a channel read `targetFlowLps` over an interval.
+ * The pulse count that makes a channel read `targetFlowLpm` over an interval.
  *
  * The inverse of the engine's two lines — `frequency = pulses / elapsedSeconds` and
  * `flowLpm = (frequency - adjust) / f_multiplier` (sensors/sensor_state_engine.cpp:27-28) — so
@@ -636,12 +699,14 @@ export function advanceSensorTick(sensor: SimulatedSensor, input: SensorTickInpu
  */
 export function pulsesForFlow(
   sensor: SimulatedSensor,
-  targetFlowLps: number,
+  targetFlowLpm: number,
   elapsedMs: number
 ): number {
   if (sensor.multiplier === 0) {
     return 0;
   }
-  const frequency = targetFlowLps * 60 * sensor.multiplier + sensor.adjust;
+  // The `* 60` that used to be here converted the caller's L/s into the L/min the formula wants.
+  // Callers now speak L/min (§2a), so it is gone rather than being cancelled by a second conversion.
+  const frequency = targetFlowLpm * sensor.multiplier + sensor.adjust;
   return Math.max(0, frequency) * (elapsedMs / 1000);
 }

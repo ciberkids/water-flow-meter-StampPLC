@@ -105,8 +105,8 @@
       "x": 2,
       "y": 124,
       "emphasis": "muted",
-      "content": "UP/DN pages  hold=exit",
-      "worst": "UP/DN pages  hold=exit",
+      "content": "UP/DN pages",
+      "worst": "UP/DN pages",
       "bound": "shared footer vocabulary, see 7.1",
       "bannerReplaces": true
     },

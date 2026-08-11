@@ -98,7 +98,7 @@ void LedController::clearResetRamp() {
 
 void LedController::update(uint32_t nowMs,
                            double totalSessionLiters,
-                           double aggregateFlowLps,
+                           double aggregateFlowLpm,
                            bool allSensorsReady,
                            bool hasUndersampling) {
   clampConfig();
@@ -134,7 +134,7 @@ void LedController::update(uint32_t nowMs,
   bool greenOn = allSensorsReady && !hasUndersampling;
 
   // Blue channel indicates live flow
-  if (aggregateFlowLps > 0.0f) {
+  if (aggregateFlowLpm > 0.0f) {
     lastFlowTimestampMs_ = nowMs;
   }
   bool blueOn = false;

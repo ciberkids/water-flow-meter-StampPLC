@@ -386,7 +386,10 @@ void UiRenderer::drawFlowDots(const ui_exporter::Element& element,
   const int height = element.height > 0 ? element.height : 12;
   const int radius = std::max(1, std::min(spacing, height) / 3);
   const int16_t centerY = static_cast<int16_t>(element.y + height / 2);
-  const bool active = context.aggregateFlowLps > 0.001;
+  // 0.01 L/min, restated from the old 0.001 L/s (§2a requires the thresholds move with the unit).
+  // A hair looser than a straight ×60 would give, because the point is "is water moving at all" and
+  // 0.06 L/min is below anything a pulse meter can resolve in a one-second window anyway.
+  const bool active = context.aggregateFlowLpm > 0.01;
 
   /**
    * ONE STEP PER REPAINT, not a rate derived from the flow.

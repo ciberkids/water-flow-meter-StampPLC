@@ -67,8 +67,8 @@
       "x": 2,
       "y": 124,
       "emphasis": "muted",
-      "content": "ENTER opens confirm screen",
-      "worst": "ENTER opens confirm screen",
+      "content": "UP/DN pages  ENTER reset...",
+      "worst": "UP/DN pages  ENTER reset...",
       "bound": "fixed literal",
       "bannerReplaces": true
     },

@@ -22,6 +22,12 @@ import type { FirmwareValueDefinition } from "../../src/types/firmwareActions";
 import { sampleValueFor } from "../../src/utils/sampleValues";
 import { formatSetting, pendingRawFor, rangeHintFor, settingOfScreen } from "../../src/utils/settingHints";
 import { clipToPanel } from "../../src/utils/layout";
+import {
+  createSensorTable,
+  resolveSensorBinding,
+  setSensor,
+  type SimulatedSensor
+} from "../../src/utils/sensorConfig";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const mockupRoot = path.resolve(here, "..", "..");
@@ -60,6 +66,28 @@ interface Screen {
 }
 
 /**
+ * The installation the gallery depicts: two channels running, one of them pinned at its ceiling, one
+ * uncalibrated, three out of service.
+ *
+ * A STATE, not a set of strings. The forty-odd `sensor.N.metric` rows used to be written out by hand
+ * here, which made this file a third home for the row format alongside the firmware and
+ * `sensorConfig.ts` — and all three drifted: the firmware and the app rendered `1: 2.34 L/s` under an
+ * `Instant Flow (L/m)` header while this file alone had the agreed `1:  140.40`. Choosing the state
+ * and resolving it through the same function the app uses means the gallery cannot show a row the
+ * simulator would not.
+ */
+const gallerySensors: SimulatedSensor[] = (() => {
+  let table = createSensorTable();
+  // 2.34 L/s is 140.4 L/min, comfortably inside the default 150 ceiling.
+  table = setSensor(table, 2, { instantFlowLps: 2.5, maxFlowLps: 2.5, qMaxLpm: 150 });  // at MAX
+  for (const out of [3, 6, 7]) table = setSensor(table, out, { connected: false });
+  // Uncalibrated: connected, but no valid configuration yet, so every row reads SET?.
+  table = setSensor(table, 4, { ready: false, multiplier: 0 });
+  table = setSensor(table, 5, { instantFlowLps: 0, maxFlowLps: 0 });
+  return table;
+})();
+
+/**
  * Realistic values for the gallery — a two-sensor installation with one channel uncalibrated and one that
  * has hit its ceiling, which is the state worth looking at rather than an all-zeros or all-nines panel.
  */
@@ -71,46 +99,6 @@ const TYPICAL: Record<string, string> = {
   "telemetry.totalVolumeLiters": "987.60",
   "telemetry.maxFlowLpm": "Max Flow:  150.00 L/m (S2)",
   "legend.status": "WiFi OK  MQTT OK  LED 1p/10L",
-  "sensor.1.instantFlow": "1:  140.40",
-  "sensor.2.instantFlow": "2:  138.90",
-  "sensor.3.instantFlow": "3: --",
-  "sensor.4.instantFlow": "4: SET?",
-  "sensor.5.instantFlow": "5:    0.00",
-  "sensor.6.instantFlow": "6: --",
-  "sensor.7.instantFlow": "7: --",
-  "sensor.8.instantFlow": "8:   96.20",
-  "sensor.1.cumulativeM3": "1:     12.34",
-  "sensor.2.cumulativeM3": "2:      9.87",
-  "sensor.3.cumulativeM3": "3: --",
-  "sensor.4.cumulativeM3": "4: SET?",
-  "sensor.5.cumulativeM3": "5:      0.00",
-  "sensor.6.cumulativeM3": "6: --",
-  "sensor.7.cumulativeM3": "7: --",
-  "sensor.8.cumulativeM3": "8:      3.02",
-  "sensor.1.sessionM3": "1:      1.21",
-  "sensor.2.sessionM3": "2:      0.94",
-  "sensor.3.sessionM3": "3: --",
-  "sensor.4.sessionM3": "4: SET?",
-  "sensor.5.sessionM3": "5:      0.00",
-  "sensor.6.sessionM3": "6: --",
-  "sensor.7.sessionM3": "7: --",
-  "sensor.8.sessionM3": "8:      0.31",
-  "sensor.1.maxFlowSinceReset": "1:   98.40",
-  "sensor.2.maxFlowSinceReset": "2:  150.00 MAX",
-  "sensor.3.maxFlowSinceReset": "3: --",
-  "sensor.4.maxFlowSinceReset": "4: SET?",
-  "sensor.5.maxFlowSinceReset": "5:    0.00",
-  "sensor.6.maxFlowSinceReset": "6: --",
-  "sensor.7.maxFlowSinceReset": "7: --",
-  "sensor.8.maxFlowSinceReset": "8:   96.20",
-  "sensor.1.status": "OK",
-  "sensor.2.status": "OK",
-  "sensor.3.status": "--",
-  "sensor.4.status": "SET?",
-  "sensor.5.status": "OK",
-  "sensor.6.status": "--",
-  "sensor.7.status": "--",
-  "sensor.8.status": "OK",
   "net.wifi.enabled": "On",
   "net.wifi.state": "OK",
   "net.wifi.ssid": "PlantFloor",
@@ -147,6 +135,11 @@ function resolveTypical(binding: string, screen: Screen): string {
   const local = TYPICAL[binding];
   if (local !== undefined) return local;
 
+  // Per-sensor rows come from the REAL resolver over the state above, so the gallery and the
+  // simulator cannot disagree about the format.
+  const fromSensors = resolveSensorBinding(binding, gallerySensors, 2);
+  if (fromSensors !== undefined) return fromSensors;
+
   const setting = settingOfScreen(screen, definitionById);
   if (binding === "config.editor.range") {
     return setting ? rangeHintFor(setting) : "";
@@ -167,15 +160,19 @@ function colorFor(element: Element): string {
   return theme.colors.textPrimary;
 }
 
-/** One <text> per character, so the advance is the device's and not the font's. */
-function glyphRun(text: string, x: number, y: number, advance: number, size: number, fill: string, bold: boolean) {
+/**
+ * One <text> per character, so the advance is the device's and not the font's.
+ *
+ * NO weight is ever set. Font0 has no bold, so emphasis on the device is a colour change and nothing
+ * else; drawing 700 here showed a distinction the panel cannot make.
+ */
+function glyphRun(text: string, x: number, y: number, advance: number, size: number, fill: string) {
   const parts: string[] = [];
   for (let i = 0; i < text.length; i += 1) {
     const ch = text[i];
     if (ch === " ") continue;
     parts.push(
-      `<text x="${x + i * advance}" y="${y + 7}" font-size="${size}" fill="${fill}"` +
-        `${bold ? ' font-weight="700"' : ""}>${escapeXml(ch)}</text>`
+      `<text x="${x + i * advance}" y="${y + 7}" font-size="${size}" fill="${fill}">${escapeXml(ch)}</text>`
     );
   }
   return parts.join("");
@@ -247,11 +244,11 @@ export function renderScreen(screen: Screen, useWorst: boolean): string {
         `<rect x="${element.x}" y="${element.y}" width="${bw}" height="${8 + BADGE_PAD_Y * 2}" ` +
           `fill="${theme.colors.badgeBackground}" stroke="${theme.colors.badgeBorder}" stroke-width="0.5"/>`
       );
-      body.push(glyphRun(shown, element.x + BADGE_PAD_X, element.y + BADGE_PAD_Y, advance, size, theme.colors.textPrimary, false));
+      body.push(glyphRun(shown, element.x + BADGE_PAD_X, element.y + BADGE_PAD_Y, advance, size, theme.colors.textPrimary));
       continue;
     }
 
-    body.push(glyphRun(shown, element.x, element.y, advance, size, colorFor(element), element.emphasis === "strong"));
+    body.push(glyphRun(shown, element.x, element.y, advance, size, colorFor(element)));
   }
 
   return (

@@ -18,7 +18,7 @@ class SensorStateEngine {
     RegisterBank* registerBank = nullptr;
     ModbusManager* modbusManager = nullptr;
     double* totalSessionLitersCache = nullptr;
-    double* aggregateFlowLpsCache = nullptr;
+    double* aggregateFlowLpmCache = nullptr;
     bool* allSensorsReadyCache = nullptr;
     uint16_t* undersamplingFlags = nullptr;
   };

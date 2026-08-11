@@ -137,6 +137,17 @@ struct Screen {
   std::size_t animationCount;
   const Submenu* submenus;
   std::size_t submenuCount;
+  /**
+   * Screen-level visibility: the SETTING binding that gates this screen, or nullptr when it is
+   * unconditional.
+   *
+   * The navigator skips a screen whose gate does not hold, so a level's ring is shorter than its
+   * member count when a branch is inactive. Relaxes R7.3, which is safe here because the gate is
+   * itself a setting with an unguarded editor — the completeness rule becomes "reachable under some
+   * value of the gate", still statically decidable by enumerating that setting's options.
+   */
+  const char* visibleWhenBinding;
+  std::int32_t visibleWhenEquals;
 };
 
 struct ThemeColor {

@@ -120,7 +120,7 @@ void UiController::update(uint32_t nowMs,
                           uint16_t warningFlags,
                           uint16_t connectedBitmap,
                           double totalSessionLiters,
-                          double aggregateFlowLps,
+                          double aggregateFlowLpm,
                           float pollingRateKhz,
                           const LedController& ledController,
                           const UiCountdownState& countdown,
@@ -132,7 +132,7 @@ void UiController::update(uint32_t nowMs,
   context_.warningFlags = warningFlags;
   context_.connectedBitmap = connectedBitmap;
   context_.totalSessionLiters = totalSessionLiters;
-  context_.aggregateFlowLps = aggregateFlowLps;
+  context_.aggregateFlowLpm = aggregateFlowLpm;
   context_.pollingRateKhz = pollingRateKhz;
   context_.ledVolumeStep = ledController.volumeStepLiters();
   context_.ledPulsePeriodMs = ledController.pulsePeriodMs();
@@ -160,7 +160,7 @@ void UiController::update(uint32_t nowMs,
   context_.warningCount = 0;
   context_.warningSummary.clear();
 
-  // The P0 flow indicator is driven straight from aggregateFlowLps by
+  // The P0 flow indicator is driven straight from aggregateFlowLpm by
   // UiRenderer::drawFlowDots(); no frame counter is kept here.
 
   for (std::size_t i = 0; i < plc::kNumSensors; ++i) {
@@ -171,7 +171,7 @@ void UiController::update(uint32_t nowMs,
     // threaded through and marked unused. The snapshot is rebuilt every frame, so this is a projection
     // rather than a cache, and it cannot go stale the way SensorData::isReady did across a reboot.
     dst.ready = configIsValid(configs[i]);
-    dst.instantFlow = src.instantFlow_L_s;
+    dst.instantFlow = src.instantFlow_L_min;
     dst.cumulativeLiters = src.cumulativeLiters;
     dst.sessionLiters = src.sessionLiters;
     dst.maxFlow = src.maxFlowSinceReset;

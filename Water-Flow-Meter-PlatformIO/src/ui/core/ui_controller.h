@@ -30,7 +30,7 @@ struct UiRenderContext {
   uint16_t warningFlags = 0;
   uint16_t connectedBitmap = 0;
   double totalSessionLiters = 0.0;
-  double aggregateFlowLps = 0.0;
+  double aggregateFlowLpm = 0.0;
   /**
    * Core-0 sampling rate, as published in register 0.
    *
@@ -155,7 +155,7 @@ class UiController {
               uint16_t warningFlags,
               uint16_t connectedBitmap,
               double totalSessionLiters,
-              double aggregateFlowLps,
+              double aggregateFlowLpm,
               float pollingRateKhz,
               const LedController& ledController,
               const UiCountdownState& countdown,

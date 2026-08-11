@@ -69,19 +69,57 @@ const SettingDescriptor* settingEditedByScreen(const ui_exporter::Screen* screen
 // A sibling move: follow the flow's target without touching depth. Falls back to
 // the UiPage ring when the dataset names no target, so an under-specified screen
 // still pages.
+/**
+ * Steps to the next reachable sibling, over any that are hidden.
+ *
+ * The flow's own target is the next sibling in the DATASET, which may be gated off — the calibration
+ * branch hides Multiplier and Adjust on a pulses-calibrated channel. Following the target blindly
+ * would land the operator on a screen the level no longer contains, which then draws rows for a
+ * calibration form they are not using.
+ */
 void handlePageNext(const UiActionContext& ctx, const ui_exporter::Flow&) {
   if (ctx.resolvedTarget) {
-    ctx.controller.navigator().goToSibling(ctx.resolvedTarget);
-    ctx.controller.syncPageFromScreen(ctx.resolvedTarget, ctx.nowMs);
+    auto& nav = ctx.controller.navigator();
+    const ui_exporter::Screen* target = ctx.resolvedTarget;
+    if (!nav.screenVisible(target)) {
+      target = nav.nextVisibleSibling(target);
+    }
+    if (target) {
+      nav.goToSibling(target);
+      ctx.controller.syncPageFromScreen(target, ctx.nowMs);
+    }
     return;
   }
   ctx.controller.nextPage(ctx.nowMs);
 }
 
+/**
+ * The same, backwards.
+ *
+ * There is no `previousVisibleSibling`: the ring closes, so walking FORWARD from a hidden screen
+ * eventually arrives at the one before it. Going forward from the hidden target lands on the next
+ * visible screen after it, which is not where UP should go — so this walks forward from the CURRENT
+ * screen instead and stops at the last visible one before it comes back round.
+ */
 void handlePagePrevious(const UiActionContext& ctx, const ui_exporter::Flow&) {
   if (ctx.resolvedTarget) {
-    ctx.controller.navigator().goToSibling(ctx.resolvedTarget);
-    ctx.controller.syncPageFromScreen(ctx.resolvedTarget, ctx.nowMs);
+    auto& nav = ctx.controller.navigator();
+    const ui_exporter::Screen* target = ctx.resolvedTarget;
+    if (!nav.screenVisible(target)) {
+      const ui_exporter::Screen* const start = nav.current();
+      const ui_exporter::Screen* candidate = nav.nextVisibleSibling(start);
+      const ui_exporter::Screen* previous = candidate;
+      // Walk the whole visible ring; the last member before returning to `start` is the one UP wants.
+      for (uint8_t hops = 0; candidate && candidate != start && hops < 16; ++hops) {
+        previous = candidate;
+        candidate = nav.nextVisibleSibling(candidate);
+      }
+      target = previous;
+    }
+    if (target) {
+      nav.goToSibling(target);
+      ctx.controller.syncPageFromScreen(target, ctx.nowMs);
+    }
     return;
   }
   ctx.controller.previousPage(ctx.nowMs);

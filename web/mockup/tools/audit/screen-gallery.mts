@@ -22,9 +22,32 @@ if (!out) {
   process.exit(1);
 }
 
-const files = fs.readdirSync(specDir).filter((f) => f.endsWith(".json"));
-const screens = files.map((f) => JSON.parse(fs.readFileSync(path.join(specDir, f), "utf-8")));
-const byId = new Map(screens.map((s) => [s.id, s]));
+/**
+ * Every screen in the DATASET, drawn from its requirement file where it has one.
+ *
+ * It used to read the spec directory alone, so the nine screens with no requirement file — the
+ * confirms, the toasts, the Nyquist warning, the idle state — were simply absent from a gallery whose
+ * whole job is showing what the panel does. Worse, they were absent silently: the count looked
+ * plausible and nothing said anything was missing.
+ *
+ * The spec file wins where one exists, because that is the reviewed geometry. The dataset fills in
+ * otherwise, and those cards are marked so the gap is visible rather than invisible.
+ */
+const specFiles = fs.readdirSync(specDir).filter((f) => f.endsWith(".json"));
+const specById = new Map(
+  specFiles
+    .map((f) => JSON.parse(fs.readFileSync(path.join(specDir, f), "utf-8")))
+    .map((s) => [s.id, s])
+);
+const dataset = JSON.parse(
+  fs.readFileSync(path.resolve(here, "..", "..", "src", "data", "screens.json"), "utf-8")
+) as { screens: any[] };
+
+const screens = dataset.screens.map((screen) => specById.get(screen.id) ?? screen);
+const byId = new Map(screens.map((s: any) => [s.id, s]));
+const unspecified = new Set(
+  dataset.screens.filter((screen) => !specById.has(screen.id)).map((screen) => screen.id)
+);
 
 const RING = [
   "info-p0-global-status", "info-p1-instant-flow", "info-p2-cumulative-m3", "info-p3-session-m3",
@@ -43,8 +66,8 @@ const groups: { title: string; blurb: string; ids: string[] }[] = [
     ids: screens.filter((s) => s.id.startsWith("config-")).map((s) => s.id).sort()
   },
   {
-    title: "Everything else",
-    blurb: "Confirmations, warnings and transient states.",
+    title: "Confirmations, warnings and transient states",
+    blurb: "Each confirm is now a two-entry level: the confirm itself and a < BACK row. ENTER-short on a confirm is unattached and therefore ignored — long-ENTER is the only gesture it claims, and holding it runs the countdown.",
     ids: screens
       .filter((s) => !s.id.startsWith("net-") && !s.id.startsWith("config-") && !s.id.startsWith("info-"))
       .map((s) => s.id).sort()
@@ -55,9 +78,12 @@ const seen = new Set<string>();
 const card = (id: string, worst: boolean) => {
   const s = byId.get(id);
   if (!s) return "";
+  const gap = unspecified.has(id)
+    ? `<span class="card__gap" title="Drawn from the dataset — this screen has no requirement file yet">no spec</span>`
+    : "";
   return `<figure class="card">
   <div class="panel">${renderScreen(s, worst)}</div>
-  <figcaption><b>${s.name ?? id}</b><code>${id}</code>${s.description ? `<p>${s.description}</p>` : ""}</figcaption>
+  <figcaption><b>${s.name ?? id}</b>${gap}<code>${id}</code>${s.description ? `<p>${s.description}</p>` : ""}</figcaption>
 </figure>`;
 };
 
@@ -114,11 +140,14 @@ const html = `<title>StampPLC panel — every screen</title>
   figcaption { padding: .7rem .85rem .9rem; font-size: .84rem; display: flex; flex-direction: column; gap: .25rem; }
   figcaption b { font-size: .9rem; }
   figcaption code { font: 11px/1.4 ui-monospace, monospace; color: var(--accent); }
+  .card__gap { align-self: flex-start; font: 600 9px/1 ui-sans-serif, system-ui, sans-serif;
+               letter-spacing: .06em; text-transform: uppercase; padding: .2rem .35rem;
+               border: 1px solid var(--rule); border-radius: 3px; color: var(--ink-soft); }
   figcaption p { margin: .15rem 0 0; color: var(--ink-soft); font-size: .8rem; }
 </style>
 <div class="wrap">
-<h1>StampPLC panel — every specified screen</h1>
-<p class="lede">Rendered from <code>docs/Requirements/feature addition/screens/*.json</code> at the device's own glyph advances — 6 px for text, 7 px for a value — so what you see is what the 240 x 135 panel draws. Settings resolve through the firmware manifest descriptor, the same source the simulator uses.</p>
+<h1>StampPLC panel — every screen</h1>
+<p class="lede">Rendered at the device's own glyph advances — 6 px for text, 7 px for a value — so what you see is what the 240 x 135 panel draws. Geometry comes from each screen's requirement file in <code>docs/Requirements/feature addition/screens/</code>; the few marked <b>no spec</b> are drawn from the generated dataset because no requirement file exists for them yet. Values resolve through the firmware manifest descriptor and the simulated sensor table — the same sources the simulator uses, so this cannot disagree with it.</p>
 ${sections}
 ${worstSection}
 </div>`;

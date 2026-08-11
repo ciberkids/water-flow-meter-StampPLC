@@ -100,7 +100,7 @@ ButtonInputManager buttonInput;
 uint16_t connectedSensorsBitmap = 0;
 uint16_t undersamplingFlags = 0;
 double totalSessionLitersCache = 0.0;
-double aggregateFlowLpsCache = 0.0;
+double aggregateFlowLpmCache = 0.0;
 bool allSensorsReadyCache = true;
 
 /**
@@ -122,7 +122,7 @@ ModbusDependencies modbusDeps{.sensors = sensors,
                               .connectedBitmap = &connectedSensorsBitmap,
                               .undersamplingFlags = &undersamplingFlags,
                               .totalSessionLitersCache = &totalSessionLitersCache,
-                              .aggregateFlowLpsCache = &aggregateFlowLpsCache,
+                              .aggregateFlowLpmCache = &aggregateFlowLpmCache,
                               .allSensorsReadyCache = &allSensorsReadyCache,
                               .pollingRateKhz = &pollingRate_kHz,
                               .link = &linkSettings,
@@ -315,7 +315,7 @@ SensorStateEngine::Dependencies sensorEngineDeps{
     .registerBank = &registerBank,
     .modbusManager = &modbusManager,
     .totalSessionLitersCache = &totalSessionLitersCache,
-    .aggregateFlowLpsCache = &aggregateFlowLpsCache,
+    .aggregateFlowLpmCache = &aggregateFlowLpmCache,
     .allSensorsReadyCache = &allSensorsReadyCache,
     .undersamplingFlags = &undersamplingFlags,
 };
@@ -474,7 +474,7 @@ void performFactoryReset() {
 
   registerBank.fill(0);
   totalSessionLitersCache = 0.0;
-  aggregateFlowLpsCache = 0.0;
+  aggregateFlowLpmCache = 0.0;
   allSensorsReadyCache = true;
   undersamplingFlags = 0;
   registerBank.setUint16(REG_UNDERSAMPLING_FLAGS, 0);
@@ -670,6 +670,31 @@ void logicTaskCode(void * pvParameters) {
   // dataset's own flows from here.
   uiController.navigator().reset(
       uiScreenRouter.screenForMode(UiMode::Info, UiPage::GlobalStatus));
+  /**
+   * Teach the navigator to evaluate a screen's visibility gate.
+   *
+   * Bound HERE because deciding it needs the settings, and this is where they live. The navigator
+   * itself holds the screen table and the stack and nothing else, so it asks rather than reaches.
+   *
+   * The sensor index comes from the navigator's own level — a gate on a per-sensor setting like
+   * `config.sensor.calibrationType` means "for the channel this level is about", which is exactly
+   * what `sensorIndex()` already answers for the editors.
+   */
+  uiController.navigator().bindVisibility(
+      [](const ui_exporter::Screen& screen, void* context) -> bool {
+        auto* controller = static_cast<UiController*>(context);
+        const auto* setting = ui::findSetting(screen.visibleWhenBinding);
+        if (!setting || !controller) {
+          // An unresolvable gate must not hide the screen: making a setting unreachable is the
+          // failure the completeness rule exists to prevent, and a typo in a binding id should show
+          // up as a row that never hides rather than one that never appears.
+          return true;
+        }
+        const int32_t value =
+            ui::readSetting(*setting, controller->navigator().sensorIndex(), uiSettingsAccess);
+        return value == screen.visibleWhenEquals;
+      },
+      &uiController);
   buttonInput.begin(millis());
   InteractionHandler::Dependencies interactionDeps{};
   interactionDeps.screenRouter = &uiScreenRouter;
@@ -776,7 +801,7 @@ void logicTaskCode(void * pvParameters) {
     ledController.setSuspended(suspendLeds);
     ledController.update(now,
                          totalSessionLitersCache,
-                         aggregateFlowLpsCache,
+                         aggregateFlowLpmCache,
                          allSensorsReadyCache,
                          undersamplingFlags != 0);
 
@@ -786,7 +811,7 @@ void logicTaskCode(void * pvParameters) {
                         undersamplingFlags,
                         connectedSensorsBitmap,
                         totalSessionLitersCache,
-                        aggregateFlowLpsCache,
+                        aggregateFlowLpmCache,
                         pollingRate_kHz,
                         ledController,
                         interactions.countdown,
@@ -952,13 +977,14 @@ void logicTaskCode(void * pvParameters) {
         if (!out.present) {
           continue;  // a disconnected sensor publishes nothing at all — see task #1
         }
-        out.flowLPerMin = sensors[i].instantFlow_L_s * 60.0f;
+        // §2a: storage IS L/min now, so the ×60 this used to carry is gone.
+        out.flowLPerMin = sensors[i].instantFlow_L_min;
         out.sessionLiters = sensors[i].sessionLiters;
         out.totalCubicMeters = units::litresToCubicMeters(sensors[i].cumulativeLiters);
-        out.maxFlowLPerMin = sensors[i].maxFlowSinceReset * 60.0f;
+        out.maxFlowLPerMin = sensors[i].maxFlowSinceReset;
         out.pulses = sensors[i].pulseCount;
       }
-      snapshot.total.flowLPerMin = static_cast<float>(aggregateFlowLpsCache * 60.0);
+      snapshot.total.flowLPerMin = static_cast<float>(aggregateFlowLpmCache);
       snapshot.total.sessionLiters = static_cast<float>(totalSessionLitersCache);
       snapshot.diagnostics.pollingRateKhz = pollingRate_kHz;
       snapshot.diagnostics.undersamplingFlags = undersamplingFlags;

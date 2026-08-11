@@ -166,7 +166,13 @@ int main() {
       if (metric.unit != nullptr) {
         fields.push_back({"unit", str(metric.unit)});
       }
-      fields.push_back({"register", num(ui::sensorMetricRegister(metric, s))});
+      // A DERIVED per-sensor value has no register, and must not claim one. `pulsesPerLitre` is the
+      // case: on a pulses-calibrated channel it is register 24, but on a formula-calibrated one that
+      // register holds zero and the figure is computed from the multiplier — so advertising an
+      // address would send a Modbus master to read a 0 and believe it.
+      if (metric.offset != ui::kNoRegister) {
+        fields.push_back({"register", num(ui::sensorMetricRegister(metric, s))});
+      }
       fields.push_back({"readOnly", "true"});
       fields.push_back({"description", str(description.c_str())});
       values.push_back(std::move(fields));

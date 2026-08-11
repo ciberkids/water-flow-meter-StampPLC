@@ -44,11 +44,11 @@ interface DisplayViewportProps {
    */
   powered?: boolean;
   /**
-   * Aggregate flow in L/s, which sets the flow-dot chase rate exactly as `drawFlowDots` does.
+   * Aggregate flow in L/MIN (§2a), which decides whether the flow-dot chase runs at all.
    *
    * Undefined or zero leaves the dots unlit, which is what the device shows with no flow.
    */
-  aggregateFlowLps?: number;
+  aggregateFlowLpm?: number;
   /**
    * Whether the firmware loop is advancing.
    *
@@ -96,19 +96,12 @@ export function DisplayViewport({
   firmwareValues,
   bindingDisplay = "sample",
   powered = true,
-  aggregateFlowLps = 0,
+  aggregateFlowLpm = 0,
   animating = false,
   repaintCount = 0
 }: DisplayViewportProps) {
   const { theme } = useTheme();
 
-  /**
-   * The chase index, advanced on a timer while the loop runs.
-   *
-   * Clamps and period are the firmware's: one full chase per 1/flow seconds, flow pinned to
-   * [0.1, 10] L/s. Below the floor the chase would crawl slower than a repaint can show; above the
-   * ceiling it would step faster than the panel refreshes and read as noise.
-   */
   /**
    * Which dot is lit: nothing without flow, the first with flow but a stopped loop, and one step per
    * repaint while it runs.
@@ -117,7 +110,9 @@ export function DisplayViewport({
    * second clock in the app. It also means the chase is deterministic: the same tick count always
    * gives the same frame, which is what makes it reproducible in a screenshot.
    */
-  const hasFlow = aggregateFlowLps > 0.001;
+  // 0.01 L/min, restated from the old 0.001 L/s so the threshold moved with the unit — matching
+  // `drawFlowDots`. Left at 0.001 it would have declared flow at a sixtieth of the intended rate.
+  const hasFlow = aggregateFlowLpm > 0.01;
   const dotPhase = !hasFlow ? -1 : animating ? repaintCount % 4 : 0;
 
   const orientation = layout.bounds.orientation;
@@ -150,8 +145,17 @@ export function DisplayViewport({
       value: {
         color: theme.colors.value,
         fontSize: `${theme.typography.value}px`,
-        lineHeight: `${theme.typography.value}px`,
-        fontWeight: 700
+        lineHeight: `${theme.typography.value}px`
+        /**
+         * NO fontWeight. Font0 has no bold — `ui_renderer.cpp` says so at the one place that already
+         * works around it — so the device distinguishes a value by COLOUR alone (highlightColor_).
+         *
+         * Rendering 700 here made the mockup show a weight the panel cannot produce, and it was
+         * visible as an inconsistency rather than a nicety: on the formula row, `f-mult` is a `value`
+         * and the other terms are `text`, so the multiplier looked bold on S4 while the emphasised
+         * term on S5 and S6 only changed colour. Same emphasis, two different treatments, neither
+         * matching the device.
+         */
       },
       badge: {
         padding: "1px 3px",

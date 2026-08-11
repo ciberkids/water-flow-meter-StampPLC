@@ -54,7 +54,7 @@ The expander is addressed at `0x43` over I²C (SCL = GPIO15, SDA = GPIO1
 ### 3.3. Blue Channel — Live Flow Activity
 
 - **Intent:** Highlight real-time flow detection.
-- **Behaviour:** Blinks (250 ms on / 250 ms off) whenever the aggregated instantaneous flow across all ready sensors exceeds 0.0 L/s; remains OFF during idle.
+- **Behaviour:** Blinks (250 ms on / 250 ms off) whenever the aggregated instantaneous flow across all ready sensors exceeds 0.0 L/min; remains OFF during idle.
 - **Debounce:** A 500 ms hold-off avoids flicker when flow is intermittent; the blue LED remains on for at least one full cycle after the last pulse.
 
 ### 3.4. Boot Progress — Channel Snake

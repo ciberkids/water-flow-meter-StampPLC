@@ -57,7 +57,7 @@ bool readinessFor(std::size_t count, const bool* inUse, const bool* calibrated) 
   deps.registerBank = nullptr;
   deps.modbusManager = nullptr;  // guarded by a null check in update()
   deps.totalSessionLitersCache = &totalLiters;
-  deps.aggregateFlowLpsCache = &aggFlow;
+  deps.aggregateFlowLpmCache = &aggFlow;
   deps.allSensorsReadyCache = &allReady;
   deps.undersamplingFlags = &undersampling;
 
@@ -100,7 +100,7 @@ void disconnectedSensorTests() {
   sensors[1].pulseCount = 6000;     // and a large backlog is sitting there
   sensors[1].sessionLiters = 999.0f;
   sensors[1].cumulativeLiters = 12345.0;
-  sensors[1].instantFlow_L_s = 42.0f;
+  sensors[1].instantFlow_L_min = 42.0f;
 
   plc::SensorStateEngine::Dependencies deps;
   deps.sensors = sensors;
@@ -109,23 +109,25 @@ void disconnectedSensorTests() {
   deps.registerBank = nullptr;
   deps.modbusManager = nullptr;
   deps.totalSessionLitersCache = &totalLiters;
-  deps.aggregateFlowLpsCache = &aggFlow;
+  deps.aggregateFlowLpmCache = &aggFlow;
   deps.allSensorsReadyCache = &allReady;
   deps.undersamplingFlags = &undersampling;
 
   plc::SensorStateEngine engine(deps);
   engine.update(1.0f);
 
-  std::printf("      ch0 flow=%.2f L/s session=%.2f L | totals: flow=%.2f L/s volume=%.2f L\n",
-              static_cast<double>(sensors[0].instantFlow_L_s),
+  std::printf("      ch0 flow=%.2f L/min session=%.2f L | totals: flow=%.2f L/min volume=%.2f L\n",
+              static_cast<double>(sensors[0].instantFlow_L_min),
               static_cast<double>(sensors[0].sessionLiters), aggFlow, totalLiters);
 
-  check(sensors[0].instantFlow_L_s > 0.9f && sensors[0].instantFlow_L_s < 1.1f,
-        "the live sensor converted its pulses (60 pulses, F=1 -> about 1 L/s)");
+  check(sensors[0].instantFlow_L_min > 59.0f && sensors[0].instantFlow_L_min < 61.0f,
+        "the live sensor converted its pulses (60 pulses, F=1 -> about 60 L/min)");
 
-  // The aggregates are the part worth asserting: 999 L and 42 L/s are sitting in the array.
-  check(aggFlow < 1.1,
-        "aggregate flow EXCLUDES the disconnected sensor's stale 42 L/s");
+  // The aggregates are the part worth asserting: 999 L and a stale 42 L/min sit in the array. The
+  // bound is above the live channel's own 60 L/min and below 60 + 42, so it can only pass by
+  // excluding the disconnected one.
+  check(aggFlow < 61.0,
+        "aggregate flow EXCLUDES the disconnected sensor's stale 42 L/min");
   check(totalLiters < 1.1,
         "and aggregate volume excludes its stale 999 L — a plausible wrong total is the worst kind");
 
@@ -214,14 +216,14 @@ void bootRestoreTests() {
   deps.registerBank = nullptr;
   deps.modbusManager = nullptr;
   deps.totalSessionLitersCache = &totalLiters;
-  deps.aggregateFlowLpsCache = &aggFlow;
+  deps.aggregateFlowLpmCache = &aggFlow;
   deps.allSensorsReadyCache = &allReady;
   deps.undersamplingFlags = &undersampling;
 
   plc::SensorStateEngine engine(deps);
   engine.update(1.0f);
 
-  check(sensors[0].instantFlow_L_s > 0.9f && sensors[0].instantFlow_L_s < 1.1f,
+  check(sensors[0].instantFlow_L_min > 59.0f && sensors[0].instantFlow_L_min < 61.0f,
         "a restored calibrated channel computes flow with no config write");
   check(sensors[0].cumulativeLiters > 4321.0,
         "and its restored lifetime total ADVANCES rather than staying frozen");

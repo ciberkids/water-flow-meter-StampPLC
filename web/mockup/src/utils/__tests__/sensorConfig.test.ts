@@ -38,18 +38,18 @@ describe("per-sensor table", () => {
     // These are sampleValues.ts's strings for sensor 3, which this module supersedes: wiring it
     // in must not change what the panel draws for a working device.
     expect(resolveSensorBinding("sensor.3.status", table, 0)).toBe("OK");
-    expect(resolveSensorBinding("sensor.3.instantFlow", table, 0)).toBe("3:   2.34 L/s");
-    expect(resolveSensorBinding("sensor.3.maxFlowSinceReset", table, 0)).toBe("3:   2.34 L/s");
-    expect(resolveSensorBinding("sensor.3.cumulativeLiters", table, 0)).toBe("3: 123.45 L");
-    expect(resolveSensorBinding("sensor.3.sessionLiters", table, 0)).toBe("3: 123.45 L");
-    expect(resolveSensorBinding("sensor.3.cumulativeM3", table, 0)).toBe("3:   0.12 m^3");
-    expect(resolveSensorBinding("sensor.3.sessionM3", table, 0)).toBe("3:   0.12 m^3");
+    expect(resolveSensorBinding("sensor.3.instantFlow", table, 0)).toBe("3:  140.40");
+    expect(resolveSensorBinding("sensor.3.maxFlowSinceReset", table, 0)).toBe("3:  140.40");
+    expect(resolveSensorBinding("sensor.3.cumulativeLiters", table, 0)).toBe("3:  123.45");
+    expect(resolveSensorBinding("sensor.3.sessionLiters", table, 0)).toBe("3:  123.45");
+    expect(resolveSensorBinding("sensor.3.cumulativeM3", table, 0)).toBe("3:    0.12");
+    expect(resolveSensorBinding("sensor.3.sessionM3", table, 0)).toBe("3:    0.12");
   });
 
   it("keeps the eight rows independent", () => {
     const table = setSensor(createSensorTable(), 1, { connected: false });
     expect(resolveSensorBinding("sensor.1.instantFlow", table, 0)).toBe("1: --");
-    expect(resolveSensorBinding("sensor.2.instantFlow", table, 0)).toBe("2:   2.34 L/s");
+    expect(resolveSensorBinding("sensor.2.instantFlow", table, 0)).toBe("2:  140.40");
     expect(sensorAt(table, 2)?.connected).toBe(true);
   });
 
@@ -64,23 +64,42 @@ describe("per-sensor table", () => {
 describe("rendering, against the device's own format strings", () => {
   const table = createSensorTable();
   const flowing = table;
-  const zeroFlow = setSensor(table, 4, { instantFlowLps: 0 });
+  const zeroFlow = setSensor(table, 4, { instantFlowLpm: 0 });
   const notReady = setSensor(table, 4, { ready: false });
   const disconnected = setSensor(table, 4, { connected: false });
 
-  it("prints a metric with the 1-based sensor number and a six-wide value", () => {
-    expect(resolveSensorBinding("sensor.4.instantFlow", flowing, 0)).toBe("4:   2.34 L/s");
-    expect(resolveSensorBinding("sensor.4.cumulativeLiters", flowing, 0)).toBe("4: 123.45 L");
+  it("prints a metric with the 1-based sensor number and a seven-wide value, no unit", () => {
+    expect(resolveSensorBinding("sensor.4.instantFlow", flowing, 0)).toBe("4:  140.40");
+    expect(resolveSensorBinding("sensor.4.cumulativeLiters", flowing, 0)).toBe("4:  123.45");
+  });
+
+  it("marks a peak that reached the channel's own ceiling with MAX", () => {
+    // §5a's whole purpose: a channel pinned at its q_max is under-dimensioned for its pipe, and the
+    // number alone cannot say so because a legitimate peak can sit just below the same value.
+    // Compared in L/min against q_max, which is stored in L/min — comparing the stored L/s peak
+    // against it would flag nothing, ever.
+    const atCeiling = setSensor(createSensorTable(), 4, { qMaxLpm: 150, maxFlowLpm: 150 });
+    expect(resolveSensorBinding("sensor.4.maxFlowSinceReset", atCeiling, 0)).toBe("4:  150.00 MAX");
+
+    const below = setSensor(createSensorTable(), 4, { qMaxLpm: 150, maxFlowLpm: 144 });
+    expect(resolveSensorBinding("sensor.4.maxFlowSinceReset", below, 0)).toBe("4:  144.00");
+  });
+
+  it("never marks the instantaneous row, only the peak", () => {
+    // The marker belongs to §5a's page. A live reading AT the ceiling is being clamped right now,
+    // which the peak page is what reports — flagging it twice would say two different things.
+    const atCeiling = setSensor(createSensorTable(), 4, { qMaxLpm: 150, instantFlowLpm: 150 });
+    expect(resolveSensorBinding("sensor.4.instantFlow", atCeiling, 0)).toBe("4:  150.00");
   });
 
   it("prints zero flow as a measurement, not as a withheld value", () => {
-    expect(resolveSensorBinding("sensor.4.instantFlow", zeroFlow, 0)).toBe("4:   0.00 L/s");
+    expect(resolveSensorBinding("sensor.4.instantFlow", zeroFlow, 0)).toBe("4:    0.00");
     expect(resolveSensorBinding("sensor.4.status", zeroFlow, 0)).toBe("OK");
   });
 
   it("distinguishes not-ready from both connected and disconnected", () => {
-    expect(resolveSensorBinding("sensor.4.instantFlow", notReady, 0)).toBe("4: WAIT");
-    expect(resolveSensorBinding("sensor.4.status", notReady, 0)).toBe("WAIT");
+    expect(resolveSensorBinding("sensor.4.instantFlow", notReady, 0)).toBe("4: SET?");
+    expect(resolveSensorBinding("sensor.4.status", notReady, 0)).toBe("SET?");
   });
 
   it("prints a disconnected channel's number and dashes — never hidden, never zero", () => {
@@ -93,8 +112,8 @@ describe("rendering, against the device's own format strings", () => {
   it("renders a status without the sensor number and a metric with it", () => {
     expect(resolveSensorBinding("sensor.4.status", disconnected, 0)).toBe("--");
     expect(resolveSensorBinding("sensor.4.instantFlow", disconnected, 0)).toBe("4: --");
-    expect(resolveSensorBinding("sensor.4.status", notReady, 0)).toBe("WAIT");
-    expect(resolveSensorBinding("sensor.4.instantFlow", notReady, 0)).toBe("4: WAIT");
+    expect(resolveSensorBinding("sensor.4.status", notReady, 0)).toBe("SET?");
+    expect(resolveSensorBinding("sensor.4.instantFlow", notReady, 0)).toBe("4: SET?");
   });
 
   it("refuses bindings it cannot answer instead of inventing a number", () => {
@@ -221,21 +240,25 @@ describe("advancing a tick", () => {
 
   it("accumulates a ready channel's litres into both totals and raises the peak", () => {
     const sensor = sensorAt(createSensorTable(), 1) as SimulatedSensor;
-    // multiplier 10, adjust 0: 1200 pulses in 1 s is 120 L/min, so 2 L/s.
-    const next = advanceSensorTick({ ...sensor, maxFlowLps: 0 }, { pulses: 1200, elapsedMs: 1000 });
-    expect(next.instantFlowLps).toBeCloseTo(2, 10);
+    // multiplier 10, adjust 0: 1200 pulses in 1 s is 1200 Hz, so 120 L/min — which is now what the
+    // channel STORES (§2a), where it used to store the 2 L/s that works out to.
+    const next = advanceSensorTick({ ...sensor, maxFlowLpm: 0 }, { pulses: 1200, elapsedMs: 1000 });
+    expect(next.instantFlowLpm).toBeCloseTo(120, 10);
+    expect(next.maxFlowLpm).toBeCloseTo(120, 10);
+    // Volume is still litres: 120 L/min over one second is 2 L. This is the one division §2a leaves,
+    // and asserting it separately from the rate is what would catch it being dropped with the others.
     expect(next.sessionLiters).toBeCloseTo(sensor.sessionLiters + 2, 10);
     expect(next.cumulativeLiters).toBeCloseTo(sensor.cumulativeLiters + 2, 10);
-    expect(next.maxFlowLps).toBeCloseTo(2, 10);
   });
 
   it("clamps flow to q_max and never below zero", () => {
     const sensor = sensorAt(createSensorTable(), 1) as SimulatedSensor;
     const fast = advanceSensorTick(sensor, { pulses: 100000, elapsedMs: 1000 });
-    expect(fast.instantFlowLps).toBeCloseTo(sensor.qMaxLpm / 60, 10);
+    // Clamped AT q_max, not at a sixtieth of it: both are L/min now, so the comparison is direct.
+    expect(fast.instantFlowLpm).toBeCloseTo(sensor.qMaxLpm, 10);
 
     const backwards = advanceSensorTick({ ...sensor, adjust: 5000 }, { pulses: 10, elapsedMs: 1000 });
-    expect(backwards.instantFlowLps).toBe(0);
+    expect(backwards.instantFlowLpm).toBe(0);
     expect(backwards.cumulativeLiters).toBe(sensor.cumulativeLiters);
   });
 
@@ -243,8 +266,9 @@ describe("advancing a tick", () => {
     const sensor = sensorAt(createSensorTable(), 1) as SimulatedSensor;
     const fast = advanceSensorTick(sensor, { pulses: 1200, elapsedMs: 1000 });
     const slow = advanceSensorTick(fast, { pulses: 60, elapsedMs: 1000 });
-    expect(slow.instantFlowLps).toBeCloseTo(0.1, 10);
-    expect(slow.maxFlowLps).toBeCloseTo(fast.maxFlowLps, 10);
+    // 60 pulses in 1 s is 60 Hz over a multiplier of 10, so 6 L/min — the old 0.1 L/s.
+    expect(slow.instantFlowLpm).toBeCloseTo(6, 10);
+    expect(slow.maxFlowLpm).toBeCloseTo(fast.maxFlowLpm, 10);
   });
 
   it("leaves a disconnected channel's totals frozen, however many pulses arrive", () => {
@@ -254,8 +278,9 @@ describe("advancing a tick", () => {
 
     expect(after.cumulativeLiters).toBe(123.45);
     expect(after.sessionLiters).toBe(123.45);
-    expect(after.maxFlowLps).toBe(2.34);
-    expect(after.instantFlowLps).toBe(0);
+    // The default peak, in the stored unit: 140.4 L/min is the old 2.34 L/s (§2a).
+    expect(after.maxFlowLpm).toBe(140.4);
+    expect(after.instantFlowLpm).toBe(0);
     // And the row still renders as withheld rather than as zero.
     expect(resolveSensorBinding("sensor.5.cumulativeLiters", [after], 0)).toBe("5: --");
   });
@@ -264,12 +289,12 @@ describe("advancing a tick", () => {
     const sensor = sensorAt(createSensorTable(), 1) as SimulatedSensor;
 
     const waiting = advanceSensorTick({ ...sensor, ready: false }, { pulses: 1200, elapsedMs: 1000 });
-    expect(waiting.instantFlowLps).toBe(0);
+    expect(waiting.instantFlowLpm).toBe(0);
     expect(waiting.cumulativeLiters).toBe(sensor.cumulativeLiters);
     expect(waiting.sessionLiters).toBe(sensor.sessionLiters);
 
     const unconfigured = advanceSensorTick({ ...sensor, multiplier: 0 }, { pulses: 1200, elapsedMs: 1000 });
-    expect(unconfigured.instantFlowLps).toBe(0);
+    expect(unconfigured.instantFlowLpm).toBe(0);
     expect(unconfigured.cumulativeLiters).toBe(sensor.cumulativeLiters);
   });
 
@@ -277,13 +302,13 @@ describe("advancing a tick", () => {
     const sensor = sensorAt(createSensorTable(), 1) as SimulatedSensor;
     expect(advanceSensorTick(sensor, { pulses: 1200, elapsedMs: 0 })).toEqual(sensor);
     expect(advanceSensorTick(sensor, { pulses: 1200, elapsedMs: -1000 })).toEqual(sensor);
-    expect(advanceSensorTick(sensor, oneSecond).instantFlowLps).toBe(0);
+    expect(advanceSensorTick(sensor, oneSecond).instantFlowLpm).toBe(0);
   });
 
   it("drives a target flow through the pulse count the device would have counted", () => {
     const sensor = sensorAt(createSensorTable(), 1) as SimulatedSensor;
     const pulses = pulsesForFlow(sensor, 2.34, 1000);
-    expect(advanceSensorTick(sensor, { pulses, elapsedMs: 1000 }).instantFlowLps).toBeCloseTo(2.34, 10);
+    expect(advanceSensorTick(sensor, { pulses, elapsedMs: 1000 }).instantFlowLpm).toBeCloseTo(2.34, 10);
     expect(pulsesForFlow({ ...sensor, multiplier: 0 }, 2.34, 1000)).toBe(0);
   });
 });

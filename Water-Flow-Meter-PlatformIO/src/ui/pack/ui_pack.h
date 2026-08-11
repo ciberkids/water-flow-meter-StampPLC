@@ -44,7 +44,14 @@ const char* packStatusText(PackStatus status);
 /** The fixed 64-byte header of §3.2, read field by field rather than cast over. */
 struct PackHeader {
   static constexpr std::size_t kSize = 64;
-  static constexpr uint16_t kFormatVersion = 1;
+  /**
+   * 2: the screen record grew by eight bytes for screen visibility (see kScreenRecordBytes).
+   *
+   * Bumped rather than tolerated, so a v1 pack is REFUSED with BadFormatVersion instead of being
+   * read at the wrong stride. No pack has shipped — no hardware has — so this is the cheapest moment
+   * the format will ever change, the same argument that moved the flow registers to L/min.
+   */
+  static constexpr uint16_t kFormatVersion = 2;
   static constexpr std::size_t kLabelBytes = 20;
 
   uint16_t formatVersion = 0;
@@ -69,6 +76,20 @@ struct PackScreen {
   uint32_t elementsOffset = 0;
   uint16_t flowCount = 0;
   uint32_t flowsOffset = 0;
+  /**
+   * The SETTING binding that gates this screen, or 0 for an unconditional one.
+   *
+   * A string-table offset, and 0 is the table's own empty string — the sentinel the format already
+   * uses for "no string" — so no new convention is introduced.
+   *
+   * Without these two fields a loadable pack could not express what the built-in menu does: the
+   * calibration branch hides Multiplier and Adjust on a pulses-calibrated channel, and a pack that
+   * cannot say so would show both forms at once with half of them inapplicable. The round-trip test
+   * did not catch it because it compared only the fields the record HAD.
+   */
+  uint32_t visibleWhenStr = 0;
+  /** The value `visibleWhenStr` must hold for this screen to be part of its level. */
+  int32_t visibleWhenEquals = 0;
 };
 
 struct PackElement {
@@ -98,7 +119,12 @@ constexpr uint16_t kNoTargetScreen = 0xFFFF;
 
 class MenuPack {
  public:
-  static constexpr std::size_t kScreenRecordBytes = 16;
+  /**
+   * 24, not 16: the record gained `visibleWhenStr` and `visibleWhenEquals` so a pack can express
+   * screen visibility. That is a LAYOUT change, which is why kFormatVersion moved with it — a v1 pack
+   * read with a 24-byte stride would misparse every screen after the first rather than being refused.
+   */
+  static constexpr std::size_t kScreenRecordBytes = 24;
   static constexpr std::size_t kLevelRecordBytes = 8;
   static constexpr std::size_t kElementRecordBytes = 20;
   static constexpr std::size_t kFlowRecordBytes = 16;

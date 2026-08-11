@@ -134,10 +134,33 @@ export interface ScreenEvent {
   targetScreenId?: string;
 }
 
+/**
+ * A condition under which a screen is part of its level.
+ *
+ * `binding` names a SETTING and `equals` the stored value that makes the screen visible. A screen
+ * with no `visibleWhen` is always visible, which is every screen but three.
+ *
+ * This exists because a meter is calibrated one of two ways and never both: a datasheet prints either
+ * `450 pulses/L` or `F = 6*Q - 8`. Showing the rows for both leaves half the sensor menu inapplicable
+ * at all times, and the operator has to remember which half.
+ *
+ * It RELAXES R7.3, which forbade runtime-hidden rows on the grounds that the completeness rule —
+ * every settable value has a reachable editor — must be statically decidable. It still is, because
+ * the gate is itself a setting with an unguarded editor: the rule becomes "reachable under SOME value
+ * of the setting that gates it", which a static check can prove by enumerating that setting's
+ * options. What R7.3 actually could not tolerate was a guard on RUNTIME state, where no such
+ * enumeration exists.
+ */
+export interface ScreenVisibility {
+  binding: string;
+  equals: number;
+}
+
 export interface ScreenDefinition {
   id: string;
   name: string;
   description?: string;
+  visibleWhen?: ScreenVisibility;
   elements: ScreenElement[];
   events?: ScreenEvent[];
   flows?: ScreenFlow[];

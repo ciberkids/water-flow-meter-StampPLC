@@ -380,7 +380,7 @@ position; titles carry the meaning.
 2. **The footer legend must state the ENTER mapping for the current screen type** (§3.2), because it differs between navigation, editor and confirm screens. For example `↑↓ adjust · ENTER save · hold ENTER discard`.
 3. Use a contrasting highlight colour for the pending value in an editor; show the saved value muted alongside it.
 4. `BACK` renders as a distinct entry (e.g. `◀ BACK`) so it is not mistaken for a setting.
-5. Display units alongside numeric values (“L/s”, “L”, “m³”, “ms”).
+5. Display units alongside numeric values (“L/min”, “L”, “m³”, “ms”).
 6. Provide success or error feedback within 1 s of an action — the acknowledgement toasts of §4.3.1 satisfy this.
 7. All eight sensors fit without overlap using a two-column layout (sensors 1–4 left, 5–8 right).
 8. Surface the LED status legend on P0.

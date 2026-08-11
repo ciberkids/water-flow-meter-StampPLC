@@ -73,13 +73,32 @@
       "bound": "one channel clamped to q_max=65535 L/min"
     },
     {
+      "id": "cal-label",
+      "kind": "text",
+      "x": 2,
+      "y": 100,
+      "emphasis": "muted",
+      "content": "Pulses/L",
+      "worst": "Pulses/L",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "cal-value",
+      "kind": "value",
+      "x": 68,
+      "y": 100,
+      "binding": "sensor.4.pulsesPerLitre",
+      "worst": "4: 1966020",
+      "bound": "set on a pulses-calibrated channel; 60*multiplier on a formula one, so the worst case is 60*32767 = 1966020"
+    },
+    {
       "id": "footer-hint",
       "kind": "text",
       "x": 2,
       "y": 124,
       "emphasis": "muted",
-      "content": "UP/DN channels  ENTER open  hold=exit",
-      "worst": "UP/DN channels  ENTER open  hold=exit",
+      "content": "UP/DN channels  ENTER open",
+      "worst": "UP/DN channels  ENTER open",
       "bound": "shared footer vocabulary, see 7.1",
       "bannerReplaces": true
     },

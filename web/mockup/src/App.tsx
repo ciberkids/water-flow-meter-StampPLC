@@ -1312,7 +1312,7 @@ export function App() {
   /**
    * The aggregates, with the firmware's own formats and its own summation set.
    *
-   * `SensorStateEngine::update` accumulates `totalSessionLiters` and `aggregateFlowLps` INSIDE
+   * `SensorStateEngine::update` accumulates `totalSessionLiters` and `aggregateFlowLpm` INSIDE
    * `if (sensor.inUse)` (sensor_state_engine.cpp:21-49), so a disconnected channel contributes to
    * neither — which is what makes switching one off visible on P0. Two details worth stating because I
    * got both wrong first time round: the volume aggregate is SESSION litres, not cumulative, and
@@ -1331,8 +1331,8 @@ export function App() {
    * One computation, not two: the dots and `telemetry.totalFlowLpm` must agree about whether water is
    * moving, or the panel shows a still chase beside a non-zero reading.
    */
-  const aggregateFlowLps = useMemo(
-    () => sensors.filter((sensor) => sensor.connected).reduce((sum, s) => sum + s.instantFlowLps, 0),
+  const aggregateFlowLpm = useMemo(
+    () => sensors.filter((sensor) => sensor.connected).reduce((sum, s) => sum + s.instantFlowLpm, 0),
     [sensors]
   );
 
@@ -1352,8 +1352,8 @@ export function App() {
       let owner = 0;
       let peak = 0;
       for (const sensor of inUse) {
-        if (sensor.maxFlowLps > peak) {
-          peak = sensor.maxFlowLps;
+        if (sensor.maxFlowLpm > peak) {
+          peak = sensor.maxFlowLpm;
           owner = sensor.number;
         }
       }
@@ -1363,7 +1363,7 @@ export function App() {
       if (owner === 0) {
         return "Max Flow: 0.00 L/m";
       }
-      return `Max Flow: ${(peak * 60).toFixed(2).padStart(7)} L/m (S${owner})`;
+      return `Max Flow: ${peak.toFixed(2).padStart(7)} L/m (S${owner})`;
     };
 
     /**
@@ -1424,13 +1424,15 @@ export function App() {
             ? `${Math.ceil(holdCountdown.remainingMs / 1000)} s`
             : undefined;
         case "telemetry.total":
-          return `Total ${totalSessionLiters.toFixed(2)} L | Flow ${aggregateFlowLps.toFixed(2)} L/s`;
+          return `Total ${totalSessionLiters.toFixed(2)} L | Flow ${aggregateFlowLpm.toFixed(2)} L/m`;
+        // L/s is the DERIVED reading now (§2a moved storage to L/min); it stays for any consumer
+        // bound to it that still wants per-second.
         case "telemetry.totalFlowLps":
-          return aggregateFlowLps.toFixed(2);
+          return (aggregateFlowLpm / 60).toFixed(2);
         // `%7.2f` on the device: a field width, so the column cannot shift under a growing integer
         // part. padStart reproduces it rather than approximating with a fixed prefix.
         case "telemetry.totalFlowLpm":
-          return (aggregateFlowLps * 60).toFixed(2).padStart(7);
+          return aggregateFlowLpm.toFixed(2).padStart(7);
         case "telemetry.totalVolumeLiters":
           return totalSessionLiters.toFixed(2);
         case "telemetry.totalVolumeM3":
@@ -1491,7 +1493,7 @@ export function App() {
         sampleValueFor(binding.id, manifestValueById.get(binding.id), "sample");
     }
     return out;
-  }, [aggregateFlowLps, editorState, hierarchy, holdCountdown, manifestValueBindings, manifestValueById, navParents, pinnedValues, screens, selectedScreen, selectedSensor, sensors]);
+  }, [aggregateFlowLpm, editorState, hierarchy, holdCountdown, manifestValueBindings, manifestValueById, navParents, pinnedValues, screens, selectedScreen, selectedSensor, sensors]);
 
   /**
    * The stored integer a setting currently holds, from whichever home owns it.
@@ -1533,6 +1535,70 @@ export function App() {
       setPinnedValues((current) => ({ ...current, [definition.id]: text }));
     },
     [selectedSensor]
+  );
+
+  /**
+   * Whether a conditional screen is part of its level right now — `UiNavigator::screenVisible`.
+   *
+   * A screen with no `visibleWhen` is unconditional, which is every screen but the six the
+   * calibration branch gates. An unresolvable gate leaves the screen VISIBLE, the same choice the
+   * firmware makes: hiding a row because the question could not be asked would make a setting
+   * unreachable, which is the failure the completeness rule exists to prevent.
+   */
+  const screenVisible = useCallback(
+    (screen: ScreenDefinition | undefined): boolean => {
+      if (!screen) return false;
+      const gate = screen.visibleWhen;
+      if (!gate) return true;
+      const definition = manifestValueById.get(gate.binding);
+      if (!definition) return true;
+      if (isPerSensorSetting(definition)) {
+        if (selectedSensor === 0) return true;
+        return readSensorSettingRaw(sensors, selectedSensor, definition) === gate.equals;
+      }
+      const pinned = pinnedValues[definition.id];
+      const raw = pinned !== undefined
+        ? definition.options?.find((o) => o.label === pinned.trim())?.value ?? Number.parseInt(pinned, 10)
+        : sampleRawFor(definition);
+      return raw === gate.equals;
+    },
+    [manifestValueById, pinnedValues, selectedSensor, sensors]
+  );
+
+  /**
+   * The next reachable screen in the ring, stepping over any that are hidden.
+   *
+   * `direction` walks the same DOWN chain either way: a ring closes, so "the one before X" is the last
+   * visible member reached before coming back to X. There is no reverse chain to follow.
+   */
+  const nextVisibleInRing = useCallback(
+    (from: string, direction: "down" | "up"): string | undefined => {
+      const byIdLocal = new Map(screens.map((screen) => [screen.id, screen]));
+      const step = (id: string): string | undefined =>
+        byIdLocal.get(id)?.flows?.find(
+          (flow) => flow.trigger.type === "button" && flow.trigger.button === "down" && flow.targetScreenId
+        )?.targetScreenId;
+
+      if (direction === "down") {
+        let cursor = step(from);
+        for (let hops = 0; cursor && hops < 32; hops += 1) {
+          if (screenVisible(byIdLocal.get(cursor))) return cursor;
+          if (cursor === from) return undefined;
+          cursor = step(cursor);
+        }
+        return cursor;
+      }
+      // Walk the whole visible ring forward; the last member before returning to `from` is the one UP
+      // wants.
+      let cursor = step(from);
+      let previous: string | undefined;
+      for (let hops = 0; cursor && cursor !== from && hops < 32; hops += 1) {
+        if (screenVisible(byIdLocal.get(cursor))) previous = cursor;
+        cursor = step(cursor);
+      }
+      return previous;
+    },
+    [screenVisible, screens]
   );
 
   /** True when device memory answers this binding, so nothing may pin over it. */
@@ -1799,6 +1865,25 @@ export function App() {
             }
             // At depth 0 there is nowhere to ascend to, so the press is deliberately a no-op rather
             // than a jump to a page the operator is already on.
+          } else if (action === "ui.action.page.next" || action === "ui.action.page.previous") {
+            /**
+             * Ring stepping SKIPS hidden screens (`handlePageNext`/`handlePagePrevious`).
+             *
+             * The flow's own target is the next sibling in the DATASET, which the calibration branch
+             * may have gated off. Following it blindly would land on a screen the level no longer
+             * contains, drawing rows for a calibration form the operator is not using.
+             */
+            const direction = action === "ui.action.page.next" ? "down" : "up";
+            let target = flow.targetScreenId;
+            if (target && !screenVisible(screens.find((screen) => screen.id === target))) {
+              target = nextVisibleInRing(selectedScreen?.id ?? kRootScreenId, direction);
+            }
+            if (target) {
+              const resolvedId = selectById(target);
+              if (resolvedId) {
+                activeScreenId = resolvedId;
+              }
+            }
           } else if (action === "config.action.value.increment" ||
                      action === "config.action.value.decrement") {
             /**
@@ -1867,7 +1952,7 @@ export function App() {
               table.map((sensor) =>
                 action === "core.action.reset-session"
                   ? { ...sensor, sessionLiters: 0 }
-                  : { ...sensor, sessionLiters: 0, cumulativeLiters: 0, maxFlowLps: 0 }
+                  : { ...sensor, sessionLiters: 0, cumulativeLiters: 0, maxFlowLpm: 0 }
               )
             );
             const origin = navParentsRef.current[0];
@@ -2026,7 +2111,7 @@ export function App() {
           table.map((sensor) =>
             flow.actionId === "core.action.reset-session"
               ? { ...sensor, sessionLiters: 0 }
-              : { ...sensor, sessionLiters: 0, cumulativeLiters: 0, maxFlowLps: 0 }
+              : { ...sensor, sessionLiters: 0, cumulativeLiters: 0, maxFlowLpm: 0 }
           )
         );
       }
@@ -2340,7 +2425,7 @@ export function App() {
                       // The dots chase at the rate the aggregate flow implies, and only while the
                       // loop is advancing — on the device they are driven by millis(), so a stopped
                       // loop is a stopped panel.
-                      aggregateFlowLps={aggregateFlowLps}
+                      aggregateFlowLpm={aggregateFlowLpm}
                       animating={loopRunning && displayOn}
                       repaintCount={repaintCount}
                       // The transition overlay is OFF. It faded a miniature of the incoming screen

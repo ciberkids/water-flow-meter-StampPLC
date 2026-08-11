@@ -114,6 +114,31 @@ void roundTripTests(const std::vector<uint8_t>& bytes) {
       ++mismatches;
     }
 
+    /**
+     * The VISIBILITY GATE, compared field for field.
+     *
+     * This is the check whose absence let the pack format be silently less expressive than the
+     * built-in table: the record simply had no such field, so a pack of the calibration branch would
+     * have shown Multiplier and Adjust on a pulses-calibrated channel while the built-in menu hid
+     * them — and the round-trip test passed the whole time, because it compared only what the record
+     * happened to carry. A round-trip test is only as good as the fields it knows to look at.
+     */
+    const char* packGate = screen.visibleWhenStr != 0 ? pack.stringAt(screen.visibleWhenStr) : nullptr;
+    const char* tableGate = expected.visibleWhenBinding;
+    const bool gateMatches = (packGate == nullptr && tableGate == nullptr) ||
+                             (packGate != nullptr && tableGate != nullptr &&
+                              std::strcmp(packGate, tableGate) == 0);
+    if (!gateMatches) {
+      std::printf("      %s: gate \"%s\" != \"%s\"\n", id, packGate ? packGate : "(none)",
+                  tableGate ? tableGate : "(none)");
+      ++mismatches;
+    } else if (tableGate != nullptr && screen.visibleWhenEquals != expected.visibleWhenEquals) {
+      std::printf("      %s: gate value %ld != %ld\n", id,
+                  static_cast<long>(screen.visibleWhenEquals),
+                  static_cast<long>(expected.visibleWhenEquals));
+      ++mismatches;
+    }
+
     for (uint16_t e = 0; e < screen.elementCount && e < expected.elementCount; ++e) {
       ui::PackElement element{};
       if (!pack.elementAt(screen, e, &element)) {

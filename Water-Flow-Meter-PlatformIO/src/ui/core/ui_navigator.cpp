@@ -33,7 +33,7 @@ uint8_t sensorIndexFromId(const char* id) {
  * the dataset to 82 and tripped exactly that. Searching the real table removes the capacity rather
  * than raising it, so the next batch of screens cannot reintroduce this.
  */
-const ui_exporter::Screen* nextSibling(const ui_exporter::Screen* screen) {
+const ui_exporter::Screen* rawNextSibling(const ui_exporter::Screen* screen) {
   if (!screen || !screen->flows) {
     return nullptr;
   }
@@ -54,6 +54,44 @@ const ui_exporter::Screen* nextSibling(const ui_exporter::Screen* screen) {
 }
 
 }  // namespace
+
+bool UiNavigator::screenVisible(const ui_exporter::Screen* screen) const {
+  if (!screen) {
+    return false;
+  }
+  // No gate: unconditional, which is every screen but the three the calibration branch gates.
+  if (!screen->visibleWhenBinding) {
+    return true;
+  }
+  if (!visibility_) {
+    // Nothing bound to answer it. Visible is the safe default: hiding a row because the question
+    // could not be asked would make a setting unreachable, which is the failure the completeness
+    // rule exists to prevent.
+    return true;
+  }
+  return visibility_(*screen, visibilityContext_);
+}
+
+/**
+ * The next sibling the operator can actually reach — hidden screens are stepped over.
+ *
+ * One place, so navigation and `ringPosition` cannot disagree about how long a level is. Bounded by
+ * kMaxRing: a ring whose every member is hidden would otherwise spin, and the honest answer there is
+ * "nowhere to go" rather than a hang.
+ */
+const ui_exporter::Screen* UiNavigator::nextVisibleSibling(const ui_exporter::Screen* from) const {
+  const ui_exporter::Screen* walk = rawNextSibling(from);
+  for (uint8_t hops = 0; walk && hops < kMaxRing; ++hops) {
+    if (screenVisible(walk)) {
+      return walk;
+    }
+    if (walk == from) {
+      break;
+    }
+    walk = rawNextSibling(walk);
+  }
+  return walk == from ? nullptr : walk;
+}
 
 void UiNavigator::reset(const ui_exporter::Screen* root) {
   root_ = root;
@@ -123,7 +161,7 @@ bool UiNavigator::ringPosition(uint8_t* indexOut, uint8_t* countOut) const {
   const ui_exporter::Screen* walk = current_;
   while (walk && count < kMaxRing) {
     members[count++] = walk;
-    walk = nextSibling(walk);
+    walk = nextVisibleSibling(walk);
     if (walk == current_) {
       break;  // Closed the ring.
     }

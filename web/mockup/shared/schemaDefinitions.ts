@@ -209,6 +209,22 @@ export const screenSchema: JSONSchemaType<ScreenDefinition> = {
     id: { type: "string", minLength: 1 },
     name: { type: "string", minLength: 1 },
     description: { type: "string", nullable: true },
+    /**
+     * When present, the screen is only part of its level while `binding` holds `equals`.
+     *
+     * The binding must be a SETTING with an unguarded editor — that is what keeps the completeness
+     * rule decidable after R7.3 was relaxed for the calibration branch.
+     */
+    visibleWhen: {
+      type: "object",
+      nullable: true,
+      additionalProperties: false,
+      required: ["binding", "equals"],
+      properties: {
+        binding: { type: "string", minLength: 1 },
+        equals: { type: "number" }
+      }
+    },
     elements: {
       type: "array",
       minItems: 0,

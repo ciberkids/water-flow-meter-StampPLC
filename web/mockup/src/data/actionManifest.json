@@ -367,7 +367,7 @@
       "id": "sensor.1.instantFlow",
       "category": "reading",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 101,
       "readOnly": true,
       "description": "Sensor 1 instantaneous flow"
@@ -420,16 +420,24 @@
       "id": "sensor.1.maxFlowSinceReset",
       "category": "accumulated",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 115,
       "readOnly": true,
       "description": "Sensor 1 peak flow since last session reset"
     },
     {
+      "id": "sensor.1.pulsesPerLitre",
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true,
+      "description": "Sensor 1 pulses per litre, set or calculated from the multiplier"
+    },
+    {
       "id": "sensor.2.instantFlow",
       "category": "reading",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 141,
       "readOnly": true,
       "description": "Sensor 2 instantaneous flow"
@@ -482,16 +490,24 @@
       "id": "sensor.2.maxFlowSinceReset",
       "category": "accumulated",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 155,
       "readOnly": true,
       "description": "Sensor 2 peak flow since last session reset"
     },
     {
+      "id": "sensor.2.pulsesPerLitre",
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true,
+      "description": "Sensor 2 pulses per litre, set or calculated from the multiplier"
+    },
+    {
       "id": "sensor.3.instantFlow",
       "category": "reading",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 181,
       "readOnly": true,
       "description": "Sensor 3 instantaneous flow"
@@ -544,16 +560,24 @@
       "id": "sensor.3.maxFlowSinceReset",
       "category": "accumulated",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 195,
       "readOnly": true,
       "description": "Sensor 3 peak flow since last session reset"
     },
     {
+      "id": "sensor.3.pulsesPerLitre",
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true,
+      "description": "Sensor 3 pulses per litre, set or calculated from the multiplier"
+    },
+    {
       "id": "sensor.4.instantFlow",
       "category": "reading",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 221,
       "readOnly": true,
       "description": "Sensor 4 instantaneous flow"
@@ -606,16 +630,24 @@
       "id": "sensor.4.maxFlowSinceReset",
       "category": "accumulated",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 235,
       "readOnly": true,
       "description": "Sensor 4 peak flow since last session reset"
     },
     {
+      "id": "sensor.4.pulsesPerLitre",
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true,
+      "description": "Sensor 4 pulses per litre, set or calculated from the multiplier"
+    },
+    {
       "id": "sensor.5.instantFlow",
       "category": "reading",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 261,
       "readOnly": true,
       "description": "Sensor 5 instantaneous flow"
@@ -668,16 +700,24 @@
       "id": "sensor.5.maxFlowSinceReset",
       "category": "accumulated",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 275,
       "readOnly": true,
       "description": "Sensor 5 peak flow since last session reset"
     },
     {
+      "id": "sensor.5.pulsesPerLitre",
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true,
+      "description": "Sensor 5 pulses per litre, set or calculated from the multiplier"
+    },
+    {
       "id": "sensor.6.instantFlow",
       "category": "reading",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 301,
       "readOnly": true,
       "description": "Sensor 6 instantaneous flow"
@@ -730,16 +770,24 @@
       "id": "sensor.6.maxFlowSinceReset",
       "category": "accumulated",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 315,
       "readOnly": true,
       "description": "Sensor 6 peak flow since last session reset"
     },
     {
+      "id": "sensor.6.pulsesPerLitre",
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true,
+      "description": "Sensor 6 pulses per litre, set or calculated from the multiplier"
+    },
+    {
       "id": "sensor.7.instantFlow",
       "category": "reading",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 341,
       "readOnly": true,
       "description": "Sensor 7 instantaneous flow"
@@ -792,16 +840,24 @@
       "id": "sensor.7.maxFlowSinceReset",
       "category": "accumulated",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 355,
       "readOnly": true,
       "description": "Sensor 7 peak flow since last session reset"
     },
     {
+      "id": "sensor.7.pulsesPerLitre",
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true,
+      "description": "Sensor 7 pulses per litre, set or calculated from the multiplier"
+    },
+    {
       "id": "sensor.8.instantFlow",
       "category": "reading",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 381,
       "readOnly": true,
       "description": "Sensor 8 instantaneous flow"
@@ -854,10 +910,18 @@
       "id": "sensor.8.maxFlowSinceReset",
       "category": "accumulated",
       "type": "number",
-      "unit": "L/s",
+      "unit": "L/min",
       "register": 395,
       "readOnly": true,
       "description": "Sensor 8 peak flow since last session reset"
+    },
+    {
+      "id": "sensor.8.pulsesPerLitre",
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true,
+      "description": "Sensor 8 pulses per litre, set or calculated from the multiplier"
     },
     {
       "id": "net.status",
@@ -945,7 +1009,7 @@
       "type": "number",
       "unit": "L/s",
       "readOnly": true,
-      "description": "Aggregate instantaneous flow across ready sensors"
+      "description": "Aggregate instantaneous flow, in litres per second (derived)"
     },
     {
       "id": "telemetry.totalFlowLpm",

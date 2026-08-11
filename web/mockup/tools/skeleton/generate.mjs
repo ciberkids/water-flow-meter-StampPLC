@@ -200,6 +200,43 @@ function assertCoversEverySetting(deviceList, sensorList) {
     .filter((v) => !v.id.startsWith("config.wifi.") && !v.id.startsWith("config.mqtt."))
     .map((v) => v.id)
     .filter((id) => !declared.has(id));
+
+  /**
+   * A GATED setting is still covered, provided its gate is itself reachable.
+   *
+   * R7.3 was relaxed for the calibration branch (see SENSOR_SETTINGS), so a setting's editor may
+   * leave the level depending on another setting's value. The rule becomes "reachable under SOME
+   * value of the setting that gates it" — still statically decidable, because the gate is a setting
+   * whose options can be enumerated. What must be checked, and is checked here, is that the gate is
+   * not ITSELF gated: a chain of conditions has no such enumeration and would put the rule back where
+   * R7.3 refused to have it.
+   */
+  const gateOf = new Map(
+    [...deviceList, ...sensorList].filter((d) => d.visibleWhen).map((d) => [d.binding, d.visibleWhen])
+  );
+  for (const [binding, gate] of gateOf) {
+    const gateValue = manifest.values.find((v) => v.id === gate.binding);
+    if (!gateValue || gateValue.category !== "setting") {
+      throw new Error(
+        `${binding} is gated on "${gate.binding}", which is not a setting. A gate must be a setting ` +
+        `so the completeness rule can enumerate its values and prove the gated screen is reachable.`
+      );
+    }
+    if (gateOf.has(gate.binding)) {
+      throw new Error(
+        `${binding} is gated on "${gate.binding}", which is itself gated. Chained conditions cannot ` +
+        `be enumerated, which is exactly what R7.3 forbids — keep every gate ungated.`
+      );
+    }
+    const reachable = (gateValue.options ?? []).some((option) => option.value === gate.equals);
+    if (!reachable) {
+      throw new Error(
+        `${binding} is only visible when ${gate.binding} == ${gate.equals}, which is not one of its ` +
+        `options. The setting would be unreachable at the panel.`
+      );
+    }
+  }
+
   if (missing.length > 0) {
     throw new Error(
       `the skeleton would violate the completeness rule: no editor screen for ` +
@@ -225,15 +262,13 @@ DEVICE.forEach((d, i) => {
       ...(d.binding ? [value("field-value", L.valueY, d.binding, { emphasis: "strong" })]
                     : [text("field-value", L.valueY, "Sensors 1-8 >", { emphasis: "strong" })]),
       text("footer-hint", L.footerY,
-        isDescent ? "UP/DN page  ENTER open  hold ENTER exit"
-                  : "UP/DN page  ENTER edit  hold ENTER exit",
+        isDescent ? "UP/DN pages  ENTER open" : "UP/DN pages  ENTER edit",
         { emphasis: "muted" }),
       scrollbar()
     ],
     flows: [
       ...ringFlows(CONFIG_RING, i),
-      btn("f-enter", isDescent ? "Open sensor list" : "Edit value", "enter", "short", A.descend, target),
-      btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+      btn("f-enter", isDescent ? "Open sensor list" : "Edit value", "enter", "short", A.descend, target)
     ]
   });
 });
@@ -251,13 +286,12 @@ screens.push({
   ],
   flows: [
     ...ringFlows(CONFIG_RING, CONFIG_RING.length - 1),
-    btn("f-back", "Back one level", "enter", "short", A.back),
-    btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+    btn("f-back", "Back one level", "enter", "short", A.back)
   ]
 });
 
 // ── L2 Value editors for C1..C6 ─────────────────────────────────────────────
-function editorScreen({ page, screenId, title, binding, parentId }) {
+function editorScreen({ page, screenId, title, binding, parentId, visibleWhen }) {
   const v = byId.get(binding);
   if (!v) throw new Error(`catalogue has no value "${binding}"`);
   const unit = v.unit ? ` ${v.unit}` : "";
@@ -272,6 +306,7 @@ function editorScreen({ page, screenId, title, binding, parentId }) {
   return {
     id: screenId,
     name: `${page}.V — Edit ${title}`,
+    ...(visibleWhen ? { visibleWhen } : {}),
     description: `Value editor for ${page}. ENTER commits and ascends; hold ENTER discards.`,
     elements: [
       text("hdr-title", L.headerY, `Edit > ${title}`),
@@ -320,8 +355,7 @@ for (let n = 1; n <= 8; n += 1) {
     ],
     flows: [
       ...ringFlows(SENSOR_IDS, n - 1),
-      btn("f-enter", `Open sensor ${n} settings`, "enter", "short", A.descend, "config-s1-connected"),
-      btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+      btn("f-enter", `Open sensor ${n} settings`, "enter", "short", A.descend, "config-s1-connected")
     ]
   });
 }
@@ -337,32 +371,42 @@ screens.push({
   ],
   flows: [
     ...ringFlows(SENSOR_IDS, SENSOR_IDS.length - 1),
-    btn("f-back", "Back one level", "enter", "short", A.back),
-    btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+    btn("f-back", "Back one level", "enter", "short", A.back)
   ]
 });
 
 // ── L3 Sensor settings: S1..S4 + BACK, and L4 their editors ─────────────────
 /**
- * The per-sensor settings, with BOTH calibration forms present.
+ * The per-sensor settings, with the INACTIVE calibration form hidden.
  *
  * A meter is specified one of two ways and never both — a datasheet prints either `F = 6*Q - 8` or
- * `450 pulses/L` — so S2 asks which, and the rows for the other form report `--` rather than
- * disappearing.
+ * `450 pulses/L` — so S2 asks which, and the rows belonging to the other form leave the level
+ * entirely. Showing both left half the sensor menu permanently inapplicable, with the operator having
+ * to remember which half.
  *
- * They do not disappear because R7.3 forbids it: a row hidden by a runtime condition makes the
- * completeness rule (every settable value has a reachable editor) undecidable, which is the same
- * reason guarded editors were rejected. `Flow.guard` exists in the schema and is emitted into
- * GeneratedUi, but nothing evaluates it, so hiding is not implemented anyway. Showing `--` is also
- * the more informative failure: an operator who set Pulses/L can SEE that Multiplier no longer
- * applies, where a vanished row just looks like a menu that lost an entry.
+ * `visibleWhen` RELAXES R7.3, which forbade runtime-hidden rows on the grounds that the completeness
+ * rule must be statically decidable. It still is, and that is the whole reason this shape is
+ * acceptable: the gate is a SETTING whose own editor is ungated, so the rule becomes "reachable under
+ * some value of the setting that gates it" — provable by enumerating that setting's options.
+ * `assertCoversEverySetting` below does exactly that. What R7.3 could not tolerate was a guard on
+ * RUNTIME state, where no such enumeration exists; that is still forbidden.
+ *
+ * `config.sensor.calibrationType` stores 0 for Formula and 1 for Pulses/L (kCalibrationOptions).
  */
+const CAL_FORMULA = { binding: "config.sensor.calibrationType", equals: 0 };
+const CAL_PULSES = { binding: "config.sensor.calibrationType", equals: 1 };
+
 const SENSOR_SETTINGS = [
   { page: "S1", id: "config-s1-connected", title: "Connected", binding: "config.sensor.connected" },
   { page: "S2", id: "config-s2-calibration", title: "Calibration", binding: "config.sensor.calibrationType" },
-  { page: "S3", id: "config-s3-pulses-per-l", title: "Pulses per litre", binding: "config.sensor.pulsesPerLiter" },
-  { page: "S4", id: "config-s4-multiplier", title: "Multiplier (F)", binding: "config.sensor.multiplier" },
-  { page: "S5", id: "config-s5-adjust", title: "Adjust", binding: "config.sensor.adjust" },
+  { page: "S3", id: "config-s3-pulses-per-l", title: "Pulses per litre", binding: "config.sensor.pulsesPerLiter",
+    visibleWhen: CAL_PULSES },
+  { page: "S4", id: "config-s4-multiplier", title: "Multiplier (F)", binding: "config.sensor.multiplier",
+    visibleWhen: CAL_FORMULA },
+  { page: "S5", id: "config-s5-adjust", title: "Adjust", binding: "config.sensor.adjust",
+    visibleWhen: CAL_FORMULA },
+  // Q is the flow variable in BOTH forms — it is the channel's ceiling either way — so it is never
+  // hidden. Neither is Connected, and neither is the question itself.
   { page: "S6", id: "config-s6-max-flow", title: "Max Flow (Q)", binding: "config.sensor.maxFlow" }
 ];
 const S_RING = [...SENSOR_SETTINGS.map((s) => s.id), "config-sensor-settings-back"];
@@ -373,6 +417,9 @@ SENSOR_SETTINGS.forEach((s, i) => {
   screens.push({
     id: s.id,
     name: `${s.page} — ${s.title}`,
+    // The editor inherits its parent's gate: an editor whose list page has left the level is
+    // unreachable anyway, and stating it means the completeness check sees one consistent story.
+    ...(s.visibleWhen ? { visibleWhen: s.visibleWhen } : {}),
     description: `Sensor settings entry ${s.page}, scoped to the sensor of the current level.`,
     elements: [
       text("hdr-title", L.headerY, `Sensor > ${s.title}`),
@@ -380,18 +427,17 @@ SENSOR_SETTINGS.forEach((s, i) => {
       text("field-label", L.bodyY, `Current${unit}`, { emphasis: "muted" }),
       value("field-value", L.valueY, s.binding, { emphasis: "strong" }),
       value("nyquist-warning", L.savedValueY, "config.sensor.nyquistWarning", { emphasis: "muted" }),
-      text("footer-hint", L.footerY, "UP/DN page  ENTER edit  hold ENTER exit", { emphasis: "muted" }),
+      text("footer-hint", L.footerY, "UP/DN pages  ENTER edit", { emphasis: "muted" }),
       scrollbar()
     ],
     flows: [
       ...ringFlows(S_RING, i),
-      btn("f-enter", "Edit value", "enter", "short", A.descend, editorId(s.id)),
-      btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+      btn("f-enter", "Edit value", "enter", "short", A.descend, editorId(s.id))
     ]
   });
   screens.push(editorScreen({
     page: s.page, screenId: editorId(s.id), title: s.title,
-    binding: s.binding, parentId: s.id
+    binding: s.binding, parentId: s.id, visibleWhen: s.visibleWhen
   }));
 });
 screens.push({
@@ -406,8 +452,7 @@ screens.push({
   ],
   flows: [
     ...ringFlows(S_RING, S_RING.length - 1),
-    btn("f-back", "Back one level", "enter", "short", A.back),
-    btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+    btn("f-back", "Back one level", "enter", "short", A.back)
   ]
 });
 
@@ -528,7 +573,7 @@ function emitInfoPage({ id, page, title, crumb, ring, index, rows, footer }) {
     elements.push(text(`row${i}-label`, y[i], row.label, { emphasis: "muted" }));
     elements.push(value(`row${i}-value`, y[i] + 10, row.binding, { emphasis: "strong" }));
   });
-  elements.push(text("footer-hint", L.footerY, footer ?? "UP/DN page  hold ENTER exit",
+  elements.push(text("footer-hint", L.footerY, footer ?? "UP/DN pages",
                      { emphasis: "muted" }));
   elements.push(scrollbar());
   screens.push({
@@ -537,8 +582,7 @@ function emitInfoPage({ id, page, title, crumb, ring, index, rows, footer }) {
     description: `${crumb} information page. Read-only; the values come from the live radio and broker.`,
     elements,
     flows: [
-      ...ringFlows(ring, index),
-      btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+      ...ringFlows(ring, index)
     ]
   });
 }
@@ -564,8 +608,7 @@ function emitBackRow({ backId, backName, ring, crumb }) {
     ],
     flows: [
       ...ringFlows(ring, ring.length - 1),
-      btn("f-back", "Back one level", "enter", "short", A.back),
-      btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+      btn("f-back", "Back one level", "enter", "short", A.back)
     ]
   });
 }
@@ -606,9 +649,9 @@ function emitLevel({ items, ring, crumb, backId, backName, ringOffset = 0 }) {
           ? [value("field-value", L.valueY, item.binding, { emphasis: "strong" })]
           : [text("field-value", L.valueY, "Settings >", { emphasis: "strong" })]),
         text("footer-hint", L.footerY,
-          isDescent ? "UP/DN page  ENTER open  hold ENTER exit"
+          isDescent ? "UP/DN pages  ENTER open"
                     : isReadOnly ? "Set via web portal or RS485"
-                                 : "UP/DN page  ENTER edit  hold ENTER exit",
+                                 : "UP/DN pages  ENTER edit",
           { emphasis: "muted" }),
         scrollbar()
       ],
@@ -619,8 +662,7 @@ function emitLevel({ items, ring, crumb, backId, backName, ringOffset = 0 }) {
         ...(isReadOnly ? [] : [
           btn("f-enter", isDescent ? `Open ${item.title}` : "Edit value", "enter", "short",
               A.descend, isDescent ? item.descendTo : editorId(item.id))
-        ]),
-        btn("f-escape", "Exit to main screen", "enter", "long", A.escape, "info-p0-global-status")
+        ])
       ]
     });
     if (item.binding && !isReadOnly) {
@@ -657,8 +699,7 @@ function emitLevel({ items, ring, crumb, backId, backName, ringOffset = 0 }) {
     flows: [
       btn("f-next", "Next page", "down", "short", A.next, r.next),
       btn("f-prev", "Previous page", "up", "short", A.prev, r.prev),
-      btn("f-enter", `Open ${r.crumb} settings`, "enter", "short", A.descend, r.enter),
-      btn("f-escape", "Back to main screen", "enter", "long", A.escape, "info-p0-global-status")
+      btn("f-enter", `Open ${r.crumb} settings`, "enter", "short", A.descend, r.enter)
     ]
   });
 });
@@ -724,8 +765,7 @@ screens.push({
   flows: [
     btn("f-next", "Next page", "down", "short", A.next, "net-wifi-root"),
     btn("f-prev", "Previous page", "up", "short", A.prev, "info-p5-enter-config"),
-    btn("f-enter", "Open confirm screen", "enter", "short", A.descend, "confirm-factory-reset"),
-    btn("f-escape", "Back to main screen", "enter", "long", A.escape, "info-p0-global-status")
+    btn("f-enter", "Open confirm screen", "enter", "short", A.descend, "confirm-factory-reset")
   ]
 });
 
@@ -756,21 +796,38 @@ const CONFIRMS = [
   }
 ];
 
+/**
+ * Each confirm is a TWO-ENTRY LEVEL: the confirm itself, and a `< BACK` row.
+ *
+ * ENTER-short on the confirm is now UNATTACHED, and therefore ignored — `findFlow` returns null and
+ * the interaction handler does nothing. That is the harmonisation: long-ENTER stops being a hidden
+ * global gesture and becomes an ordinary per-screen flow that fires only where a screen declares one.
+ *
+ * It replaces `f-exit`, an ENTER-short that meant "leave without acting" and sat one slip away from
+ * the hold that acts. Leaving is now the same motion as leaving any other level — page to `< BACK`,
+ * press ENTER — so the only gesture that does anything destructive on this screen is the deliberate
+ * hold, and the only gesture that leaves it is the one that leaves everywhere else.
+ *
+ * The hold itself is unchanged: it runs the on-screen countdown and releasing early abandons it.
+ */
 for (const c of CONFIRMS) {
+  const backId = `${c.id}-back`;
+  const ring = [c.id, backId];
   screens.push({
     id: c.id,
     name: c.name,
-    description: `Confirm screen. Inverted gestures per §3.2: ENTER-short exits, ENTER held ${c.holdMs} ms confirms.`,
+    description: `Confirm screen. ENTER-short is unattached and ignored; ENTER held ${c.holdMs} ms ` +
+                 `confirms, and releasing early abandons the countdown. UP/DOWN pages to < BACK.`,
     elements: [
       overlay(),
       text("title", L.bodyY, c.title, { emphasis: "strong" }),
       text("warning-1", L.bodyY + 18, c.warn, { emphasis: "muted" }),
       text("warning-2", L.bodyY + 30, c.warn2, { emphasis: "muted" }),
       { id: "timer-value", kind: "value", x: 104, y: L.valueY + 34, binding: "countdown.value", emphasis: "strong" },
-      text("footer-hint", L.footerY, "ENTER exit  hold ENTER confirm", { emphasis: "muted" })
+      text("footer-hint", L.footerY, "hold ENTER confirms  UP/DN back", { emphasis: "muted" })
     ],
     flows: [
-      btn("f-exit", "Exit without acting", "enter", "short", A.back),
+      ...ringFlows(ring, 0),
       {
         id: "f-confirm",
         label: c.name.replace("?", ""),
@@ -778,8 +835,10 @@ for (const c of CONFIRMS) {
         actionId: c.action,
         ...(c.toast ? { targetScreenId: c.toast } : {})
       }
+      // No f-escape: long-ENTER here means CONFIRM, and nothing else claims it.
     ]
   });
+  emitBackRow({ backId, backName: `${c.name.replace("?", "")} — Back`, ring, crumb: c.title });
 }
 
 const TOASTS = [
@@ -958,7 +1017,6 @@ for (const s of kept) {
   if (s.id.startsWith("info-p")) {
     s.flows = (s.flows ?? []).filter((f) => f.trigger.type !== "button" || f.trigger.button !== "enter");
     if (descend) s.flows.push(btn("f-enter", "Open", "enter", "short", A.descend, descend));
-    s.flows.push(btn("f-escape", "Back to main screen", "enter", "long", A.escape, "info-p0-global-status"));
   }
 
   // Font0 (M5GFX GLCDfont) covers codepoints 0-255 only, and for c >= 176 with

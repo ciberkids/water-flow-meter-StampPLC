@@ -14,10 +14,21 @@ import type { ScreenDataset, ScreenDefinition, ScreenElement } from "../../src/t
 
 const MAGIC = "WFMUI\0";
 const HEADER_BYTES = 64;
-const FORMAT_VERSION = 1;
+/**
+ * 2: the screen record grew by eight bytes for screen visibility.
+ *
+ * Bumped so a v1 pack is REFUSED rather than read at the wrong stride, which would misparse every
+ * screen after the first. Must match `MenuPack::kFormatVersion`.
+ */
+const FORMAT_VERSION = 2;
 const LABEL_BYTES = 20;
 
-const SCREEN_RECORD_BYTES = 16;
+/**
+ * 24, not 16: the record carries `visibleWhenStr` and `visibleWhenEquals` so a pack can express
+ * screen visibility, which the built-in menu already uses for the calibration branch. Must match
+ * `MenuPack::kScreenRecordBytes`, and the format version moved with it — see FORMAT_VERSION.
+ */
+const SCREEN_RECORD_BYTES = 24;
 const ELEMENT_RECORD_BYTES = 20;
 const FLOW_RECORD_BYTES = 16;
 const LEVEL_RECORD_BYTES = 8;
@@ -147,6 +158,10 @@ export function emitPack(dataset: ScreenDataset, options: PackOptions): PackResu
     screenRecords.writeUInt16LE(screen.elements.length, at + 8);
     screenRecords.writeUInt16LE((screen.flows ?? []).length, at + 10);
     screenRecords.writeUInt32LE(cursor, at + 12);
+    // Screen visibility. Offset 0 is the string table's own empty string, which is the format's
+    // established "no string" sentinel — so an unconditional screen needs no special value.
+    screenRecords.writeUInt32LE(intern(screen.visibleWhen?.binding), at + 16);
+    screenRecords.writeInt32LE(screen.visibleWhen?.equals ?? 0, at + 20);
     cursor += body.elements.length + body.flows.length;
   });
 

@@ -26,6 +26,28 @@ class UiNavigator {
  public:
   static constexpr uint8_t kMaxDepth = 5;
 
+  /**
+   * Answers whether a conditional screen is currently part of its level.
+   *
+   * A function pointer rather than an owned dependency: deciding it needs the SETTINGS, which the
+   * navigator deliberately does not hold — it knows the screen table and the stack, nothing else.
+   * Whoever owns settings binds this once at startup.
+   *
+   * Unbound, every screen is visible, which is what the host navigation tests want and what the
+   * device does before settings are loaded.
+   */
+  using VisibilityFn = bool (*)(const ui_exporter::Screen&, void* context);
+  void bindVisibility(VisibilityFn fn, void* context) {
+    visibility_ = fn;
+    visibilityContext_ = context;
+  }
+
+  /** Whether this screen is part of its level right now. True when it carries no gate. */
+  bool screenVisible(const ui_exporter::Screen* screen) const;
+
+  /** The next sibling the operator can reach, stepping over any that are hidden. */
+  const ui_exporter::Screen* nextVisibleSibling(const ui_exporter::Screen* from) const;
+
   /** Establishes the root (P0) and places the operator on it. */
   void reset(const ui_exporter::Screen* root);
 
@@ -91,6 +113,8 @@ class UiNavigator {
   const ui_exporter::Screen* stack_[kMaxDepth] = {};
   uint8_t depth_ = 0;
   uint8_t sensorIndex_ = 0;
+  VisibilityFn visibility_ = nullptr;
+  void* visibilityContext_ = nullptr;
 };
 
 }  // namespace ui

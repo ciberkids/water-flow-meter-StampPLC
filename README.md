@@ -85,7 +85,6 @@ their handler table by `static_assert`, so advertising an action with no handler
 | `web/mockup/` | Design tool, exporter (`tools/exporter/`), skeleton generator (`tools/skeleton/`) |
 | `docs/` | Requirements, decisions, hardware references — see the trust table below |
 | `graphics/` | SVG assets and captured previews |
-| `water-flow-meter-StampPLC_Legacy/` | Read-only single-file predecessor, kept for comparison |
 | `.github/workflows/ci.yml` | Three jobs on every push: web + exporter, host tests, firmware compile |
 
 ---

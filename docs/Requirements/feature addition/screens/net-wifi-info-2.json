@@ -67,9 +67,9 @@
       "kind": "text",
       "x": 2,
       "y": 124,
-      "content": "UP/DN pages  hold=exit",
+      "content": "UP/DN pages",
       "emphasis": "muted",
-      "worst": "UP/DN pages  hold=exit",
+      "worst": "UP/DN pages",
       "bound": "fixed literal",
       "bannerReplaces": true
     },

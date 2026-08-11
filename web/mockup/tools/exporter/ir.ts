@@ -125,6 +125,7 @@ function convertScreen(
     id: screen.id,
     name: screen.name,
     description: screen.description,
+    visibleWhen: screen.visibleWhen,
     elements: screen.elements.map(convertElement),
     events: screen.events ? [...screen.events] : [],
     flows: [...flows],

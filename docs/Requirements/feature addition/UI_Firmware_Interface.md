@@ -4,7 +4,15 @@
 
 ## 1. Asset Pipeline Overview
 
-1. Designers edit `screens.json` in the mockup workspace and trigger **Export to Firmware**.
+> **`screens.json` is GENERATED.** This section used to open "Designers edit `screens.json`", which
+> stopped being true when the dataset became derived from the per-screen requirement files plus the
+> firmware catalogue. Editing it directly works until the generator next runs, and then CI reports a
+> diff nobody expected. See **UI_Dataset_Contract.md** for what each JSON is, who owns it, and which
+> gate enforces each edge — and edit the requirement file or `generate.mjs`, not the dataset.
+
+1. Geometry is authored per screen in `docs/Requirements/feature addition/screens/*.json`;
+   `web/mockup/tools/skeleton/generate.mjs` combines it with `actionManifest.json` (itself generated
+   from the firmware catalogues) to produce `screens.json`. Then **Export to Firmware**.
 2. The Node.js translator emits:
    - `src/ui/generated/GeneratedUi.{h,cpp}` — strongly typed tables (`ui_exporter::Screen`, `Theme`, etc.).
    - `src/ui/generated/ui_export_ir.json` — debugging IR describing the same content.

@@ -27,8 +27,7 @@ static constexpr ui_exporter::Element kInfoP0GlobalStatusElements[] = {
 
 static constexpr ui_exporter::Flow kInfoP0GlobalStatusFlows[] = {
     { "f-next", "Next page", "info-p1-instant-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous page", "net-mqtt-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-prev", "Previous page", "net-mqtt-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowHdrTitle_Text = { "Instant Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -59,8 +58,7 @@ static constexpr ui_exporter::Element kInfoP1InstantFlowElements[] = {
 
 static constexpr ui_exporter::Flow kInfoP1InstantFlowFlows[] = {
     { "f-next", "Next page", "info-p2-cumulative-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous page", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-prev", "Previous page", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3HdrTitle_Text = { "Cumulative (m3)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -72,7 +70,7 @@ static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3FooterHint_Text = { "ENTER reset totals (hold 3s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3FooterHint_Text = { "UP/DN pages  ENTER reset...", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP2CumulativeM3Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3HdrTitle_Text, nullptr, nullptr },
@@ -92,8 +90,7 @@ static constexpr ui_exporter::Element kInfoP2CumulativeM3Elements[] = {
 static constexpr ui_exporter::Flow kInfoP2CumulativeM3Flows[] = {
     { "f-next", "Next page", "info-p3-session-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous page", "info-p1-instant-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open", "confirm-reset-totals", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open", "confirm-reset-totals", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3HdrTitle_Text = { "Session (m3)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -105,7 +102,7 @@ static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S5Valu
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3FooterHint_Text = { "ENTER reset session (hold 3s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3FooterHint_Text = { "UP/DN pages  ENTER reset...", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP3SessionM3Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3HdrTitle_Text, nullptr, nullptr },
@@ -125,8 +122,7 @@ static constexpr ui_exporter::Element kInfoP3SessionM3Elements[] = {
 static constexpr ui_exporter::Flow kInfoP3SessionM3Flows[] = {
     { "f-next", "Next page", "info-p4-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous page", "info-p2-cumulative-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open", "confirm-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open", "confirm-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowHdrTitle_Text = { "Max Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -158,8 +154,7 @@ static constexpr ui_exporter::Element kInfoP4MaxFlowElements[] = {
 static constexpr ui_exporter::Flow kInfoP4MaxFlowFlows[] = {
     { "f-next", "Next page", "info-p5-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous page", "info-p3-session-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open", "confirm-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open", "confirm-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kInfoP5EnterConfig_InfoP5EnterConfigHdrTitle_Text = { "Configuration", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -179,8 +174,7 @@ static constexpr ui_exporter::Element kInfoP5EnterConfigElements[] = {
 static constexpr ui_exporter::Flow kInfoP5EnterConfigFlows[] = {
     { "f-next", "Next page", "info-p6-factory-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous page", "info-p4-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open", "config-c1-modbus-id", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open", "config-c1-modbus-id", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningTitle_Text = { "! Sampling too slow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -225,7 +219,7 @@ static constexpr ui_exporter::TextPayload kConfigC1ModbusId_ConfigC1ModbusIdHdrT
 static constexpr ui_exporter::TextPayload kConfigC1ModbusId_ConfigC1ModbusIdNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigC1ModbusId_ConfigC1ModbusIdFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC1ModbusId_ConfigC1ModbusIdRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC1ModbusId_ConfigC1ModbusIdFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC1ModbusId_ConfigC1ModbusIdFooterHint_Text = { "UP/DN pages  ENTER edit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC1ModbusIdElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC1ModbusId_ConfigC1ModbusIdHdrTitle_Text, nullptr, nullptr },
@@ -240,15 +234,14 @@ static constexpr ui_exporter::Element kConfigC1ModbusIdElements[] = {
 static constexpr ui_exporter::Flow kConfigC1ModbusIdFlows[] = {
     { "f-next", "Next entry", "config-c2-baud-rate", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-root-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "config-c1-modbus-id-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Edit value", "config-c1-modbus-id-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigC2BaudRate_ConfigC2BaudRateHdrTitle_Text = { "Config > Baud Rate", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC2BaudRate_ConfigC2BaudRateNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigC2BaudRate_ConfigC2BaudRateFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC2BaudRate_ConfigC2BaudRateRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC2BaudRate_ConfigC2BaudRateFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC2BaudRate_ConfigC2BaudRateFooterHint_Text = { "UP/DN pages  ENTER edit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC2BaudRateElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC2BaudRate_ConfigC2BaudRateHdrTitle_Text, nullptr, nullptr },
@@ -263,15 +256,14 @@ static constexpr ui_exporter::Element kConfigC2BaudRateElements[] = {
 static constexpr ui_exporter::Flow kConfigC2BaudRateFlows[] = {
     { "f-next", "Next entry", "config-c3-parity", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-c1-modbus-id", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "config-c2-baud-rate-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Edit value", "config-c2-baud-rate-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigC3Parity_ConfigC3ParityHdrTitle_Text = { "Config > Parity", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC3Parity_ConfigC3ParityNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigC3Parity_ConfigC3ParityFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC3Parity_ConfigC3ParityRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC3Parity_ConfigC3ParityFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC3Parity_ConfigC3ParityFooterHint_Text = { "UP/DN pages  ENTER edit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC3ParityElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC3Parity_ConfigC3ParityHdrTitle_Text, nullptr, nullptr },
@@ -286,15 +278,14 @@ static constexpr ui_exporter::Element kConfigC3ParityElements[] = {
 static constexpr ui_exporter::Flow kConfigC3ParityFlows[] = {
     { "f-next", "Next entry", "config-c4-stop-bits", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-c2-baud-rate", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "config-c3-parity-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Edit value", "config-c3-parity-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigC4StopBits_ConfigC4StopBitsHdrTitle_Text = { "Config > Stop Bits", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC4StopBits_ConfigC4StopBitsNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigC4StopBits_ConfigC4StopBitsFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC4StopBits_ConfigC4StopBitsRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC4StopBits_ConfigC4StopBitsFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC4StopBits_ConfigC4StopBitsFooterHint_Text = { "UP/DN pages  ENTER edit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC4StopBitsElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC4StopBits_ConfigC4StopBitsHdrTitle_Text, nullptr, nullptr },
@@ -309,15 +300,14 @@ static constexpr ui_exporter::Element kConfigC4StopBitsElements[] = {
 static constexpr ui_exporter::Flow kConfigC4StopBitsFlows[] = {
     { "f-next", "Next entry", "config-c5-led-pulse-vol", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-c3-parity", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "config-c4-stop-bits-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Edit value", "config-c4-stop-bits-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigC5LedPulseVol_ConfigC5LedPulseVolHdrTitle_Text = { "Config > LED Pulse Volume", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC5LedPulseVol_ConfigC5LedPulseVolNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigC5LedPulseVol_ConfigC5LedPulseVolFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC5LedPulseVol_ConfigC5LedPulseVolRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC5LedPulseVol_ConfigC5LedPulseVolFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC5LedPulseVol_ConfigC5LedPulseVolFooterHint_Text = { "UP/DN pages  ENTER edit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC5LedPulseVolElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC5LedPulseVol_ConfigC5LedPulseVolHdrTitle_Text, nullptr, nullptr },
@@ -332,15 +322,14 @@ static constexpr ui_exporter::Element kConfigC5LedPulseVolElements[] = {
 static constexpr ui_exporter::Flow kConfigC5LedPulseVolFlows[] = {
     { "f-next", "Next entry", "config-c6-led-pulse-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-c4-stop-bits", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "config-c5-led-pulse-vol-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Edit value", "config-c5-led-pulse-vol-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodHdrTitle_Text = { "Config > LED Pulse Period", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodFooterHint_Text = { "UP/DN pages  ENTER edit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC6LedPulsePeriodElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC6LedPulsePeriod_ConfigC6LedPulsePeriodHdrTitle_Text, nullptr, nullptr },
@@ -355,8 +344,7 @@ static constexpr ui_exporter::Element kConfigC6LedPulsePeriodElements[] = {
 static constexpr ui_exporter::Flow kConfigC6LedPulsePeriodFlows[] = {
     { "f-next", "Next entry", "config-c7-sensor-select", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-c5-led-pulse-vol", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "config-c6-led-pulse-period-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Edit value", "config-c6-led-pulse-period-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectHdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -364,7 +352,7 @@ static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSe
 static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectBody1_Text = { "Channels 1-8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectBody2_Text = { "Connection and calibration,", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectBody3_Text = { "per channel.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectFooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectFooterHint_Text = { "UP/DN pages  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigC7SensorSelectElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectHdrTitle_Text, nullptr, nullptr },
@@ -380,8 +368,7 @@ static constexpr ui_exporter::Element kConfigC7SensorSelectElements[] = {
 static constexpr ui_exporter::Flow kConfigC7SensorSelectFlows[] = {
     { "f-next", "Next entry", "config-root-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-c6-led-pulse-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open sensor list", "config-sensor-1", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open sensor list", "config-sensor-1", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigRootBack_ConfigRootBackHdrTitle_Text = { "Config", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -401,8 +388,7 @@ static constexpr ui_exporter::Element kConfigRootBackElements[] = {
 static constexpr ui_exporter::Flow kConfigRootBackFlows[] = {
     { "f-next", "Next entry", "config-c1-modbus-id", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-c7-sensor-select", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigC1ModbusIdEdit_ConfigC1ModbusIdEditHdrTitle_Text = { "Edit > Modbus ID", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -593,7 +579,9 @@ static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1StatusLabe
 static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1FlowLabel_Text = { "Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1FlowValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1FooterHint_Text = { "UP/DN channels  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1CalLabel_Text = { "Pulses/L", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1CalValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1FooterHint_Text = { "UP/DN channels  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor1Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor1_ConfigSensor1HdrTitle_Text, nullptr, nullptr },
@@ -603,6 +591,8 @@ static constexpr ui_exporter::Element kConfigSensor1Elements[] = {
     { "status-value", ui_exporter::ElementType::Value, 62, 56, 0, 0, &kConfigSensor1_ConfigSensor1StatusValue_Text, nullptr, "sensor.1.status" },
     { "flow-label", ui_exporter::ElementType::Text, 2, 78, 0, 0, &kConfigSensor1_ConfigSensor1FlowLabel_Text, nullptr, nullptr },
     { "flow-value", ui_exporter::ElementType::Value, 68, 78, 0, 0, &kConfigSensor1_ConfigSensor1FlowValue_Text, nullptr, "sensor.1.instantFlow" },
+    { "cal-label", ui_exporter::ElementType::Text, 2, 100, 0, 0, &kConfigSensor1_ConfigSensor1CalLabel_Text, nullptr, nullptr },
+    { "cal-value", ui_exporter::ElementType::Value, 68, 100, 0, 0, &kConfigSensor1_ConfigSensor1CalValue_Text, nullptr, "sensor.1.pulsesPerLitre" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor1_ConfigSensor1FooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
@@ -611,8 +601,7 @@ static constexpr ui_exporter::Element kConfigSensor1Elements[] = {
 static constexpr ui_exporter::Flow kConfigSensor1Flows[] = {
     { "f-next", "Next entry", "config-sensor-2", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-sensor-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open sensor 1 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open sensor 1 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -622,7 +611,9 @@ static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2StatusLabe
 static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2FlowLabel_Text = { "Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2FlowValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2FooterHint_Text = { "UP/DN channels  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2CalLabel_Text = { "Pulses/L", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2CalValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor2_ConfigSensor2FooterHint_Text = { "UP/DN channels  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor2Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor2_ConfigSensor2HdrTitle_Text, nullptr, nullptr },
@@ -632,6 +623,8 @@ static constexpr ui_exporter::Element kConfigSensor2Elements[] = {
     { "status-value", ui_exporter::ElementType::Value, 62, 56, 0, 0, &kConfigSensor2_ConfigSensor2StatusValue_Text, nullptr, "sensor.2.status" },
     { "flow-label", ui_exporter::ElementType::Text, 2, 78, 0, 0, &kConfigSensor2_ConfigSensor2FlowLabel_Text, nullptr, nullptr },
     { "flow-value", ui_exporter::ElementType::Value, 68, 78, 0, 0, &kConfigSensor2_ConfigSensor2FlowValue_Text, nullptr, "sensor.2.instantFlow" },
+    { "cal-label", ui_exporter::ElementType::Text, 2, 100, 0, 0, &kConfigSensor2_ConfigSensor2CalLabel_Text, nullptr, nullptr },
+    { "cal-value", ui_exporter::ElementType::Value, 68, 100, 0, 0, &kConfigSensor2_ConfigSensor2CalValue_Text, nullptr, "sensor.2.pulsesPerLitre" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor2_ConfigSensor2FooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
@@ -640,8 +633,7 @@ static constexpr ui_exporter::Element kConfigSensor2Elements[] = {
 static constexpr ui_exporter::Flow kConfigSensor2Flows[] = {
     { "f-next", "Next entry", "config-sensor-3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-sensor-1", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open sensor 2 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open sensor 2 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -651,7 +643,9 @@ static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3StatusLabe
 static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3FlowLabel_Text = { "Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3FlowValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3FooterHint_Text = { "UP/DN channels  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3CalLabel_Text = { "Pulses/L", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3CalValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor3_ConfigSensor3FooterHint_Text = { "UP/DN channels  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor3Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor3_ConfigSensor3HdrTitle_Text, nullptr, nullptr },
@@ -661,6 +655,8 @@ static constexpr ui_exporter::Element kConfigSensor3Elements[] = {
     { "status-value", ui_exporter::ElementType::Value, 62, 56, 0, 0, &kConfigSensor3_ConfigSensor3StatusValue_Text, nullptr, "sensor.3.status" },
     { "flow-label", ui_exporter::ElementType::Text, 2, 78, 0, 0, &kConfigSensor3_ConfigSensor3FlowLabel_Text, nullptr, nullptr },
     { "flow-value", ui_exporter::ElementType::Value, 68, 78, 0, 0, &kConfigSensor3_ConfigSensor3FlowValue_Text, nullptr, "sensor.3.instantFlow" },
+    { "cal-label", ui_exporter::ElementType::Text, 2, 100, 0, 0, &kConfigSensor3_ConfigSensor3CalLabel_Text, nullptr, nullptr },
+    { "cal-value", ui_exporter::ElementType::Value, 68, 100, 0, 0, &kConfigSensor3_ConfigSensor3CalValue_Text, nullptr, "sensor.3.pulsesPerLitre" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor3_ConfigSensor3FooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
@@ -669,8 +665,7 @@ static constexpr ui_exporter::Element kConfigSensor3Elements[] = {
 static constexpr ui_exporter::Flow kConfigSensor3Flows[] = {
     { "f-next", "Next entry", "config-sensor-4", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-sensor-2", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open sensor 3 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open sensor 3 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -680,7 +675,9 @@ static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4StatusLabe
 static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4FlowLabel_Text = { "Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4FlowValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4FooterHint_Text = { "UP/DN channels  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4CalLabel_Text = { "Pulses/L", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4CalValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor4_ConfigSensor4FooterHint_Text = { "UP/DN channels  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor4Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor4_ConfigSensor4HdrTitle_Text, nullptr, nullptr },
@@ -690,6 +687,8 @@ static constexpr ui_exporter::Element kConfigSensor4Elements[] = {
     { "status-value", ui_exporter::ElementType::Value, 62, 56, 0, 0, &kConfigSensor4_ConfigSensor4StatusValue_Text, nullptr, "sensor.4.status" },
     { "flow-label", ui_exporter::ElementType::Text, 2, 78, 0, 0, &kConfigSensor4_ConfigSensor4FlowLabel_Text, nullptr, nullptr },
     { "flow-value", ui_exporter::ElementType::Value, 68, 78, 0, 0, &kConfigSensor4_ConfigSensor4FlowValue_Text, nullptr, "sensor.4.instantFlow" },
+    { "cal-label", ui_exporter::ElementType::Text, 2, 100, 0, 0, &kConfigSensor4_ConfigSensor4CalLabel_Text, nullptr, nullptr },
+    { "cal-value", ui_exporter::ElementType::Value, 68, 100, 0, 0, &kConfigSensor4_ConfigSensor4CalValue_Text, nullptr, "sensor.4.pulsesPerLitre" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor4_ConfigSensor4FooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
@@ -698,8 +697,7 @@ static constexpr ui_exporter::Element kConfigSensor4Elements[] = {
 static constexpr ui_exporter::Flow kConfigSensor4Flows[] = {
     { "f-next", "Next entry", "config-sensor-5", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-sensor-3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open sensor 4 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open sensor 4 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -709,7 +707,9 @@ static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5StatusLabe
 static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5FlowLabel_Text = { "Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5FlowValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5FooterHint_Text = { "UP/DN channels  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5CalLabel_Text = { "Pulses/L", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5CalValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor5_ConfigSensor5FooterHint_Text = { "UP/DN channels  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor5Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor5_ConfigSensor5HdrTitle_Text, nullptr, nullptr },
@@ -719,6 +719,8 @@ static constexpr ui_exporter::Element kConfigSensor5Elements[] = {
     { "status-value", ui_exporter::ElementType::Value, 62, 56, 0, 0, &kConfigSensor5_ConfigSensor5StatusValue_Text, nullptr, "sensor.5.status" },
     { "flow-label", ui_exporter::ElementType::Text, 2, 78, 0, 0, &kConfigSensor5_ConfigSensor5FlowLabel_Text, nullptr, nullptr },
     { "flow-value", ui_exporter::ElementType::Value, 68, 78, 0, 0, &kConfigSensor5_ConfigSensor5FlowValue_Text, nullptr, "sensor.5.instantFlow" },
+    { "cal-label", ui_exporter::ElementType::Text, 2, 100, 0, 0, &kConfigSensor5_ConfigSensor5CalLabel_Text, nullptr, nullptr },
+    { "cal-value", ui_exporter::ElementType::Value, 68, 100, 0, 0, &kConfigSensor5_ConfigSensor5CalValue_Text, nullptr, "sensor.5.pulsesPerLitre" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor5_ConfigSensor5FooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
@@ -727,8 +729,7 @@ static constexpr ui_exporter::Element kConfigSensor5Elements[] = {
 static constexpr ui_exporter::Flow kConfigSensor5Flows[] = {
     { "f-next", "Next entry", "config-sensor-6", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-sensor-4", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open sensor 5 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open sensor 5 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -738,7 +739,9 @@ static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6StatusLabe
 static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6FlowLabel_Text = { "Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6FlowValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6FooterHint_Text = { "UP/DN channels  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6CalLabel_Text = { "Pulses/L", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6CalValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor6_ConfigSensor6FooterHint_Text = { "UP/DN channels  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor6Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor6_ConfigSensor6HdrTitle_Text, nullptr, nullptr },
@@ -748,6 +751,8 @@ static constexpr ui_exporter::Element kConfigSensor6Elements[] = {
     { "status-value", ui_exporter::ElementType::Value, 62, 56, 0, 0, &kConfigSensor6_ConfigSensor6StatusValue_Text, nullptr, "sensor.6.status" },
     { "flow-label", ui_exporter::ElementType::Text, 2, 78, 0, 0, &kConfigSensor6_ConfigSensor6FlowLabel_Text, nullptr, nullptr },
     { "flow-value", ui_exporter::ElementType::Value, 68, 78, 0, 0, &kConfigSensor6_ConfigSensor6FlowValue_Text, nullptr, "sensor.6.instantFlow" },
+    { "cal-label", ui_exporter::ElementType::Text, 2, 100, 0, 0, &kConfigSensor6_ConfigSensor6CalLabel_Text, nullptr, nullptr },
+    { "cal-value", ui_exporter::ElementType::Value, 68, 100, 0, 0, &kConfigSensor6_ConfigSensor6CalValue_Text, nullptr, "sensor.6.pulsesPerLitre" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor6_ConfigSensor6FooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
@@ -756,8 +761,7 @@ static constexpr ui_exporter::Element kConfigSensor6Elements[] = {
 static constexpr ui_exporter::Flow kConfigSensor6Flows[] = {
     { "f-next", "Next entry", "config-sensor-7", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-sensor-5", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open sensor 6 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open sensor 6 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -767,7 +771,9 @@ static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7StatusLabe
 static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7FlowLabel_Text = { "Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7FlowValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7FooterHint_Text = { "UP/DN channels  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7CalLabel_Text = { "Pulses/L", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7CalValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor7_ConfigSensor7FooterHint_Text = { "UP/DN channels  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor7Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor7_ConfigSensor7HdrTitle_Text, nullptr, nullptr },
@@ -777,6 +783,8 @@ static constexpr ui_exporter::Element kConfigSensor7Elements[] = {
     { "status-value", ui_exporter::ElementType::Value, 62, 56, 0, 0, &kConfigSensor7_ConfigSensor7StatusValue_Text, nullptr, "sensor.7.status" },
     { "flow-label", ui_exporter::ElementType::Text, 2, 78, 0, 0, &kConfigSensor7_ConfigSensor7FlowLabel_Text, nullptr, nullptr },
     { "flow-value", ui_exporter::ElementType::Value, 68, 78, 0, 0, &kConfigSensor7_ConfigSensor7FlowValue_Text, nullptr, "sensor.7.instantFlow" },
+    { "cal-label", ui_exporter::ElementType::Text, 2, 100, 0, 0, &kConfigSensor7_ConfigSensor7CalLabel_Text, nullptr, nullptr },
+    { "cal-value", ui_exporter::ElementType::Value, 68, 100, 0, 0, &kConfigSensor7_ConfigSensor7CalValue_Text, nullptr, "sensor.7.pulsesPerLitre" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor7_ConfigSensor7FooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
@@ -785,8 +793,7 @@ static constexpr ui_exporter::Element kConfigSensor7Elements[] = {
 static constexpr ui_exporter::Flow kConfigSensor7Flows[] = {
     { "f-next", "Next entry", "config-sensor-8", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-sensor-6", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open sensor 7 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open sensor 7 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -796,7 +803,9 @@ static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8StatusLabe
 static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8StatusValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8FlowLabel_Text = { "Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8FlowValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8FooterHint_Text = { "UP/DN channels  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8CalLabel_Text = { "Pulses/L", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8CalValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensor8_ConfigSensor8FooterHint_Text = { "UP/DN channels  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigSensor8Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensor8_ConfigSensor8HdrTitle_Text, nullptr, nullptr },
@@ -806,6 +815,8 @@ static constexpr ui_exporter::Element kConfigSensor8Elements[] = {
     { "status-value", ui_exporter::ElementType::Value, 62, 56, 0, 0, &kConfigSensor8_ConfigSensor8StatusValue_Text, nullptr, "sensor.8.status" },
     { "flow-label", ui_exporter::ElementType::Text, 2, 78, 0, 0, &kConfigSensor8_ConfigSensor8FlowLabel_Text, nullptr, nullptr },
     { "flow-value", ui_exporter::ElementType::Value, 68, 78, 0, 0, &kConfigSensor8_ConfigSensor8FlowValue_Text, nullptr, "sensor.8.instantFlow" },
+    { "cal-label", ui_exporter::ElementType::Text, 2, 100, 0, 0, &kConfigSensor8_ConfigSensor8CalLabel_Text, nullptr, nullptr },
+    { "cal-value", ui_exporter::ElementType::Value, 68, 100, 0, 0, &kConfigSensor8_ConfigSensor8CalValue_Text, nullptr, "sensor.8.pulsesPerLitre" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensor8_ConfigSensor8FooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
@@ -814,8 +825,7 @@ static constexpr ui_exporter::Element kConfigSensor8Elements[] = {
 static constexpr ui_exporter::Flow kConfigSensor8Flows[] = {
     { "f-next", "Next entry", "config-sensor-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-sensor-7", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open sensor 8 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open sensor 8 settings", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigSensorBack_ConfigSensorBackHdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -835,8 +845,7 @@ static constexpr ui_exporter::Element kConfigSensorBackElements[] = {
 static constexpr ui_exporter::Flow kConfigSensorBackFlows[] = {
     { "f-next", "Next entry", "config-sensor-1", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-sensor-8", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedHdrTitle_Text = { "Sensor > Connected", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -845,7 +854,7 @@ static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedSe
 static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS1Connected_ConfigS1ConnectedFooterHint_Text = { "UP/DN pages  ENTER edit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigS1ConnectedElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigS1Connected_ConfigS1ConnectedHdrTitle_Text, nullptr, nullptr },
@@ -862,8 +871,7 @@ static constexpr ui_exporter::Element kConfigS1ConnectedElements[] = {
 static constexpr ui_exporter::Flow kConfigS1ConnectedFlows[] = {
     { "f-next", "Next entry", "config-s2-calibration", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-sensor-settings-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "config-s1-connected-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Edit value", "config-s1-connected-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigS1ConnectedEdit_ConfigS1ConnectedEditHdrTitle_Text = { "Edit > Connected", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -903,7 +911,7 @@ static constexpr ui_exporter::TextPayload kConfigS2Calibration_ConfigS2Calibrati
 static constexpr ui_exporter::TextPayload kConfigS2Calibration_ConfigS2CalibrationRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS2Calibration_ConfigS2CalibrationContextNote_Text = { "Formula: F = m*Q + a.  Pulses/L: K p/L.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS2Calibration_ConfigS2CalibrationNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigS2Calibration_ConfigS2CalibrationFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS2Calibration_ConfigS2CalibrationFooterHint_Text = { "UP/DN pages  ENTER edit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigS2CalibrationElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigS2Calibration_ConfigS2CalibrationHdrTitle_Text, nullptr, nullptr },
@@ -921,8 +929,7 @@ static constexpr ui_exporter::Element kConfigS2CalibrationElements[] = {
 static constexpr ui_exporter::Flow kConfigS2CalibrationFlows[] = {
     { "f-next", "Next entry", "config-s3-pulses-per-l", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "config-s2-calibration-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Edit value", "config-s2-calibration-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigS2CalibrationEdit_ConfigS2CalibrationEditHdrTitle_Text = { "Edit > Calibration", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -963,7 +970,7 @@ static constexpr ui_exporter::TextPayload kConfigS3PulsesPerL_ConfigS3PulsesPerL
 static constexpr ui_exporter::TextPayload kConfigS3PulsesPerL_ConfigS3PulsesPerLRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS3PulsesPerL_ConfigS3PulsesPerLContextNote_Text = { "Used when Calibration is Pulses/L.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS3PulsesPerL_ConfigS3PulsesPerLNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigS3PulsesPerL_ConfigS3PulsesPerLFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS3PulsesPerL_ConfigS3PulsesPerLFooterHint_Text = { "UP/DN pages  ENTER edit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigS3PulsesPerLElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigS3PulsesPerL_ConfigS3PulsesPerLHdrTitle_Text, nullptr, nullptr },
@@ -981,8 +988,7 @@ static constexpr ui_exporter::Element kConfigS3PulsesPerLElements[] = {
 static constexpr ui_exporter::Flow kConfigS3PulsesPerLFlows[] = {
     { "f-next", "Next entry", "config-s4-multiplier", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-s2-calibration", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "config-s3-pulses-per-l-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Edit value", "config-s3-pulses-per-l-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigS3PulsesPerLEdit_ConfigS3PulsesPerLEditHdrTitle_Text = { "Edit > Pulses per litre", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -1027,7 +1033,7 @@ static constexpr ui_exporter::TextPayload kConfigS4Multiplier_ConfigS4Multiplier
 static constexpr ui_exporter::TextPayload kConfigS4Multiplier_ConfigS4MultiplierFAdj_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS4Multiplier_ConfigS4MultiplierFRange_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS4Multiplier_ConfigS4MultiplierNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigS4Multiplier_ConfigS4MultiplierFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS4Multiplier_ConfigS4MultiplierFooterHint_Text = { "UP/DN pages  ENTER edit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigS4MultiplierElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigS4Multiplier_ConfigS4MultiplierHdrTitle_Text, nullptr, nullptr },
@@ -1049,8 +1055,7 @@ static constexpr ui_exporter::Element kConfigS4MultiplierElements[] = {
 static constexpr ui_exporter::Flow kConfigS4MultiplierFlows[] = {
     { "f-next", "Next entry", "config-s5-adjust", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-s3-pulses-per-l", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "config-s4-multiplier-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Edit value", "config-s4-multiplier-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigS4MultiplierEdit_ConfigS4MultiplierEditHdrTitle_Text = { "Edit > Multiplier (F)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -1105,7 +1110,7 @@ static constexpr ui_exporter::TextPayload kConfigS5Adjust_ConfigS5AdjustFQ_Text 
 static constexpr ui_exporter::TextPayload kConfigS5Adjust_ConfigS5AdjustFAdj_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigS5Adjust_ConfigS5AdjustFRange_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS5Adjust_ConfigS5AdjustNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigS5Adjust_ConfigS5AdjustFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS5Adjust_ConfigS5AdjustFooterHint_Text = { "UP/DN pages  ENTER edit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigS5AdjustElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigS5Adjust_ConfigS5AdjustHdrTitle_Text, nullptr, nullptr },
@@ -1127,8 +1132,7 @@ static constexpr ui_exporter::Element kConfigS5AdjustElements[] = {
 static constexpr ui_exporter::Flow kConfigS5AdjustFlows[] = {
     { "f-next", "Next entry", "config-s6-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-s4-multiplier", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "config-s5-adjust-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Edit value", "config-s5-adjust-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigS5AdjustEdit_ConfigS5AdjustEditHdrTitle_Text = { "Edit > Adjust", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -1183,7 +1187,7 @@ static constexpr ui_exporter::TextPayload kConfigS6MaxFlow_ConfigS6MaxFlowFQ_Tex
 static constexpr ui_exporter::TextPayload kConfigS6MaxFlow_ConfigS6MaxFlowFAdj_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigS6MaxFlow_ConfigS6MaxFlowFRange_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigS6MaxFlow_ConfigS6MaxFlowNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigS6MaxFlow_ConfigS6MaxFlowFooterHint_Text = { "UP/DN pages  ENTER edit  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigS6MaxFlow_ConfigS6MaxFlowFooterHint_Text = { "UP/DN pages  ENTER edit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfigS6MaxFlowElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigS6MaxFlow_ConfigS6MaxFlowHdrTitle_Text, nullptr, nullptr },
@@ -1205,8 +1209,7 @@ static constexpr ui_exporter::Element kConfigS6MaxFlowElements[] = {
 static constexpr ui_exporter::Flow kConfigS6MaxFlowFlows[] = {
     { "f-next", "Next entry", "config-sensor-settings-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-s5-adjust", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Edit value", "config-s6-max-flow-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Edit value", "config-s6-max-flow-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigS6MaxFlowEdit_ConfigS6MaxFlowEditHdrTitle_Text = { "Edit > Max Flow (Q)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -1267,15 +1270,14 @@ static constexpr ui_exporter::Element kConfigSensorSettingsBackElements[] = {
 static constexpr ui_exporter::Flow kConfigSensorSettingsBackFlows[] = {
     { "f-next", "Next entry", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-s6-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootHdrTitle_Text = { "WiFi", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootLine1_Text = { "Radio, network name and", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootLine2_Text = { "passphrase.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootFooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiRoot_NetWifiRootFooterHint_Text = { "UP/DN pages  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kNetWifiRootElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetWifiRoot_NetWifiRootHdrTitle_Text, nullptr, nullptr },
@@ -1290,15 +1292,14 @@ static constexpr ui_exporter::Element kNetWifiRootElements[] = {
 static constexpr ui_exporter::Flow kNetWifiRootFlows[] = {
     { "f-next", "Next page", "net-mqtt-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous page", "info-p6-factory-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open WiFi settings", "net-wifi-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open WiFi settings", "net-wifi-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootHdrTitle_Text = { "MQTT", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootLine1_Text = { "Broker, credentials and", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootLine2_Text = { "Home Assistant discovery.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootFooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttRoot_NetMqttRootFooterHint_Text = { "UP/DN pages  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kNetMqttRootElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetMqttRoot_NetMqttRootHdrTitle_Text, nullptr, nullptr },
@@ -1313,8 +1314,7 @@ static constexpr ui_exporter::Element kNetMqttRootElements[] = {
 static constexpr ui_exporter::Flow kNetMqttRootFlows[] = {
     { "f-next", "Next page", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous page", "net-wifi-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open MQTT settings", "net-mqtt-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open MQTT settings", "net-mqtt-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoHdrTitle_Text = { "WiFi > WiFi", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
@@ -1327,7 +1327,7 @@ static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow2Label_Text
 static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow3Label_Text = { "Passphrase", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoRow3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoFooterHint_Text = { "UP/DN pages  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiInfo_NetWifiInfoFooterHint_Text = { "UP/DN pages", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kNetWifiInfoElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetWifiInfo_NetWifiInfoHdrTitle_Text, nullptr, nullptr },
@@ -1347,8 +1347,7 @@ static constexpr ui_exporter::Element kNetWifiInfoElements[] = {
 
 static constexpr ui_exporter::Flow kNetWifiInfoFlows[] = {
     { "f-next", "Next entry", "net-wifi-info-2", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-wifi-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-prev", "Previous entry", "net-wifi-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kNetWifiInfo2_NetWifiInfo2HdrTitle_Text = { "WiFi > WiFi link", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
@@ -1357,7 +1356,7 @@ static constexpr ui_exporter::TextPayload kNetWifiInfo2_NetWifiInfo2Row0Label_Te
 static constexpr ui_exporter::TextPayload kNetWifiInfo2_NetWifiInfo2Row0Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetWifiInfo2_NetWifiInfo2Row1Label_Text = { "Signal (dBm)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetWifiInfo2_NetWifiInfo2Row1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNetWifiInfo2_NetWifiInfo2FooterHint_Text = { "UP/DN pages  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiInfo2_NetWifiInfo2FooterHint_Text = { "UP/DN pages", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kNetWifiInfo2Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetWifiInfo2_NetWifiInfo2HdrTitle_Text, nullptr, nullptr },
@@ -1373,13 +1372,12 @@ static constexpr ui_exporter::Element kNetWifiInfo2Elements[] = {
 
 static constexpr ui_exporter::Flow kNetWifiInfo2Flows[] = {
     { "f-next", "Next entry", "net-wifi-portal-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-wifi-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-prev", "Previous entry", "net-wifi-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kNetWifiPortalReset_NetWifiPortalResetHdrTitle_Text = { "WiFi > Reset portal login", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetWifiPortalReset_NetWifiPortalResetNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNetWifiPortalReset_NetWifiPortalResetFooterHint_Text = { "UP/DN pages  ENTER open  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiPortalReset_NetWifiPortalResetFooterHint_Text = { "UP/DN pages  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kNetWifiPortalResetElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetWifiPortalReset_NetWifiPortalResetHdrTitle_Text, nullptr, nullptr },
@@ -1392,8 +1390,7 @@ static constexpr ui_exporter::Element kNetWifiPortalResetElements[] = {
 static constexpr ui_exporter::Flow kNetWifiPortalResetFlows[] = {
     { "f-next", "Next entry", "net-wifi-ap-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "net-wifi-info-2", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open Reset portal login", "confirm-reset-portal-login", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open Reset portal login", "confirm-reset-portal-login", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kNetWifiBack_NetWifiBackHdrTitle_Text = { "WiFi", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -1413,8 +1410,7 @@ static constexpr ui_exporter::Element kNetWifiBackElements[] = {
 static constexpr ui_exporter::Flow kNetWifiBackFlows[] = {
     { "f-next", "Next entry", "net-wifi-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "net-wifi-ap-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoHdrTitle_Text = { "WiFi > AP info", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -1427,7 +1423,7 @@ static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow2Label_
 static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow3Label_Text = { "Closes in (s)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoRow3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoFooterHint_Text = { "UP/DN pages  hold=exit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetWifiApInfo_NetWifiApInfoFooterHint_Text = { "UP/DN pages", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kNetWifiApInfoElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kNetWifiApInfo_NetWifiApInfoHdrTitle_Text, nullptr, nullptr },
@@ -1447,8 +1443,7 @@ static constexpr ui_exporter::Element kNetWifiApInfoElements[] = {
 
 static constexpr ui_exporter::Flow kNetWifiApInfoFlows[] = {
     { "f-next", "Next entry", "net-wifi-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-wifi-portal-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-prev", "Previous entry", "net-wifi-portal-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kNetMqttInfo_NetMqttInfoHdrTitle_Text = { "MQTT > MQTT", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
@@ -1481,8 +1476,7 @@ static constexpr ui_exporter::Element kNetMqttInfoElements[] = {
 
 static constexpr ui_exporter::Flow kNetMqttInfoFlows[] = {
     { "f-next", "Next entry", "net-mqtt-info-2", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-prev", "Previous entry", "net-mqtt-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kNetMqttInfo2_NetMqttInfo2HdrTitle_Text = { "MQTT > MQTT broker", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
@@ -1515,8 +1509,7 @@ static constexpr ui_exporter::Element kNetMqttInfo2Elements[] = {
 
 static constexpr ui_exporter::Flow kNetMqttInfo2Flows[] = {
     { "f-next", "Next entry", "net-mqtt-info-3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-prev", "Previous entry", "net-mqtt-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3HdrTitle_Text = { "MQTT > MQTT publish", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
@@ -1545,8 +1538,7 @@ static constexpr ui_exporter::Element kNetMqttInfo3Elements[] = {
 
 static constexpr ui_exporter::Flow kNetMqttInfo3Flows[] = {
     { "f-next", "Next entry", "net-mqtt-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "net-mqtt-info-2", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-prev", "Previous entry", "net-mqtt-info-2", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kNetMqttBack_NetMqttBackHdrTitle_Text = { "MQTT", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -1566,8 +1558,7 @@ static constexpr ui_exporter::Element kNetMqttBackElements[] = {
 static constexpr ui_exporter::Flow kNetMqttBackFlows[] = {
     { "f-next", "Next entry", "net-mqtt-info", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "net-mqtt-info-3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
-    { "f-escape", "Exit to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kInfoP6FactoryReset_InfoP6FactoryResetHdrTitle_Text = { "Factory Reset", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -1576,7 +1567,7 @@ static constexpr ui_exporter::TextPayload kInfoP6FactoryReset_InfoP6FactoryReset
 static constexpr ui_exporter::TextPayload kInfoP6FactoryReset_InfoP6FactoryResetWarning3_Text = { "and MQTT credentials.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kInfoP6FactoryReset_InfoP6FactoryResetWarning4_Text = { "Re-provisioning needs the AP", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP6FactoryReset_InfoP6FactoryResetWarning5_Text = { "portal, at the device.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP6FactoryReset_InfoP6FactoryResetFooterHint_Text = { "ENTER opens confirm screen", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP6FactoryReset_InfoP6FactoryResetFooterHint_Text = { "UP/DN pages  ENTER reset...", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP6FactoryResetElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP6FactoryReset_InfoP6FactoryResetHdrTitle_Text, nullptr, nullptr },
@@ -1593,15 +1584,14 @@ static constexpr ui_exporter::Element kInfoP6FactoryResetElements[] = {
 static constexpr ui_exporter::Flow kInfoP6FactoryResetFlows[] = {
     { "f-next", "Next page", "net-wifi-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous page", "info-p5-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open confirm screen", "confirm-factory-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 },
-    { "f-escape", "Back to main screen", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "ui.action.nav.escape", nullptr, 0 }
+    { "f-enter", "Open confirm screen", "confirm-factory-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfirmResetTotals_ConfirmResetTotalsTitle_Text = { "RESET TOTALS?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfirmResetTotals_ConfirmResetTotalsWarning1_Text = { "Persistent cumulative volume", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfirmResetTotals_ConfirmResetTotalsWarning2_Text = { "cannot be recovered.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfirmResetTotals_ConfirmResetTotalsTimerValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfirmResetTotals_ConfirmResetTotalsFooterHint_Text = { "ENTER exit  hold ENTER confirm", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfirmResetTotals_ConfirmResetTotalsFooterHint_Text = { "hold ENTER confirms  UP/DN back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfirmResetTotalsElements[] = {
     { "overlay-bg", ui_exporter::ElementType::Box, 0, 0, 240, 135, nullptr, nullptr, nullptr },
@@ -1614,15 +1604,34 @@ static constexpr ui_exporter::Element kConfirmResetTotalsElements[] = {
 
 
 static constexpr ui_exporter::Flow kConfirmResetTotalsFlows[] = {
-    { "f-exit", "Exit without acting", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
+    { "f-next", "Next entry", "confirm-reset-totals-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "confirm-reset-totals-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-confirm", "Reset totals", "toast-totals-reset", ui_exporter::FlowTrigger::Timeout, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 3000, nullptr, nullptr, nullptr, "core.action.reset-all-measured", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kConfirmResetTotalsBack_ConfirmResetTotalsBackHdrTitle_Text = { "RESET TOTALS?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfirmResetTotalsBack_ConfirmResetTotalsBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfirmResetTotalsBack_ConfirmResetTotalsBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kConfirmResetTotalsBackElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfirmResetTotalsBack_ConfirmResetTotalsBackHdrTitle_Text, nullptr, nullptr },
+    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfirmResetTotalsBack_ConfirmResetTotalsBackBackLabel_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmResetTotalsBack_ConfirmResetTotalsBackFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kConfirmResetTotalsBackFlows[] = {
+    { "f-next", "Next entry", "confirm-reset-totals", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "confirm-reset-totals", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfirmResetSession_ConfirmResetSessionTitle_Text = { "RESET SESSION?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfirmResetSession_ConfirmResetSessionWarning1_Text = { "Session totals and max flow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfirmResetSession_ConfirmResetSessionWarning2_Text = { "return to zero.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfirmResetSession_ConfirmResetSessionTimerValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfirmResetSession_ConfirmResetSessionFooterHint_Text = { "ENTER exit  hold ENTER confirm", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfirmResetSession_ConfirmResetSessionFooterHint_Text = { "hold ENTER confirms  UP/DN back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfirmResetSessionElements[] = {
     { "overlay-bg", ui_exporter::ElementType::Box, 0, 0, 240, 135, nullptr, nullptr, nullptr },
@@ -1635,15 +1644,34 @@ static constexpr ui_exporter::Element kConfirmResetSessionElements[] = {
 
 
 static constexpr ui_exporter::Flow kConfirmResetSessionFlows[] = {
-    { "f-exit", "Exit without acting", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
+    { "f-next", "Next entry", "confirm-reset-session-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "confirm-reset-session-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-confirm", "Reset session", "toast-session-reset", ui_exporter::FlowTrigger::Timeout, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 1500, nullptr, nullptr, nullptr, "core.action.reset-session", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kConfirmResetSessionBack_ConfirmResetSessionBackHdrTitle_Text = { "RESET SESSION?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfirmResetSessionBack_ConfirmResetSessionBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfirmResetSessionBack_ConfirmResetSessionBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kConfirmResetSessionBackElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfirmResetSessionBack_ConfirmResetSessionBackHdrTitle_Text, nullptr, nullptr },
+    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfirmResetSessionBack_ConfirmResetSessionBackBackLabel_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmResetSessionBack_ConfirmResetSessionBackFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kConfirmResetSessionBackFlows[] = {
+    { "f-next", "Next entry", "confirm-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "confirm-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfirmFactoryReset_ConfirmFactoryResetTitle_Text = { "FACTORY RESET?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfirmFactoryReset_ConfirmFactoryResetWarning1_Text = { "Wipes NVS and reboots.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfirmFactoryReset_ConfirmFactoryResetWarning2_Text = { "This cannot be undone.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfirmFactoryReset_ConfirmFactoryResetTimerValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfirmFactoryReset_ConfirmFactoryResetFooterHint_Text = { "ENTER exit  hold ENTER confirm", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfirmFactoryReset_ConfirmFactoryResetFooterHint_Text = { "hold ENTER confirms  UP/DN back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfirmFactoryResetElements[] = {
     { "overlay-bg", ui_exporter::ElementType::Box, 0, 0, 240, 135, nullptr, nullptr, nullptr },
@@ -1656,15 +1684,34 @@ static constexpr ui_exporter::Element kConfirmFactoryResetElements[] = {
 
 
 static constexpr ui_exporter::Flow kConfirmFactoryResetFlows[] = {
-    { "f-exit", "Exit without acting", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
+    { "f-next", "Next entry", "confirm-factory-reset-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "confirm-factory-reset-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-confirm", "Factory reset", nullptr, ui_exporter::FlowTrigger::Timeout, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 30000, nullptr, nullptr, nullptr, "core.action.factory-reset", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kConfirmFactoryResetBack_ConfirmFactoryResetBackHdrTitle_Text = { "FACTORY RESET?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfirmFactoryResetBack_ConfirmFactoryResetBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfirmFactoryResetBack_ConfirmFactoryResetBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kConfirmFactoryResetBackElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfirmFactoryResetBack_ConfirmFactoryResetBackHdrTitle_Text, nullptr, nullptr },
+    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfirmFactoryResetBack_ConfirmFactoryResetBackBackLabel_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmFactoryResetBack_ConfirmFactoryResetBackFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kConfirmFactoryResetBackFlows[] = {
+    { "f-next", "Next entry", "confirm-factory-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "confirm-factory-reset", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfirmResetPortalLogin_ConfirmResetPortalLoginTitle_Text = { "RESET PORTAL LOGIN?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfirmResetPortalLogin_ConfirmResetPortalLoginWarning1_Text = { "Restores admin/admin. Totals,", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfirmResetPortalLogin_ConfirmResetPortalLoginWarning2_Text = { "config and calibration kept.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfirmResetPortalLogin_ConfirmResetPortalLoginTimerValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfirmResetPortalLogin_ConfirmResetPortalLoginFooterHint_Text = { "ENTER exit  hold ENTER confirm", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfirmResetPortalLogin_ConfirmResetPortalLoginFooterHint_Text = { "hold ENTER confirms  UP/DN back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kConfirmResetPortalLoginElements[] = {
     { "overlay-bg", ui_exporter::ElementType::Box, 0, 0, 240, 135, nullptr, nullptr, nullptr },
@@ -1677,8 +1724,27 @@ static constexpr ui_exporter::Element kConfirmResetPortalLoginElements[] = {
 
 
 static constexpr ui_exporter::Flow kConfirmResetPortalLoginFlows[] = {
-    { "f-exit", "Exit without acting", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
+    { "f-next", "Next entry", "confirm-reset-portal-login-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "confirm-reset-portal-login-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-confirm", "Reset portal login", "toast-portal-login-reset", ui_exporter::FlowTrigger::Timeout, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 3000, nullptr, nullptr, nullptr, "core.action.reset-portal-login", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kConfirmResetPortalLoginBack_ConfirmResetPortalLoginBackHdrTitle_Text = { "RESET PORTAL LOGIN?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfirmResetPortalLoginBack_ConfirmResetPortalLoginBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfirmResetPortalLoginBack_ConfirmResetPortalLoginBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kConfirmResetPortalLoginBackElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfirmResetPortalLoginBack_ConfirmResetPortalLoginBackHdrTitle_Text, nullptr, nullptr },
+    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfirmResetPortalLoginBack_ConfirmResetPortalLoginBackBackLabel_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmResetPortalLoginBack_ConfirmResetPortalLoginBackFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kConfirmResetPortalLoginBackFlows[] = {
+    { "f-next", "Next entry", "confirm-reset-portal-login", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "confirm-reset-portal-login", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kToastTotalsReset_ToastTotalsResetMessage_Text = { "TOTALS RESET", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -1724,69 +1790,73 @@ static constexpr ui_exporter::Flow kToastPortalLoginResetFlows[] = {
 };
 
 const ui_exporter::Screen kGeneratedScreens[] = {
-    { "info-p0-global-status", "P0 — Global Status", kInfoP0GlobalStatusElements, sizeof(kInfoP0GlobalStatusElements) / sizeof(kInfoP0GlobalStatusElements[0]), kInfoP0GlobalStatusFlows, sizeof(kInfoP0GlobalStatusFlows) / sizeof(kInfoP0GlobalStatusFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "info-p1-instant-flow", "P1 — Instant Flow", kInfoP1InstantFlowElements, sizeof(kInfoP1InstantFlowElements) / sizeof(kInfoP1InstantFlowElements[0]), kInfoP1InstantFlowFlows, sizeof(kInfoP1InstantFlowFlows) / sizeof(kInfoP1InstantFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "info-p2-cumulative-m3", "P2 — Cumulative Volume", kInfoP2CumulativeM3Elements, sizeof(kInfoP2CumulativeM3Elements) / sizeof(kInfoP2CumulativeM3Elements[0]), kInfoP2CumulativeM3Flows, sizeof(kInfoP2CumulativeM3Flows) / sizeof(kInfoP2CumulativeM3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "info-p3-session-m3", "P3 — Session Volume", kInfoP3SessionM3Elements, sizeof(kInfoP3SessionM3Elements) / sizeof(kInfoP3SessionM3Elements[0]), kInfoP3SessionM3Flows, sizeof(kInfoP3SessionM3Flows) / sizeof(kInfoP3SessionM3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "info-p4-max-flow", "P4 — Max Flow Since Reset", kInfoP4MaxFlowElements, sizeof(kInfoP4MaxFlowElements) / sizeof(kInfoP4MaxFlowElements[0]), kInfoP4MaxFlowFlows, sizeof(kInfoP4MaxFlowFlows) / sizeof(kInfoP4MaxFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "info-p5-enter-config", "P5 — Enter Configuration", kInfoP5EnterConfigElements, sizeof(kInfoP5EnterConfigElements) / sizeof(kInfoP5EnterConfigElements[0]), kInfoP5EnterConfigFlows, sizeof(kInfoP5EnterConfigFlows) / sizeof(kInfoP5EnterConfigFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "nyquist-warning", "Nyquist Validation Warning", kNyquistWarningElements, sizeof(kNyquistWarningElements) / sizeof(kNyquistWarningElements[0]), kNyquistWarningFlows, sizeof(kNyquistWarningFlows) / sizeof(kNyquistWarningFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "state-idle", "Idle (display off)", kStateIdleElements, sizeof(kStateIdleElements) / sizeof(kStateIdleElements[0]), kStateIdleFlows, sizeof(kStateIdleFlows) / sizeof(kStateIdleFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-c1-modbus-id", "C1 — Modbus ID", kConfigC1ModbusIdElements, sizeof(kConfigC1ModbusIdElements) / sizeof(kConfigC1ModbusIdElements[0]), kConfigC1ModbusIdFlows, sizeof(kConfigC1ModbusIdFlows) / sizeof(kConfigC1ModbusIdFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-c2-baud-rate", "C2 — Baud Rate", kConfigC2BaudRateElements, sizeof(kConfigC2BaudRateElements) / sizeof(kConfigC2BaudRateElements[0]), kConfigC2BaudRateFlows, sizeof(kConfigC2BaudRateFlows) / sizeof(kConfigC2BaudRateFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-c3-parity", "C3 — Parity", kConfigC3ParityElements, sizeof(kConfigC3ParityElements) / sizeof(kConfigC3ParityElements[0]), kConfigC3ParityFlows, sizeof(kConfigC3ParityFlows) / sizeof(kConfigC3ParityFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-c4-stop-bits", "C4 — Stop Bits", kConfigC4StopBitsElements, sizeof(kConfigC4StopBitsElements) / sizeof(kConfigC4StopBitsElements[0]), kConfigC4StopBitsFlows, sizeof(kConfigC4StopBitsFlows) / sizeof(kConfigC4StopBitsFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-c5-led-pulse-vol", "C5 — LED Pulse Volume", kConfigC5LedPulseVolElements, sizeof(kConfigC5LedPulseVolElements) / sizeof(kConfigC5LedPulseVolElements[0]), kConfigC5LedPulseVolFlows, sizeof(kConfigC5LedPulseVolFlows) / sizeof(kConfigC5LedPulseVolFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-c6-led-pulse-period", "C6 — LED Pulse Period", kConfigC6LedPulsePeriodElements, sizeof(kConfigC6LedPulsePeriodElements) / sizeof(kConfigC6LedPulsePeriodElements[0]), kConfigC6LedPulsePeriodFlows, sizeof(kConfigC6LedPulsePeriodFlows) / sizeof(kConfigC6LedPulsePeriodFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-c7-sensor-select", "C7 — Sensors", kConfigC7SensorSelectElements, sizeof(kConfigC7SensorSelectElements) / sizeof(kConfigC7SensorSelectElements[0]), kConfigC7SensorSelectFlows, sizeof(kConfigC7SensorSelectFlows) / sizeof(kConfigC7SensorSelectFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-root-back", "C.BACK — Back", kConfigRootBackElements, sizeof(kConfigRootBackElements) / sizeof(kConfigRootBackElements[0]), kConfigRootBackFlows, sizeof(kConfigRootBackFlows) / sizeof(kConfigRootBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-c1-modbus-id-edit", "C1.V — Edit Modbus ID", kConfigC1ModbusIdEditElements, sizeof(kConfigC1ModbusIdEditElements) / sizeof(kConfigC1ModbusIdEditElements[0]), kConfigC1ModbusIdEditFlows, sizeof(kConfigC1ModbusIdEditFlows) / sizeof(kConfigC1ModbusIdEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-c2-baud-rate-edit", "C2.V — Edit Baud Rate", kConfigC2BaudRateEditElements, sizeof(kConfigC2BaudRateEditElements) / sizeof(kConfigC2BaudRateEditElements[0]), kConfigC2BaudRateEditFlows, sizeof(kConfigC2BaudRateEditFlows) / sizeof(kConfigC2BaudRateEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-c3-parity-edit", "C3.V — Edit Parity", kConfigC3ParityEditElements, sizeof(kConfigC3ParityEditElements) / sizeof(kConfigC3ParityEditElements[0]), kConfigC3ParityEditFlows, sizeof(kConfigC3ParityEditFlows) / sizeof(kConfigC3ParityEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-c4-stop-bits-edit", "C4.V — Edit Stop Bits", kConfigC4StopBitsEditElements, sizeof(kConfigC4StopBitsEditElements) / sizeof(kConfigC4StopBitsEditElements[0]), kConfigC4StopBitsEditFlows, sizeof(kConfigC4StopBitsEditFlows) / sizeof(kConfigC4StopBitsEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-c5-led-pulse-vol-edit", "C5.V — Edit LED Pulse Volume", kConfigC5LedPulseVolEditElements, sizeof(kConfigC5LedPulseVolEditElements) / sizeof(kConfigC5LedPulseVolEditElements[0]), kConfigC5LedPulseVolEditFlows, sizeof(kConfigC5LedPulseVolEditFlows) / sizeof(kConfigC5LedPulseVolEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-c6-led-pulse-period-edit", "C6.V — Edit LED Pulse Period", kConfigC6LedPulsePeriodEditElements, sizeof(kConfigC6LedPulsePeriodEditElements) / sizeof(kConfigC6LedPulsePeriodEditElements[0]), kConfigC6LedPulsePeriodEditFlows, sizeof(kConfigC6LedPulsePeriodEditFlows) / sizeof(kConfigC6LedPulsePeriodEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-sensor-1", "SEN1 — Sensor 1", kConfigSensor1Elements, sizeof(kConfigSensor1Elements) / sizeof(kConfigSensor1Elements[0]), kConfigSensor1Flows, sizeof(kConfigSensor1Flows) / sizeof(kConfigSensor1Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-sensor-2", "SEN2 — Sensor 2", kConfigSensor2Elements, sizeof(kConfigSensor2Elements) / sizeof(kConfigSensor2Elements[0]), kConfigSensor2Flows, sizeof(kConfigSensor2Flows) / sizeof(kConfigSensor2Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-sensor-3", "SEN3 — Sensor 3", kConfigSensor3Elements, sizeof(kConfigSensor3Elements) / sizeof(kConfigSensor3Elements[0]), kConfigSensor3Flows, sizeof(kConfigSensor3Flows) / sizeof(kConfigSensor3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-sensor-4", "SEN4 — Sensor 4", kConfigSensor4Elements, sizeof(kConfigSensor4Elements) / sizeof(kConfigSensor4Elements[0]), kConfigSensor4Flows, sizeof(kConfigSensor4Flows) / sizeof(kConfigSensor4Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-sensor-5", "SEN5 — Sensor 5", kConfigSensor5Elements, sizeof(kConfigSensor5Elements) / sizeof(kConfigSensor5Elements[0]), kConfigSensor5Flows, sizeof(kConfigSensor5Flows) / sizeof(kConfigSensor5Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-sensor-6", "SEN6 — Sensor 6", kConfigSensor6Elements, sizeof(kConfigSensor6Elements) / sizeof(kConfigSensor6Elements[0]), kConfigSensor6Flows, sizeof(kConfigSensor6Flows) / sizeof(kConfigSensor6Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-sensor-7", "SEN7 — Sensor 7", kConfigSensor7Elements, sizeof(kConfigSensor7Elements) / sizeof(kConfigSensor7Elements[0]), kConfigSensor7Flows, sizeof(kConfigSensor7Flows) / sizeof(kConfigSensor7Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-sensor-8", "SEN8 — Sensor 8", kConfigSensor8Elements, sizeof(kConfigSensor8Elements) / sizeof(kConfigSensor8Elements[0]), kConfigSensor8Flows, sizeof(kConfigSensor8Flows) / sizeof(kConfigSensor8Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-sensor-back", "SEN.BACK — Back", kConfigSensorBackElements, sizeof(kConfigSensorBackElements) / sizeof(kConfigSensorBackElements[0]), kConfigSensorBackFlows, sizeof(kConfigSensorBackFlows) / sizeof(kConfigSensorBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-s1-connected", "S1 — Connected", kConfigS1ConnectedElements, sizeof(kConfigS1ConnectedElements) / sizeof(kConfigS1ConnectedElements[0]), kConfigS1ConnectedFlows, sizeof(kConfigS1ConnectedFlows) / sizeof(kConfigS1ConnectedFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-s1-connected-edit", "S1.V — Edit Connected", kConfigS1ConnectedEditElements, sizeof(kConfigS1ConnectedEditElements) / sizeof(kConfigS1ConnectedEditElements[0]), kConfigS1ConnectedEditFlows, sizeof(kConfigS1ConnectedEditFlows) / sizeof(kConfigS1ConnectedEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-s2-calibration", "S2 — Calibration", kConfigS2CalibrationElements, sizeof(kConfigS2CalibrationElements) / sizeof(kConfigS2CalibrationElements[0]), kConfigS2CalibrationFlows, sizeof(kConfigS2CalibrationFlows) / sizeof(kConfigS2CalibrationFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-s2-calibration-edit", "S2.V — Edit Calibration", kConfigS2CalibrationEditElements, sizeof(kConfigS2CalibrationEditElements) / sizeof(kConfigS2CalibrationEditElements[0]), kConfigS2CalibrationEditFlows, sizeof(kConfigS2CalibrationEditFlows) / sizeof(kConfigS2CalibrationEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-s3-pulses-per-l", "S3 — Pulses per litre", kConfigS3PulsesPerLElements, sizeof(kConfigS3PulsesPerLElements) / sizeof(kConfigS3PulsesPerLElements[0]), kConfigS3PulsesPerLFlows, sizeof(kConfigS3PulsesPerLFlows) / sizeof(kConfigS3PulsesPerLFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-s3-pulses-per-l-edit", "S3.V — Edit Pulses per litre", kConfigS3PulsesPerLEditElements, sizeof(kConfigS3PulsesPerLEditElements) / sizeof(kConfigS3PulsesPerLEditElements[0]), kConfigS3PulsesPerLEditFlows, sizeof(kConfigS3PulsesPerLEditFlows) / sizeof(kConfigS3PulsesPerLEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-s4-multiplier", "S4 — Multiplier (F)", kConfigS4MultiplierElements, sizeof(kConfigS4MultiplierElements) / sizeof(kConfigS4MultiplierElements[0]), kConfigS4MultiplierFlows, sizeof(kConfigS4MultiplierFlows) / sizeof(kConfigS4MultiplierFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-s4-multiplier-edit", "S4.V — Edit Multiplier (F)", kConfigS4MultiplierEditElements, sizeof(kConfigS4MultiplierEditElements) / sizeof(kConfigS4MultiplierEditElements[0]), kConfigS4MultiplierEditFlows, sizeof(kConfigS4MultiplierEditFlows) / sizeof(kConfigS4MultiplierEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-s5-adjust", "S5 — Adjust", kConfigS5AdjustElements, sizeof(kConfigS5AdjustElements) / sizeof(kConfigS5AdjustElements[0]), kConfigS5AdjustFlows, sizeof(kConfigS5AdjustFlows) / sizeof(kConfigS5AdjustFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-s5-adjust-edit", "S5.V — Edit Adjust", kConfigS5AdjustEditElements, sizeof(kConfigS5AdjustEditElements) / sizeof(kConfigS5AdjustEditElements[0]), kConfigS5AdjustEditFlows, sizeof(kConfigS5AdjustEditFlows) / sizeof(kConfigS5AdjustEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-s6-max-flow", "S6 — Max Flow (Q)", kConfigS6MaxFlowElements, sizeof(kConfigS6MaxFlowElements) / sizeof(kConfigS6MaxFlowElements[0]), kConfigS6MaxFlowFlows, sizeof(kConfigS6MaxFlowFlows) / sizeof(kConfigS6MaxFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-s6-max-flow-edit", "S6.V — Edit Max Flow (Q)", kConfigS6MaxFlowEditElements, sizeof(kConfigS6MaxFlowEditElements) / sizeof(kConfigS6MaxFlowEditElements[0]), kConfigS6MaxFlowEditFlows, sizeof(kConfigS6MaxFlowEditFlows) / sizeof(kConfigS6MaxFlowEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-sensor-settings-back", "S.BACK — Back", kConfigSensorSettingsBackElements, sizeof(kConfigSensorSettingsBackElements) / sizeof(kConfigSensorSettingsBackElements[0]), kConfigSensorSettingsBackFlows, sizeof(kConfigSensorSettingsBackFlows) / sizeof(kConfigSensorSettingsBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-wifi-root", "WIFI — WiFi", kNetWifiRootElements, sizeof(kNetWifiRootElements) / sizeof(kNetWifiRootElements[0]), kNetWifiRootFlows, sizeof(kNetWifiRootFlows) / sizeof(kNetWifiRootFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-root", "MQTT — MQTT", kNetMqttRootElements, sizeof(kNetMqttRootElements) / sizeof(kNetMqttRootElements[0]), kNetMqttRootFlows, sizeof(kNetMqttRootFlows) / sizeof(kNetMqttRootFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-wifi-info", "W.I1 — WiFi", kNetWifiInfoElements, sizeof(kNetWifiInfoElements) / sizeof(kNetWifiInfoElements[0]), kNetWifiInfoFlows, sizeof(kNetWifiInfoFlows) / sizeof(kNetWifiInfoFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-wifi-info-2", "W.I2 — WiFi link", kNetWifiInfo2Elements, sizeof(kNetWifiInfo2Elements) / sizeof(kNetWifiInfo2Elements[0]), kNetWifiInfo2Flows, sizeof(kNetWifiInfo2Flows) / sizeof(kNetWifiInfo2Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-wifi-portal-reset", "W4 — Reset portal login", kNetWifiPortalResetElements, sizeof(kNetWifiPortalResetElements) / sizeof(kNetWifiPortalResetElements[0]), kNetWifiPortalResetFlows, sizeof(kNetWifiPortalResetFlows) / sizeof(kNetWifiPortalResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-wifi-back", "W.BACK — Back", kNetWifiBackElements, sizeof(kNetWifiBackElements) / sizeof(kNetWifiBackElements[0]), kNetWifiBackFlows, sizeof(kNetWifiBackFlows) / sizeof(kNetWifiBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-wifi-ap-info", "W6 — AP info", kNetWifiApInfoElements, sizeof(kNetWifiApInfoElements) / sizeof(kNetWifiApInfoElements[0]), kNetWifiApInfoFlows, sizeof(kNetWifiApInfoFlows) / sizeof(kNetWifiApInfoFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-info", "M.I1 — MQTT", kNetMqttInfoElements, sizeof(kNetMqttInfoElements) / sizeof(kNetMqttInfoElements[0]), kNetMqttInfoFlows, sizeof(kNetMqttInfoFlows) / sizeof(kNetMqttInfoFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-info-2", "M.I2 — MQTT broker", kNetMqttInfo2Elements, sizeof(kNetMqttInfo2Elements) / sizeof(kNetMqttInfo2Elements[0]), kNetMqttInfo2Flows, sizeof(kNetMqttInfo2Flows) / sizeof(kNetMqttInfo2Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-info-3", "M.I3 — MQTT publish", kNetMqttInfo3Elements, sizeof(kNetMqttInfo3Elements) / sizeof(kNetMqttInfo3Elements[0]), kNetMqttInfo3Flows, sizeof(kNetMqttInfo3Flows) / sizeof(kNetMqttInfo3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "net-mqtt-back", "M.BACK — Back", kNetMqttBackElements, sizeof(kNetMqttBackElements) / sizeof(kNetMqttBackElements[0]), kNetMqttBackFlows, sizeof(kNetMqttBackFlows) / sizeof(kNetMqttBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "info-p6-factory-reset", "P6 — Factory Reset", kInfoP6FactoryResetElements, sizeof(kInfoP6FactoryResetElements) / sizeof(kInfoP6FactoryResetElements[0]), kInfoP6FactoryResetFlows, sizeof(kInfoP6FactoryResetFlows) / sizeof(kInfoP6FactoryResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "confirm-reset-totals", "Reset totals?", kConfirmResetTotalsElements, sizeof(kConfirmResetTotalsElements) / sizeof(kConfirmResetTotalsElements[0]), kConfirmResetTotalsFlows, sizeof(kConfirmResetTotalsFlows) / sizeof(kConfirmResetTotalsFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "confirm-reset-session", "Reset session?", kConfirmResetSessionElements, sizeof(kConfirmResetSessionElements) / sizeof(kConfirmResetSessionElements[0]), kConfirmResetSessionFlows, sizeof(kConfirmResetSessionFlows) / sizeof(kConfirmResetSessionFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "confirm-factory-reset", "Factory reset?", kConfirmFactoryResetElements, sizeof(kConfirmFactoryResetElements) / sizeof(kConfirmFactoryResetElements[0]), kConfirmFactoryResetFlows, sizeof(kConfirmFactoryResetFlows) / sizeof(kConfirmFactoryResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "confirm-reset-portal-login", "Reset portal login?", kConfirmResetPortalLoginElements, sizeof(kConfirmResetPortalLoginElements) / sizeof(kConfirmResetPortalLoginElements[0]), kConfirmResetPortalLoginFlows, sizeof(kConfirmResetPortalLoginFlows) / sizeof(kConfirmResetPortalLoginFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "toast-totals-reset", "Totals reset", kToastTotalsResetElements, sizeof(kToastTotalsResetElements) / sizeof(kToastTotalsResetElements[0]), kToastTotalsResetFlows, sizeof(kToastTotalsResetFlows) / sizeof(kToastTotalsResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "toast-session-reset", "Session reset", kToastSessionResetElements, sizeof(kToastSessionResetElements) / sizeof(kToastSessionResetElements[0]), kToastSessionResetFlows, sizeof(kToastSessionResetFlows) / sizeof(kToastSessionResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "toast-portal-login-reset", "Portal login reset", kToastPortalLoginResetElements, sizeof(kToastPortalLoginResetElements) / sizeof(kToastPortalLoginResetElements[0]), kToastPortalLoginResetFlows, sizeof(kToastPortalLoginResetFlows) / sizeof(kToastPortalLoginResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 }
+    { "info-p0-global-status", "P0 — Global Status", kInfoP0GlobalStatusElements, sizeof(kInfoP0GlobalStatusElements) / sizeof(kInfoP0GlobalStatusElements[0]), kInfoP0GlobalStatusFlows, sizeof(kInfoP0GlobalStatusFlows) / sizeof(kInfoP0GlobalStatusFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "info-p1-instant-flow", "P1 — Instant Flow", kInfoP1InstantFlowElements, sizeof(kInfoP1InstantFlowElements) / sizeof(kInfoP1InstantFlowElements[0]), kInfoP1InstantFlowFlows, sizeof(kInfoP1InstantFlowFlows) / sizeof(kInfoP1InstantFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "info-p2-cumulative-m3", "P2 — Cumulative Volume", kInfoP2CumulativeM3Elements, sizeof(kInfoP2CumulativeM3Elements) / sizeof(kInfoP2CumulativeM3Elements[0]), kInfoP2CumulativeM3Flows, sizeof(kInfoP2CumulativeM3Flows) / sizeof(kInfoP2CumulativeM3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "info-p3-session-m3", "P3 — Session Volume", kInfoP3SessionM3Elements, sizeof(kInfoP3SessionM3Elements) / sizeof(kInfoP3SessionM3Elements[0]), kInfoP3SessionM3Flows, sizeof(kInfoP3SessionM3Flows) / sizeof(kInfoP3SessionM3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "info-p4-max-flow", "P4 — Max Flow Since Reset", kInfoP4MaxFlowElements, sizeof(kInfoP4MaxFlowElements) / sizeof(kInfoP4MaxFlowElements[0]), kInfoP4MaxFlowFlows, sizeof(kInfoP4MaxFlowFlows) / sizeof(kInfoP4MaxFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "info-p5-enter-config", "P5 — Enter Configuration", kInfoP5EnterConfigElements, sizeof(kInfoP5EnterConfigElements) / sizeof(kInfoP5EnterConfigElements[0]), kInfoP5EnterConfigFlows, sizeof(kInfoP5EnterConfigFlows) / sizeof(kInfoP5EnterConfigFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "nyquist-warning", "Nyquist Validation Warning", kNyquistWarningElements, sizeof(kNyquistWarningElements) / sizeof(kNyquistWarningElements[0]), kNyquistWarningFlows, sizeof(kNyquistWarningFlows) / sizeof(kNyquistWarningFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "state-idle", "Idle (display off)", kStateIdleElements, sizeof(kStateIdleElements) / sizeof(kStateIdleElements[0]), kStateIdleFlows, sizeof(kStateIdleFlows) / sizeof(kStateIdleFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c1-modbus-id", "C1 — Modbus ID", kConfigC1ModbusIdElements, sizeof(kConfigC1ModbusIdElements) / sizeof(kConfigC1ModbusIdElements[0]), kConfigC1ModbusIdFlows, sizeof(kConfigC1ModbusIdFlows) / sizeof(kConfigC1ModbusIdFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c2-baud-rate", "C2 — Baud Rate", kConfigC2BaudRateElements, sizeof(kConfigC2BaudRateElements) / sizeof(kConfigC2BaudRateElements[0]), kConfigC2BaudRateFlows, sizeof(kConfigC2BaudRateFlows) / sizeof(kConfigC2BaudRateFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c3-parity", "C3 — Parity", kConfigC3ParityElements, sizeof(kConfigC3ParityElements) / sizeof(kConfigC3ParityElements[0]), kConfigC3ParityFlows, sizeof(kConfigC3ParityFlows) / sizeof(kConfigC3ParityFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c4-stop-bits", "C4 — Stop Bits", kConfigC4StopBitsElements, sizeof(kConfigC4StopBitsElements) / sizeof(kConfigC4StopBitsElements[0]), kConfigC4StopBitsFlows, sizeof(kConfigC4StopBitsFlows) / sizeof(kConfigC4StopBitsFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c5-led-pulse-vol", "C5 — LED Pulse Volume", kConfigC5LedPulseVolElements, sizeof(kConfigC5LedPulseVolElements) / sizeof(kConfigC5LedPulseVolElements[0]), kConfigC5LedPulseVolFlows, sizeof(kConfigC5LedPulseVolFlows) / sizeof(kConfigC5LedPulseVolFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c6-led-pulse-period", "C6 — LED Pulse Period", kConfigC6LedPulsePeriodElements, sizeof(kConfigC6LedPulsePeriodElements) / sizeof(kConfigC6LedPulsePeriodElements[0]), kConfigC6LedPulsePeriodFlows, sizeof(kConfigC6LedPulsePeriodFlows) / sizeof(kConfigC6LedPulsePeriodFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c7-sensor-select", "C7 — Sensors", kConfigC7SensorSelectElements, sizeof(kConfigC7SensorSelectElements) / sizeof(kConfigC7SensorSelectElements[0]), kConfigC7SensorSelectFlows, sizeof(kConfigC7SensorSelectFlows) / sizeof(kConfigC7SensorSelectFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-root-back", "C.BACK — Back", kConfigRootBackElements, sizeof(kConfigRootBackElements) / sizeof(kConfigRootBackElements[0]), kConfigRootBackFlows, sizeof(kConfigRootBackFlows) / sizeof(kConfigRootBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c1-modbus-id-edit", "C1.V — Edit Modbus ID", kConfigC1ModbusIdEditElements, sizeof(kConfigC1ModbusIdEditElements) / sizeof(kConfigC1ModbusIdEditElements[0]), kConfigC1ModbusIdEditFlows, sizeof(kConfigC1ModbusIdEditFlows) / sizeof(kConfigC1ModbusIdEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c2-baud-rate-edit", "C2.V — Edit Baud Rate", kConfigC2BaudRateEditElements, sizeof(kConfigC2BaudRateEditElements) / sizeof(kConfigC2BaudRateEditElements[0]), kConfigC2BaudRateEditFlows, sizeof(kConfigC2BaudRateEditFlows) / sizeof(kConfigC2BaudRateEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c3-parity-edit", "C3.V — Edit Parity", kConfigC3ParityEditElements, sizeof(kConfigC3ParityEditElements) / sizeof(kConfigC3ParityEditElements[0]), kConfigC3ParityEditFlows, sizeof(kConfigC3ParityEditFlows) / sizeof(kConfigC3ParityEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c4-stop-bits-edit", "C4.V — Edit Stop Bits", kConfigC4StopBitsEditElements, sizeof(kConfigC4StopBitsEditElements) / sizeof(kConfigC4StopBitsEditElements[0]), kConfigC4StopBitsEditFlows, sizeof(kConfigC4StopBitsEditFlows) / sizeof(kConfigC4StopBitsEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c5-led-pulse-vol-edit", "C5.V — Edit LED Pulse Volume", kConfigC5LedPulseVolEditElements, sizeof(kConfigC5LedPulseVolEditElements) / sizeof(kConfigC5LedPulseVolEditElements[0]), kConfigC5LedPulseVolEditFlows, sizeof(kConfigC5LedPulseVolEditFlows) / sizeof(kConfigC5LedPulseVolEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c6-led-pulse-period-edit", "C6.V — Edit LED Pulse Period", kConfigC6LedPulsePeriodEditElements, sizeof(kConfigC6LedPulsePeriodEditElements) / sizeof(kConfigC6LedPulsePeriodEditElements[0]), kConfigC6LedPulsePeriodEditFlows, sizeof(kConfigC6LedPulsePeriodEditFlows) / sizeof(kConfigC6LedPulsePeriodEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-sensor-1", "SEN1 — Sensor 1", kConfigSensor1Elements, sizeof(kConfigSensor1Elements) / sizeof(kConfigSensor1Elements[0]), kConfigSensor1Flows, sizeof(kConfigSensor1Flows) / sizeof(kConfigSensor1Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-sensor-2", "SEN2 — Sensor 2", kConfigSensor2Elements, sizeof(kConfigSensor2Elements) / sizeof(kConfigSensor2Elements[0]), kConfigSensor2Flows, sizeof(kConfigSensor2Flows) / sizeof(kConfigSensor2Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-sensor-3", "SEN3 — Sensor 3", kConfigSensor3Elements, sizeof(kConfigSensor3Elements) / sizeof(kConfigSensor3Elements[0]), kConfigSensor3Flows, sizeof(kConfigSensor3Flows) / sizeof(kConfigSensor3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-sensor-4", "SEN4 — Sensor 4", kConfigSensor4Elements, sizeof(kConfigSensor4Elements) / sizeof(kConfigSensor4Elements[0]), kConfigSensor4Flows, sizeof(kConfigSensor4Flows) / sizeof(kConfigSensor4Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-sensor-5", "SEN5 — Sensor 5", kConfigSensor5Elements, sizeof(kConfigSensor5Elements) / sizeof(kConfigSensor5Elements[0]), kConfigSensor5Flows, sizeof(kConfigSensor5Flows) / sizeof(kConfigSensor5Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-sensor-6", "SEN6 — Sensor 6", kConfigSensor6Elements, sizeof(kConfigSensor6Elements) / sizeof(kConfigSensor6Elements[0]), kConfigSensor6Flows, sizeof(kConfigSensor6Flows) / sizeof(kConfigSensor6Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-sensor-7", "SEN7 — Sensor 7", kConfigSensor7Elements, sizeof(kConfigSensor7Elements) / sizeof(kConfigSensor7Elements[0]), kConfigSensor7Flows, sizeof(kConfigSensor7Flows) / sizeof(kConfigSensor7Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-sensor-8", "SEN8 — Sensor 8", kConfigSensor8Elements, sizeof(kConfigSensor8Elements) / sizeof(kConfigSensor8Elements[0]), kConfigSensor8Flows, sizeof(kConfigSensor8Flows) / sizeof(kConfigSensor8Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-sensor-back", "SEN.BACK — Back", kConfigSensorBackElements, sizeof(kConfigSensorBackElements) / sizeof(kConfigSensorBackElements[0]), kConfigSensorBackFlows, sizeof(kConfigSensorBackFlows) / sizeof(kConfigSensorBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-s1-connected", "S1 — Connected", kConfigS1ConnectedElements, sizeof(kConfigS1ConnectedElements) / sizeof(kConfigS1ConnectedElements[0]), kConfigS1ConnectedFlows, sizeof(kConfigS1ConnectedFlows) / sizeof(kConfigS1ConnectedFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-s1-connected-edit", "S1.V — Edit Connected", kConfigS1ConnectedEditElements, sizeof(kConfigS1ConnectedEditElements) / sizeof(kConfigS1ConnectedEditElements[0]), kConfigS1ConnectedEditFlows, sizeof(kConfigS1ConnectedEditFlows) / sizeof(kConfigS1ConnectedEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-s2-calibration", "S2 — Calibration", kConfigS2CalibrationElements, sizeof(kConfigS2CalibrationElements) / sizeof(kConfigS2CalibrationElements[0]), kConfigS2CalibrationFlows, sizeof(kConfigS2CalibrationFlows) / sizeof(kConfigS2CalibrationFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-s2-calibration-edit", "S2.V — Edit Calibration", kConfigS2CalibrationEditElements, sizeof(kConfigS2CalibrationEditElements) / sizeof(kConfigS2CalibrationEditElements[0]), kConfigS2CalibrationEditFlows, sizeof(kConfigS2CalibrationEditFlows) / sizeof(kConfigS2CalibrationEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-s3-pulses-per-l", "S3 — Pulses per litre", kConfigS3PulsesPerLElements, sizeof(kConfigS3PulsesPerLElements) / sizeof(kConfigS3PulsesPerLElements[0]), kConfigS3PulsesPerLFlows, sizeof(kConfigS3PulsesPerLFlows) / sizeof(kConfigS3PulsesPerLFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, "config.sensor.calibrationType", 1 },
+    { "config-s3-pulses-per-l-edit", "S3.V — Edit Pulses per litre", kConfigS3PulsesPerLEditElements, sizeof(kConfigS3PulsesPerLEditElements) / sizeof(kConfigS3PulsesPerLEditElements[0]), kConfigS3PulsesPerLEditFlows, sizeof(kConfigS3PulsesPerLEditFlows) / sizeof(kConfigS3PulsesPerLEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, "config.sensor.calibrationType", 1 },
+    { "config-s4-multiplier", "S4 — Multiplier (F)", kConfigS4MultiplierElements, sizeof(kConfigS4MultiplierElements) / sizeof(kConfigS4MultiplierElements[0]), kConfigS4MultiplierFlows, sizeof(kConfigS4MultiplierFlows) / sizeof(kConfigS4MultiplierFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, "config.sensor.calibrationType", 0 },
+    { "config-s4-multiplier-edit", "S4.V — Edit Multiplier (F)", kConfigS4MultiplierEditElements, sizeof(kConfigS4MultiplierEditElements) / sizeof(kConfigS4MultiplierEditElements[0]), kConfigS4MultiplierEditFlows, sizeof(kConfigS4MultiplierEditFlows) / sizeof(kConfigS4MultiplierEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, "config.sensor.calibrationType", 0 },
+    { "config-s5-adjust", "S5 — Adjust", kConfigS5AdjustElements, sizeof(kConfigS5AdjustElements) / sizeof(kConfigS5AdjustElements[0]), kConfigS5AdjustFlows, sizeof(kConfigS5AdjustFlows) / sizeof(kConfigS5AdjustFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, "config.sensor.calibrationType", 0 },
+    { "config-s5-adjust-edit", "S5.V — Edit Adjust", kConfigS5AdjustEditElements, sizeof(kConfigS5AdjustEditElements) / sizeof(kConfigS5AdjustEditElements[0]), kConfigS5AdjustEditFlows, sizeof(kConfigS5AdjustEditFlows) / sizeof(kConfigS5AdjustEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, "config.sensor.calibrationType", 0 },
+    { "config-s6-max-flow", "S6 — Max Flow (Q)", kConfigS6MaxFlowElements, sizeof(kConfigS6MaxFlowElements) / sizeof(kConfigS6MaxFlowElements[0]), kConfigS6MaxFlowFlows, sizeof(kConfigS6MaxFlowFlows) / sizeof(kConfigS6MaxFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-s6-max-flow-edit", "S6.V — Edit Max Flow (Q)", kConfigS6MaxFlowEditElements, sizeof(kConfigS6MaxFlowEditElements) / sizeof(kConfigS6MaxFlowEditElements[0]), kConfigS6MaxFlowEditFlows, sizeof(kConfigS6MaxFlowEditFlows) / sizeof(kConfigS6MaxFlowEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-sensor-settings-back", "S.BACK — Back", kConfigSensorSettingsBackElements, sizeof(kConfigSensorSettingsBackElements) / sizeof(kConfigSensorSettingsBackElements[0]), kConfigSensorSettingsBackFlows, sizeof(kConfigSensorSettingsBackFlows) / sizeof(kConfigSensorSettingsBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-root", "WIFI — WiFi", kNetWifiRootElements, sizeof(kNetWifiRootElements) / sizeof(kNetWifiRootElements[0]), kNetWifiRootFlows, sizeof(kNetWifiRootFlows) / sizeof(kNetWifiRootFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-root", "MQTT — MQTT", kNetMqttRootElements, sizeof(kNetMqttRootElements) / sizeof(kNetMqttRootElements[0]), kNetMqttRootFlows, sizeof(kNetMqttRootFlows) / sizeof(kNetMqttRootFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-info", "W.I1 — WiFi", kNetWifiInfoElements, sizeof(kNetWifiInfoElements) / sizeof(kNetWifiInfoElements[0]), kNetWifiInfoFlows, sizeof(kNetWifiInfoFlows) / sizeof(kNetWifiInfoFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-info-2", "W.I2 — WiFi link", kNetWifiInfo2Elements, sizeof(kNetWifiInfo2Elements) / sizeof(kNetWifiInfo2Elements[0]), kNetWifiInfo2Flows, sizeof(kNetWifiInfo2Flows) / sizeof(kNetWifiInfo2Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-portal-reset", "W4 — Reset portal login", kNetWifiPortalResetElements, sizeof(kNetWifiPortalResetElements) / sizeof(kNetWifiPortalResetElements[0]), kNetWifiPortalResetFlows, sizeof(kNetWifiPortalResetFlows) / sizeof(kNetWifiPortalResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-back", "W.BACK — Back", kNetWifiBackElements, sizeof(kNetWifiBackElements) / sizeof(kNetWifiBackElements[0]), kNetWifiBackFlows, sizeof(kNetWifiBackFlows) / sizeof(kNetWifiBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-wifi-ap-info", "W6 — AP info", kNetWifiApInfoElements, sizeof(kNetWifiApInfoElements) / sizeof(kNetWifiApInfoElements[0]), kNetWifiApInfoFlows, sizeof(kNetWifiApInfoFlows) / sizeof(kNetWifiApInfoFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-info", "M.I1 — MQTT", kNetMqttInfoElements, sizeof(kNetMqttInfoElements) / sizeof(kNetMqttInfoElements[0]), kNetMqttInfoFlows, sizeof(kNetMqttInfoFlows) / sizeof(kNetMqttInfoFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-info-2", "M.I2 — MQTT broker", kNetMqttInfo2Elements, sizeof(kNetMqttInfo2Elements) / sizeof(kNetMqttInfo2Elements[0]), kNetMqttInfo2Flows, sizeof(kNetMqttInfo2Flows) / sizeof(kNetMqttInfo2Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-info-3", "M.I3 — MQTT publish", kNetMqttInfo3Elements, sizeof(kNetMqttInfo3Elements) / sizeof(kNetMqttInfo3Elements[0]), kNetMqttInfo3Flows, sizeof(kNetMqttInfo3Flows) / sizeof(kNetMqttInfo3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "net-mqtt-back", "M.BACK — Back", kNetMqttBackElements, sizeof(kNetMqttBackElements) / sizeof(kNetMqttBackElements[0]), kNetMqttBackFlows, sizeof(kNetMqttBackFlows) / sizeof(kNetMqttBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "info-p6-factory-reset", "P6 — Factory Reset", kInfoP6FactoryResetElements, sizeof(kInfoP6FactoryResetElements) / sizeof(kInfoP6FactoryResetElements[0]), kInfoP6FactoryResetFlows, sizeof(kInfoP6FactoryResetFlows) / sizeof(kInfoP6FactoryResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "confirm-reset-totals", "Reset totals?", kConfirmResetTotalsElements, sizeof(kConfirmResetTotalsElements) / sizeof(kConfirmResetTotalsElements[0]), kConfirmResetTotalsFlows, sizeof(kConfirmResetTotalsFlows) / sizeof(kConfirmResetTotalsFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "confirm-reset-totals-back", "Reset totals — Back", kConfirmResetTotalsBackElements, sizeof(kConfirmResetTotalsBackElements) / sizeof(kConfirmResetTotalsBackElements[0]), kConfirmResetTotalsBackFlows, sizeof(kConfirmResetTotalsBackFlows) / sizeof(kConfirmResetTotalsBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "confirm-reset-session", "Reset session?", kConfirmResetSessionElements, sizeof(kConfirmResetSessionElements) / sizeof(kConfirmResetSessionElements[0]), kConfirmResetSessionFlows, sizeof(kConfirmResetSessionFlows) / sizeof(kConfirmResetSessionFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "confirm-reset-session-back", "Reset session — Back", kConfirmResetSessionBackElements, sizeof(kConfirmResetSessionBackElements) / sizeof(kConfirmResetSessionBackElements[0]), kConfirmResetSessionBackFlows, sizeof(kConfirmResetSessionBackFlows) / sizeof(kConfirmResetSessionBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "confirm-factory-reset", "Factory reset?", kConfirmFactoryResetElements, sizeof(kConfirmFactoryResetElements) / sizeof(kConfirmFactoryResetElements[0]), kConfirmFactoryResetFlows, sizeof(kConfirmFactoryResetFlows) / sizeof(kConfirmFactoryResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "confirm-factory-reset-back", "Factory reset — Back", kConfirmFactoryResetBackElements, sizeof(kConfirmFactoryResetBackElements) / sizeof(kConfirmFactoryResetBackElements[0]), kConfirmFactoryResetBackFlows, sizeof(kConfirmFactoryResetBackFlows) / sizeof(kConfirmFactoryResetBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "confirm-reset-portal-login", "Reset portal login?", kConfirmResetPortalLoginElements, sizeof(kConfirmResetPortalLoginElements) / sizeof(kConfirmResetPortalLoginElements[0]), kConfirmResetPortalLoginFlows, sizeof(kConfirmResetPortalLoginFlows) / sizeof(kConfirmResetPortalLoginFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "confirm-reset-portal-login-back", "Reset portal login — Back", kConfirmResetPortalLoginBackElements, sizeof(kConfirmResetPortalLoginBackElements) / sizeof(kConfirmResetPortalLoginBackElements[0]), kConfirmResetPortalLoginBackFlows, sizeof(kConfirmResetPortalLoginBackFlows) / sizeof(kConfirmResetPortalLoginBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "toast-totals-reset", "Totals reset", kToastTotalsResetElements, sizeof(kToastTotalsResetElements) / sizeof(kToastTotalsResetElements[0]), kToastTotalsResetFlows, sizeof(kToastTotalsResetFlows) / sizeof(kToastTotalsResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "toast-session-reset", "Session reset", kToastSessionResetElements, sizeof(kToastSessionResetElements) / sizeof(kToastSessionResetElements[0]), kToastSessionResetFlows, sizeof(kToastSessionResetFlows) / sizeof(kToastSessionResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "toast-portal-login-reset", "Portal login reset", kToastPortalLoginResetElements, sizeof(kToastPortalLoginResetElements) / sizeof(kToastPortalLoginResetElements[0]), kToastPortalLoginResetFlows, sizeof(kToastPortalLoginResetFlows) / sizeof(kToastPortalLoginResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 }
 };
 
 static constexpr ui_exporter::ThemeColor kThemeColors[] = {
@@ -1810,7 +1880,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-10T12:27:17.978Z", 63, 525
+    "2026-08-11T09:53:34.508Z", 67, 557
 };
 
 }  // namespace ui_exporter

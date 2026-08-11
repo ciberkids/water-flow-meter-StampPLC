@@ -1180,11 +1180,29 @@ void confirmAbortTests() {
   check(onScreen(dev, "confirm-reset-totals") && dev.controller.navigator().depth() == 1,
         "releasing past 1.5 s returns to the confirm screen rather than exiting it");
 
-  // A plain tap is still the way out, and must not be swallowed by the arming path.
+  /**
+   * A plain tap on a confirm screen is IGNORED — it is not attached to anything.
+   *
+   * This asserted the opposite until the gesture contract was harmonised: ENTER-short was an `f-exit`
+   * meaning "leave without acting", which put the escape one slip away from the hold that acts. Now
+   * long-ENTER is the only gesture the screen claims, and leaving is the same motion as leaving any
+   * other level — page to `< BACK` and press ENTER.
+   *
+   * The important half is that the press does NOTHING: `findFlow` returns null for an unclaimed
+   * gesture and the handler makes no default, which is what lets long-ENTER stop being a hidden
+   * global escape everywhere else.
+   */
   dev.tap(ButtonInputManager::Button::Enter);
   check(harness::writes.empty(), "a tap on the confirm screen writes nothing");
+  check(onScreen(dev, "confirm-reset-totals") && dev.controller.navigator().depth() == 1,
+        "and does not move: ENTER-short is unattached on a confirm, so it is ignored");
+
+  // Leaving is by the level's own BACK entry, reached with DOWN like any other sibling.
+  dev.tap(ButtonInputManager::Button::Down);
+  check(onScreen(dev, "confirm-reset-totals-back"), "DOWN pages to the confirm's < BACK entry");
+  dev.tap(ButtonInputManager::Button::Enter);
   check(dev.controller.navigator().depth() == 0 && onScreen(dev, "info-p2-cumulative-m3"),
-        "a tap exits via the screen's own ENTER-short f-exit flow");
+        "and ENTER there ascends, landing back on the page the operator came from");
 
   // §4.3 note 2: "during a countdown, UP/DOWN have no effect" — including not cancelling it.
   Device other;

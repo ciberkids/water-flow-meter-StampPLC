@@ -79,8 +79,17 @@ inline bool configIsValid(const SensorCharacteristics& cfg) {
 struct SensorData {
   bool inUse = false;
   volatile uint32_t pulseCount = 0;
-  float instantFlow_L_s = 0.0f;
+  /**
+   * Instantaneous flow in LITRES PER MINUTE (§2a).
+   *
+   * Was `instantFlow_L_s`. L/min is how water flow is specified everywhere it matters here — the
+   * datasheet's Q, `q_max`, the Nyquist limit, MQTT, Home Assistant and the panel — so storing L/s
+   * meant a division on the way in and a multiplication on every one of those ways out. §2a's point
+   * is that the change REMOVES conversions rather than adding them.
+   */
+  float instantFlow_L_min = 0.0f;
   double cumulativeLiters = 0.0;
   float sessionLiters = 0.0f;
+  /** Peak `instantFlow_L_min` since the last session reset, in the same unit. */
   float maxFlowSinceReset = 0.0f;
 };

@@ -237,18 +237,21 @@ bool UiBindingResolver::resolveTelemetryBinding(const UiRenderContext& context,
                   bufferSize,
                   "Total %.2f L | Flow %.2f L/s",
                   context.totalSessionLiters,
-                  context.aggregateFlowLps);
+                  context.aggregateFlowLpm);
     return true;
   }
   if (binding == "telemetry.totalFlowLps") {
-    std::snprintf(buffer, bufferSize, "%.2f", context.aggregateFlowLps);
+    // The L/s reading is now the derived one: §2a moved storage to L/min, so this converts on the way
+    // OUT for any reader that still wants per-second. It stays in the catalogue rather than being
+    // renamed, because a Modbus/MQTT consumer bound to it must keep getting seconds.
+    std::snprintf(buffer, bufferSize, "%.2f", context.aggregateFlowLpm / 60.0);
     return true;
   }
   // `%7.2f`, not `%.2f`: a field WIDTH so the column cannot shift under a growing integer part.
   // Eight channels each clamped to q_max = 65535 L/min reach 524280.00, which is nine characters —
   // the width is a floor, so the layout's declared worst case comes from that bound and not from here.
   if (binding == "telemetry.totalFlowLpm") {
-    std::snprintf(buffer, bufferSize, "%7.2f", units::flowLpsToLpm(context.aggregateFlowLps));
+    std::snprintf(buffer, bufferSize, "%7.2f", context.aggregateFlowLpm);
     return true;
   }
   if (binding == "telemetry.totalVolumeLiters") {
@@ -290,7 +293,7 @@ bool UiBindingResolver::resolveTelemetryBinding(const UiRenderContext& context,
     std::snprintf(buffer,
                   bufferSize,
                   "Max Flow: %7.2f L/m (S%u)",
-                  units::flowLpsToLpm(peak),
+                  peak,  // already L/min (§2a)
                   static_cast<unsigned>(owner));
     return true;
   }
@@ -322,9 +325,20 @@ bool UiBindingResolver::resolveSensorBinding(const UiRenderContext& context,
   const auto& sensor = context.sensors[sensorIndex];
   const unsigned sensorLabel = static_cast<unsigned>(sensorIndex + 1);
 
-  // "status" reports readiness regardless of whether a metric is available.
+  /**
+   * `SET?`, not `WAIT` (§4.4).
+   *
+   * `WAIT` implies warming up. The real condition is that the channel has no valid calibration yet —
+   * q_max or the multiplier still zero — and there is nothing to wait for: it needs an operator. The
+   * spec settled this and neither the firmware nor the mockup had followed it; only the gallery's
+   * hand-written sample table did, so the three disagreed about what a just-wired channel says.
+   *
+   * `--` means NOT IN SERVICE, never "not detected". No hardware presence detection exists and none
+   * is possible — an idle passive pulse sensor is indistinguishable from one whose wire fell off — so
+   * the panel must not imply it (§4.4).
+   */
   if (metric == "status") {
-    const char* state = !sensor.enabled ? "--" : (sensor.ready ? "OK" : "WAIT");
+    const char* state = !sensor.enabled ? "--" : (sensor.ready ? "OK" : "SET?");
     std::snprintf(buffer, bufferSize, "%s", state);
     return true;
   }
@@ -334,36 +348,79 @@ bool UiBindingResolver::resolveSensorBinding(const UiRenderContext& context,
     return true;
   }
   if (!sensor.ready) {
-    std::snprintf(buffer, bufferSize, "%u: WAIT", sensorLabel);
+    std::snprintf(buffer, bufferSize, "%u: SET?", sensorLabel);
     return true;
   }
 
+  /**
+   * THE UNIT LIVES IN THE HEADER, on every telemetry page (§4.3).
+   *
+   * This wrote the unit into every row, so P1 rendered `1: 2.34 L/s` under a title reading
+   * `Instant Flow (L/m)` — the row contradicting its own header, in the wrong unit, with the L/s
+   * number. Per-row units were the first choice and §4.3 rejected them: they are impossible on the
+   * volume pages, where `8: 99999999.99 m^3` is 18 characters and overflows two columns by 19 px.
+   * Rather than let two pages disagree with the other two for a purely arithmetic reason, the unit
+   * sits once in the title, two rows above and always visible.
+   *
+   * So the trailing `%s` is a MARKER, not a unit — and there is exactly one marker: `MAX`, on the
+   * peak page, for a channel whose peak reached its own q_max ceiling. That is the whole point of
+   * §5a's page: a channel pinned at its ceiling is under-dimensioned for the pipe it is on, and the
+   * number alone cannot say so because a legitimate peak can sit just below the same value.
+   *
+   * Flow is converted to L/min here (§2a). `%7.2f` rather than `%6.2f`: a single channel can reach
+   * 9999.99 L/m, which six characters cannot hold.
+   */
   double value = 0.0;
-  const char* unit = "";
+  const char* marker = "";
+  // Pulses per litre is a COUNT, so it prints without decimals. `360.00 p/L` invites the reader to
+  // wonder what the hundredths mean on a quantity that only ever takes whole values.
+  bool integral = false;
   if (metric == "instantFlow") {
     value = sensor.instantFlow;
-    unit = "L/s";
   } else if (metric == "cumulativeLiters") {
     value = sensor.cumulativeLiters;
-    unit = "L";
   } else if (metric == "cumulativeM3") {
     value = units::litresToCubicMeters(sensor.cumulativeLiters);
-    unit = "m^3";
   } else if (metric == "sessionLiters") {
     value = sensor.sessionLiters;
-    unit = "L";
   } else if (metric == "sessionM3") {
     value = units::litresToCubicMeters(static_cast<double>(sensor.sessionLiters));
-    unit = "m^3";
+  } else if (metric == "pulsesPerLitre") {
+    integral = true;
+    /**
+     * SET on a pulses-calibrated channel, CALCULATED on a formula-calibrated one.
+     *
+     * `F = m*Q` with Q in L/min and F in Hz means K = 60*m, since F = K*Q/60. The offset is not
+     * folded in: `a` shifts the line rather than scaling it, so no single K expresses a formula with
+     * a non-zero offset, and S5 reports the offset on its own row.
+     */
+    const auto& cfg = settings_ && settings_->configs ? settings_->configs[sensorIndex]
+                                                      : SensorCharacteristics{};
+    value = cfg.calibration == CalibrationType::PulsesPerLitre
+                ? static_cast<double>(cfg.pulses_per_litre)
+                : static_cast<double>(cfg.f_multiplier) * 60.0;
   } else if (metric == "maxFlowSinceReset") {
     value = sensor.maxFlow;
-    unit = "L/s";
+    // Compared in L/min against the channel's own q_max, which is stored in L/min. Comparing the
+    // stored L/s peak against it would flag nothing, ever.
+    const auto& cfg = settings_ && settings_->configs ? settings_->configs[sensorIndex]
+                                                      : SensorCharacteristics{};
+    if (cfg.q_max > 0 && value >= static_cast<double>(cfg.q_max)) {
+      marker = "MAX";
+    }
   } else {
     // Unknown metric: fail rather than render a plausible-looking wrong number.
     return false;
   }
 
-  std::snprintf(buffer, bufferSize, "%u: %6.2f %s", sensorLabel, value, unit);
+  // No trailing space when there is no marker, so P1's row is `1: 65535.00` exactly as declared
+  // rather than carrying an invisible twelfth character.
+  if (marker[0] == '\0') {
+    std::snprintf(buffer, bufferSize, integral ? "%u: %7.0f" : "%u: %7.2f", sensorLabel, value);
+  } else {
+    std::snprintf(buffer, bufferSize, integral ? "%u: %7.0f %s" : "%u: %7.2f %s", sensorLabel, value,
+                  marker);
+  }
   return true;
 }
 

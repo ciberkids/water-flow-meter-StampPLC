@@ -119,7 +119,7 @@ off UART1 keeps us clear of the library's optional built-in Modbus slave, which 
 
 - **Red (P6):** Pulses when cumulative volume crosses the configured threshold (1/10/100 L). Pulse period defaults to 500 ms and is adjustable via global holding register 32.
 - **Green (P5):** Solid ON when all enabled sensors report `isReady == true`; OFF otherwise.
-- **Blue (P4):** Blinks at 2 Hz whenever aggregate instantaneous flow > 0 L/s.
+- **Blue (P4):** Blinks at 2 Hz whenever aggregate instantaneous flow > 0 L/min.
 - Configuration registers:  
   - `Reg 31` — Red volume step (1, 10, 100).  
   - `Reg 32` — Red pulse period (ms), clamped 100–2000 ms.

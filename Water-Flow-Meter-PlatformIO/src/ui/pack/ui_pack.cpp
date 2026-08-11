@@ -155,9 +155,25 @@ PackStatus MenuPack::validate(const uint8_t* bytes, std::size_t length, uint16_t
     }
   }
 
-  // Every string is read as NUL-terminated, so the block must end in one. Without this a string
-  // at the very end would run off the buffer.
-  if (h.stringsBytes == 0 || bytes[h.stringsOffset + h.stringsBytes - 1] != '\0') {
+  /**
+   * The string block must END in a NUL, and BEGIN with one.
+   *
+   * The end check is why every string can be read as NUL-terminated without running off the buffer.
+   *
+   * The block must also END THE BUFFER, and that is the check that actually closes the hole the
+   * single-byte corruption sweep found. Flipping the low byte of `stringsOffset` gave a shifted block
+   * that still fitted and still happened to end on a NUL — so it validated, and then every string in
+   * the pack resolved to the wrong text, which is far worse than being refused. NUL bytes are common
+   * in a string table, so "ends on a NUL" and even "begins on a NUL" are weak; the strings are the
+   * LAST block the emitter writes, so `stringsOffset + stringsBytes` is exactly the end of the buffer
+   * and any shift at all breaks it.
+   *
+   * Offset 0 of the table is the empty string by construction (the emitter seeds the block with a
+   * lone NUL and returns 0 for ""), which is what lets `visibleWhenStr == 0` mean "unconditional".
+   */
+  if (h.stringsBytes == 0 || bytes[h.stringsOffset + h.stringsBytes - 1] != '\0' ||
+      bytes[h.stringsOffset] != '\0' ||
+      h.stringsOffset + h.stringsBytes != PackHeader::kSize + h.payloadBytes) {
     bytes_ = nullptr;
     return PackStatus::BadStringTable;
   }
@@ -179,6 +195,12 @@ PackStatus MenuPack::validate(const uint8_t* bytes, std::size_t length, uint16_t
       return PackStatus::BadOffset;
     }
     if (!stringAt(screen.idStr) || !stringAt(screen.nameStr)) {
+      bytes_ = nullptr;
+      return PackStatus::BadStringTable;
+    }
+    // A gate that names a string the table cannot resolve would silently become unconditional, which
+    // is the failure mode worth refusing: the screen would appear for both calibration forms.
+    if (screen.visibleWhenStr != 0 && !stringAt(screen.visibleWhenStr)) {
       bytes_ = nullptr;
       return PackStatus::BadStringTable;
     }
@@ -228,6 +250,8 @@ bool MenuPack::screenAt(uint16_t index, PackScreen* out) const {
   out->elementCount   = readU16(p + 8);
   out->flowCount      = readU16(p + 10);
   out->elementsOffset = readU32(p + 12);
+  out->visibleWhenStr = readU32(p + 16);
+  out->visibleWhenEquals = static_cast<int32_t>(readU32(p + 20));
   // flowsOffset shares the record's tail; see the emitter for the exact packing.
   out->flowsOffset    = out->elementsOffset +
                         static_cast<uint32_t>(out->elementCount) * kElementRecordBytes;

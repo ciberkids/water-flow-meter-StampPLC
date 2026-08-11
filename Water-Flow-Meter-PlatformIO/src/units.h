@@ -31,21 +31,15 @@ inline constexpr float litresToCubicMeters(float litres) {
 }
 
 /**
- * Litres per second to litres per minute.
+ * There is deliberately NO flow conversion here any more.
  *
- * TRANSITIONAL. Spec §2a moves the stored unit to L/min, at which point flow is already in the
- * unit the panel, the q_max setting and the Nyquist limit all use, and this function has no
- * callers left. It exists so that the display bindings which must show L/min today do the
- * conversion in ONE place rather than each carrying its own `* 60`, and so that the storage move
- * is a deletion rather than a hunt.
+ * `flowLpsToLpm` lived here through the transition and its own comment said what would end it: §2a
+ * moves the stored unit to L/min, at which point flow is already in the unit the panel, `q_max`, the
+ * Nyquist limit, MQTT and Home Assistant all use, and the function has no callers. That move has now
+ * happened, so it is deleted rather than left as a tempting no-op.
+ *
+ * The one place a per-second figure is still produced is `telemetry.totalFlowLps`, which divides at
+ * the point of use because it is the only consumer that wants seconds.
  */
-inline constexpr float flowLpsToLpm(float litresPerSecond) {
-  return litresPerSecond * 60.0f;
-}
-
-/** Litres per second to litres per minute, for the double-valued aggregate. */
-inline constexpr double flowLpsToLpm(double litresPerSecond) {
-  return litresPerSecond * 60.0;
-}
 
 }  // namespace units

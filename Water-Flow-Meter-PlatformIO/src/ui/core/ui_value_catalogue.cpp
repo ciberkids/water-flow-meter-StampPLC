@@ -14,7 +14,9 @@ using namespace plc;  // register offsets from modbus/register_map.h
  * the register layout moves the manifest with it.
  */
 constexpr SensorMetric kSensorMetrics[] = {
-    {"instantFlow", ValueCategory::Reading, ValueType::Number, "L/s", OFF_INSTANT_FLOW,
+    // L/min, per §2a. Register 101 carries the same unit — a Modbus master reading it gets L/min,
+    // and Project_document.md's register table says so.
+    {"instantFlow", ValueCategory::Reading, ValueType::Number, "L/min", OFF_INSTANT_FLOW,
      "instantaneous flow"},
     {"status", ValueCategory::Reading, ValueType::String, nullptr, OFF_STATUS_FLAGS,
      "status flags (bit 0 inUse, bit 1 isReady)"},
@@ -26,8 +28,25 @@ constexpr SensorMetric kSensorMetrics[] = {
      "session volume"},
     {"sessionM3", ValueCategory::Accumulated, ValueType::Number, "m3", OFF_SESSION_M3,
      "session volume (derived from litres)"},
-    {"maxFlowSinceReset", ValueCategory::Accumulated, ValueType::Number, "L/s", OFF_MAX_FLOW,
-     "peak flow since last session reset"}};
+    {"maxFlowSinceReset", ValueCategory::Accumulated, ValueType::Number, "L/min", OFF_MAX_FLOW,
+     "peak flow since last session reset"},
+    /**
+     * Pulses per litre — SET on a pulses-calibrated channel, CALCULATED on a formula-calibrated one.
+     *
+     * The point is comparability. A datasheet gives you either `450 pulses/L` or `F = 6*Q - 8`, and
+     * with the two forms side by side on the selector there is no way to tell whether two channels
+     * are calibrated alike. Both reduce to a pulses-per-litre figure, so showing it makes them
+     * comparable at a glance: `F = m*Q` means K = 60*m, because F = K*Q/60.
+     *
+     * The offset term is deliberately not folded in. `a` shifts the line, it does not scale it, so
+     * there is no single K that expresses a formula with a non-zero offset — and pretending otherwise
+     * would be worse than showing the scale factor and letting S5 report the offset separately.
+     *
+     * `kNoRegister` on purpose: on a formula channel register 24 holds zero while this shows 360, so
+     * advertising an address would tell a Modbus master to read a value that is not this one.
+     */
+    {"pulsesPerLitre", ValueCategory::Derived, ValueType::Number, "p/L", kNoRegister,
+     "pulses per litre, set or calculated from the multiplier"}};
 
 constexpr SimpleValue kSimpleValues[] = {
     // ── Network status (WiFi_MQTT_Connectivity.md §3.4, §7.3) ─────────────────────────
@@ -62,14 +81,21 @@ constexpr SimpleValue kSimpleValues[] = {
      plc::net_reg::kPortalRemainingS, ValueSource::Network, false,
      "Seconds left on the AP window before R7.6 closes it"},
 
-    {"telemetry.totalFlowLps", ValueCategory::System, ValueType::Number, "L/s", kNoRegister,
-     ValueSource::Telemetry, false, "Aggregate instantaneous flow across ready sensors"},
     /**
-     * The same aggregate in L/min, which is the unit the panel shows (spec §2a).
+     * The aggregate in L/s — now the DERIVED one.
      *
-     * A NEW id rather than a change of unit on the one above: `telemetry.totalFlowLps` is the wire's
-     * name for a L/s quantity, and silently redefining its unit would leave every existing reader
-     * off by sixty with nothing to notice it by.
+     * §2a moved storage to L/min, so this divides on the way out. It keeps its id and its unit
+     * because a consumer bound to it asked for per-second and must keep getting it; renaming or
+     * silently redefining it would leave every such reader off by sixty with nothing to notice by.
+     */
+    {"telemetry.totalFlowLps", ValueCategory::System, ValueType::Number, "L/s", kNoRegister,
+     ValueSource::Telemetry, false, "Aggregate instantaneous flow, in litres per second (derived)"},
+    /**
+     * The same aggregate in L/min — the STORED unit, and what every surface shows (§2a).
+     *
+     * A separate id from the L/s one above rather than a redefinition of it, which is what let the
+     * storage move happen without breaking a single existing reader: anything bound to the L/s name
+     * still gets seconds, and it is now the arm that divides.
      */
     {"telemetry.totalFlowLpm", ValueCategory::System, ValueType::Number, "L/min", kNoRegister,
      ValueSource::Telemetry, false, "Aggregate instantaneous flow, in litres per minute"},

@@ -360,7 +360,7 @@ void ModbusManager::syncSensorToHolding(std::size_t sensorIndex) {
   // totals immediately. Gated on the cached bit, this branch published 0.0 for the lifetime total after
   // every reboot — the cumulative value was intact in RAM and a master read zero.
   if (deps_.sensors[sensorIndex].inUse && configIsValid(deps_.configs[sensorIndex])) {
-    deps_.registers->setFloat(base + OFF_INSTANT_FLOW, deps_.sensors[sensorIndex].instantFlow_L_s);
+    deps_.registers->setFloat(base + OFF_INSTANT_FLOW, deps_.sensors[sensorIndex].instantFlow_L_min);
     deps_.registers->setDouble(base + OFF_CUMULATIVE_LITERS, deps_.sensors[sensorIndex].cumulativeLiters);
     deps_.registers->setDouble(base + OFF_CUMULATIVE_M3,
                                units::litresToCubicMeters(deps_.sensors[sensorIndex].cumulativeLiters));
@@ -583,8 +583,8 @@ void ModbusManager::resetRuntimeCaches() {
   if (deps_.totalSessionLitersCache) {
     *deps_.totalSessionLitersCache = 0.0;
   }
-  if (deps_.aggregateFlowLpsCache) {
-    *deps_.aggregateFlowLpsCache = 0.0;
+  if (deps_.aggregateFlowLpmCache) {
+    *deps_.aggregateFlowLpmCache = 0.0;
   }
   if (deps_.allSensorsReadyCache) {
     *deps_.allSensorsReadyCache = true;

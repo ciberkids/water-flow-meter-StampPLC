@@ -67,6 +67,8 @@ export interface IRScreen {
   id: string;
   name: string;
   description?: string;
+  /** Screen-level visibility, when the screen is conditional (see ScreenVisibility). */
+  visibleWhen?: { binding: string; equals: number };
   elements: IRScreenElement[];
   events: IRScreenEvent[];
   flows: IRFlow[];

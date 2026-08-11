@@ -57,7 +57,7 @@ class LedController {
 
   void update(uint32_t nowMs,
               double totalSessionLiters,
-              double aggregateFlowLps,
+              double aggregateFlowLpm,
               bool allSensorsReady,
               bool hasUndersampling);
 

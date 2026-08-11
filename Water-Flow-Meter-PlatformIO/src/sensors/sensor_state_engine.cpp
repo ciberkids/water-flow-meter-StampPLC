@@ -10,7 +10,7 @@ void SensorStateEngine::update(float elapsedSeconds) {
   }
 
   double totalSessionLiters = 0.0;
-  double aggregateFlowLps = 0.0;
+  double aggregateFlowLpm = 0.0;
   bool allReady = true;
   std::size_t activeSensors = 0;
 
@@ -53,25 +53,29 @@ void SensorStateEngine::update(float elapsedSeconds) {
           flowRateLpm = config.q_max;
         }
 
-        sensor.instantFlow_L_s = flowRateLpm / 60.0f;
-        if (sensor.instantFlow_L_s > sensor.maxFlowSinceReset) {
-          sensor.maxFlowSinceReset = sensor.instantFlow_L_s;
+        // Stored as computed. The clamp above is already in L/min against q_max, so this is where
+        // §2a removes a conversion rather than adding one.
+        sensor.instantFlow_L_min = flowRateLpm;
+        if (sensor.instantFlow_L_min > sensor.maxFlowSinceReset) {
+          sensor.maxFlowSinceReset = sensor.instantFlow_L_min;
         }
 
-        const double litersInterval = sensor.instantFlow_L_s * elapsedSeconds;
+        // The one division that remains, and it is unavoidable: volume is a rate times a TIME, and
+        // the interval is in seconds while the rate is per minute.
+        const double litersInterval = static_cast<double>(flowRateLpm) * elapsedSeconds / 60.0;
         sensor.sessionLiters += litersInterval;
         sensor.cumulativeLiters += litersInterval;
       } else {
-        sensor.instantFlow_L_s = 0.0f;
+        sensor.instantFlow_L_min = 0.0f;
       }
 
       totalSessionLiters += sensor.sessionLiters;
-      aggregateFlowLps += sensor.instantFlow_L_s;
+      aggregateFlowLpm += sensor.instantFlow_L_min;
       if (!configIsValid(config)) {
         allReady = false;
       }
     } else {
-      sensor.instantFlow_L_s = 0.0f;
+      sensor.instantFlow_L_min = 0.0f;
       // A DISABLED channel must not clear allReady. RGB_LED_Behavior.md §3.2 defines green
       // as "solid ON when every ACTIVE sensor is ready" — active, not all eight.
       // Clearing it here meant a two-sensor installation could never show green, because the
@@ -91,8 +95,8 @@ void SensorStateEngine::update(float elapsedSeconds) {
   if (deps_.totalSessionLitersCache) {
     *deps_.totalSessionLitersCache = totalSessionLiters;
   }
-  if (deps_.aggregateFlowLpsCache) {
-    *deps_.aggregateFlowLpsCache = aggregateFlowLps;
+  if (deps_.aggregateFlowLpmCache) {
+    *deps_.aggregateFlowLpmCache = aggregateFlowLpm;
   }
   if (deps_.allSensorsReadyCache) {
     *deps_.allSensorsReadyCache = allReady;
