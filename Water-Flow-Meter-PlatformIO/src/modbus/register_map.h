@@ -17,6 +17,18 @@ inline constexpr uint16_t REG_MASTER_RESET_ALL_SESSION = 22;
 inline constexpr uint16_t REG_UNDERSAMPLING_FLAGS = 30;
 inline constexpr uint16_t REG_LED_RED_VOLUME_STEP = 31;
 inline constexpr uint16_t REG_LED_RED_PULSE_PERIOD = 32;
+/**
+ * Which unit the PANEL shows flows in: 0 = L/min, 1 = L/s, 2 = m3/h.
+ *
+ * A DISPLAY preference, and nothing more. Storage stays L/min (§2a) and every other surface is
+ * unaffected: registers 101 and 115 keep publishing L/min, so does MQTT, so does Home Assistant, and
+ * the calibration settings keep the datasheet's unit. A Modbus master must never shift by sixty
+ * because somebody changed what the screen shows.
+ *
+ * It gets a register anyway, so an integrator can read what the panel is displaying — useful when a
+ * support call describes a number that does not match the wire.
+ */
+inline constexpr uint16_t REG_DISPLAY_FLOW_UNIT = 33;
 
 // Serial link configuration block — Project_document.md §4.1.1.
 // Writes to 40-43 are staged; register 44 commits them.

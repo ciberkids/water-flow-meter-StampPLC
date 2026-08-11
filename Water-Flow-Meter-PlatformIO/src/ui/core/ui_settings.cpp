@@ -46,6 +46,7 @@ bool isNetworkTarget(SettingTarget target) {
     case SettingTarget::SensorMaxFlow:
     case SettingTarget::SensorCalibrationType:
     case SettingTarget::SensorPulsesPerLitre:
+    case SettingTarget::DisplayFlowUnit:
       return false;
   }
   return false;
@@ -82,6 +83,8 @@ int32_t readSetting(const SettingDescriptor& setting,
       return access.leds ? access.leds->volumeStepLiters() : 1;
     case SettingTarget::LedPulsePeriod:
       return access.leds ? access.leds->pulsePeriodMs() : 500;
+    case SettingTarget::DisplayFlowUnit:
+      return access.displayFlowUnit ? *access.displayFlowUnit : 0;
 
     // Network. Reads LIVE rather than staged, because NetSettings exposes no staged accessor for
     // the non-text fields and does not need one: writeSetting applies in the same call, so the two
@@ -233,6 +236,8 @@ bool writeSetting(const SettingDescriptor& setting,
       return access.modbus->applyHoldingWrite(plc::REG_LED_RED_VOLUME_STEP, word);
     case SettingTarget::LedPulsePeriod:
       return access.modbus->applyHoldingWrite(plc::REG_LED_RED_PULSE_PERIOD, word);
+    case SettingTarget::DisplayFlowUnit:
+      return access.modbus->applyHoldingWrite(plc::REG_DISPLAY_FLOW_UNIT, word);
     default:
       break;
   }

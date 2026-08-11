@@ -212,6 +212,9 @@ bool UiBindingResolver::resolvePageBinding(const UiRenderContext& context,
   if (binding == "page.title") {
     return copyLiteral(pageTitle(context.page), buffer, bufferSize);
   }
+  if (binding == "telemetry.flowUnitLabel") {
+    return copyLiteral(units::flowUnitLabel(panelFlowUnit()), buffer, bufferSize);
+  }
   if (binding == "nav.position") {
     const unsigned depth = controller_ ? controller_->navigator().depth() : 0;
     // Depth alone when the ring size is unknown: `ringCount` is 0 before the navigator has resolved
@@ -225,6 +228,15 @@ bool UiBindingResolver::resolvePageBinding(const UiRenderContext& context,
     return true;
   }
   return false;
+}
+
+/** The panel's current flow unit, from the setting. L/m when settings are not bound yet. */
+units::FlowUnit UiBindingResolver::panelFlowUnit() const {
+  if (!settings_ || !settings_->displayFlowUnit) {
+    return units::FlowUnit::LitresPerMinute;
+  }
+  const uint16_t raw = *settings_->displayFlowUnit;
+  return raw <= 2 ? static_cast<units::FlowUnit>(raw) : units::FlowUnit::LitresPerMinute;
 }
 
 bool UiBindingResolver::resolveTelemetryBinding(const UiRenderContext& context,
@@ -251,7 +263,8 @@ bool UiBindingResolver::resolveTelemetryBinding(const UiRenderContext& context,
   // Eight channels each clamped to q_max = 65535 L/min reach 524280.00, which is nine characters —
   // the width is a floor, so the layout's declared worst case comes from that bound and not from here.
   if (binding == "telemetry.totalFlowLpm") {
-    std::snprintf(buffer, bufferSize, "%7.2f", context.aggregateFlowLpm);
+    std::snprintf(buffer, bufferSize, "%7.2f",
+                  units::flowFromLpm(context.aggregateFlowLpm, panelFlowUnit()));
     return true;
   }
   if (binding == "telemetry.totalVolumeLiters") {
@@ -287,13 +300,16 @@ bool UiBindingResolver::resolveTelemetryBinding(const UiRenderContext& context,
     if (!anyEnabled) {
       return copyLiteral("Max Flow: --", buffer, bufferSize);
     }
+    const units::FlowUnit unit = panelFlowUnit();
     if (owner == 0) {
-      return copyLiteral("Max Flow: 0.00 L/m", buffer, bufferSize);
+      std::snprintf(buffer, bufferSize, "Max Flow: 0.00 %s", units::flowUnitLabel(unit));
+      return true;
     }
     std::snprintf(buffer,
                   bufferSize,
-                  "Max Flow: %7.2f L/m (S%u)",
-                  peak,  // already L/min (§2a)
+                  "Max Flow: %7.2f %s (S%u)",
+                  units::flowFromLpm(peak, unit),
+                  units::flowUnitLabel(unit),
                   static_cast<unsigned>(owner));
     return true;
   }
@@ -323,7 +339,6 @@ bool UiBindingResolver::resolveSensorBinding(const UiRenderContext& context,
   }
 
   const auto& sensor = context.sensors[sensorIndex];
-  const unsigned sensorLabel = static_cast<unsigned>(sensorIndex + 1);
 
   /**
    * `SET?`, not `WAIT` (§4.4).
@@ -343,13 +358,20 @@ bool UiBindingResolver::resolveSensorBinding(const UiRenderContext& context,
     return true;
   }
 
+  /**
+   * NO `%u: ` PREFIX. The channel number is a row LABEL, which the screens now carry themselves.
+   *
+   * It used to be baked into every reading, which made it redundant wherever the number is already
+   * known — the per-sensor config pages say "Sensor 3" in their header and then showed `3: 140.40`
+   * underneath — and made the value unusable anywhere but the eight-row telemetry pages it was shaped
+   * for. Those pages gained an `N:` label element each, so nothing is lost and the value became
+   * reusable.
+   */
   if (!sensor.enabled) {
-    std::snprintf(buffer, bufferSize, "%u: --", sensorLabel);
-    return true;
+    return copyLiteral("--", buffer, bufferSize);
   }
   if (!sensor.ready) {
-    std::snprintf(buffer, bufferSize, "%u: SET?", sensorLabel);
-    return true;
+    return copyLiteral("SET?", buffer, bufferSize);
   }
 
   /**
@@ -376,7 +398,7 @@ bool UiBindingResolver::resolveSensorBinding(const UiRenderContext& context,
   // wonder what the hundredths mean on a quantity that only ever takes whole values.
   bool integral = false;
   if (metric == "instantFlow") {
-    value = sensor.instantFlow;
+    value = units::flowFromLpm(sensor.instantFlow, panelFlowUnit());
   } else if (metric == "cumulativeLiters") {
     value = sensor.cumulativeLiters;
   } else if (metric == "cumulativeM3") {
@@ -400,14 +422,14 @@ bool UiBindingResolver::resolveSensorBinding(const UiRenderContext& context,
                 ? static_cast<double>(cfg.pulses_per_litre)
                 : static_cast<double>(cfg.f_multiplier) * 60.0;
   } else if (metric == "maxFlowSinceReset") {
-    value = sensor.maxFlow;
-    // Compared in L/min against the channel's own q_max, which is stored in L/min. Comparing the
-    // stored L/s peak against it would flag nothing, ever.
+    // The MAX test compares in L/MIN against q_max, which is stored in L/min — before any display
+    // conversion. Testing the converted value would flag nothing on a channel shown in m3/h.
     const auto& cfg = settings_ && settings_->configs ? settings_->configs[sensorIndex]
                                                       : SensorCharacteristics{};
-    if (cfg.q_max > 0 && value >= static_cast<double>(cfg.q_max)) {
+    if (cfg.q_max > 0 && sensor.maxFlow >= static_cast<float>(cfg.q_max)) {
       marker = "MAX";
     }
+    value = units::flowFromLpm(sensor.maxFlow, panelFlowUnit());
   } else {
     // Unknown metric: fail rather than render a plausible-looking wrong number.
     return false;
@@ -416,10 +438,9 @@ bool UiBindingResolver::resolveSensorBinding(const UiRenderContext& context,
   // No trailing space when there is no marker, so P1's row is `1: 65535.00` exactly as declared
   // rather than carrying an invisible twelfth character.
   if (marker[0] == '\0') {
-    std::snprintf(buffer, bufferSize, integral ? "%u: %7.0f" : "%u: %7.2f", sensorLabel, value);
+    std::snprintf(buffer, bufferSize, integral ? "%7.0f" : "%7.2f", value);
   } else {
-    std::snprintf(buffer, bufferSize, integral ? "%u: %7.0f %s" : "%u: %7.2f %s", sensorLabel, value,
-                  marker);
+    std::snprintf(buffer, bufferSize, integral ? "%7.0f %s" : "%7.2f %s", value, marker);
   }
   return true;
 }

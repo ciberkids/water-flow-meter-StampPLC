@@ -455,6 +455,36 @@ function parseSensorMetricBinding(binding: string): [number, string] | undefined
 }
 
 /**
+ * The panel's flow unit — a DISPLAY choice, applied at render and nowhere else.
+ *
+ * Mirrors `units::flowFromLpm`. Storage is L/min (§2a) and every wire surface keeps it, so this
+ * converts on the way to the glyphs and never on the way to a register. One function, because
+ * otherwise each of the flow readings would carry its own factor and they would drift the way the
+ * `/ 1000` volume conversions did.
+ */
+export type FlowUnit = 0 | 1 | 2;
+
+export function flowFromLpm(litresPerMinute: number, unit: FlowUnit): number {
+  switch (unit) {
+    case 1:
+      return litresPerMinute / 60;
+    case 2:
+      // 1 m3/h is 1000 L per 60 min, so L/min * 60 / 1000.
+      return litresPerMinute * 0.06;
+    default:
+      return litresPerMinute;
+  }
+}
+
+/** What the header prints. The same strings as kFlowUnitOptions' labels. */
+export function flowUnitLabel(unit: FlowUnit): string {
+  return unit === 1 ? "L/s" : unit === 2 ? "m3/h" : "L/m";
+}
+
+/** Which metrics are a FLOW, and so follow the display unit. Volumes do not. */
+const kFlowMetrics = new Set(["instantFlow", "maxFlowSinceReset"]);
+
+/**
  * The metrics `resolveSensorBinding` knows. NO UNITS — the unit lives in the header (§4.3).
  *
  * This was a unit table, so P1 rendered `1: 2.34 L/s` under a title reading `Instant Flow (L/m)`:
@@ -527,24 +557,28 @@ function metricValue(sensor: SimulatedSensor, metric: string): number | undefine
  * `%7.2f`, not `%6.2f` — a channel can reach 9999.99 L/m, which six characters cannot hold — and no
  * trailing space when there is no marker, so P1's row is `1: 65535.00` exactly as declared.
  */
-function resolveSensorMetric(sensor: SimulatedSensor, metric: string): string | undefined {
+function resolveSensorMetric(sensor: SimulatedSensor, metric: string, flowUnit: FlowUnit = 0): string | undefined {
   if (metric === "status") {
     return !sensor.connected ? "--" : sensor.ready ? "OK" : "SET?";
   }
+  // No channel-number prefix: it is a row LABEL, which the telemetry pages now carry themselves. It
+  // was redundant on the per-sensor config pages, whose header already names the channel.
   if (!sensor.connected) {
-    return `${sensor.number}: --`;
+    return "--";
   }
   if (!sensor.ready) {
-    return `${sensor.number}: SET?`;
+    return "SET?";
   }
   if (!kKnownMetrics.has(metric)) {
     // The firmware returns false rather than rendering a plausible-looking wrong number, so does this.
     return undefined;
   }
-  const value = metricValue(sensor, metric);
-  if (value === undefined) {
+  const stored = metricValue(sensor, metric);
+  if (stored === undefined) {
     return undefined;
   }
+  // Flows follow the display unit; volumes and the pulse count do not.
+  const value = kFlowMetrics.has(metric) ? flowFromLpm(stored, flowUnit) : stored;
   /**
    * `MAX` marks a peak that reached the channel's OWN q_max ceiling — the whole point of §5a's page.
    * A channel pinned at its ceiling is under-dimensioned for the pipe it is on, and the number alone
@@ -553,15 +587,17 @@ function resolveSensorMetric(sensor: SimulatedSensor, metric: string): string | 
    * Compared in L/min against q_max, which is stored in L/min. Comparing the stored L/s peak against
    * it would flag nothing, ever.
    */
+  // Compared in L/MIN against q_max, which is stored in L/min — BEFORE the display conversion.
+  // Testing the converted value would flag nothing on a channel being shown in m3/h.
   const marker =
-    metric === "maxFlowSinceReset" && sensor.qMaxLpm > 0 && value >= sensor.qMaxLpm ? " MAX" : "";
+    metric === "maxFlowSinceReset" && sensor.qMaxLpm > 0 && stored >= sensor.qMaxLpm ? " MAX" : "";
   // Pulses per litre is a COUNT: `360.00 p/L` invites the reader to wonder what the hundredths mean
   // on a quantity that only ever takes whole values.
   const text =
     metric === "pulsesPerLitre"
       ? String(Math.round(value)).padStart(7, " ")
       : formatFixed7(value);
-  return `${sensor.number}: ${text}${marker}`;
+  return `${text}${marker}`;
 }
 
 /**
@@ -581,12 +617,13 @@ export function resolveSensorBinding(
   binding: string,
   table: readonly SimulatedSensor[],
   sensorIndex: number,
-  rawValue?: number
+  rawValue?: number,
+  flowUnit: FlowUnit = 0
 ): string | undefined {
   const parsed = parseSensorMetricBinding(binding);
   if (parsed) {
     const sensor = sensorAt(table, parsed[0]);
-    return sensor ? resolveSensorMetric(sensor, parsed[1]) : undefined;
+    return sensor ? resolveSensorMetric(sensor, parsed[1], flowUnit) : undefined;
   }
 
   if (binding === "config.selectedSensor") {

@@ -30,6 +30,7 @@ enum class SettingTarget : uint8_t {
   LinkStopBits,
   LedVolumeStep,
   LedPulsePeriod,
+  DisplayFlowUnit,
   SensorConnected,
   SensorMultiplier,
   SensorAdjust,

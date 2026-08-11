@@ -98,6 +98,15 @@ LinkSettingsManager linkSettings;
 LedController ledController;
 ButtonInputManager buttonInput;
 uint16_t connectedSensorsBitmap = 0;
+/**
+ * Which unit the panel shows flows in — 0 L/m, 1 L/s, 2 m3/h (REG_DISPLAY_FLOW_UNIT).
+ *
+ * A display preference, so it changes nothing about what is stored or published. It lives here beside
+ * the other persisted device-wide config rather than inside LedController or the renderer: the
+ * renderer should not own state that survives a reboot, and the LED settings are a different concern
+ * that merely happens to sit in adjacent registers.
+ */
+uint16_t displayFlowUnit = 0;
 uint16_t undersamplingFlags = 0;
 double totalSessionLitersCache = 0.0;
 double aggregateFlowLpmCache = 0.0;
@@ -123,6 +132,7 @@ ModbusDependencies modbusDeps{.sensors = sensors,
                               .undersamplingFlags = &undersamplingFlags,
                               .totalSessionLitersCache = &totalSessionLitersCache,
                               .aggregateFlowLpmCache = &aggregateFlowLpmCache,
+                              .displayFlowUnit = &displayFlowUnit,
                               .allSensorsReadyCache = &allSensorsReadyCache,
                               .pollingRateKhz = &pollingRate_kHz,
                               .link = &linkSettings,
@@ -380,6 +390,7 @@ void loadSensorConfig(std::size_t index) {
 }
 
 constexpr const char* kPrefConnectedBitmap = "conn_map";
+constexpr const char* kPrefFlowUnit = "flow_unit";
 /** §3.5: solid white is held for the acknowledgement toast duration (§4.3.1). */
 constexpr uint32_t kResetAcceptedHoldMs = 2000;
 
@@ -464,6 +475,7 @@ void performFactoryReset() {
   linkSettings.begin(LinkSettings{});
   saveLinkSettings(linkSettings.live());
   preferences.putUShort(kPrefConnectedBitmap, 0);
+  preferences.putUShort(kPrefFlowUnit, 0);
   for (std::size_t i = 0; i < kNumSensors; ++i) {
     configs[i] = SensorCharacteristics{};
     saveSensorConfig(i);
@@ -710,6 +722,12 @@ void logicTaskCode(void * pvParameters) {
   // cached bit to false and nothing ever recomputed it — so every reboot left a calibrated channel
   // counting pulses it then discarded, and publishing 0.0 for a lifetime total that was intact in RAM.
   connectedSensorsBitmap = preferences.getUShort(kPrefConnectedBitmap, 0);
+  // Defaults to L/m, which is the stored unit and the meter datasheet's — so a device that has never
+  // been configured shows the same numbers the wire carries.
+  displayFlowUnit = preferences.getUShort(kPrefFlowUnit, 0);
+  if (displayFlowUnit > 2) {
+    displayFlowUnit = 0;
+  }
   for (std::size_t i = 0; i < kNumSensors; ++i) {
     loadCumulativeData(static_cast<uint8_t>(i));
     loadSensorConfig(i);
@@ -1131,6 +1149,7 @@ void setup() {
   uiSettingsAccess.modbus = &modbusManager;
   uiSettingsAccess.configs = configs;
   uiSettingsAccess.connectedBitmap = &connectedSensorsBitmap;
+  uiSettingsAccess.displayFlowUnit = &displayFlowUnit;
   uiSettingsAccess.sensorCount = kNumSensors;
   uiSettingsAccess.net = &netSettings;
   uiBindingResolver.bindSettings(&uiSettingsAccess, &uiController);

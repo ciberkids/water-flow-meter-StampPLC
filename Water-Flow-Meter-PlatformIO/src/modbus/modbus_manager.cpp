@@ -26,6 +26,7 @@ bool ModbusManager::isWritableAddress(uint16_t address) const {
       address == REG_MASTER_RESET_ALL_SESSION ||
       address == REG_LED_RED_VOLUME_STEP ||
       address == REG_LED_RED_PULSE_PERIOD ||
+      address == REG_DISPLAY_FLOW_UNIT ||
       address == REG_LINK_SLAVE_ID ||
       address == REG_LINK_BAUD_INDEX ||
       address == REG_LINK_PARITY ||
@@ -230,6 +231,18 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
     return true;
   }
 
+  if (address == REG_DISPLAY_FLOW_UNIT) {
+    // 0 L/m, 1 L/s, 2 m3/h. Refused rather than clamped: a master writing 7 has misunderstood the
+    // register, and silently storing 0 would hide that.
+    if (value > 2 || !deps_.displayFlowUnit) {
+      return false;
+    }
+    *deps_.displayFlowUnit = value;
+    deps_.preferences->putUShort("flow_unit", value);
+    deps_.registers->setUint16(address, value);
+    return true;
+  }
+
   std::size_t sensorIndex = (address - SENSOR_1_BASE_ADDR) / SENSOR_BLOCK_SIZE;
   if (sensorIndex >= deps_.sensorCount || !deps_.sensors[sensorIndex].inUse) {
     return false;
@@ -411,6 +424,9 @@ void ModbusManager::syncGlobalRegisters() {
   deps_.registers->setUint16(REG_UNDERSAMPLING_FLAGS, *deps_.undersamplingFlags);
   deps_.registers->setUint16(REG_LED_RED_VOLUME_STEP, deps_.ledController->volumeStepLiters());
   deps_.registers->setUint16(REG_LED_RED_PULSE_PERIOD, deps_.ledController->pulsePeriodMs());
+  if (deps_.displayFlowUnit) {
+    deps_.registers->setUint16(REG_DISPLAY_FLOW_UNIT, *deps_.displayFlowUnit);
+  }
 }
 
 void ModbusManager::evaluateSensorDiagnostics() {

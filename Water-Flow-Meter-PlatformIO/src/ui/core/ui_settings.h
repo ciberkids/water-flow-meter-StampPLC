@@ -19,6 +19,13 @@ struct SettingsAccess {
   ModbusManager* modbus = nullptr;
   SensorCharacteristics* configs = nullptr;
   uint16_t* connectedBitmap = nullptr;
+  /**
+   * Which unit the panel shows flows in (REG_DISPLAY_FLOW_UNIT), owned by firmware.cpp.
+   *
+   * A pointer, like `connectedBitmap`: the value is persisted device-wide state, and the settings
+   * layer reads and writes it rather than owning a second copy.
+   */
+  uint16_t* displayFlowUnit = nullptr;
   std::size_t sensorCount = 0;
   /**
    * WiFi, MQTT and portal configuration (WiFi_MQTT_Connectivity.md §6.1).

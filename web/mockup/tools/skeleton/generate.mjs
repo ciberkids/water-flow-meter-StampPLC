@@ -156,7 +156,17 @@ const DEVICE = [
   { page: "C4", id: "config-c4-stop-bits", title: "Stop Bits", binding: "config.stopBits" },
   { page: "C5", id: "config-c5-led-pulse-vol", title: "LED Pulse Volume", binding: "config.ledPulseVolume" },
   { page: "C6", id: "config-c6-led-pulse-period", title: "LED Pulse Period", binding: "config.ledPulsePeriod" },
-  { page: "C7", id: "config-c7-sensor-select", title: "Sensors", binding: null }
+  /**
+   * How the panel shows flows — a DISPLAY preference (§2a.1: the panel is a view, the wire is the
+   * record). Placed with the LED settings because both are about how the device presents itself,
+   * rather than with the link settings, which describe how it talks.
+   *
+   * Changing it converts what the flow pages draw and moves their header unit with them. It changes
+   * nothing that is stored or published: registers 101 and 115, MQTT, Home Assistant and the
+   * calibration settings all stay in L/min.
+   */
+  { page: "C7", id: "config-c7-flow-unit", title: "Flow unit", binding: "config.flowUnit" },
+  { page: "C8", id: "config-c8-sensor-select", title: "Sensors", binding: null }
 ];
 const CONFIG_RING = [...DEVICE.map((d) => d.id), "config-root-back"];
 
@@ -319,7 +329,7 @@ function editorScreen({ page, screenId, title, binding, parentId, visibleWhen })
       value("pending-value", L.valueY, "config.editor.pending", { emphasis: "strong" }),
       text("saved-label", L.savedLabelY, "Saved", { emphasis: "muted" }),
       value("saved-value", L.savedValueY, binding, { emphasis: "muted" }),
-      text("footer-hint", L.footerY, "UP/DN adjust  ENTER save  hold ENTER discard", { emphasis: "muted" })
+      text("footer-hint", L.footerY, "UP/DN adjust  ENTER save  hold=cancel", { emphasis: "muted" })
     ],
     flows: [
       btn("f-inc", "Increase", "up", "short", A.inc),
@@ -1003,10 +1013,20 @@ for (const s of kept) {
     s.elements.push(scrollbar()); barsAdded += 1;
   }
   // Info pages: ENTER-short now descends into a confirm screen or Configuration.
+  /**
+   * P4 has NO descent, and that is deliberate.
+   *
+   * It used to descend into `confirm-reset-session`, the same confirm P3 opens. Two problems. The
+   * operator was looking at max flow and got a screen titled RESET SESSION? warning about session
+   * totals, which reads as the wrong screen arriving. And the peak is VOLATILE by decision — a power
+   * cycle clears it — so there is no persistent thing on this page for a reset to act on.
+   *
+   * ENTER is therefore unattached here and simply ignored, which is the gesture contract: a screen
+   * either claims a gesture or the press does nothing.
+   */
   const descend = {
     "info-p2-cumulative-m3": "confirm-reset-totals",
     "info-p3-session-m3": "confirm-reset-session",
-    "info-p4-max-flow": "confirm-reset-session",
     "info-p5-enter-config": "config-c1-modbus-id"
   }[s.id];
   // Every info page gets its ENTER flows rebuilt, not just those with a descent

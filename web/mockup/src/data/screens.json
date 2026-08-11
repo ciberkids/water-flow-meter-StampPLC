@@ -19,7 +19,15 @@
           "x": 2,
           "y": 14,
           "emphasis": "muted",
-          "content": "Total Current Flow (L/m)"
+          "content": "Total Current Flow"
+        },
+        {
+          "id": "total-flow-unit",
+          "kind": "text",
+          "x": 116,
+          "y": 14,
+          "emphasis": "muted",
+          "binding": "telemetry.flowUnitLabel"
         },
         {
           "id": "total-flow-value",
@@ -122,61 +130,133 @@
           "x": 2,
           "y": 2,
           "emphasis": "strong",
-          "content": "Instant Flow (L/m)"
+          "content": "Instant Flow"
+        },
+        {
+          "id": "hdr-unit",
+          "kind": "text",
+          "x": 80,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "telemetry.flowUnitLabel"
+        },
+        {
+          "id": "s1-label",
+          "kind": "text",
+          "x": 2,
+          "y": 24,
+          "emphasis": "muted",
+          "content": "1:"
         },
         {
           "id": "s1-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 24,
           "binding": "sensor.1.instantFlow"
         },
         {
+          "id": "s2-label",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "2:"
+        },
+        {
           "id": "s2-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 44,
           "binding": "sensor.2.instantFlow"
         },
         {
+          "id": "s3-label",
+          "kind": "text",
+          "x": 2,
+          "y": 64,
+          "emphasis": "muted",
+          "content": "3:"
+        },
+        {
           "id": "s3-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 64,
           "binding": "sensor.3.instantFlow"
         },
         {
+          "id": "s4-label",
+          "kind": "text",
+          "x": 2,
+          "y": 84,
+          "emphasis": "muted",
+          "content": "4:"
+        },
+        {
           "id": "s4-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 84,
           "binding": "sensor.4.instantFlow"
         },
         {
+          "id": "s5-label",
+          "kind": "text",
+          "x": 114,
+          "y": 24,
+          "emphasis": "muted",
+          "content": "5:"
+        },
+        {
           "id": "s5-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 24,
           "binding": "sensor.5.instantFlow"
         },
         {
+          "id": "s6-label",
+          "kind": "text",
+          "x": 114,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "6:"
+        },
+        {
           "id": "s6-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 44,
           "binding": "sensor.6.instantFlow"
         },
         {
+          "id": "s7-label",
+          "kind": "text",
+          "x": 114,
+          "y": 64,
+          "emphasis": "muted",
+          "content": "7:"
+        },
+        {
           "id": "s7-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 64,
           "binding": "sensor.7.instantFlow"
         },
         {
+          "id": "s8-label",
+          "kind": "text",
+          "x": 114,
+          "y": 84,
+          "emphasis": "muted",
+          "content": "8:"
+        },
+        {
           "id": "s8-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 84,
           "binding": "sensor.8.instantFlow"
         },
@@ -236,58 +316,122 @@
           "content": "Cumulative (m3)"
         },
         {
+          "id": "s1-label",
+          "kind": "text",
+          "x": 2,
+          "y": 24,
+          "emphasis": "muted",
+          "content": "1:"
+        },
+        {
           "id": "s1-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 24,
           "binding": "sensor.1.cumulativeM3"
         },
         {
+          "id": "s2-label",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "2:"
+        },
+        {
           "id": "s2-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 44,
           "binding": "sensor.2.cumulativeM3"
         },
         {
+          "id": "s3-label",
+          "kind": "text",
+          "x": 2,
+          "y": 64,
+          "emphasis": "muted",
+          "content": "3:"
+        },
+        {
           "id": "s3-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 64,
           "binding": "sensor.3.cumulativeM3"
         },
         {
+          "id": "s4-label",
+          "kind": "text",
+          "x": 2,
+          "y": 84,
+          "emphasis": "muted",
+          "content": "4:"
+        },
+        {
           "id": "s4-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 84,
           "binding": "sensor.4.cumulativeM3"
         },
         {
+          "id": "s5-label",
+          "kind": "text",
+          "x": 114,
+          "y": 24,
+          "emphasis": "muted",
+          "content": "5:"
+        },
+        {
           "id": "s5-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 24,
           "binding": "sensor.5.cumulativeM3"
         },
         {
+          "id": "s6-label",
+          "kind": "text",
+          "x": 114,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "6:"
+        },
+        {
           "id": "s6-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 44,
           "binding": "sensor.6.cumulativeM3"
         },
         {
+          "id": "s7-label",
+          "kind": "text",
+          "x": 114,
+          "y": 64,
+          "emphasis": "muted",
+          "content": "7:"
+        },
+        {
           "id": "s7-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 64,
           "binding": "sensor.7.cumulativeM3"
         },
         {
+          "id": "s8-label",
+          "kind": "text",
+          "x": 114,
+          "y": 84,
+          "emphasis": "muted",
+          "content": "8:"
+        },
+        {
           "id": "s8-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 84,
           "binding": "sensor.8.cumulativeM3"
         },
@@ -358,58 +502,122 @@
           "content": "Session (m3)"
         },
         {
+          "id": "s1-label",
+          "kind": "text",
+          "x": 2,
+          "y": 24,
+          "emphasis": "muted",
+          "content": "1:"
+        },
+        {
           "id": "s1-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 24,
           "binding": "sensor.1.sessionM3"
         },
         {
+          "id": "s2-label",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "2:"
+        },
+        {
           "id": "s2-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 44,
           "binding": "sensor.2.sessionM3"
         },
         {
+          "id": "s3-label",
+          "kind": "text",
+          "x": 2,
+          "y": 64,
+          "emphasis": "muted",
+          "content": "3:"
+        },
+        {
           "id": "s3-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 64,
           "binding": "sensor.3.sessionM3"
         },
         {
+          "id": "s4-label",
+          "kind": "text",
+          "x": 2,
+          "y": 84,
+          "emphasis": "muted",
+          "content": "4:"
+        },
+        {
           "id": "s4-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 84,
           "binding": "sensor.4.sessionM3"
         },
         {
+          "id": "s5-label",
+          "kind": "text",
+          "x": 114,
+          "y": 24,
+          "emphasis": "muted",
+          "content": "5:"
+        },
+        {
           "id": "s5-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 24,
           "binding": "sensor.5.sessionM3"
         },
         {
+          "id": "s6-label",
+          "kind": "text",
+          "x": 114,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "6:"
+        },
+        {
           "id": "s6-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 44,
           "binding": "sensor.6.sessionM3"
         },
         {
+          "id": "s7-label",
+          "kind": "text",
+          "x": 114,
+          "y": 64,
+          "emphasis": "muted",
+          "content": "7:"
+        },
+        {
           "id": "s7-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 64,
           "binding": "sensor.7.sessionM3"
         },
         {
+          "id": "s8-label",
+          "kind": "text",
+          "x": 114,
+          "y": 84,
+          "emphasis": "muted",
+          "content": "8:"
+        },
+        {
           "id": "s8-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 84,
           "binding": "sensor.8.sessionM3"
         },
@@ -477,61 +685,133 @@
           "x": 2,
           "y": 2,
           "emphasis": "strong",
-          "content": "Max Flow (L/m)"
+          "content": "Max Flow"
+        },
+        {
+          "id": "hdr-unit",
+          "kind": "text",
+          "x": 56,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "telemetry.flowUnitLabel"
+        },
+        {
+          "id": "s1-label",
+          "kind": "text",
+          "x": 2,
+          "y": 24,
+          "emphasis": "muted",
+          "content": "1:"
         },
         {
           "id": "s1-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 24,
           "binding": "sensor.1.maxFlowSinceReset"
         },
         {
+          "id": "s2-label",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "2:"
+        },
+        {
           "id": "s2-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 44,
           "binding": "sensor.2.maxFlowSinceReset"
         },
         {
+          "id": "s3-label",
+          "kind": "text",
+          "x": 2,
+          "y": 64,
+          "emphasis": "muted",
+          "content": "3:"
+        },
+        {
           "id": "s3-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 64,
           "binding": "sensor.3.maxFlowSinceReset"
         },
         {
+          "id": "s4-label",
+          "kind": "text",
+          "x": 2,
+          "y": 84,
+          "emphasis": "muted",
+          "content": "4:"
+        },
+        {
           "id": "s4-value",
           "kind": "value",
-          "x": 2,
+          "x": 18,
           "y": 84,
           "binding": "sensor.4.maxFlowSinceReset"
         },
         {
+          "id": "s5-label",
+          "kind": "text",
+          "x": 114,
+          "y": 24,
+          "emphasis": "muted",
+          "content": "5:"
+        },
+        {
           "id": "s5-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 24,
           "binding": "sensor.5.maxFlowSinceReset"
         },
         {
+          "id": "s6-label",
+          "kind": "text",
+          "x": 114,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "6:"
+        },
+        {
           "id": "s6-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 44,
           "binding": "sensor.6.maxFlowSinceReset"
         },
         {
+          "id": "s7-label",
+          "kind": "text",
+          "x": 114,
+          "y": 64,
+          "emphasis": "muted",
+          "content": "7:"
+        },
+        {
           "id": "s7-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 64,
           "binding": "sensor.7.maxFlowSinceReset"
         },
         {
+          "id": "s8-label",
+          "kind": "text",
+          "x": 114,
+          "y": 84,
+          "emphasis": "muted",
+          "content": "8:"
+        },
+        {
           "id": "s8-value",
           "kind": "value",
-          "x": 114,
+          "x": 130,
           "y": 84,
           "binding": "sensor.8.maxFlowSinceReset"
         },
@@ -541,7 +821,7 @@
           "x": 2,
           "y": 124,
           "emphasis": "muted",
-          "content": "MAX = at sensor ceiling"
+          "content": "UP/DN pages   MAX = at ceiling"
         },
         {
           "id": "level-position",
@@ -574,17 +854,6 @@
           },
           "targetScreenId": "info-p3-session-m3",
           "actionId": "ui.action.page.previous"
-        },
-        {
-          "id": "f-enter",
-          "label": "Open",
-          "trigger": {
-            "type": "button",
-            "button": "enter",
-            "gesture": "short"
-          },
-          "targetScreenId": "confirm-reset-session",
-          "actionId": "ui.action.nav.descend"
         }
       ]
     },
@@ -804,6 +1073,104 @@
             "gesture": "short"
           },
           "targetScreenId": "info-p0-global-status"
+        }
+      ]
+    },
+    {
+      "id": "config-c7-sensor-select",
+      "name": "C7 — Sensors",
+      "description": "Config root entry C7. ENTER opens the sensor selector, where UP/DOWN pages through the eight channels and ENTER opens the settings of the one shown.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "emphasis": "strong",
+          "content": "Config > Sensors"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
+          "id": "body-1",
+          "kind": "text",
+          "x": 2,
+          "y": 30,
+          "emphasis": "strong",
+          "content": "Channels 1-8"
+        },
+        {
+          "id": "body-2",
+          "kind": "text",
+          "x": 2,
+          "y": 50,
+          "emphasis": "muted",
+          "content": "Connection and calibration,"
+        },
+        {
+          "id": "body-3",
+          "kind": "text",
+          "x": 2,
+          "y": 62,
+          "emphasis": "muted",
+          "content": "per channel."
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER open"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-root-back",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c6-led-pulse-period",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open sensor list",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-1",
+          "actionId": "ui.action.nav.descend"
         }
       ]
     },
@@ -1320,7 +1687,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "config-c7-sensor-select",
+          "targetScreenId": "config-c7-flow-unit",
           "actionId": "ui.action.page.next"
         },
         {
@@ -1348,8 +1715,106 @@
       ]
     },
     {
-      "id": "config-c7-sensor-select",
-      "name": "C7 — Sensors",
+      "id": "config-c7-flow-unit",
+      "name": "C7 — Flow unit",
+      "description": "Config root entry C7. Which unit the panel shows flows in — a display preference: storage, the registers, MQTT and the calibration settings all stay in L/min.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "emphasis": "strong",
+          "content": "Config > Flow unit"
+        },
+        {
+          "id": "nav-position",
+          "kind": "text",
+          "x": 168,
+          "y": 2,
+          "emphasis": "muted",
+          "binding": "nav.position"
+        },
+        {
+          "id": "field-value",
+          "kind": "value",
+          "x": 2,
+          "y": 24,
+          "emphasis": "strong",
+          "binding": "config.flowUnit"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "context-note",
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "muted",
+          "content": "Display only. Modbus stays L/m."
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "emphasis": "muted",
+          "content": "UP/DN pages  ENTER edit"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c8-sensor-select",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c6-led-pulse-period",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Edit value",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c7-flow-unit-edit",
+          "actionId": "ui.action.nav.descend"
+        }
+      ]
+    },
+    {
+      "id": "config-c8-sensor-select",
+      "name": "C8 — Sensors",
       "description": "Config root entry C7. ENTER opens the sensor selector, where UP/DOWN pages through the eight channels and ENTER opens the settings of the one shown.",
       "elements": [
         {
@@ -1429,7 +1894,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-c6-led-pulse-period",
+          "targetScreenId": "config-c7-flow-unit",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -1511,7 +1976,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-c7-sensor-select",
+          "targetScreenId": "config-c8-sensor-select",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -2262,6 +2727,128 @@
             "gesture": "long"
           },
           "targetScreenId": "config-c6-led-pulse-period",
+          "actionId": "config.action.value.discard"
+        }
+      ]
+    },
+    {
+      "id": "config-c7-flow-unit-edit",
+      "name": "C7.V — Edit Flow unit",
+      "description": "Value editor for C7. ENTER commits and ascends; hold ENTER discards. — laid out to the §7 editor template.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 2,
+          "y": 2,
+          "emphasis": "strong",
+          "content": "Edit > Flow unit"
+        },
+        {
+          "id": "pending-label",
+          "kind": "text",
+          "x": 2,
+          "y": 26,
+          "emphasis": "muted",
+          "content": "New"
+        },
+        {
+          "id": "pending-value",
+          "kind": "value",
+          "x": 44,
+          "y": 26,
+          "emphasis": "strong",
+          "binding": "config.editor.pending"
+        },
+        {
+          "id": "saved-label",
+          "kind": "text",
+          "x": 2,
+          "y": 44,
+          "emphasis": "muted",
+          "content": "Saved"
+        },
+        {
+          "id": "saved-value",
+          "kind": "value",
+          "x": 44,
+          "y": 44,
+          "binding": "config.flowUnit"
+        },
+        {
+          "id": "range-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 66,
+          "emphasis": "muted",
+          "binding": "config.editor.range"
+        },
+        {
+          "id": "nyquist-warning",
+          "kind": "text",
+          "x": 2,
+          "y": 88,
+          "emphasis": "strong",
+          "binding": "config.sensor.nyquistWarning"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 2,
+          "y": 124,
+          "emphasis": "muted",
+          "content": "UP/DN adjust  ENTER save  hold=cancel"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 100
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-inc",
+          "label": "Increase",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.increment"
+        },
+        {
+          "id": "f-dec",
+          "label": "Decrease",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "actionId": "config.action.value.decrement"
+        },
+        {
+          "id": "f-commit",
+          "label": "Save and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-c7-flow-unit",
+          "actionId": "config.action.value.commit"
+        },
+        {
+          "id": "f-discard",
+          "label": "Discard and go back",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "long"
+          },
+          "targetScreenId": "config-c7-flow-unit",
           "actionId": "config.action.value.discard"
         }
       ]

@@ -200,6 +200,9 @@ Storage storageFor(ui::SettingTarget target) {
     // belong, and this is that answer.
     case ui::SettingTarget::SensorCalibrationType:
     case ui::SettingTarget::SensorPulsesPerLitre:
+    // A DISPLAY preference, so the portal does not serve it either: it changes what the panel shows
+    // and nothing the portal configures.
+    case ui::SettingTarget::DisplayFlowUnit:
       return Storage{Storage::Kind::External, NetField::Count};
   }
   return Storage{};
@@ -238,6 +241,9 @@ bool readNetScalar(const NetSettings& net, ui::SettingTarget target, int32_t& ou
     // belong, and this is that answer.
     case ui::SettingTarget::SensorCalibrationType:
     case ui::SettingTarget::SensorPulsesPerLitre:
+    // A DISPLAY preference, so the portal does not serve it either: it changes what the panel shows
+    // and nothing the portal configures.
+    case ui::SettingTarget::DisplayFlowUnit:
       return false;
   }
   return false;
@@ -277,6 +283,9 @@ bool stageNetScalar(NetSettings& net, ui::SettingTarget target, int32_t value) {
     // belong, and this is that answer.
     case ui::SettingTarget::SensorCalibrationType:
     case ui::SettingTarget::SensorPulsesPerLitre:
+    // A DISPLAY preference, so the portal does not serve it either: it changes what the panel shows
+    // and nothing the portal configures.
+    case ui::SettingTarget::DisplayFlowUnit:
       return false;
   }
   return false;

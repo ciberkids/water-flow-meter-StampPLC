@@ -380,7 +380,7 @@ bool descendToASensorEditor(Device& dev) {
   // Cycle the config ring to the Sensors entry, which descends rather than editing.
   for (int i = 0; i < 12; ++i) {
     const auto* screen = dev.controller.navigator().current();
-    if (screen && std::strcmp(screen->id, "config-c7-sensor-select") == 0) break;
+    if (screen && std::strcmp(screen->id, "config-c8-sensor-select") == 0) break;
     dev.tap(ButtonInputManager::Button::Down);
   }
   dev.tap(ButtonInputManager::Button::Enter);  // sensor list
@@ -732,10 +732,10 @@ void sensorEditorDescentTests() {
   Device dev;
   dev.boot();
   check(walkToConfigRoot(dev), "at C1");
-  for (int i = 0; i < 8 && !onScreen(dev, "config-c7-sensor-select"); ++i) {
+  for (int i = 0; i < 8 && !onScreen(dev, "config-c8-sensor-select"); ++i) {
     dev.tap(ButtonInputManager::Button::Down);
   }
-  check(onScreen(dev, "config-c7-sensor-select"), "paged along the config root ring to C7");
+  check(onScreen(dev, "config-c8-sensor-select"), "paged along the config root ring to C7");
 
   dev.tap(ButtonInputManager::Button::Enter);
   check(onScreen(dev, "config-sensor-1"), "C7 descends onto the sensor list");

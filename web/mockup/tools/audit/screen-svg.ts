@@ -99,6 +99,7 @@ const TYPICAL: Record<string, string> = {
   "telemetry.totalVolumeLiters": "987.60",
   "telemetry.maxFlowLpm": "Max Flow:  150.00 L/m (S2)",
   "legend.status": "WiFi OK  MQTT OK  LED 1p/10L",
+  "telemetry.flowUnitLabel": "L/m",
   "net.wifi.enabled": "On",
   "net.wifi.state": "OK",
   "net.wifi.ssid": "PlantFloor",
@@ -137,7 +138,8 @@ function resolveTypical(binding: string, screen: Screen): string {
 
   // Per-sensor rows come from the REAL resolver over the state above, so the gallery and the
   // simulator cannot disagree about the format.
-  const fromSensors = resolveSensorBinding(binding, gallerySensors, 2);
+  // The gallery draws the DEFAULT unit (L/m), which is what an unconfigured device shows.
+  const fromSensors = resolveSensorBinding(binding, gallerySensors, 2, undefined, 0);
   if (fromSensors !== undefined) return fromSensors;
 
   const setting = settingOfScreen(screen, definitionById);

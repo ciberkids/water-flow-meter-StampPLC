@@ -144,6 +144,16 @@ constexpr SimpleValue kSimpleValues[] = {
      * into the sensor settings the panel looked identical to one level into the config root. The
      * title carries the crumb and this carries the coordinates.
      */
+    /**
+     * The unit the panel is currently showing flows in — `L/m`, `L/s` or `m3/h`.
+     *
+     * Bound by the header of every flow page, so the title follows the setting. Without it the unit
+     * would be literal text on each of those screens: four second copies of `config.flowUnit`, and
+     * the header would state a unit the rows were not using — the exact defect that made P1 render
+     * L/s under an L/m title.
+     */
+    {"telemetry.flowUnitLabel", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
+     ValueSource::UiState, false, "Unit the panel is showing flows in"},
     {"nav.position", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
      ValueSource::UiState, false, "Navigation depth and position within the current level"},
     {"page.title", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,

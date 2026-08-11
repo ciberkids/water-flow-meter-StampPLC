@@ -18,6 +18,8 @@
  * the compiler cannot tell you when one is missed.
  */
 
+#include <cstdint>
+
 namespace units {
 
 /** Litres to cubic metres. 1 m3 = 1000 L, exactly. */
@@ -41,5 +43,37 @@ inline constexpr float litresToCubicMeters(float litres) {
  * The one place a per-second figure is still produced is `telemetry.totalFlowLps`, which divides at
  * the point of use because it is the only consumer that wants seconds.
  */
+
+/**
+ * The panel's flow unit — a DISPLAY choice, applied at render and nowhere else.
+ *
+ * Storage is L/min (§2a) and every wire surface keeps it, so this converts on the way to the glyphs
+ * and never on the way to a register. One function, because otherwise each of the four flow readings
+ * would carry its own factor and they would drift the way the `/ 1000` volume conversions did.
+ */
+enum class FlowUnit : uint16_t { LitresPerMinute = 0, LitresPerSecond = 1, CubicMetresPerHour = 2 };
+
+inline double flowFromLpm(double litresPerMinute, FlowUnit unit) {
+  switch (unit) {
+    case FlowUnit::LitresPerSecond:
+      return litresPerMinute / 60.0;
+    case FlowUnit::CubicMetresPerHour:
+      // 1 m3/h is 1000 L per 60 min, so L/min * 60 / 1000.
+      return litresPerMinute * 0.06;
+    case FlowUnit::LitresPerMinute:
+    default:
+      return litresPerMinute;
+  }
+}
+
+/** What the header prints. Matches kFlowUnitOptions' labels, which are the same strings. */
+inline const char* flowUnitLabel(FlowUnit unit) {
+  switch (unit) {
+    case FlowUnit::LitresPerSecond:      return "L/s";
+    case FlowUnit::CubicMetresPerHour:   return "m3/h";
+    case FlowUnit::LitresPerMinute:
+    default:                             return "L/m";
+  }
+}
 
 }  // namespace units

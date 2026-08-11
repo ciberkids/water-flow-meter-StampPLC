@@ -14,75 +14,155 @@
       "bound": "fixed literal; the unit lives here, not on eight rows"
     },
     {
-      "id": "s1-value",
-      "kind": "value",
+      "id": "s1-label",
+      "kind": "text",
       "x": 2,
       "y": 24,
+      "emphasis": "muted",
+      "content": "1:",
+      "worst": "1:",
+      "bound": "fixed literal: the channel number, 1..8"
+    },
+    {
+      "id": "s1-value",
+      "kind": "value",
+      "x": 18,
+      "y": 24,
       "binding": "sensor.1.sessionM3",
-      "worst": "1: 99999999.99",
+      "worst": "99999999.99",
       "bound": "display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution)"
+    },
+    {
+      "id": "s2-label",
+      "kind": "text",
+      "x": 2,
+      "y": 44,
+      "emphasis": "muted",
+      "content": "2:",
+      "worst": "2:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s2-value",
       "kind": "value",
-      "x": 2,
+      "x": 18,
       "y": 44,
       "binding": "sensor.2.sessionM3",
-      "worst": "2: 99999999.99",
+      "worst": "99999999.99",
       "bound": "display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution)"
+    },
+    {
+      "id": "s3-label",
+      "kind": "text",
+      "x": 2,
+      "y": 64,
+      "emphasis": "muted",
+      "content": "3:",
+      "worst": "3:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s3-value",
       "kind": "value",
-      "x": 2,
+      "x": 18,
       "y": 64,
       "binding": "sensor.3.sessionM3",
-      "worst": "3: 99999999.99",
+      "worst": "99999999.99",
       "bound": "display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution)"
+    },
+    {
+      "id": "s4-label",
+      "kind": "text",
+      "x": 2,
+      "y": 84,
+      "emphasis": "muted",
+      "content": "4:",
+      "worst": "4:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s4-value",
       "kind": "value",
-      "x": 2,
+      "x": 18,
       "y": 84,
       "binding": "sensor.4.sessionM3",
-      "worst": "4: 99999999.99",
+      "worst": "99999999.99",
       "bound": "display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution)"
+    },
+    {
+      "id": "s5-label",
+      "kind": "text",
+      "x": 114,
+      "y": 24,
+      "emphasis": "muted",
+      "content": "5:",
+      "worst": "5:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s5-value",
       "kind": "value",
-      "x": 114,
+      "x": 130,
       "y": 24,
       "binding": "sensor.5.sessionM3",
-      "worst": "5: 99999999.99",
+      "worst": "99999999.99",
       "bound": "display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution)"
+    },
+    {
+      "id": "s6-label",
+      "kind": "text",
+      "x": 114,
+      "y": 44,
+      "emphasis": "muted",
+      "content": "6:",
+      "worst": "6:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s6-value",
       "kind": "value",
-      "x": 114,
+      "x": 130,
       "y": 44,
       "binding": "sensor.6.sessionM3",
-      "worst": "6: 99999999.99",
+      "worst": "99999999.99",
       "bound": "display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution)"
+    },
+    {
+      "id": "s7-label",
+      "kind": "text",
+      "x": 114,
+      "y": 64,
+      "emphasis": "muted",
+      "content": "7:",
+      "worst": "7:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s7-value",
       "kind": "value",
-      "x": 114,
+      "x": 130,
       "y": 64,
       "binding": "sensor.7.sessionM3",
-      "worst": "7: 99999999.99",
+      "worst": "99999999.99",
       "bound": "display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution)"
+    },
+    {
+      "id": "s8-label",
+      "kind": "text",
+      "x": 114,
+      "y": 84,
+      "emphasis": "muted",
+      "content": "8:",
+      "worst": "8:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s8-value",
       "kind": "value",
-      "x": 114,
+      "x": 130,
       "y": 84,
       "binding": "sensor.8.sessionM3",
-      "worst": "8: 99999999.99",
+      "worst": "99999999.99",
       "bound": "display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution)"
     },
     {

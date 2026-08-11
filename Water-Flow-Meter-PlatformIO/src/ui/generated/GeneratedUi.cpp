@@ -3,7 +3,8 @@
 namespace ui_exporter {
 
 static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusHdrTitle_Text = { "System Status", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowLabel_Text = { "Total Current Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowLabel_Text = { "Total Current Flow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowUnit_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusSessionTotalLabel_Text = { "Since reset (m3)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatusSessionTotalValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
@@ -14,6 +15,7 @@ static constexpr ui_exporter::TextPayload kInfoP0GlobalStatus_InfoP0GlobalStatus
 static constexpr ui_exporter::Element kInfoP0GlobalStatusElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusHdrTitle_Text, nullptr, nullptr },
     { "total-flow-label", ui_exporter::ElementType::Text, 2, 14, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowLabel_Text, nullptr, nullptr },
+    { "total-flow-unit", ui_exporter::ElementType::Text, 116, 14, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowUnit_Text, nullptr, "telemetry.flowUnitLabel" },
     { "total-flow-value", ui_exporter::ElementType::Value, 152, 14, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusTotalFlowValue_Text, nullptr, "telemetry.totalFlowLpm" },
     { "flow-dots", ui_exporter::ElementType::Icon, 60, 30, 120, 40, nullptr, "flow-dots", nullptr },
     { "session-total-label", ui_exporter::ElementType::Text, 2, 80, 0, 0, &kInfoP0GlobalStatus_InfoP0GlobalStatusSessionTotalLabel_Text, nullptr, nullptr },
@@ -30,27 +32,45 @@ static constexpr ui_exporter::Flow kInfoP0GlobalStatusFlows[] = {
     { "f-prev", "Previous page", "net-mqtt-root", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowHdrTitle_Text = { "Instant Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowHdrTitle_Text = { "Instant Flow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowHdrUnit_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS1Label_Text = { "1:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS2Label_Text = { "2:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS3Label_Text = { "3:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS4Label_Text = { "4:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS4Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS5Label_Text = { "5:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS5Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS6Label_Text = { "6:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS7Label_Text = { "7:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS8Label_Text = { "8:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowS8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP1InstantFlow_InfoP1InstantFlowFooterHint_Text = { "UP/DN pages   UP+DN off", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP1InstantFlowElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowHdrTitle_Text, nullptr, nullptr },
-    { "s1-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS1Value_Text, nullptr, "sensor.1.instantFlow" },
-    { "s2-value", ui_exporter::ElementType::Value, 2, 44, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS2Value_Text, nullptr, "sensor.2.instantFlow" },
-    { "s3-value", ui_exporter::ElementType::Value, 2, 64, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS3Value_Text, nullptr, "sensor.3.instantFlow" },
-    { "s4-value", ui_exporter::ElementType::Value, 2, 84, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS4Value_Text, nullptr, "sensor.4.instantFlow" },
-    { "s5-value", ui_exporter::ElementType::Value, 114, 24, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS5Value_Text, nullptr, "sensor.5.instantFlow" },
-    { "s6-value", ui_exporter::ElementType::Value, 114, 44, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS6Value_Text, nullptr, "sensor.6.instantFlow" },
-    { "s7-value", ui_exporter::ElementType::Value, 114, 64, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS7Value_Text, nullptr, "sensor.7.instantFlow" },
-    { "s8-value", ui_exporter::ElementType::Value, 114, 84, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS8Value_Text, nullptr, "sensor.8.instantFlow" },
+    { "hdr-unit", ui_exporter::ElementType::Text, 80, 2, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowHdrUnit_Text, nullptr, "telemetry.flowUnitLabel" },
+    { "s1-label", ui_exporter::ElementType::Text, 2, 24, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS1Label_Text, nullptr, nullptr },
+    { "s1-value", ui_exporter::ElementType::Value, 18, 24, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS1Value_Text, nullptr, "sensor.1.instantFlow" },
+    { "s2-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS2Label_Text, nullptr, nullptr },
+    { "s2-value", ui_exporter::ElementType::Value, 18, 44, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS2Value_Text, nullptr, "sensor.2.instantFlow" },
+    { "s3-label", ui_exporter::ElementType::Text, 2, 64, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS3Label_Text, nullptr, nullptr },
+    { "s3-value", ui_exporter::ElementType::Value, 18, 64, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS3Value_Text, nullptr, "sensor.3.instantFlow" },
+    { "s4-label", ui_exporter::ElementType::Text, 2, 84, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS4Label_Text, nullptr, nullptr },
+    { "s4-value", ui_exporter::ElementType::Value, 18, 84, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS4Value_Text, nullptr, "sensor.4.instantFlow" },
+    { "s5-label", ui_exporter::ElementType::Text, 114, 24, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS5Label_Text, nullptr, nullptr },
+    { "s5-value", ui_exporter::ElementType::Value, 130, 24, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS5Value_Text, nullptr, "sensor.5.instantFlow" },
+    { "s6-label", ui_exporter::ElementType::Text, 114, 44, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS6Label_Text, nullptr, nullptr },
+    { "s6-value", ui_exporter::ElementType::Value, 130, 44, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS6Value_Text, nullptr, "sensor.6.instantFlow" },
+    { "s7-label", ui_exporter::ElementType::Text, 114, 64, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS7Label_Text, nullptr, nullptr },
+    { "s7-value", ui_exporter::ElementType::Value, 130, 64, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS7Value_Text, nullptr, "sensor.7.instantFlow" },
+    { "s8-label", ui_exporter::ElementType::Text, 114, 84, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS8Label_Text, nullptr, nullptr },
+    { "s8-value", ui_exporter::ElementType::Value, 130, 84, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowS8Value_Text, nullptr, "sensor.8.instantFlow" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP1InstantFlow_InfoP1InstantFlowFooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
@@ -62,26 +82,42 @@ static constexpr ui_exporter::Flow kInfoP1InstantFlowFlows[] = {
 };
 
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3HdrTitle_Text = { "Cumulative (m3)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S1Label_Text = { "1:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S2Label_Text = { "2:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S3Label_Text = { "3:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S4Label_Text = { "4:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S4Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S5Label_Text = { "5:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S5Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S6Label_Text = { "6:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S7Label_Text = { "7:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S8Label_Text = { "8:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3S8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP2CumulativeM3_InfoP2CumulativeM3FooterHint_Text = { "UP/DN pages  ENTER reset...", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP2CumulativeM3Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3HdrTitle_Text, nullptr, nullptr },
-    { "s1-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S1Value_Text, nullptr, "sensor.1.cumulativeM3" },
-    { "s2-value", ui_exporter::ElementType::Value, 2, 44, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S2Value_Text, nullptr, "sensor.2.cumulativeM3" },
-    { "s3-value", ui_exporter::ElementType::Value, 2, 64, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S3Value_Text, nullptr, "sensor.3.cumulativeM3" },
-    { "s4-value", ui_exporter::ElementType::Value, 2, 84, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S4Value_Text, nullptr, "sensor.4.cumulativeM3" },
-    { "s5-value", ui_exporter::ElementType::Value, 114, 24, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S5Value_Text, nullptr, "sensor.5.cumulativeM3" },
-    { "s6-value", ui_exporter::ElementType::Value, 114, 44, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S6Value_Text, nullptr, "sensor.6.cumulativeM3" },
-    { "s7-value", ui_exporter::ElementType::Value, 114, 64, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S7Value_Text, nullptr, "sensor.7.cumulativeM3" },
-    { "s8-value", ui_exporter::ElementType::Value, 114, 84, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S8Value_Text, nullptr, "sensor.8.cumulativeM3" },
+    { "s1-label", ui_exporter::ElementType::Text, 2, 24, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S1Label_Text, nullptr, nullptr },
+    { "s1-value", ui_exporter::ElementType::Value, 18, 24, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S1Value_Text, nullptr, "sensor.1.cumulativeM3" },
+    { "s2-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S2Label_Text, nullptr, nullptr },
+    { "s2-value", ui_exporter::ElementType::Value, 18, 44, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S2Value_Text, nullptr, "sensor.2.cumulativeM3" },
+    { "s3-label", ui_exporter::ElementType::Text, 2, 64, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S3Label_Text, nullptr, nullptr },
+    { "s3-value", ui_exporter::ElementType::Value, 18, 64, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S3Value_Text, nullptr, "sensor.3.cumulativeM3" },
+    { "s4-label", ui_exporter::ElementType::Text, 2, 84, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S4Label_Text, nullptr, nullptr },
+    { "s4-value", ui_exporter::ElementType::Value, 18, 84, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S4Value_Text, nullptr, "sensor.4.cumulativeM3" },
+    { "s5-label", ui_exporter::ElementType::Text, 114, 24, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S5Label_Text, nullptr, nullptr },
+    { "s5-value", ui_exporter::ElementType::Value, 130, 24, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S5Value_Text, nullptr, "sensor.5.cumulativeM3" },
+    { "s6-label", ui_exporter::ElementType::Text, 114, 44, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S6Label_Text, nullptr, nullptr },
+    { "s6-value", ui_exporter::ElementType::Value, 130, 44, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S6Value_Text, nullptr, "sensor.6.cumulativeM3" },
+    { "s7-label", ui_exporter::ElementType::Text, 114, 64, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S7Label_Text, nullptr, nullptr },
+    { "s7-value", ui_exporter::ElementType::Value, 130, 64, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S7Value_Text, nullptr, "sensor.7.cumulativeM3" },
+    { "s8-label", ui_exporter::ElementType::Text, 114, 84, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S8Label_Text, nullptr, nullptr },
+    { "s8-value", ui_exporter::ElementType::Value, 130, 84, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3S8Value_Text, nullptr, "sensor.8.cumulativeM3" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP2CumulativeM3_InfoP2CumulativeM3FooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
@@ -94,26 +130,42 @@ static constexpr ui_exporter::Flow kInfoP2CumulativeM3Flows[] = {
 };
 
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3HdrTitle_Text = { "Session (m3)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S1Label_Text = { "1:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S2Label_Text = { "2:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S3Label_Text = { "3:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S4Label_Text = { "4:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S4Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S5Label_Text = { "5:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S5Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S6Label_Text = { "6:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S7Label_Text = { "7:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S8Label_Text = { "8:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3FooterHint_Text = { "UP/DN pages  ENTER reset...", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP3SessionM3Elements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3HdrTitle_Text, nullptr, nullptr },
-    { "s1-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S1Value_Text, nullptr, "sensor.1.sessionM3" },
-    { "s2-value", ui_exporter::ElementType::Value, 2, 44, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S2Value_Text, nullptr, "sensor.2.sessionM3" },
-    { "s3-value", ui_exporter::ElementType::Value, 2, 64, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S3Value_Text, nullptr, "sensor.3.sessionM3" },
-    { "s4-value", ui_exporter::ElementType::Value, 2, 84, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S4Value_Text, nullptr, "sensor.4.sessionM3" },
-    { "s5-value", ui_exporter::ElementType::Value, 114, 24, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S5Value_Text, nullptr, "sensor.5.sessionM3" },
-    { "s6-value", ui_exporter::ElementType::Value, 114, 44, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S6Value_Text, nullptr, "sensor.6.sessionM3" },
-    { "s7-value", ui_exporter::ElementType::Value, 114, 64, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S7Value_Text, nullptr, "sensor.7.sessionM3" },
-    { "s8-value", ui_exporter::ElementType::Value, 114, 84, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S8Value_Text, nullptr, "sensor.8.sessionM3" },
+    { "s1-label", ui_exporter::ElementType::Text, 2, 24, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S1Label_Text, nullptr, nullptr },
+    { "s1-value", ui_exporter::ElementType::Value, 18, 24, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S1Value_Text, nullptr, "sensor.1.sessionM3" },
+    { "s2-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S2Label_Text, nullptr, nullptr },
+    { "s2-value", ui_exporter::ElementType::Value, 18, 44, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S2Value_Text, nullptr, "sensor.2.sessionM3" },
+    { "s3-label", ui_exporter::ElementType::Text, 2, 64, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S3Label_Text, nullptr, nullptr },
+    { "s3-value", ui_exporter::ElementType::Value, 18, 64, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S3Value_Text, nullptr, "sensor.3.sessionM3" },
+    { "s4-label", ui_exporter::ElementType::Text, 2, 84, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S4Label_Text, nullptr, nullptr },
+    { "s4-value", ui_exporter::ElementType::Value, 18, 84, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S4Value_Text, nullptr, "sensor.4.sessionM3" },
+    { "s5-label", ui_exporter::ElementType::Text, 114, 24, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S5Label_Text, nullptr, nullptr },
+    { "s5-value", ui_exporter::ElementType::Value, 130, 24, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S5Value_Text, nullptr, "sensor.5.sessionM3" },
+    { "s6-label", ui_exporter::ElementType::Text, 114, 44, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S6Label_Text, nullptr, nullptr },
+    { "s6-value", ui_exporter::ElementType::Value, 130, 44, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S6Value_Text, nullptr, "sensor.6.sessionM3" },
+    { "s7-label", ui_exporter::ElementType::Text, 114, 64, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S7Label_Text, nullptr, nullptr },
+    { "s7-value", ui_exporter::ElementType::Value, 130, 64, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S7Value_Text, nullptr, "sensor.7.sessionM3" },
+    { "s8-label", ui_exporter::ElementType::Text, 114, 84, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S8Label_Text, nullptr, nullptr },
+    { "s8-value", ui_exporter::ElementType::Value, 130, 84, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S8Value_Text, nullptr, "sensor.8.sessionM3" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3FooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
@@ -125,27 +177,45 @@ static constexpr ui_exporter::Flow kInfoP3SessionM3Flows[] = {
     { "f-enter", "Open", "confirm-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowHdrTitle_Text = { "Max Flow (L/m)", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowHdrTitle_Text = { "Max Flow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowHdrUnit_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS1Label_Text = { "1:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS2Label_Text = { "2:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS3Label_Text = { "3:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS4Label_Text = { "4:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS4Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS5Label_Text = { "5:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS5Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS6Label_Text = { "6:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS6Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS7Label_Text = { "7:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS8Label_Text = { "8:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowS8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowFooterHint_Text = { "MAX = at sensor ceiling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP4MaxFlow_InfoP4MaxFlowFooterHint_Text = { "UP/DN pages   MAX = at ceiling", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP4MaxFlowElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowHdrTitle_Text, nullptr, nullptr },
-    { "s1-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS1Value_Text, nullptr, "sensor.1.maxFlowSinceReset" },
-    { "s2-value", ui_exporter::ElementType::Value, 2, 44, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS2Value_Text, nullptr, "sensor.2.maxFlowSinceReset" },
-    { "s3-value", ui_exporter::ElementType::Value, 2, 64, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS3Value_Text, nullptr, "sensor.3.maxFlowSinceReset" },
-    { "s4-value", ui_exporter::ElementType::Value, 2, 84, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS4Value_Text, nullptr, "sensor.4.maxFlowSinceReset" },
-    { "s5-value", ui_exporter::ElementType::Value, 114, 24, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS5Value_Text, nullptr, "sensor.5.maxFlowSinceReset" },
-    { "s6-value", ui_exporter::ElementType::Value, 114, 44, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS6Value_Text, nullptr, "sensor.6.maxFlowSinceReset" },
-    { "s7-value", ui_exporter::ElementType::Value, 114, 64, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS7Value_Text, nullptr, "sensor.7.maxFlowSinceReset" },
-    { "s8-value", ui_exporter::ElementType::Value, 114, 84, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS8Value_Text, nullptr, "sensor.8.maxFlowSinceReset" },
+    { "hdr-unit", ui_exporter::ElementType::Text, 56, 2, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowHdrUnit_Text, nullptr, "telemetry.flowUnitLabel" },
+    { "s1-label", ui_exporter::ElementType::Text, 2, 24, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS1Label_Text, nullptr, nullptr },
+    { "s1-value", ui_exporter::ElementType::Value, 18, 24, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS1Value_Text, nullptr, "sensor.1.maxFlowSinceReset" },
+    { "s2-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS2Label_Text, nullptr, nullptr },
+    { "s2-value", ui_exporter::ElementType::Value, 18, 44, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS2Value_Text, nullptr, "sensor.2.maxFlowSinceReset" },
+    { "s3-label", ui_exporter::ElementType::Text, 2, 64, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS3Label_Text, nullptr, nullptr },
+    { "s3-value", ui_exporter::ElementType::Value, 18, 64, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS3Value_Text, nullptr, "sensor.3.maxFlowSinceReset" },
+    { "s4-label", ui_exporter::ElementType::Text, 2, 84, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS4Label_Text, nullptr, nullptr },
+    { "s4-value", ui_exporter::ElementType::Value, 18, 84, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS4Value_Text, nullptr, "sensor.4.maxFlowSinceReset" },
+    { "s5-label", ui_exporter::ElementType::Text, 114, 24, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS5Label_Text, nullptr, nullptr },
+    { "s5-value", ui_exporter::ElementType::Value, 130, 24, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS5Value_Text, nullptr, "sensor.5.maxFlowSinceReset" },
+    { "s6-label", ui_exporter::ElementType::Text, 114, 44, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS6Label_Text, nullptr, nullptr },
+    { "s6-value", ui_exporter::ElementType::Value, 130, 44, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS6Value_Text, nullptr, "sensor.6.maxFlowSinceReset" },
+    { "s7-label", ui_exporter::ElementType::Text, 114, 64, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS7Label_Text, nullptr, nullptr },
+    { "s7-value", ui_exporter::ElementType::Value, 130, 64, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS7Value_Text, nullptr, "sensor.7.maxFlowSinceReset" },
+    { "s8-label", ui_exporter::ElementType::Text, 114, 84, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS8Label_Text, nullptr, nullptr },
+    { "s8-value", ui_exporter::ElementType::Value, 130, 84, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowS8Value_Text, nullptr, "sensor.8.maxFlowSinceReset" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP4MaxFlow_InfoP4MaxFlowFooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
@@ -153,8 +223,7 @@ static constexpr ui_exporter::Element kInfoP4MaxFlowElements[] = {
 
 static constexpr ui_exporter::Flow kInfoP4MaxFlowFlows[] = {
     { "f-next", "Next page", "info-p5-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous page", "info-p3-session-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
-    { "f-enter", "Open", "confirm-reset-session", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
+    { "f-prev", "Previous page", "info-p3-session-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kInfoP5EnterConfig_InfoP5EnterConfigHdrTitle_Text = { "Configuration", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -213,6 +282,30 @@ static constexpr ui_exporter::Flow kStateIdleFlows[] = {
     { "f-wake", "Wake to info", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 },
     { "f-wake-up", "Wake to info", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 },
     { "f-wake-down", "Wake to info", "info-p0-global-status", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectHdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectBody1_Text = { "Channels 1-8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectBody2_Text = { "Connection and calibration,", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectBody3_Text = { "per channel.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectFooterHint_Text = { "UP/DN pages  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kConfigC7SensorSelectElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectHdrTitle_Text, nullptr, nullptr },
+    { "nav-position", ui_exporter::ElementType::Text, 168, 2, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectNavPosition_Text, nullptr, "nav.position" },
+    { "body-1", ui_exporter::ElementType::Text, 2, 30, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectBody1_Text, nullptr, nullptr },
+    { "body-2", ui_exporter::ElementType::Text, 2, 50, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectBody2_Text, nullptr, nullptr },
+    { "body-3", ui_exporter::ElementType::Text, 2, 62, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectBody3_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kConfigC7SensorSelectFlows[] = {
+    { "f-next", "Next entry", "config-root-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "config-c6-led-pulse-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Open sensor list", "config-sensor-1", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigC1ModbusId_ConfigC1ModbusIdHdrTitle_Text = { "Config > Modbus ID", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -342,32 +435,56 @@ static constexpr ui_exporter::Element kConfigC6LedPulsePeriodElements[] = {
 
 
 static constexpr ui_exporter::Flow kConfigC6LedPulsePeriodFlows[] = {
-    { "f-next", "Next entry", "config-c7-sensor-select", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-next", "Next entry", "config-c7-flow-unit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-c5-led-pulse-vol", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-enter", "Edit value", "config-c6-led-pulse-period-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectHdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectBody1_Text = { "Channels 1-8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectBody2_Text = { "Connection and calibration,", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectBody3_Text = { "per channel.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kConfigC7SensorSelect_ConfigC7SensorSelectFooterHint_Text = { "UP/DN pages  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC7FlowUnit_ConfigC7FlowUnitHdrTitle_Text = { "Config > Flow unit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC7FlowUnit_ConfigC7FlowUnitNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC7FlowUnit_ConfigC7FlowUnitFieldValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC7FlowUnit_ConfigC7FlowUnitRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC7FlowUnit_ConfigC7FlowUnitContextNote_Text = { "Display only. Modbus stays L/m.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC7FlowUnit_ConfigC7FlowUnitFooterHint_Text = { "UP/DN pages  ENTER edit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
-static constexpr ui_exporter::Element kConfigC7SensorSelectElements[] = {
-    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectHdrTitle_Text, nullptr, nullptr },
-    { "nav-position", ui_exporter::ElementType::Text, 168, 2, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectNavPosition_Text, nullptr, "nav.position" },
-    { "body-1", ui_exporter::ElementType::Text, 2, 30, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectBody1_Text, nullptr, nullptr },
-    { "body-2", ui_exporter::ElementType::Text, 2, 50, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectBody2_Text, nullptr, nullptr },
-    { "body-3", ui_exporter::ElementType::Text, 2, 62, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectBody3_Text, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC7SensorSelect_ConfigC7SensorSelectFooterHint_Text, nullptr, nullptr },
+static constexpr ui_exporter::Element kConfigC7FlowUnitElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC7FlowUnit_ConfigC7FlowUnitHdrTitle_Text, nullptr, nullptr },
+    { "nav-position", ui_exporter::ElementType::Text, 168, 2, 0, 0, &kConfigC7FlowUnit_ConfigC7FlowUnitNavPosition_Text, nullptr, "nav.position" },
+    { "field-value", ui_exporter::ElementType::Value, 2, 24, 0, 0, &kConfigC7FlowUnit_ConfigC7FlowUnitFieldValue_Text, nullptr, "config.flowUnit" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigC7FlowUnit_ConfigC7FlowUnitRangeHint_Text, nullptr, "config.editor.range" },
+    { "context-note", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigC7FlowUnit_ConfigC7FlowUnitContextNote_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC7FlowUnit_ConfigC7FlowUnitFooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
-static constexpr ui_exporter::Flow kConfigC7SensorSelectFlows[] = {
-    { "f-next", "Next entry", "config-root-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+static constexpr ui_exporter::Flow kConfigC7FlowUnitFlows[] = {
+    { "f-next", "Next entry", "config-c8-sensor-select", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-c6-led-pulse-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Edit value", "config-c7-flow-unit-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kConfigC8SensorSelect_ConfigC8SensorSelectHdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC8SensorSelect_ConfigC8SensorSelectNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC8SensorSelect_ConfigC8SensorSelectBody1_Text = { "Channels 1-8", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC8SensorSelect_ConfigC8SensorSelectBody2_Text = { "Connection and calibration,", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC8SensorSelect_ConfigC8SensorSelectBody3_Text = { "per channel.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC8SensorSelect_ConfigC8SensorSelectFooterHint_Text = { "UP/DN pages  ENTER open", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kConfigC8SensorSelectElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC8SensorSelect_ConfigC8SensorSelectHdrTitle_Text, nullptr, nullptr },
+    { "nav-position", ui_exporter::ElementType::Text, 168, 2, 0, 0, &kConfigC8SensorSelect_ConfigC8SensorSelectNavPosition_Text, nullptr, "nav.position" },
+    { "body-1", ui_exporter::ElementType::Text, 2, 30, 0, 0, &kConfigC8SensorSelect_ConfigC8SensorSelectBody1_Text, nullptr, nullptr },
+    { "body-2", ui_exporter::ElementType::Text, 2, 50, 0, 0, &kConfigC8SensorSelect_ConfigC8SensorSelectBody2_Text, nullptr, nullptr },
+    { "body-3", ui_exporter::ElementType::Text, 2, 62, 0, 0, &kConfigC8SensorSelect_ConfigC8SensorSelectBody3_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC8SensorSelect_ConfigC8SensorSelectFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kConfigC8SensorSelectFlows[] = {
+    { "f-next", "Next entry", "config-root-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "config-c7-flow-unit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-enter", "Open sensor list", "config-sensor-1", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
@@ -387,7 +504,7 @@ static constexpr ui_exporter::Element kConfigRootBackElements[] = {
 
 static constexpr ui_exporter::Flow kConfigRootBackFlows[] = {
     { "f-next", "Next entry", "config-c1-modbus-id", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "config-c7-sensor-select", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-prev", "Previous entry", "config-c8-sensor-select", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
@@ -570,6 +687,35 @@ static constexpr ui_exporter::Flow kConfigC6LedPulsePeriodEditFlows[] = {
     { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
     { "f-commit", "Save and go back", "config-c6-led-pulse-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
     { "f-discard", "Discard and go back", "config-c6-led-pulse-period", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditHdrTitle_Text = { "Edit > Flow unit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditPendingLabel_Text = { "New", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditPendingValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditSavedLabel_Text = { "Saved", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditSavedValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditRangeHint_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditNyquistWarning_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditFooterHint_Text = { "UP/DN adjust  ENTER save  hold=cancel", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kConfigC7FlowUnitEditElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditHdrTitle_Text, nullptr, nullptr },
+    { "pending-label", ui_exporter::ElementType::Text, 2, 26, 0, 0, &kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditPendingLabel_Text, nullptr, nullptr },
+    { "pending-value", ui_exporter::ElementType::Value, 44, 26, 0, 0, &kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditPendingValue_Text, nullptr, "config.editor.pending" },
+    { "saved-label", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditSavedLabel_Text, nullptr, nullptr },
+    { "saved-value", ui_exporter::ElementType::Value, 44, 44, 0, 0, &kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditSavedValue_Text, nullptr, "config.flowUnit" },
+    { "range-hint", ui_exporter::ElementType::Text, 2, 66, 0, 0, &kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditRangeHint_Text, nullptr, "config.editor.range" },
+    { "nyquist-warning", ui_exporter::ElementType::Text, 2, 88, 0, 0, &kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditNyquistWarning_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigC7FlowUnitEdit_ConfigC7FlowUnitEditFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kConfigC7FlowUnitEditFlows[] = {
+    { "f-inc", "Increase", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.increment", nullptr, 0 },
+    { "f-dec", "Decrease", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.decrement", nullptr, 0 },
+    { "f-commit", "Save and go back", "config-c7-flow-unit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit", nullptr, 0 },
+    { "f-discard", "Discard and go back", "config-c7-flow-unit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kConfigSensor1_ConfigSensor1HdrTitle_Text = { "Config > Sensors", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -1798,13 +1944,15 @@ const ui_exporter::Screen kGeneratedScreens[] = {
     { "info-p5-enter-config", "P5 — Enter Configuration", kInfoP5EnterConfigElements, sizeof(kInfoP5EnterConfigElements) / sizeof(kInfoP5EnterConfigElements[0]), kInfoP5EnterConfigFlows, sizeof(kInfoP5EnterConfigFlows) / sizeof(kInfoP5EnterConfigFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "nyquist-warning", "Nyquist Validation Warning", kNyquistWarningElements, sizeof(kNyquistWarningElements) / sizeof(kNyquistWarningElements[0]), kNyquistWarningFlows, sizeof(kNyquistWarningFlows) / sizeof(kNyquistWarningFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "state-idle", "Idle (display off)", kStateIdleElements, sizeof(kStateIdleElements) / sizeof(kStateIdleElements[0]), kStateIdleFlows, sizeof(kStateIdleFlows) / sizeof(kStateIdleFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c7-sensor-select", "C7 — Sensors", kConfigC7SensorSelectElements, sizeof(kConfigC7SensorSelectElements) / sizeof(kConfigC7SensorSelectElements[0]), kConfigC7SensorSelectFlows, sizeof(kConfigC7SensorSelectFlows) / sizeof(kConfigC7SensorSelectFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-c1-modbus-id", "C1 — Modbus ID", kConfigC1ModbusIdElements, sizeof(kConfigC1ModbusIdElements) / sizeof(kConfigC1ModbusIdElements[0]), kConfigC1ModbusIdFlows, sizeof(kConfigC1ModbusIdFlows) / sizeof(kConfigC1ModbusIdFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-c2-baud-rate", "C2 — Baud Rate", kConfigC2BaudRateElements, sizeof(kConfigC2BaudRateElements) / sizeof(kConfigC2BaudRateElements[0]), kConfigC2BaudRateFlows, sizeof(kConfigC2BaudRateFlows) / sizeof(kConfigC2BaudRateFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-c3-parity", "C3 — Parity", kConfigC3ParityElements, sizeof(kConfigC3ParityElements) / sizeof(kConfigC3ParityElements[0]), kConfigC3ParityFlows, sizeof(kConfigC3ParityFlows) / sizeof(kConfigC3ParityFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-c4-stop-bits", "C4 — Stop Bits", kConfigC4StopBitsElements, sizeof(kConfigC4StopBitsElements) / sizeof(kConfigC4StopBitsElements[0]), kConfigC4StopBitsFlows, sizeof(kConfigC4StopBitsFlows) / sizeof(kConfigC4StopBitsFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-c5-led-pulse-vol", "C5 — LED Pulse Volume", kConfigC5LedPulseVolElements, sizeof(kConfigC5LedPulseVolElements) / sizeof(kConfigC5LedPulseVolElements[0]), kConfigC5LedPulseVolFlows, sizeof(kConfigC5LedPulseVolFlows) / sizeof(kConfigC5LedPulseVolFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-c6-led-pulse-period", "C6 — LED Pulse Period", kConfigC6LedPulsePeriodElements, sizeof(kConfigC6LedPulsePeriodElements) / sizeof(kConfigC6LedPulsePeriodElements[0]), kConfigC6LedPulsePeriodFlows, sizeof(kConfigC6LedPulsePeriodFlows) / sizeof(kConfigC6LedPulsePeriodFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "config-c7-sensor-select", "C7 — Sensors", kConfigC7SensorSelectElements, sizeof(kConfigC7SensorSelectElements) / sizeof(kConfigC7SensorSelectElements[0]), kConfigC7SensorSelectFlows, sizeof(kConfigC7SensorSelectFlows) / sizeof(kConfigC7SensorSelectFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c7-flow-unit", "C7 — Flow unit", kConfigC7FlowUnitElements, sizeof(kConfigC7FlowUnitElements) / sizeof(kConfigC7FlowUnitElements[0]), kConfigC7FlowUnitFlows, sizeof(kConfigC7FlowUnitFlows) / sizeof(kConfigC7FlowUnitFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c8-sensor-select", "C8 — Sensors", kConfigC8SensorSelectElements, sizeof(kConfigC8SensorSelectElements) / sizeof(kConfigC8SensorSelectElements[0]), kConfigC8SensorSelectFlows, sizeof(kConfigC8SensorSelectFlows) / sizeof(kConfigC8SensorSelectFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-root-back", "C.BACK — Back", kConfigRootBackElements, sizeof(kConfigRootBackElements) / sizeof(kConfigRootBackElements[0]), kConfigRootBackFlows, sizeof(kConfigRootBackFlows) / sizeof(kConfigRootBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-c1-modbus-id-edit", "C1.V — Edit Modbus ID", kConfigC1ModbusIdEditElements, sizeof(kConfigC1ModbusIdEditElements) / sizeof(kConfigC1ModbusIdEditElements[0]), kConfigC1ModbusIdEditFlows, sizeof(kConfigC1ModbusIdEditFlows) / sizeof(kConfigC1ModbusIdEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-c2-baud-rate-edit", "C2.V — Edit Baud Rate", kConfigC2BaudRateEditElements, sizeof(kConfigC2BaudRateEditElements) / sizeof(kConfigC2BaudRateEditElements[0]), kConfigC2BaudRateEditFlows, sizeof(kConfigC2BaudRateEditFlows) / sizeof(kConfigC2BaudRateEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
@@ -1812,6 +1960,7 @@ const ui_exporter::Screen kGeneratedScreens[] = {
     { "config-c4-stop-bits-edit", "C4.V — Edit Stop Bits", kConfigC4StopBitsEditElements, sizeof(kConfigC4StopBitsEditElements) / sizeof(kConfigC4StopBitsEditElements[0]), kConfigC4StopBitsEditFlows, sizeof(kConfigC4StopBitsEditFlows) / sizeof(kConfigC4StopBitsEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-c5-led-pulse-vol-edit", "C5.V — Edit LED Pulse Volume", kConfigC5LedPulseVolEditElements, sizeof(kConfigC5LedPulseVolEditElements) / sizeof(kConfigC5LedPulseVolEditElements[0]), kConfigC5LedPulseVolEditFlows, sizeof(kConfigC5LedPulseVolEditFlows) / sizeof(kConfigC5LedPulseVolEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-c6-led-pulse-period-edit", "C6.V — Edit LED Pulse Period", kConfigC6LedPulsePeriodEditElements, sizeof(kConfigC6LedPulsePeriodEditElements) / sizeof(kConfigC6LedPulsePeriodEditElements[0]), kConfigC6LedPulsePeriodEditFlows, sizeof(kConfigC6LedPulsePeriodEditFlows) / sizeof(kConfigC6LedPulsePeriodEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-c7-flow-unit-edit", "C7.V — Edit Flow unit", kConfigC7FlowUnitEditElements, sizeof(kConfigC7FlowUnitEditElements) / sizeof(kConfigC7FlowUnitEditElements[0]), kConfigC7FlowUnitEditFlows, sizeof(kConfigC7FlowUnitEditFlows) / sizeof(kConfigC7FlowUnitEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-sensor-1", "SEN1 — Sensor 1", kConfigSensor1Elements, sizeof(kConfigSensor1Elements) / sizeof(kConfigSensor1Elements[0]), kConfigSensor1Flows, sizeof(kConfigSensor1Flows) / sizeof(kConfigSensor1Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-sensor-2", "SEN2 — Sensor 2", kConfigSensor2Elements, sizeof(kConfigSensor2Elements) / sizeof(kConfigSensor2Elements[0]), kConfigSensor2Flows, sizeof(kConfigSensor2Flows) / sizeof(kConfigSensor2Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-sensor-3", "SEN3 — Sensor 3", kConfigSensor3Elements, sizeof(kConfigSensor3Elements) / sizeof(kConfigSensor3Elements[0]), kConfigSensor3Flows, sizeof(kConfigSensor3Flows) / sizeof(kConfigSensor3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
@@ -1880,7 +2029,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-11T09:53:34.508Z", 67, 557
+    "2026-08-11T11:03:33.625Z", 70, 615
 };
 
 }  // namespace ui_exporter

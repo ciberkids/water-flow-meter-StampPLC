@@ -47,34 +47,22 @@ const kByBinding: Record<string, string> = {
   // which matters: with no sample this fell back to the generic string "(not set)", nine characters,
   // and the geometry audit correctly reported it colliding with the sensor number beside it.
   "nav.position": "L2 3/8",
+  // The default unit; the live app resolves this from config.flowUnit.
+  "telemetry.flowUnitLabel": "L/m",
   "page.title": "System Status",
   "legend.led": "G ready  R volume  B card",
   "countdown.value": "3"
 };
 
-/** `sensor.<n>.<metric>` — the resolver's exact format, including the index prefix. */
-function sampleForSensorBinding(binding: string): string | undefined {
-  const match = /^sensor\.(\d+)\.(.+)$/.exec(binding);
-  if (!match) {
-    return undefined;
-  }
-  const index = match[1];
-  switch (match[2]) {
-    case "status":
-      return "OK";
-    case "instantFlow":
-    case "maxFlowSinceReset":
-      return `${index}:   2.34 L/s`;
-    case "cumulativeLiters":
-    case "sessionLiters":
-      return `${index}: 123.45 L`;
-    case "cumulativeM3":
-    case "sessionM3":
-      return `${index}:   0.12 m^3`;
-    default:
-      return undefined;
-  }
-}
+/**
+ * There is deliberately no `sensor.<n>.<metric>` sample any more.
+ *
+ * There was one, and it had gone stale in three ways at once: it carried the `3: ` prefix that is now
+ * a row label, it still said `L/s` after storage moved to L/min, and it ignored the display unit. It
+ * was also unreachable — `resolveSensorBinding` answers every sensor metric from the simulated table
+ * and runs first — so it was a second home for a format, silently wrong, waiting for the day
+ * something stopped answering and it became visible.
+ */
 
 /**
  * The value to draw for a binding.
@@ -95,7 +83,7 @@ export function sampleValueFor(
     return `{{${binding}}}`;
   }
 
-  const specific = kByBinding[binding] ?? sampleForSensorBinding(binding);
+  const specific = kByBinding[binding];
   if (specific !== undefined) {
     return specific;
   }

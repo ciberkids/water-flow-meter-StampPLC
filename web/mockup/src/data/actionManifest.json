@@ -150,6 +150,17 @@
       "description": "Red LED pulse period"
     },
     {
+      "id": "config.flowUnit",
+      "category": "setting",
+      "type": "number",
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "options": [{"label": "L/m", "value": 0}, {"label": "L/s", "value": 1}, {"label": "m3/h", "value": 2}],
+      "register": 33,
+      "description": "Unit the panel shows flows in"
+    },
+    {
       "id": "config.sensor.connected",
       "category": "setting",
       "type": "boolean",
@@ -1093,6 +1104,13 @@
       "type": "string",
       "readOnly": true,
       "description": "Active sampling-warning summary"
+    },
+    {
+      "id": "telemetry.flowUnitLabel",
+      "category": "derived",
+      "type": "string",
+      "readOnly": true,
+      "description": "Unit the panel is showing flows in"
     },
     {
       "id": "nav.position",

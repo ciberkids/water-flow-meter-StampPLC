@@ -77,17 +77,19 @@ int main() {
                      ui_exporter::FlowGesture::Short));
   check(std::strcmp(idOf(nav.current()), "config-c1-modbus-id") == 0 && nav.depth() == 1,
         "P5 ENTER descends to config root, depth 1");
-  check(nav.ringPosition(&ri, &rc) && rc == 8, "config ring reports 8 members (C1-C7 + BACK)");
+  // Nine, not eight: C7 Flow unit was inserted with the LED settings — both are about how the device
+  // presents itself — which moved Sensors to C8.
+  check(nav.ringPosition(&ri, &rc) && rc == 9, "config ring reports 9 members (C1-C8 + BACK)");
 
-  for (int i = 0; i < 6; ++i)
+  for (int i = 0; i < 7; ++i)
     nav.goToSibling(follow(nav.current(), ui_exporter::FlowButton::Down,
                            ui_exporter::FlowGesture::Short));
-  check(std::strcmp(idOf(nav.current()), "config-c7-sensor-select") == 0, "paged to C7");
+  check(std::strcmp(idOf(nav.current()), "config-c8-sensor-select") == 0, "paged to C8");
 
   nav.descend(follow(nav.current(), ui_exporter::FlowButton::Enter,
                      ui_exporter::FlowGesture::Short));
   check(std::strcmp(idOf(nav.current()), "config-sensor-1") == 0 && nav.depth() == 2,
-        "C7 ENTER descends to the sensor list, depth 2");
+        "C8 ENTER descends to the sensor list, depth 2");
   check(nav.sensorIndex() == 0, "sensor index still 0 before choosing a sensor");
 
   for (int i = 0; i < 2; ++i)

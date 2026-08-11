@@ -1,0 +1,96 @@
+{
+  "id": "config-c7-flow-unit-edit",
+  "name": "C7.V \u2014 Edit Flow unit",
+  "description": "Value editor for C7. ENTER commits and ascends; hold ENTER discards. \u2014 laid out to the \u00a77 editor template.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "Edit > Flow unit",
+      "worst": "Edit > Flow unit",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "pending-label",
+      "kind": "text",
+      "x": 2,
+      "y": 26,
+      "emphasis": "muted",
+      "content": "New",
+      "worst": "New",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "pending-value",
+      "kind": "value",
+      "x": 44,
+      "y": 26,
+      "emphasis": "strong",
+      "binding": "config.editor.pending",
+      "worst": "m3/h",
+      "bound": "the pending value, formatted by the same descriptor as the saved one"
+    },
+    {
+      "id": "saved-label",
+      "kind": "text",
+      "x": 2,
+      "y": 44,
+      "emphasis": "muted",
+      "content": "Saved",
+      "worst": "Saved",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "saved-value",
+      "kind": "value",
+      "x": 44,
+      "y": 44,
+      "binding": "config.flowUnit",
+      "worst": "m3/h",
+      "bound": "widest kFlowUnitOptions label"
+    },
+    {
+      "id": "range-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 66,
+      "emphasis": "muted",
+      "binding": "config.editor.range",
+      "worst": "None / Even / Odd",
+      "bound": "derived from the descriptor - see 7.2"
+    },
+    {
+      "id": "nyquist-warning",
+      "kind": "text",
+      "x": 2,
+      "y": 88,
+      "emphasis": "strong",
+      "binding": "config.sensor.nyquistWarning",
+      "worst": "Write refused. UP=Back",
+      "bound": "editor state; empty in the normal case"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN adjust  ENTER save  hold=cancel",
+      "worst": "UP/DN adjust  ENTER save  hold=cancel",
+      "bound": "shared footer vocabulary, see 7.1",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
+    }
+  ]
+}

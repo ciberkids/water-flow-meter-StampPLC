@@ -9,80 +9,170 @@
       "x": 2,
       "y": 2,
       "emphasis": "strong",
-      "content": "Instant Flow (L/m)",
-      "worst": "Instant Flow (L/m)",
+      "content": "Instant Flow",
+      "worst": "Instant Flow",
       "bound": "fixed literal; the unit lives here, not on eight rows"
+    },
+    {
+      "id": "hdr-unit",
+      "kind": "text",
+      "x": 80,
+      "y": 2,
+      "emphasis": "muted",
+      "binding": "telemetry.flowUnitLabel",
+      "worst": "m3/h",
+      "bound": "widest kFlowUnitOptions label; follows config.flowUnit"
+    },
+    {
+      "id": "s1-label",
+      "kind": "text",
+      "x": 2,
+      "y": 24,
+      "emphasis": "muted",
+      "content": "1:",
+      "worst": "1:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s1-value",
       "kind": "value",
-      "x": 2,
+      "x": 18,
       "y": 24,
       "binding": "sensor.1.instantFlow",
-      "worst": "1: 65535.00",
+      "worst": "65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
+    },
+    {
+      "id": "s2-label",
+      "kind": "text",
+      "x": 2,
+      "y": 44,
+      "emphasis": "muted",
+      "content": "2:",
+      "worst": "2:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s2-value",
       "kind": "value",
-      "x": 2,
+      "x": 18,
       "y": 44,
       "binding": "sensor.2.instantFlow",
-      "worst": "2: 65535.00",
+      "worst": "65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
+    },
+    {
+      "id": "s3-label",
+      "kind": "text",
+      "x": 2,
+      "y": 64,
+      "emphasis": "muted",
+      "content": "3:",
+      "worst": "3:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s3-value",
       "kind": "value",
-      "x": 2,
+      "x": 18,
       "y": 64,
       "binding": "sensor.3.instantFlow",
-      "worst": "3: 65535.00",
+      "worst": "65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
+    },
+    {
+      "id": "s4-label",
+      "kind": "text",
+      "x": 2,
+      "y": 84,
+      "emphasis": "muted",
+      "content": "4:",
+      "worst": "4:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s4-value",
       "kind": "value",
-      "x": 2,
+      "x": 18,
       "y": 84,
       "binding": "sensor.4.instantFlow",
-      "worst": "4: 65535.00",
+      "worst": "65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
+    },
+    {
+      "id": "s5-label",
+      "kind": "text",
+      "x": 114,
+      "y": 24,
+      "emphasis": "muted",
+      "content": "5:",
+      "worst": "5:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s5-value",
       "kind": "value",
-      "x": 114,
+      "x": 130,
       "y": 24,
       "binding": "sensor.5.instantFlow",
-      "worst": "5: 65535.00",
+      "worst": "65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
+    },
+    {
+      "id": "s6-label",
+      "kind": "text",
+      "x": 114,
+      "y": 44,
+      "emphasis": "muted",
+      "content": "6:",
+      "worst": "6:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s6-value",
       "kind": "value",
-      "x": 114,
+      "x": 130,
       "y": 44,
       "binding": "sensor.6.instantFlow",
-      "worst": "6: 65535.00",
+      "worst": "65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
+    },
+    {
+      "id": "s7-label",
+      "kind": "text",
+      "x": 114,
+      "y": 64,
+      "emphasis": "muted",
+      "content": "7:",
+      "worst": "7:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s7-value",
       "kind": "value",
-      "x": 114,
+      "x": 130,
       "y": 64,
       "binding": "sensor.7.instantFlow",
-      "worst": "7: 65535.00",
+      "worst": "65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
+    },
+    {
+      "id": "s8-label",
+      "kind": "text",
+      "x": 114,
+      "y": 84,
+      "emphasis": "muted",
+      "content": "8:",
+      "worst": "8:",
+      "bound": "fixed literal: the channel number, 1..8"
     },
     {
       "id": "s8-value",
       "kind": "value",
-      "x": 114,
+      "x": 130,
       "y": 84,
       "binding": "sensor.8.instantFlow",
-      "worst": "8: 65535.00",
+      "worst": "65535.00",
       "bound": "clamped to q_max = 65535 L/min by the state engine"
     },
     {

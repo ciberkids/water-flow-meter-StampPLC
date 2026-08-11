@@ -1,6 +1,6 @@
 {
-  "id": "config-c7-sensor-select",
-  "name": "C7 \u2014 Sensors",
+  "id": "config-c8-sensor-select",
+  "name": "C8 \u2014 Sensors",
   "description": "Config root entry C7. ENTER opens the sensor selector, where UP/DOWN pages through the eight channels and ENTER opens the settings of the one shown.",
   "elements": [
     {

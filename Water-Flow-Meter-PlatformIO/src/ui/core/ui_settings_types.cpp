@@ -24,6 +24,17 @@ constexpr SettingOption kBoolOptions[] = {{"Off", 0}, {"On", 1}};
  * and `Pulses/L` is what the datasheet itself says.
  */
 constexpr SettingOption kCalibrationOptions[] = {{"Formula", 0}, {"Pulses/L", 1}};
+/**
+ * The units the panel offers for a flow reading.
+ *
+ * Three, not four. `m3/min` was considered and dropped: 140.4 L/min is 0.14 m3/min, so a normal flow
+ * lives in the second decimal and a trickle rounds to nothing. `m3/h` is the unit water utilities
+ * actually use, `L/min` is the unit on the meter's own datasheet, and `L/s` is there for tooling that
+ * already speaks it.
+ *
+ * Labels are what the header prints, so they are the short forms the panel has room for.
+ */
+constexpr SettingOption kFlowUnitOptions[] = {{"L/m", 0}, {"L/s", 1}, {"m3/h", 2}};
 // §4.2 implements QoS 0 and 1. QoS 2 is deliberately absent rather than present-and-rejected:
 // an option the wheel can land on but the client refuses is a worse experience than one that
 // was never offered.
@@ -50,6 +61,14 @@ constexpr SettingDescriptor kSettings[] = {
      static_cast<uint8_t>(sizeof(kLedVolumeOptions) / sizeof(kLedVolumeOptions[0])), "L", false, 31, kNoRegister, "Volume per red LED pulse", 0, false},
     {"config.ledPulsePeriod", SettingTarget::LedPulsePeriod, SettingKind::Numeric,
      100, 2000, 1, nullptr, 0, "ms", false, 32, kNoRegister, "Red LED pulse period", 0, false},
+    /**
+     * Which unit the panel shows flows in — a DISPLAY preference (§2a.1: the panel is a view, the wire
+     * is the record). Storage, the registers, MQTT and the calibration settings are all unaffected.
+     */
+    {"config.flowUnit", SettingTarget::DisplayFlowUnit, SettingKind::Enum,
+     0, 2, 1, kFlowUnitOptions,
+     static_cast<uint8_t>(sizeof(kFlowUnitOptions) / sizeof(kFlowUnitOptions[0])), nullptr, false,
+     plc::REG_DISPLAY_FLOW_UNIT, kNoRegister, "Unit the panel shows flows in", 0, false},
     {"config.sensor.connected", SettingTarget::SensorConnected, SettingKind::Boolean,
      0, 1, 1, kBoolOptions,
      static_cast<uint8_t>(sizeof(kBoolOptions) / sizeof(kBoolOptions[0])), nullptr, true, 10, kNoRegister, "Sensor enabled (bit n of the connected-sensors bitmap)", 0, false},

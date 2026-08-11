@@ -34,6 +34,8 @@ struct ModbusDependencies {
   uint16_t* undersamplingFlags = nullptr;
   double* totalSessionLitersCache = nullptr;
   double* aggregateFlowLpmCache = nullptr;
+  /** REG_DISPLAY_FLOW_UNIT — which unit the panel shows flows in. A display preference only. */
+  uint16_t* displayFlowUnit = nullptr;
   bool* allSensorsReadyCache = nullptr;
   volatile float* pollingRateKhz = nullptr;
   plc::LinkSettingsManager* link = nullptr;

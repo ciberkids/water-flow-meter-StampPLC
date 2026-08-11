@@ -19,9 +19,19 @@
       "x": 2,
       "y": 14,
       "emphasis": "muted",
-      "content": "Total Current Flow (L/m)",
-      "worst": "Total Current Flow (L/m)",
+      "content": "Total Current Flow",
+      "worst": "Total Current Flow",
       "bound": "fixed literal"
+    },
+    {
+      "id": "total-flow-unit",
+      "kind": "text",
+      "x": 116,
+      "y": 14,
+      "emphasis": "muted",
+      "binding": "telemetry.flowUnitLabel",
+      "worst": "m3/h",
+      "bound": "widest kFlowUnitOptions label; follows config.flowUnit"
     },
     {
       "id": "total-flow-value",

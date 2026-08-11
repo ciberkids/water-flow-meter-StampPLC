@@ -1,5 +1,7 @@
 #pragma once
 
+#include "units.h"
+
 #include <cstddef>
 
 #include "ui/core/ui_controller.h"
@@ -38,6 +40,8 @@ class UiBindingResolver {
                           const char* bindingId,
                           char* buffer,
                           std::size_t bufferSize) const;
+  /** The panel's current flow unit, from `config.flowUnit`. A display choice; storage stays L/min. */
+  units::FlowUnit panelFlowUnit() const;
   bool resolveTelemetryBinding(const UiRenderContext& context,
                                const char* bindingId,
                                char* buffer,

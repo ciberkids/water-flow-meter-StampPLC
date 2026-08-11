@@ -22,7 +22,7 @@ const valueById = (id: string) => values.find((value) => value.id === id);
 /** The real navigation chain to a per-sensor editor, read off screens.json. */
 const kChainToSensor3 = [
   "info-p7-enter-config",
-  "config-c7-sensor-select",
+  "config-c8-sensor-select",
   "config-sensor-3",
   "config-s2-multiplier"
 ];
@@ -38,18 +38,18 @@ describe("per-sensor table", () => {
     // These are sampleValues.ts's strings for sensor 3, which this module supersedes: wiring it
     // in must not change what the panel draws for a working device.
     expect(resolveSensorBinding("sensor.3.status", table, 0)).toBe("OK");
-    expect(resolveSensorBinding("sensor.3.instantFlow", table, 0)).toBe("3:  140.40");
-    expect(resolveSensorBinding("sensor.3.maxFlowSinceReset", table, 0)).toBe("3:  140.40");
-    expect(resolveSensorBinding("sensor.3.cumulativeLiters", table, 0)).toBe("3:  123.45");
-    expect(resolveSensorBinding("sensor.3.sessionLiters", table, 0)).toBe("3:  123.45");
-    expect(resolveSensorBinding("sensor.3.cumulativeM3", table, 0)).toBe("3:    0.12");
-    expect(resolveSensorBinding("sensor.3.sessionM3", table, 0)).toBe("3:    0.12");
+    expect(resolveSensorBinding("sensor.3.instantFlow", table, 0)).toBe(" 140.40");
+    expect(resolveSensorBinding("sensor.3.maxFlowSinceReset", table, 0)).toBe(" 140.40");
+    expect(resolveSensorBinding("sensor.3.cumulativeLiters", table, 0)).toBe(" 123.45");
+    expect(resolveSensorBinding("sensor.3.sessionLiters", table, 0)).toBe(" 123.45");
+    expect(resolveSensorBinding("sensor.3.cumulativeM3", table, 0)).toBe("   0.12");
+    expect(resolveSensorBinding("sensor.3.sessionM3", table, 0)).toBe("   0.12");
   });
 
   it("keeps the eight rows independent", () => {
     const table = setSensor(createSensorTable(), 1, { connected: false });
-    expect(resolveSensorBinding("sensor.1.instantFlow", table, 0)).toBe("1: --");
-    expect(resolveSensorBinding("sensor.2.instantFlow", table, 0)).toBe("2:  140.40");
+    expect(resolveSensorBinding("sensor.1.instantFlow", table, 0)).toBe("--");
+    expect(resolveSensorBinding("sensor.2.instantFlow", table, 0)).toBe(" 140.40");
     expect(sensorAt(table, 2)?.connected).toBe(true);
   });
 
@@ -69,8 +69,8 @@ describe("rendering, against the device's own format strings", () => {
   const disconnected = setSensor(table, 4, { connected: false });
 
   it("prints a metric with the 1-based sensor number and a seven-wide value, no unit", () => {
-    expect(resolveSensorBinding("sensor.4.instantFlow", flowing, 0)).toBe("4:  140.40");
-    expect(resolveSensorBinding("sensor.4.cumulativeLiters", flowing, 0)).toBe("4:  123.45");
+    expect(resolveSensorBinding("sensor.4.instantFlow", flowing, 0)).toBe(" 140.40");
+    expect(resolveSensorBinding("sensor.4.cumulativeLiters", flowing, 0)).toBe(" 123.45");
   });
 
   it("marks a peak that reached the channel's own ceiling with MAX", () => {
@@ -79,41 +79,41 @@ describe("rendering, against the device's own format strings", () => {
     // Compared in L/min against q_max, which is stored in L/min — comparing the stored L/s peak
     // against it would flag nothing, ever.
     const atCeiling = setSensor(createSensorTable(), 4, { qMaxLpm: 150, maxFlowLpm: 150 });
-    expect(resolveSensorBinding("sensor.4.maxFlowSinceReset", atCeiling, 0)).toBe("4:  150.00 MAX");
+    expect(resolveSensorBinding("sensor.4.maxFlowSinceReset", atCeiling, 0)).toBe(" 150.00 MAX");
 
     const below = setSensor(createSensorTable(), 4, { qMaxLpm: 150, maxFlowLpm: 144 });
-    expect(resolveSensorBinding("sensor.4.maxFlowSinceReset", below, 0)).toBe("4:  144.00");
+    expect(resolveSensorBinding("sensor.4.maxFlowSinceReset", below, 0)).toBe(" 144.00");
   });
 
   it("never marks the instantaneous row, only the peak", () => {
     // The marker belongs to §5a's page. A live reading AT the ceiling is being clamped right now,
     // which the peak page is what reports — flagging it twice would say two different things.
     const atCeiling = setSensor(createSensorTable(), 4, { qMaxLpm: 150, instantFlowLpm: 150 });
-    expect(resolveSensorBinding("sensor.4.instantFlow", atCeiling, 0)).toBe("4:  150.00");
+    expect(resolveSensorBinding("sensor.4.instantFlow", atCeiling, 0)).toBe(" 150.00");
   });
 
   it("prints zero flow as a measurement, not as a withheld value", () => {
-    expect(resolveSensorBinding("sensor.4.instantFlow", zeroFlow, 0)).toBe("4:    0.00");
+    expect(resolveSensorBinding("sensor.4.instantFlow", zeroFlow, 0)).toBe("   0.00");
     expect(resolveSensorBinding("sensor.4.status", zeroFlow, 0)).toBe("OK");
   });
 
   it("distinguishes not-ready from both connected and disconnected", () => {
-    expect(resolveSensorBinding("sensor.4.instantFlow", notReady, 0)).toBe("4: SET?");
+    expect(resolveSensorBinding("sensor.4.instantFlow", notReady, 0)).toBe("SET?");
     expect(resolveSensorBinding("sensor.4.status", notReady, 0)).toBe("SET?");
   });
 
   it("prints a disconnected channel's number and dashes — never hidden, never zero", () => {
     const rendered = resolveSensorBinding("sensor.4.cumulativeLiters", disconnected, 0);
-    expect(rendered).toBe("4: --");
-    expect(rendered).not.toBe("4:   0.00 L");
+    expect(rendered).toBe("--");
+    expect(rendered).not.toBe("  0.00 L");
     expect(resolveSensorBinding("sensor.4.status", disconnected, 0)).toBe("--");
   });
 
   it("renders a status without the sensor number and a metric with it", () => {
     expect(resolveSensorBinding("sensor.4.status", disconnected, 0)).toBe("--");
-    expect(resolveSensorBinding("sensor.4.instantFlow", disconnected, 0)).toBe("4: --");
+    expect(resolveSensorBinding("sensor.4.instantFlow", disconnected, 0)).toBe("--");
     expect(resolveSensorBinding("sensor.4.status", notReady, 0)).toBe("SET?");
-    expect(resolveSensorBinding("sensor.4.instantFlow", notReady, 0)).toBe("4: SET?");
+    expect(resolveSensorBinding("sensor.4.instantFlow", notReady, 0)).toBe("SET?");
   });
 
   it("refuses bindings it cannot answer instead of inventing a number", () => {
@@ -131,7 +131,7 @@ describe("selected-sensor resolution", () => {
     expect(sensorIndexForScreen("config-s2-multiplier-edit", kChainToSensor3)).toBe(3);
     expect(sensorIndexForScreen("config-s1-connected", kChainToSensor3.slice(0, 3))).toBe(3);
     // Standing ON the list entry implies nothing: the firmware fixes the index while LEAVING it.
-    expect(sensorIndexForScreen("config-sensor-3", ["info-p7-enter-config", "config-c7-sensor-select"])).toBe(0);
+    expect(sensorIndexForScreen("config-sensor-3", ["info-p7-enter-config", "config-c8-sensor-select"])).toBe(0);
   });
 
   it("reports 0 when no sensor is implied", () => {
@@ -282,7 +282,7 @@ describe("advancing a tick", () => {
     expect(after.maxFlowLpm).toBe(140.4);
     expect(after.instantFlowLpm).toBe(0);
     // And the row still renders as withheld rather than as zero.
-    expect(resolveSensorBinding("sensor.5.cumulativeLiters", [after], 0)).toBe("5: --");
+    expect(resolveSensorBinding("sensor.5.cumulativeLiters", [after], 0)).toBe("--");
   });
 
   it("accumulates nothing for an enabled channel that is not ready or has no multiplier", () => {

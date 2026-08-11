@@ -65,6 +65,9 @@ import {
   pulsesForFlow,
   resolveSensorBinding,
   sensorIndexForScreen,
+  type FlowUnit,
+  flowFromLpm,
+  flowUnitLabel,
   readSensorSettingRaw,
   setSensor,
   writeSensorSetting,
@@ -1336,6 +1339,22 @@ export function App() {
     [sensors]
   );
 
+  /**
+   * The panel's flow unit, from `config.flowUnit`.
+   *
+   * A display preference: it changes what the flow pages draw and moves their header unit with them,
+   * and changes nothing that is stored or published.
+   */
+  const flowUnit = useMemo<FlowUnit>(() => {
+    const definition = manifestValueById.get("config.flowUnit");
+    if (!definition) return 0;
+    const pinned = pinnedValues["config.flowUnit"];
+    const raw = pinned !== undefined
+      ? definition.options?.find((o) => o.label === pinned.trim())?.value ?? Number.parseInt(pinned, 10)
+      : sampleRawFor(definition);
+    return (raw === 1 || raw === 2 ? raw : 0) as FlowUnit;
+  }, [manifestValueById, pinnedValues]);
+
   const resolvedValues = useMemo(() => {
     const out: Record<string, string> = {};
     const inUse = sensors.filter((sensor) => sensor.connected);
@@ -1361,9 +1380,9 @@ export function App() {
         return "Max Flow: --";
       }
       if (owner === 0) {
-        return "Max Flow: 0.00 L/m";
+        return `Max Flow: 0.00 ${flowUnitLabel(flowUnit)}`;
       }
-      return `Max Flow: ${peak.toFixed(2).padStart(7)} L/m (S${owner})`;
+      return `Max Flow: ${flowFromLpm(peak, flowUnit).toFixed(2).padStart(7)} ${flowUnitLabel(flowUnit)} (S${owner})`;
     };
 
     /**
@@ -1432,7 +1451,9 @@ export function App() {
         // `%7.2f` on the device: a field width, so the column cannot shift under a growing integer
         // part. padStart reproduces it rather than approximating with a fixed prefix.
         case "telemetry.totalFlowLpm":
-          return aggregateFlowLpm.toFixed(2).padStart(7);
+          return flowFromLpm(aggregateFlowLpm, flowUnit).toFixed(2).padStart(7);
+        case "telemetry.flowUnitLabel":
+          return flowUnitLabel(flowUnit);
         case "telemetry.totalVolumeLiters":
           return totalSessionLiters.toFixed(2);
         case "telemetry.totalVolumeM3":
@@ -1486,14 +1507,14 @@ export function App() {
       // in this panel permanently outranked the device's own state, which is the bug the round exists to
       // remove rather than relocate.
       out[binding.id] =
-        resolveSensorBinding(binding.id, sensors, selectedSensor) ??
+        resolveSensorBinding(binding.id, sensors, selectedSensor, undefined, flowUnit) ??
         aggregate(binding.id) ??
         editorDerived(binding.id) ??
         pinnedValues[binding.id] ??
         sampleValueFor(binding.id, manifestValueById.get(binding.id), "sample");
     }
     return out;
-  }, [aggregateFlowLpm, editorState, hierarchy, holdCountdown, manifestValueBindings, manifestValueById, navParents, pinnedValues, screens, selectedScreen, selectedSensor, sensors]);
+  }, [aggregateFlowLpm, editorState, flowUnit, hierarchy, holdCountdown, manifestValueBindings, manifestValueById, navParents, pinnedValues, screens, selectedScreen, selectedSensor, sensors]);
 
   /**
    * The stored integer a setting currently holds, from whichever home owns it.
@@ -2073,6 +2094,56 @@ export function App() {
   );
 
   /**
+   * AUTO-DISMISS: a `timeout` flow with no `holdButton` fires unattended after its duration.
+   *
+   * The other half of the trigger `types.ts` documents, and it was as unimplemented as hold-to-confirm
+   * was — so the three acknowledgement toasts, whose only flow is a 2 s auto-dismiss, could be reached
+   * and then never left. Generic rather than special-cased per toast: the dataset says which screens
+   * have one and how long, and anything added later works with no change here.
+   *
+   * `nav.back` from a toast lands on the originating page because the toast REPLACED the confirm at
+   * the same depth rather than being pushed — see fireHoldFlow.
+   */
+  useEffect(() => {
+    const auto = selectedScreen?.flows?.find(
+      (flow) =>
+        flow.trigger.type === "timeout" &&
+        !(flow.trigger as { holdButton?: string }).holdButton
+    );
+    if (!auto) {
+      return;
+    }
+    const delay = (auto.trigger as { durationMs?: number }).durationMs ?? 2000;
+    const handle = window.setTimeout(() => {
+      recordTraceEntry({
+        id: auto.actionId ?? "timeout",
+        label: auto.label,
+        functionName: auto.actionId ? actionCatalog.get(auto.actionId)?.label : undefined,
+        trigger: `timeout ${delay}ms`,
+        screenId: selectedScreen?.id ?? "unknown",
+        screenName: selectedScreen?.name,
+        actionParams: auto.actionParams ?? null,
+        targetScreenId: auto.targetScreenId
+      });
+      if (auto.actionId === "ui.action.nav.back") {
+        const parent = popNavParent();
+        const resolved = selectById(auto.targetScreenId ?? parent ?? kRootScreenId);
+        if (resolved) {
+          setSelectedScreenId(resolved);
+        }
+        return;
+      }
+      if (auto.targetScreenId) {
+        const resolved = selectById(auto.targetScreenId);
+        if (resolved) {
+          setSelectedScreenId(resolved);
+        }
+      }
+    }, delay);
+    return () => window.clearTimeout(handle);
+  }, [actionCatalog, popNavParent, recordTraceEntry, selectById, selectedScreen]);
+
+  /**
    * The screen's hold-to-confirm flow, if it has one.
    *
    * A `timeout` trigger with `holdButton` is a HOLD; one without is an auto-dismiss and must not be
@@ -2119,8 +2190,27 @@ export function App() {
         setSensors(createSensorTable());
         setPinnedValues({});
       }
-      // The owner's rule: a reset started from a level-0 page returns to that page rather than
-      // dropping the operator at the root to re-navigate. The stack's bottom frame IS that page.
+      /**
+       * The acknowledgement TOAST is shown, then it dismisses itself.
+       *
+       * This used to jump straight to the originating page, so the toast never appeared in the
+       * simulator at all — the reset happened and the operator got no confirmation that it had. The
+       * firmware shows it, which is the whole reason the screen exists.
+       *
+       * The toast REPLACES the confirm at the same depth rather than being pushed. That is what makes
+       * its own `nav.back` land on the originating page instead of back on the confirm — being asked
+       * again whether to do the thing you just did. So the stack is left untouched here.
+       */
+      if (flow.targetScreenId) {
+        const resolved = selectById(flow.targetScreenId);
+        if (resolved) {
+          setSelectedScreenId(resolved);
+        }
+        return;
+      }
+      // No toast — the factory reset has none, because the device reboots. The owner's rule then
+      // applies directly: a reset started from a level-0 page returns to that page rather than
+      // dropping the operator at the root to re-navigate.
       const origin = navParentsRef.current[0];
       clearNavParents();
       const resolved = selectById(origin ?? kRootScreenId);
