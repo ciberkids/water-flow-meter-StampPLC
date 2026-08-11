@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { accelerationTier, kAccelTier2Ms, kAccelTier3Ms } from "../accel";
+import { adjustSettingRaw } from "../settingHints";
 import {
   EditorRampInput,
   EditorRampState,
@@ -209,5 +210,42 @@ describe("the mockup and the firmware agree on the acceleration tiers", () => {
     // And the boundaries belong to the LOWER tier on the way in, matching `<` in both languages.
     expect(accelerationTier(kAccelTier2Ms - 1)).toEqual(pairs[0]);
     expect(accelerationTier(kAccelTier3Ms - 1)).toEqual(pairs[1]);
+  });
+});
+
+describe("what a ramped step means to the setting it lands on", () => {
+  it("moves an option list ONE entry however big the multiplier is, in both languages", () => {
+    /**
+     * The ramp made this reachable, so it is now worth pinning.
+     *
+     * Baud rate and parity are option lists, and they are exactly the screens the hold was reported on.
+     * A x25 step there does NOT jump 25 entries: both implementations reduce the delta to its SIGN for a
+     * non-numeric setting, so an option list advances one entry per step and only the INTERVAL
+     * accelerates. If the two disagreed, holding UP on Parity would spin in the simulator and crawl on
+     * the device — invisible while the ramp was dead, loud now that it works.
+     */
+    const source = firmwareSource("ui", "core", "ui_settings_types.cpp");
+    const enumArm = source.slice(source.indexOf("int32_t adjustSetting"));
+    expect(
+      /stepCount\s*=\s*delta\s*>=\s*0\s*\?\s*1\s*:\s*-1/.test(enumArm),
+      "adjustSetting must reduce delta to its sign for an option list"
+    ).toBe(true);
+
+    const parity = { id: "cfg.parity", type: "number", options: [
+      { value: 0, label: "None" }, { value: 1, label: "Odd" }, { value: 2, label: "Even" }
+    ]} as never;
+    expect(adjustSettingRaw(parity, 0, 1)).toBe(1);
+    expect(adjustSettingRaw(parity, 0, 25)).toBe(1);
+    expect(adjustSettingRaw(parity, 0, -25)).toBe(2);
+    // And it wraps rather than clamping, which is what makes the option list safe to hold on.
+    expect(adjustSettingRaw(parity, 2, 25)).toBe(0);
+  });
+
+  it("scales a NUMERIC by the multiplier and clamps at the end", () => {
+    const numeric = { id: "cfg.slave", type: "number", min: 1, max: 247, step: 1 } as never;
+    expect(adjustSettingRaw(numeric, 100, 25)).toBe(125);
+    // §5.4: clamp, never wrap — holding UP must not roll a maximum round to its minimum.
+    expect(adjustSettingRaw(numeric, 240, 25)).toBe(247);
+    expect(adjustSettingRaw(numeric, 5, -25)).toBe(1);
   });
 });
