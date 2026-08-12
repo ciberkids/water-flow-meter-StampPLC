@@ -146,15 +146,47 @@ export function ButtonPanel({
   const handlers = (buttons: PhysicalButton[], isPressed: boolean) => ({
     onPointerDown: (event: ReactPointerEvent) => {
       event.preventDefault();
+      /**
+       * CAPTURE the pointer, or a click that drifts a few pixels latches the buttons down for ever.
+       *
+       * Mouse pointers are not implicitly captured, and `.active` applies `translateY(2px) scale(0.98)`
+       * — so the control moves out from under a cursor that has barely moved, `pointerup` is delivered to
+       * whatever is underneath instead, and the levels never come back down. `onPointerLeave` is the only
+       * thing that saves it, and it is guarded by `isPressed`, which is the value captured at the last
+       * RENDER: drift inside the same frame as the press and the guard is still false, so nothing
+       * releases. All three pads then sit lit, the status reads "Select Menu opens at 3 s" for ever, and
+       * the gesture cannot fire again because it never let go.
+       *
+       * With capture, every subsequent event for this pointer comes here wherever the cursor wanders,
+       * which removes the race rather than narrowing it — and makes `onLostPointerCapture` below the real
+       * safety net it was written to be, instead of near-dead code for mouse input.
+       */
+      // PRESS FIRST, capture second, and never let the capture stop the press. Ordered the other way
+      // round this was worse than the bug it fixes: `setPointerCapture` throws on an invalid pointer id,
+      // and the throw skipped `onPressStart` entirely, so the control did nothing at all.
       buttons.forEach(onPressStart);
+      try {
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      } catch {
+        // A browser that refuses capture keeps the guarded `onPointerLeave` below as its safety net.
+      }
     },
     onPointerUp: (event: ReactPointerEvent) => {
       event.preventDefault();
       buttons.forEach(onPressEnd);
     },
-    // Guarded, unlike the old combo controls: an unguarded release fired on every pointer that merely
-    // swept across the control, which released a button the KEYBOARD was holding.
-    onPointerLeave: () => {
+    /**
+     * A leave releases only when we are NOT holding the pointer.
+     *
+     * With capture in place the cursor leaving means nothing — the button is still held and the events
+     * still arrive here — so releasing on leave would cancel a deliberate hold the moment a hand drifted.
+     * Without capture (a browser that refuses it) this stays the old safety net, still guarded so a
+     * pointer merely sweeping across cannot release a button the KEYBOARD is holding.
+     */
+    onPointerLeave: (event: ReactPointerEvent) => {
+      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+        return;
+      }
       if (isPressed) {
         buttons.forEach(onPressEnd);
       }
