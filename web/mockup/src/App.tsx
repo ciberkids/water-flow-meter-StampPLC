@@ -63,6 +63,7 @@ import {
   createSensorTable,
   resetMeasured,
   resetSession,
+  sensorAt,
   isPerSensorSetting,
   kSensorCount,
   pulsesForFlow,
@@ -455,12 +456,12 @@ export function App() {
    * volume all change every tick, so there is nothing to compare a number against. Steady mode makes all
    * three arithmetic — `channels x flow`, `flow`, and `channels x flow x t / 60`.
    *
-   * 60 L/min is the default because it is 1 L/s exactly, which makes the volume mental arithmetic, and
-   * it sits well inside the default q_max of 150 L/min so the engine does not clamp it. A value ABOVE a
-   * channel's own q_max still clamps — visibly, per channel, which is worth seeing rather than hiding.
+   * `steady` holds each channel at whatever its instant flow already is in memory, which is editable
+   * per channel in the Device memory panel. There is deliberately no figure here: this control had one,
+   * and it was a second home for the same fact that could only ever speak for all eight channels at once.
+   * Switching to steady mid-run therefore also works as a freeze, at whatever the channels had reached.
    */
   const [flowMode, setFlowMode] = useState<"random" | "steady">("random");
-  const [steadyFlowLpm, setSteadyFlowLpm] = useState<number>(60);
   const [loopIntervalMs, setLoopIntervalMs] = useState<number>(1000);
   /**
    * A sensor picked in the values panel, used only when navigation implies none.
@@ -1739,6 +1740,27 @@ export function App() {
     [selectedSensor, sensors]
   );
 
+  /**
+   * Sets one channel's instantaneous flow. Clamped to that channel's own q_max on the way in.
+   *
+   * Clamped HERE rather than left to the engine so the box shows what the channel will actually read:
+   * the engine clamps on the next tick anyway, so an unclamped field would display 500 until the loop
+   * ran and then silently become 150.
+   */
+  const handleSensorFlowChange = useCallback(
+    (sensorNumber: number, flowLpm: number) => {
+      setSensors((table) => {
+        const sensor = sensorAt(table, sensorNumber);
+        if (!sensor) {
+          return table;
+        }
+        const clamped = Math.min(Math.max(Number.isFinite(flowLpm) ? flowLpm : 0, 0), sensor.qMaxLpm);
+        return setSensor(table, sensorNumber, { instantFlowLpm: clamped });
+      });
+    },
+    []
+  );
+
   const handleSensorFieldChange = useCallback(
     (sensorNumber: number, field: "connected" | "ready", value: boolean) => {
       setSensors((table) => setSensor(table, sensorNumber, { [field]: value }));
@@ -1814,7 +1836,10 @@ export function App() {
         const target = !live
           ? 0
           : flowMode === "steady"
-            ? Math.min(steadyFlowLpm, ceilingLpm)
+            // Feeding the channel's own reading back through `pulsesForFlow` reproduces it exactly —
+            // that round trip is unit-tested — so the flow holds and the volume, the peak and the
+            // aggregate all derive from it.
+            ? Math.min(sensor.instantFlowLpm, ceilingLpm)
             : Math.random() * ceilingLpm;
         return advanceSensorTick(sensor, {
           pulses: pulsesForFlow(sensor, target, loopIntervalMs),
@@ -1822,7 +1847,7 @@ export function App() {
         });
       })
     );
-  }, [flowMode, loopIntervalMs, steadyFlowLpm]);
+  }, [flowMode, loopIntervalMs]);
 
   useEffect(() => {
     if (!loopRunning) {
@@ -2798,9 +2823,7 @@ export function App() {
                   onIntervalChange={setLoopIntervalMs}
                   onSingleTick={handleLoopTick}
                   flowMode={flowMode}
-                  steadyFlowLpm={steadyFlowLpm}
                   onFlowModeChange={setFlowMode}
-                  onSteadyFlowChange={setSteadyFlowLpm}
                   onResetValues={handleMemoryReset}
                 />
 
@@ -2880,6 +2903,7 @@ export function App() {
                   selectionFromNavigation={navSensorIndex !== 0}
                   sensorPreview={sensorPreview}
                   onSensorFieldChange={handleSensorFieldChange}
+                  onSensorFlowChange={handleSensorFlowChange}
                   onSelectSensor={handleSelectSensor}
                 />
               </div>

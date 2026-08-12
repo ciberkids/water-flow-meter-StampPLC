@@ -34,6 +34,8 @@ interface SensorRow {
   number: number;
   connected: boolean;
   ready: boolean;
+  /** L/min. Editable here, unlike every other reading — see `onSensorFlowChange`. */
+  instantFlowLpm: number;
 }
 
 interface FirmwareValuesPanelProps {
@@ -63,6 +65,16 @@ interface FirmwareValuesPanelProps {
   /** What the device would draw for that sensor's flow row, so the effect of a toggle is visible. */
   sensorPreview: (sensorNumber: number) => string;
   onSensorFieldChange: (sensorNumber: number, field: "connected" | "ready", value: boolean) => void;
+  /**
+   * Sets one channel's instantaneous flow directly, in L/min.
+   *
+   * On the DEVICE this is a reading, derived from pulses, and everything in this panel that memory owns
+   * is read-only for exactly that reason. This is the deliberate exception: in a simulator the flow is
+   * the INPUT, and the loop's job is to derive the rest from it — the aggregate, the peak, the volume.
+   * Making it editable here removes the need for a separate "steady flow" figure in the loop panel,
+   * which was a second place to say the same thing and could only say it for all eight channels at once.
+   */
+  onSensorFlowChange: (sensorNumber: number, flowLpm: number) => void;
   onSelectSensor: (sensorNumber: number) => void;
 }
 
@@ -113,6 +125,7 @@ export function FirmwareValuesPanel({
   selectionFromNavigation,
   sensorPreview,
   onSensorFieldChange,
+  onSensorFlowChange,
   onSelectSensor
 }: FirmwareValuesPanelProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(["sensors"]));
@@ -303,9 +316,26 @@ export function FirmwareValuesPanel({
                     ready
                   </label>
 
-                  <span className="sensor-row__render" title="What the device draws for this sensor">
-                    {sensorPreview(sensorNumber)}
-                  </span>
+                  {/* The flow is an INPUT here, not a readout — see `onSensorFlowChange`. Disabled when
+                      the channel is not flowing, because `normalizeSensor` forces such a channel to 0
+                      and an editable box that silently discards what you type is worse than none. The
+                      device's own rendering stays available as the tooltip, padding and all. */}
+                  <label
+                    className="sensor-row__render"
+                    title={`The device draws: ${sensorPreview(sensorNumber)}`}
+                  >
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={Number(sensor.instantFlowLpm.toFixed(2))}
+                      disabled={!sensor.connected || !sensor.ready}
+                      onChange={(event) => onSensorFlowChange(sensorNumber, Number(event.target.value))}
+                      style={{ width: 68, fontSize: 11, textAlign: "right" }}
+                      aria-label={`Sensor ${sensorNumber} instantaneous flow, litres per minute`}
+                    />
+                    <span style={{ opacity: 0.7, fontSize: 10 }}>L/m</span>
+                  </label>
                 </div>
               );
             })}
