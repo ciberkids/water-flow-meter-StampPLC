@@ -20,7 +20,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-REPO_SSH="github.com-personal:ciberkids/water-flow-meter-StampPLC.wiki.git"
+# Overridable so CI can authenticate differently from a developer's machine. A workstation has an SSH
+# host alias; a GitHub Actions runner has a token and no SSH key at all, and hardcoding either means the
+# other cannot publish — which is how this script stayed a manual step nobody remembered to run.
+WIKI_REMOTE="${WIKI_REMOTE:-github.com-personal:ciberkids/water-flow-meter-StampPLC.wiki.git}"
 DOCS="docs/Requirements/feature addition"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
@@ -147,7 +150,7 @@ fi
 
 WIKI="$(mktemp -d)"
 trap 'rm -rf "$STAGE" "$WIKI"' EXIT
-if ! git clone --quiet "$REPO_SSH" "$WIKI" 2>/dev/null; then
+if ! git clone --quiet "$WIKI_REMOTE" "$WIKI" 2>/dev/null; then
   cat >&2 <<'HELP'
 Could not clone the wiki repository.
 
@@ -170,6 +173,10 @@ if git diff --cached --quiet; then
   echo "wiki already up to date."
   exit 0
 fi
-git commit --quiet -m "docs: regenerate wiki orientation pages from the repository docs"
+# Identity on the command rather than in config: a runner has none, and a workstation already has
+# one that this script has no business overwriting.
+git -c "user.name=${WIKI_AUTHOR_NAME:-$(git config user.name || echo 'wiki sync')}" \
+    -c "user.email=${WIKI_AUTHOR_EMAIL:-$(git config user.email || echo 'wiki-sync@users.noreply.github.com')}" \
+    commit --quiet -m "docs: regenerate wiki orientation pages from the repository docs"
 git push --quiet
 echo "published: $(cd "$WIKI" && ls *.md | sed 's/\.md$//' | paste -sd, -)"
