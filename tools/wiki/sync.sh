@@ -39,6 +39,13 @@ RTU, MQTT and Home Assistant discovery.
 only — every page here points at the file that actually holds the detail, so there is nothing for the
 two to disagree about.
 
+> ⚠️ **Every page here is generated, and edits made in this editor will be destroyed.** CI republishes
+> the whole wiki on each push to `main`, so a correction typed here survives until the next merge and
+> then vanishes with nothing reporting it. Edit the source instead:
+> `tools/wiki/sync.sh` for these orientation pages, `tools/wiki/pages/*.md` for the long ones, and
+> `tools/wiki/gen-registers.mjs` for the register reference — which reads the firmware headers, so an
+> address is corrected by correcting the header.
+
 ## Start here
 
 | If you want to | Read |
