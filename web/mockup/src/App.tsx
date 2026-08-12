@@ -1449,6 +1449,28 @@ export function App() {
      * Read through `pinnedValues` first so that pinning `net.wifi.state` to RETRY moves this row too
      * — the whole point of folding three facts onto one row is that they stay the same three facts.
      */
+    /**
+     * A radio's STATE, honouring the enable setting that decides it.
+     *
+     * `net.wifi.state` and `config.wifi.enabled` are two bindings for one situation, and nothing joined
+     * them: setting the enable flag to Off in device memory left every state surface reading `OK`, so the
+     * main page went on reporting a working link for a radio that had just been switched off.
+     *
+     * The device has no such gap because the state is a CONSEQUENCE. `WifiState::Disabled` means "not
+     * enabled, or no credentials" and `wifiStateText` renders it `OFF`; the same holds for the broker,
+     * which cannot be connected while its client is disabled. So Off wins over any pin or sample here,
+     * and everything that draws a state — P0's legend row, the W.I1/M.I1 info pages, the values panel —
+     * agrees because they all come through this.
+     */
+    const netState = (kind: "wifi" | "mqtt"): string => {
+      const enabled = pinnedValues[`config.${kind}.enabled`];
+      if (enabled !== undefined && /^off$/i.test(enabled.trim())) {
+        return "OFF";
+      }
+      const id = `net.${kind}.state`;
+      return pinnedValues[id] ?? sampleValueFor(id, manifestValueById.get(id), "sample");
+    };
+
     const legendRow = (): string => {
       const part = (id: string) => pinnedValues[id] ?? sampleValueFor(id, manifestValueById.get(id), "sample");
       // The LED half reads the PIN too. Taking it from `sampleRawFor` alone meant pinning
@@ -1457,7 +1479,7 @@ export function App() {
       // to prevent. The pin is already formatted (`10 L`), so the unit suffix is stripped rather than
       // re-added.
       const led = part("config.ledPulseVolume").replace(/\s*L$/, "");
-      return `WiFi ${part("net.wifi.state")}  MQTT ${part("net.mqtt.state")}  LED 1p/${led}L`;
+      return `WiFi ${netState("wifi")}  MQTT ${netState("mqtt")}  LED 1p/${led}L`;
     };
 
     /**
@@ -1518,6 +1540,10 @@ export function App() {
           return (totalSessionLiters / 1000).toFixed(2);
         case "telemetry.maxFlowLpm":
           return maxFlowRow();
+        case "net.wifi.state":
+          return netState("wifi");
+        case "net.mqtt.state":
+          return netState("mqtt");
         case "legend.status":
           return legendRow();
         case "telemetry.status":
