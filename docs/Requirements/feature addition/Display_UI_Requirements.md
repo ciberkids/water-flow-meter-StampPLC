@@ -4,7 +4,7 @@
 **Date:** 2026-07-30
 
 > **0.2 — hierarchical navigation model.** §3, §4.1, §4.3, §5 and §6 are revised per
-> [`NF-20260730-01-menu-navigation-model.md`](../../new%20feature%20proposal/NF-20260730-01-menu-navigation-model.md).
+> [`NF-20260730-01-menu-navigation-model.md`](../../archive/NF-20260730-01-menu-navigation-model.md) (implemented, so archived).
 > Summary of what changed and why:
 >
 > - **ENTER is no longer overloaded.** 0.1 gave ENTER-long three meanings — global
@@ -406,4 +406,4 @@ position; titles carry the meaning.
 5. **Two kinds of timeout.** A hold countdown requires ENTER held and aborts on release; an auto timeout fires regardless and drives the toasts. The dataset schema currently has one `timeout` trigger for both — see `NF-20260730-01` §3.8 for the proposed discriminator.
 6. **Per-setting descriptors have no home yet.** Ranges, steps and enum lists in §5.2/§5.3 are specified here but are not expressed anywhere machine-readable. Proposal: extend the firmware manifest’s value entries with `min`, `max`, `step`, `enum` and `unit`, so one declaration drives both the web mockup and the firmware.
 7. **Settable elements should be a fixed catalogue in the web design tool.** The design tool should offer the settable entities as fixed, pre-declared items rather than free-form elements with arbitrary binding strings, so the connection back to firmware is structural instead of a name that has to match. What the dataset then controls is screen order, sub-level nesting, and the placement and wording of text — not which values exist. This is the same single source of truth as item 6.
-8. Amend the diagrams to match this revision: `docs/diagrams/ui_state_machine.mermaid`, `ui_config_layout.mermaid`, `ui_sensor_submenu.mermaid`.
+8. ~~Amend the diagrams to match this revision.~~ **Done 2026-08-12.** `ui_config_layout.mermaid` and the new `ui_navigation_tree.mermaid` are now GENERATED from the dataset by `tools/wiki/gen-diagrams.mjs`, so they cannot drift from it again. `ui_state_machine.mermaid` and `ui_sensor_submenu.mermaid` are retired — both described structure the generated pair now covers, and both had been wrong in every structural detail for months.

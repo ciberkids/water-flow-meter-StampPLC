@@ -154,13 +154,14 @@ baseline that does not exist yet.
 
 | Trust | Do not trust |
 | --- | --- |
-| `docs/Project definitions/Gesture_Reference.md` — every ✅ names its test | `README.md` — five referenced paths do not exist; its firmware test command cannot work |
-| `docs/active_work/open_decisions.md` — the de-facto ADR, 42 entries | `web/mockup/README.md` — describes a portrait display and an empty dataset |
+| `docs/Requirements/Gesture_Reference.md` — every ✅ names its test | `README.md` — five referenced paths do not exist; its firmware test command cannot work |
+| `docs/active_work/open_decisions.md` — rewritten 2026-08-12 to what is actually open; the 41 closed entries are in `docs/archive/open_decisions-closed-2026-08-12.md` | `web/mockup/README.md` — describes a portrait display and an empty dataset |
 | `Project_document.md` §4.1/§4.2 — the register map, verified line-for-line | `UI_Firmware_Interface.md` — **the most dangerous live document**: lists 4 actions where there are 15 |
 | `Loadable_UI_Menu_Packs.md` — as a *specification* | `Implementation_Alignment_Report.md` — audits a file layout that no longer exists |
 
-`open_decisions.md` caveat: ✅ in a heading means **agreed**, not **landed**. The emoji is
-severity; status lives in the `Decision:` line.
+`open_decisions.md` was rewritten 2026-08-12: it lists only what is genuinely open. The old
+caveat — ✅ meaning *agreed* rather than *landed*, with 40 headings still marked as blocking after
+their decisions had shipped — applies to the archived copy, not to the current file.
 
 ---
 

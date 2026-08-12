@@ -10,7 +10,7 @@
 > into a discoverable root-level page plus a UP+DOWN+ENTER recovery gesture.
 
 **Depends on:** the navigation model in `Display_UI_Requirements.md` §5, and decision **D2**
-(generate the manifest from firmware) in `docs/active_work/open_decisions.md`
+(generate the manifest from firmware) in `docs/archive/open_decisions-closed-2026-08-12.md`
 
 ---
 

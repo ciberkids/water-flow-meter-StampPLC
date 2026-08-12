@@ -1,49 +1,72 @@
-%% RGB LED Interaction Overview
+%% RGB LED behaviour
+%%
+%% Corrected 2026-08-12 against led/led_controller.{h,cpp}. What this diagram used to claim:
+%%
+%%   - "Instant Flow (L/s)". Storage is L/min throughout since the unit consolidation; L/s survives
+%%     only as a display choice.
+%%   - "isReady flags" as an input. The cached isReady bit was DELETED — it was losing the lifetime
+%%     total across a reboot, because a channel restored from NVS published a stale readiness. Readiness
+%%     is derived now, from the configuration being valid.
+%%   - "Configuration Pages (C5/C6 items)" writing the LED registers. Those are D1 and D2 under the
+%%     Display group since Configuration became three groups.
+%%   - No overrides at all. Four of them outrank the normal channel semantics, and the reset ramp is
+%%     the one that matters most: the countdown used to run with every channel OFF, which gave the most
+%%     destructive operation in the system the least indication.
 flowchart TD
-    subgraph Sensors["Per-Sensor Metrics"]
-        instFlow["Instant Flow (L/s)"]
-        session["Session Liters"]
-        ready["isReady flags"]
+    subgraph Sensors["Per-sensor state"]
+        instFlow["Instant flow (L/min)"]
+        session["Session litres"]
+        cfgValid["Configuration valid<br/><i>readiness is DERIVED from this, never cached</i>"]
     end
 
-    subgraph Aggregator["Aggregation Logic"]
-        flowSum["Σ Instant Flow"]
-        volumeSum["Σ Session Liters"]
-        nyquist["Validation Result\n(Undersampling Flags)"]
+    subgraph Aggregator["Aggregation"]
+        flowSum["Sum of instant flow"]
+        volumeSum["Accumulated volume since the last pulse"]
+        allReady["All in-use channels ready"]
+        under["Undersampling flags"]
     end
 
     Sensors --> Aggregator
 
-    subgraph Registers["Global Registers"]
-        reg30["Reg 30: Undersampling Flags"]
-        reg31["Reg 31: LED Red Volume Step"]
-        reg32["Reg 32: LED Red Pulse Period"]
+    subgraph Registers["Global registers"]
+        reg30["30: undersampling flags"]
+        reg31["31: LED red volume step (litres)"]
+        reg32["32: LED red pulse period (ms)"]
     end
 
-    Aggregator --> reg30
-    Aggregator --> flowSum
-    Aggregator --> volumeSum
-    reg31 --> redController
-    reg32 --> redController
+    under --> reg30
+    reg31 --> red
+    reg32 --> red
 
-    subgraph LEDController["RGB LED Controller"]
-        redController["Red Channel:\nPulse when volumeSum crosses step"]
-        greenController["Green Channel:\nON if all ready == true"]
-        blueController["Blue Channel:\nBlink if flowSum > 0"]
+    subgraph Channels["Normal channel semantics"]
+        red["RED - pulses once per volume step<br/><i>lit for period x duty cycle</i>"]
+        green["GREEN - all ready AND no undersampling<br/><i>both halves: a fast channel is not ready</i>"]
+        blue["BLUE - blinks every 250 ms while flowing<br/><i>held 500 ms after flow stops, so a trickle does not stutter</i>"]
     end
 
-    flowSum --> blueController
-    ready --> greenController
-    nyquist --> greenController
-    volumeSum --> redController
+    volumeSum --> red
+    allReady --> green
+    under --> green
+    flowSum --> blue
 
-    LEDController --> PI4IOE["PI4IOE5V6408 Expander\n(P6/P5/P4)"] --> RGBLED["RGB LED"]
-
-    subgraph UI["On-Device UI"]
-        configPage["Configuration Pages\n(C5/C6 items)"]
-        infoLegend["Info Legend\n(Red pulse every X L...)"]
+    subgraph Overrides["Overrides, which outrank the channels above"]
+        direction TB
+        boot["BOOT pattern until ready<br/><i>degrades to a red blink after the stall timeout,<br/>so a hang looks different from a slow start</i>"]
+        ramp["RESET countdown - accelerating WHITE flash"]
+        accepted["RESET accepted - solid white, briefly"]
+        cardBusy["CARD BUSY - the SD card holds the shared SPI bus,<br/>so the LED carries the status the panel cannot"]
     end
 
-    configPage --> reg31
-    configPage --> reg32
-    infoLegend --> User
+    Channels --> arbiter{"Override active?"}
+    Overrides --> arbiter
+    arbiter --> writeGate["Write only on CHANGE<br/><i>the expander shares its I2C bus with the sensor inputs;<br/>an unconditional write at loop rate competed with the measurement</i>"]
+    writeGate --> PI4IOE["PI4IOE5V6408 expander (P6/P5/P4)"] --> RGBLED["RGB LED"]
+
+    subgraph UI["Where an operator meets it"]
+        d1["D1 - LED Pulse Volume"]
+        d2["D2 - LED Pulse Period"]
+        legend["P0 footer - the LED legend"]
+    end
+
+    d1 --> reg31
+    d2 --> reg32

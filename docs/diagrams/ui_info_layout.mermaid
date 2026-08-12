@@ -1,33 +1,45 @@
-%% Info Mode Layout (135 × 240 px)
+%% Info page layout — 240 x 135 px, LANDSCAPE
+%%
+%% Corrected 2026-08-12 against the dataset. What this diagram used to claim, and why each was wrong:
+%%
+%%   - "135 x 240" portrait, with a 20 px header, 200 px body and 20 px footer. Decision D3 settled the
+%%     panel as landscape 240 x 135; the firmware was already calling setRotation(1) and it was the
+%%     DATASET that had been authored portrait. Those band heights were portrait arithmetic.
+%%   - An "Animated Propeller (frame 48 x 48)". Dropped with the animation element (decision C1). The
+%%     flow indicator is four dots that advance one position per repaint.
+%%   - "ENTER = Countdown" in the header and "Long ENTER = Idle" in the footer. Neither is true: a
+%%     countdown lives on its own confirm screen reached by ENTER-short, and held ENTER ascends one
+%%     level. Display-off is UP+DOWN.
+%%
+%% Coordinates are the real element positions. Row pitch is 20 px, and the 6/7/8 px glyph metrics of
+%% Font0 are what make 40 columns x 17 rows the whole budget.
 flowchart TB
-    subgraph Info_Screen["Info Screen"]
-        direction LR
-        subgraph Header["Header (20 px)"]
-            title["Page Title\n+ Timestamp"]
-            legend["Button Hints\n(ENTER=Countdown)"]
-        end
-
-        subgraph Body["Body (200 px)"]
+    subgraph P1["P1 - Instant Flow: two columns of four"]
+        direction TB
+        h1["y=2  Title, and the flow unit at x=80<br/><i>telemetry.flowUnitLabel - one header unit, never per row</i>"]
+        subgraph Body1["y=24..84, pitch 20"]
             direction LR
-            subgraph Sensors_Left["Sensors 1-4 Column (81 px)"]
-                s1["Sensor 1\nMetric + Value\nStatus Icon"]
-                s2["Sensor 2"]
-                s3["Sensor 3"]
-                s4["Sensor 4"]
-            end
-            subgraph Sensors_Right["Sensors 5-8 Column (81 px)"]
-                s5["Sensor 5"]
-                s6["Sensor 6"]
-                s7["Sensor 7"]
-                s8["Sensor 8"]
-            end
-            subgraph Propeller["Propeller / LED Legend (50 px)"]
-                propeller["Animated Propeller\n(frame 48px x 48px)"]
-                ledinfo["LED Legend:\nRed pulse every X L Green = Ready Blue = Flow"]
-            end
+            left["x=2 label, x=18 value<br/>sensors 1-4"]
+            right["x=114 label, x=130 value<br/>sensors 5-8"]
         end
+        f1["y=124  Footer hint"]
+        bar1["x=232, y=14  Scrollbar - position in the level's ring"]
+    end
 
-        subgraph Footer["Footer (20 px)"]
-            buttons["UP/DOWN = Pages • ENTER = Action • Long ENTER = Idle"]
-        end
+    subgraph P0["P0 - Global Status: identity, flow, the dots, network"]
+        direction TB
+        h0["y=2  Title"]
+        r0["y=14  'Total Current Flow', unit at x=116, value at x=152<br/><i>%7.2f, right-aligned on one column</i>"]
+        dots["y=30, x=60  FOUR FLOW DOTS<br/><i>one step per repaint - see the note below</i>"]
+        v0["y=80  Since reset, m3 at x=153"]
+        m0["y=92  Max flow"]
+        n0["y=108  legend.status - WiFi and MQTT, one line"]
+        f0["y=124  Footer hint"]
+        bar0["x=232, y=14  Scrollbar"]
+    end
+
+    subgraph Notes["Two things the geometry does not show"]
+        direction TB
+        repaint["REPAINT is a full fillScreen plus a redraw of every element.<br/>1000 ms on an info page, 80 ms while an editor or countdown is live,<br/>immediate on a screen change. The SPI arbiter can veto a frame."]
+        dotnote["The dots advance ONE position per repaint, not per elapsed millisecond.<br/>A rate derived from flow would be sampled far slower than it advances at 1 Hz<br/>and the chase would alias into apparent randomness."]
     end

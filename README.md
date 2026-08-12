@@ -139,16 +139,21 @@ machinery that does not exist, and status files reporting finished work as pendi
 
 | Trust | Treat with care |
 | --- | --- |
-| `docs/Project definitions/Gesture_Reference.md` — every ✅ names the test that earns it | `web/mockup/README.md` — describes a portrait display and an empty dataset |
+| `docs/Requirements/Gesture_Reference.md` — every ✅ names the test that earns it | `web/mockup/README.md` — describes a portrait display and an empty dataset |
 | `docs/active_work/open_decisions.md` — the de-facto decision record | `docs/Requirements/feature addition/UI_Firmware_Interface.md` — lists 4 actions where there are 15 |
 | `docs/Requirements/Project_document.md` §4.1–§4.2 — the register map, verified against the headers | `docs/Requirements/Implementation_Alignment_Report.md` — audits a file layout that no longer exists |
 | `MEMORY.md` — session handoff, rewritten 2026-08-01 | Any undated status claim |
 
-In `open_decisions.md`, ✅ means **agreed**, not **landed**; the emoji is severity and the status
-is in the `Decision:` line.
+`open_decisions.md` was rewritten on 2026-08-12 and now lists only what is genuinely open — two
+defects and two unbuilt things. The caveat that used to sit here (✅ meaning *agreed* rather than
+*landed*, with the heading emoji disagreeing with the `Decision:` line) is gone with the old file,
+which is preserved at `docs/archive/open_decisions-closed-2026-08-12.md`.
 
-`Loadable_UI_Menu_Packs.md` is a good specification of something **not yet built** — no SD-card
-code exists. Read it as a plan, not a description.
+`Loadable_UI_Menu_Packs.md` **is built**, contrary to what this paragraph used to say: the `.uipack`
+format, its reader, the SD storage adapter, the loader, the firmware-drawn selector, the boot-time
+selection ladder and the SPI arbitration all exist under `src/ui/pack/` and `src/bus/`. What is *not*
+built is the versioning that keeps a third-party pack valid as the catalogue grows — see **N-b** in
+`docs/active_work/open_decisions.md`.
 
 ---
 

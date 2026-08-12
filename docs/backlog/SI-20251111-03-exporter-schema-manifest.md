@@ -1,10 +1,11 @@
 # Story: SI-20251111-03-exporter-schema-manifest — Firmware Manifest & Exporter Enhancements
 
-> **Naming Convention**  
-> Store active story specs under `docs/missing implementation/` using the identifier format above, for example `SI-20250517-01-led-diagnostics.md`.  
-> Reference the story from `docs/stories to implement/missing_implementation_stories.md` with the same ID so incremental progress stays traceable.
+> **Naming convention.** Story specs live in `docs/backlog/` using the identifier format above. The
+> two directories this note used to name — `docs/missing implementation/` and `docs/stories to
+> implement/` — were renamed to `docs/backlog/` and `docs/active_work/`, and there is no
+> `missing_implementation_stories.md` index: `docs/active_work/open_decisions.md` is what gets read.
 
-**Status:** pending  
+**Status:** mostly delivered — see *Where this actually stands* below (updated 2026-08-12)  
 **Author:** Matteo  
 **Last Updated:** 2025-11-11  
 **Linked Requirements:** docs/Requirements/feature addition/Display_Web_UI_Workspace_Improvements.md#33-import--export-enhancements  
@@ -67,3 +68,35 @@ Extend the importer/exporter pipeline to support the richer UI schema: ingest fi
 
 - Implementation depends on spike SI-20251111-05 to pick the C++ design pattern for exposing actions.
 - Coordinate with documentation story to keep Help content accurate.
+
+---
+
+## Where this actually stands (2026-08-12)
+
+Checked against the code, not against memory. Most of this story shipped under other commits, which is
+why every checkbox above is still empty — nobody came back to tick them.
+
+**Delivered:**
+
+- The C++ to JSON generator exists: `Water-Flow-Meter-PlatformIO/tools/manifest_gen` emits
+  `actionManifest.json` from the firmware catalogues, and CI fails if the committed manifest drifts
+  from a fresh generation.
+- Ajv validation of both the dataset and the manifest, in `web/mockup/src/schema/`.
+- The exporter emits IR and C++ for value placeholders, scrollbars and hierarchical screens, and
+  **fails** on a binding that names a value or action the firmware does not have —
+  `manifest-value-coverage` and `manifest-action-coverage` in `tools/exporter/validation.ts`.
+- The export panel reports manifest, validation and compile status, including the PlatformIO compile
+  check (`platformio-compile`).
+
+**Not delivered, and two of the three no longer should be:**
+
+- *Schemas in `shared/`, versioned.* They live in `web/mockup/src/schema/` and are not versioned.
+  Moving them buys nothing today — the firmware does not read them — so this is a real gap only when
+  a second consumer appears. See **N-b** in `../active_work/open_decisions.md`, which is the same
+  question wearing a different hat.
+- *Animation assets.* Dropped by decision C1: the scrollbar shipped and animation stays authorable
+  but export-blocked. Not pending — decided against.
+- *Backward compatibility via schema versioning and migration utilities.* This is exactly **N-b**.
+  Tracked there, not here.
+
+**What is genuinely left:** nothing this story should own. The residue is N-b.
