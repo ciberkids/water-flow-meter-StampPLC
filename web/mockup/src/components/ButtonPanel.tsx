@@ -95,7 +95,7 @@ const COMBOS: { id: string; label: string; hint: string; buttons: PhysicalButton
   {
     id: "selector",
     label: "BtnA + BtnB + BtnC — hold 3 s",
-    hint: "Select Menu recovery page (Loadable_UI_Menu_Packs §3.4.1). Firmware-drawn, so the panel reports it rather than showing it.",
+    hint: "Select Menu — the only way to switch UI pack (Loadable_UI_Menu_Packs §3.4.1). Fires WHILE held at 3 s; the panel draws it, because the firmware does.",
     buttons: ["up", "down", "enter"]
   }
 ];

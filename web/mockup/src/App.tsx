@@ -1,7 +1,8 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import packageJson from "../package.json";
-import { DisplayViewport } from "./components/DisplayViewport";
+import { DisplayViewport, PackSelectorEntry } from "./components/DisplayViewport";
+import { movePackCursor, packCommitAction } from "./utils/packSelector";
 import { ScreenSelector } from "./components/ScreenSelector";
 import screensData from "./data/screens.json";
 import actionManifestJson from "./data/actionManifest.json";
@@ -1303,6 +1304,24 @@ export function App() {
   }, []);
   const [selectorOpen, setSelectorOpen] = useState<boolean>(false);
   const selectorOpenRef = useRef<boolean>(false);
+
+  /**
+   * The Select Menu's contents and cursor (Loadable_UI_Menu_Packs §3.4).
+   *
+   * A simulated card, because the simulator has no SD slot — but shaped by the firmware's rules rather
+   * than invented: index 0 is the built-in default, always present and always first, and it is the one
+   * marked active until something else is selected. `PackSelector::kMaxEntries` is 8, chosen against the
+   * panel rather than the filesystem, and `truncated` is what the device says out loud when the card held
+   * more, so an operator whose pack is missing is told rather than left to suspect the card.
+   */
+  const [packEntries, setPackEntries] = useState<PackSelectorEntry[]>([
+    { label: "Built-in", active: true },
+    { label: "production", active: false },
+    { label: "commissioning", active: false }
+  ]);
+  const [packCursor, setPackCursor] = useState(0);
+  const packCursorRef = useRef(0);
+  packCursorRef.current = packCursor;
   const setSelector = useCallback((open: boolean) => {
     selectorOpenRef.current = open;
     setSelectorOpen(open);
@@ -1813,6 +1832,21 @@ export function App() {
           });
         } else if (event.button === "up+down+enter" && event.kind === "long") {
           setSelector(true);
+          /**
+           * `openPackSelector` does two more things, and both matter to what the operator sees.
+           *
+           * The cursor resets to the top, because `PackSelector::begin` rebuilds the list from scratch
+           * every time rather than caching it — the card may have been swapped since the page was last
+           * open, and a stale list would offer a pack that is no longer there. Keeping the cursor where
+           * it was would point at a different pack than it did before.
+           *
+           * And any pending edit is DISCARDED (`endEdit()`), because §3.4.1's gesture is reachable from
+           * inside a value editor, and committing a half-typed value on the way out would be worse than
+           * losing it.
+           */
+          setPackCursor(0);
+          editorStateRef.current = null;
+          setEditorState(null);
           recordTraceEntry({
             id: "ui.selector.open",
             label: "Select Menu opened (firmware-drawn page)",
@@ -1835,15 +1869,49 @@ export function App() {
        */
       if (selectorOpenRef.current) {
         const closes = event.button === "enter";
+        const activeIndex = Math.max(packEntries.findIndex((entry) => entry.active), 0);
+        const commit =
+          closes && event.kind !== "long"
+            ? packCommitAction(packCursorRef.current, activeIndex)
+            : null;
         if (closes) {
           setSelector(false);
+          /**
+           * A committed choice writes the pack pointer and REBOOTS. The simulator cannot reboot, so it
+           * moves the active marker — which is what the operator would see on the way back — and the
+           * trace entry carries what actually happened.
+           *
+           * `packCommitAction` is consulted rather than assumed, because selecting the pack that is
+           * already running does NOTHING: the firmware refuses to write the same pointer and restart
+           * into an identical UI, since that "would look like the device ignoring the press". A
+           * simulator that moved a marker and logged a reboot there would be inventing an event.
+           */
+          if (commit && commit !== "nothing") {
+            setPackEntries((current) =>
+              current.map((entry, index) => ({ ...entry, active: index === packCursorRef.current }))
+            );
+          }
+        } else if (event.button === "up" || event.button === "down") {
+          /**
+           * UP/DOWN move the cursor on ANY event kind, not just a tap.
+           *
+           * `handlePackSelector` drains the queue and switches on the button alone, so a long press and
+           * a held repeat move it too. Clamped rather than wrapped, matching `PackSelector::moveCursor`.
+           */
+          const delta = event.button === "down" ? 1 : -1;
+          // WRAPS, per `PackSelector::moveCursor`. Clamping was my first guess and it was wrong.
+          setPackCursor((current) => movePackCursor(current, delta, packEntries.length));
         }
         recordTraceEntry({
           id: closes ? "ui.selector.close" : "ui.selector.move",
           label: closes
             ? event.kind === "long"
               ? "Select Menu closed without selecting"
-              : "Select Menu choice committed (the device reboots into the pack)"
+              : commit === "nothing"
+                ? "Select Menu: that pack is already running — no write, no reboot"
+                : commit === "delete-pointer"
+                  ? "Select Menu: pointer deleted, rebooting into the built-in menu"
+                  : "Select Menu: pointer written, rebooting into the selected pack"
             : "Select Menu cursor moved",
           functionName: "Pack selector",
           trigger: triggerLabel,
@@ -2615,6 +2683,13 @@ export function App() {
                       showGrid={showGrid}
                       boundValues={resolvedValues}
                       powered={displayOn}
+                      // The firmware-drawn page. Passing it is what stops the chrome claiming the Select
+                      // Menu is open while the panel shows the screen underneath it.
+                      packSelector={
+                        selectorOpen
+                          ? { entries: packEntries, cursor: packCursor, truncated: false }
+                          : null
+                      }
                       // The dots chase at the rate the aggregate flow implies, and only while the
                       // loop is advancing — on the device they are driven by millis(), so a stopped
                       // loop is a stopped panel.

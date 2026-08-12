@@ -1,10 +1,25 @@
-import { CSSProperties, useCallback, useMemo } from "react";
+import { CSSProperties, Fragment, useCallback, useMemo } from "react";
 import { sampleValueFor } from "../utils/sampleValues";
 import { ScreenElement } from "../types";
 import { LayoutReport } from "../utils/layout";
+import { packSelectorLayout } from "../utils/packSelector";
 import { useTheme } from "../theme/ThemeProvider";
 import { DeviceGrid } from "./DeviceGrid";
 import { TransitionPreviewState } from "../types/transitionPreview";
+
+/** One row of the Select Menu. Index 0 is always the built-in default and never comes from the card. */
+export interface PackSelectorEntry {
+  label: string;
+  /** The menu currently running, marked so the operator can see what they are leaving (§3.4). */
+  active: boolean;
+}
+
+export interface PackSelectorState {
+  entries: PackSelectorEntry[];
+  cursor: number;
+  /** The card held more than the page can show. Said out loud rather than silently dropped. */
+  truncated: boolean;
+}
 
 interface DisplayViewportProps {
   layout: LayoutReport;
@@ -43,6 +58,19 @@ interface DisplayViewportProps {
    * keep rendering.
    */
   powered?: boolean;
+  /**
+   * The firmware-drawn Select Menu, when it is open (Loadable_UI_Menu_Packs §3.4).
+   *
+   * The one page the dataset cannot describe. `UiRenderer::drawPackSelector` short-circuits before every
+   * table-driven path, which is the requirement rather than an optimisation — §3.4.1 says the gesture
+   * must work "even if the active pack draws nothing at all", and that is only true if the firmware owns
+   * this page. So the simulator has to own it too.
+   *
+   * Until this existed the app tracked `selectorOpen`, wrote it into the status line and the loop badge,
+   * and left the 240x135 area showing whatever screen the operator had been on — the chrome claiming a
+   * page was open while the panel showed a different one, which is the one thing a viewport must not do.
+   */
+  packSelector?: PackSelectorState | null;
   /**
    * Aggregate flow in L/MIN (§2a), which decides whether the flow-dot chase runs at all.
    *
@@ -86,6 +114,82 @@ function scrollThumbStyle(indicator: string | undefined): CSSProperties {
   return { top: `${top}%`, height: `${height}%` };
 }
 
+/**
+ * `UiRenderer::drawPackSelector`, in the browser.
+ *
+ * Every coordinate here is the firmware's, read off ui_renderer.cpp rather than chosen: the title at
+ * (4, 4), rows at `20 + i * 12`, the cursor glyph at x=4 and the label at x=16, the active marker at
+ * x=228, and the footer at y=116. A page that looked right but sat two pixels off would be the mockup
+ * disagreeing with the device about the one screen that exists to be dependable.
+ *
+ * The cursor is a leading `>` and not an inverted row, for the firmware's own reason: Font0 has no bold,
+ * and inverting a row would mean a fillRect per row — more bus traffic on the page that most needs to
+ * work when other things do not.
+ *
+ * The two colours are the firmware's mapping, not a guess: `ui_renderer.cpp` resolves `highlightColor_`
+ * from the palette's `value` and `warningColor_` from `badgeBorder`, so a theme edit moves both surfaces
+ * together instead of the panel and the preview drifting apart on a recoloured pack.
+ */
+function renderPackSelector(
+  selector: PackSelectorState,
+  baseStyle: CSSProperties,
+  theme: ReturnType<typeof useTheme>["theme"]
+) {
+  const at = (left: number, top: number, extra?: CSSProperties): CSSProperties => ({
+    ...baseStyle,
+    left: `${left}px`,
+    top: `${top}px`,
+    ...extra
+  });
+
+  // A selector with no entries is a wiring bug, not an operator-visible state, and the firmware says so
+  // on screen rather than painting an empty page nobody can escape. Mirrored, including the colour.
+  if (selector.entries.length === 0) {
+    return (
+      <>
+        <span style={at(packSelectorLayout.title.x, packSelectorLayout.title.y)}>SELECT MENU</span>
+        <span
+          style={at(packSelectorLayout.cursorX, packSelectorLayout.rows.top, {
+            color: theme.colors.badgeBorder
+          })}
+        >
+          {packSelectorLayout.unavailableText}
+        </span>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <span style={at(packSelectorLayout.title.x, packSelectorLayout.title.y)}>SELECT MENU</span>
+      {selector.entries.map((entry, index) => {
+        const top = packSelectorLayout.rows.top + index * packSelectorLayout.rows.pitch;
+        const onCursor = index === selector.cursor;
+        return (
+          <Fragment key={`${index}-${entry.label}`}>
+            <span
+              style={at(packSelectorLayout.cursorX, top, onCursor ? { color: theme.colors.value } : undefined)}
+            >
+              {onCursor ? ">" : " "}
+            </span>
+            <span
+              style={at(packSelectorLayout.labelX, top, onCursor ? { color: theme.colors.value } : undefined)}
+            >
+              {entry.label}
+            </span>
+            {entry.active ? (
+              <span style={at(packSelectorLayout.activeMarkerX, top)}>*</span>
+            ) : null}
+          </Fragment>
+        );
+      })}
+      <span style={at(packSelectorLayout.footer.x, packSelectorLayout.footer.y)}>
+        {selector.truncated ? packSelectorLayout.truncatedText : packSelectorLayout.footerText}
+      </span>
+    </>
+  );
+}
+
 export function DisplayViewport({
   layout,
   zoomPercent,
@@ -96,6 +200,7 @@ export function DisplayViewport({
   firmwareValues,
   bindingDisplay = "sample",
   powered = true,
+  packSelector = null,
   aggregateFlowLpm = 0,
   animating = false,
   repaintCount = 0
@@ -419,7 +524,11 @@ export function DisplayViewport({
               surface is the faithful render, and any "display off" wording belongs to the chrome outside
               this frame. (The dataset's state-idle screen carries a "- Display off -" label; that label
               is the dataset being unfaithful, and it is not what we draw here.) */}
-          {powered ? renderElementsForLayout(layout, { scrollIndicator }) : null}
+          {powered && packSelector
+            ? renderPackSelector(packSelector, baseStyle, theme)
+            : powered
+              ? renderElementsForLayout(layout, { scrollIndicator })
+              : null}
           {pendingTransition ? (
             <div
               className={`transition-overlay transition-overlay--${pendingTransition.effect}`}
