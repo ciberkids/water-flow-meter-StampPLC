@@ -61,6 +61,8 @@ import {
   SimulatedSensor,
   advanceSensorTick,
   createSensorTable,
+  resetMeasured,
+  resetSession,
   isPerSensorSetting,
   kSensorCount,
   pulsesForFlow,
@@ -415,7 +417,21 @@ export function App() {
       unit: value.unit,
       description: value.description,
       category: value.category,
-      perSensor: value.perSensor
+      perSensor: value.perSensor,
+      /**
+       * The descriptor's fixed set, WITHOUT WHICH the panel cannot offer a dropdown.
+       *
+       * This mapping listed six fields and dropped `options`, so every row arrived with none and
+       * `renderRow` fell through to its text-box branch — for booleans and enums alike. The
+       * `<select>` branch existed, was commented, and could never render: changing a sensor from On
+       * to Off meant typing "Off" exactly, and typing it wrong looked identical to typing it right,
+       * because the box kept the text and the resolver ignored it.
+       *
+       * A projection that silently drops the one field a downstream branch depends on is the same
+       * defect shape as a catalogue entry with no resolver arm — everything compiles, nothing works,
+       * and the dead branch reads as evidence that it does.
+       */
+      options: value.options
     }));
   }, [firmwareManifest]);
 
@@ -431,6 +447,20 @@ export function App() {
   /** Manual pins for the bindings memory does not model (network, UART summary, page titles…). */
   const [pinnedValues, setPinnedValues] = useState<Record<string, string>>({});
   const [loopRunning, setLoopRunning] = useState<boolean>(false);
+  /**
+   * How the loop drives flow, and at what figure when it is steady.
+   *
+   * The loop only ever drove each channel with a fresh `Math.random()`, which shows the panel moving and
+   * makes the three aggregate readings impossible to check: the total, the peak and the accumulated
+   * volume all change every tick, so there is nothing to compare a number against. Steady mode makes all
+   * three arithmetic — `channels x flow`, `flow`, and `channels x flow x t / 60`.
+   *
+   * 60 L/min is the default because it is 1 L/s exactly, which makes the volume mental arithmetic, and
+   * it sits well inside the default q_max of 150 L/min so the engine does not clamp it. A value ABOVE a
+   * channel's own q_max still clamps — visibly, per channel, which is worth seeing rather than hiding.
+   */
+  const [flowMode, setFlowMode] = useState<"random" | "steady">("random");
+  const [steadyFlowLpm, setSteadyFlowLpm] = useState<number>(60);
   const [loopIntervalMs, setLoopIntervalMs] = useState<number>(1000);
   /**
    * A sensor picked in the values panel, used only when navigation implies none.
@@ -1760,19 +1790,39 @@ export function App() {
     setRepaintCount((count) => count + 1);
     setSensors((table) =>
       table.map((sensor) => {
-        // Inside the channel's OWN ceiling. A flat 0..4 L/s target exceeded the default q_max of
-        // 150 L/min (2.5 L/s), so the engine clamped and several rows sat at exactly 2.50 for runs of
-        // ticks — indistinguishable from a frozen row, which is the one distinction this panel exists
-        // to make legible.
-        const ceilingLps = sensor.qMaxLpm / 60;
-        const target = sensor.connected && sensor.ready ? Math.random() * ceilingLps : 0;
+        /**
+         * The channel's own ceiling, in L/MIN — the unit `pulsesForFlow` takes.
+         *
+         * This was `sensor.qMaxLpm / 60`, named `ceilingLps`, and handed straight to a function whose
+         * parameter is `targetFlowLpm`. `pulsesForFlow` used to multiply by 60 to convert a caller's
+         * L/s; when storage moved to L/min (§2a) that conversion was correctly deleted and this caller
+         * was not updated, so every simulated run since has driven the channels at ONE SIXTIETH of the
+         * intended flow. Eight channels topped out around 20 L/min where the hardware would be at 1200.
+         *
+         * Nothing caught it because nothing checked: with a random target per tick, no reading has a
+         * value anyone can compare against. It surfaced the moment a steady flow made the aggregate
+         * arithmetic — 8 channels at 60 L/min showing a total of 8.00 rather than 480.00.
+         */
+        const ceilingLpm = sensor.qMaxLpm;
+        const live = sensor.connected && sensor.ready;
+        /**
+         * `steady` asks for the SAME figure on every channel and every tick, so the aggregate, the peak
+         * and the volume can be checked by hand. It is still clamped to the channel's own ceiling — the
+         * engine would clamp it anyway, and a channel with a smaller q_max visibly running slower than
+         * its neighbours is the correct picture rather than a discrepancy to explain away.
+         */
+        const target = !live
+          ? 0
+          : flowMode === "steady"
+            ? Math.min(steadyFlowLpm, ceilingLpm)
+            : Math.random() * ceilingLpm;
         return advanceSensorTick(sensor, {
           pulses: pulsesForFlow(sensor, target, loopIntervalMs),
           elapsedMs: loopIntervalMs
         });
       })
     );
-  }, [loopIntervalMs]);
+  }, [flowMode, loopIntervalMs, steadyFlowLpm]);
 
   useEffect(() => {
     if (!loopRunning) {
@@ -1783,7 +1833,16 @@ export function App() {
   }, [handleLoopTick, loopIntervalMs, loopRunning]);
 
   const handleMemoryReset = useCallback(() => {
-    setSensors(createSensorTable());
+    /**
+     * Clears the MEASUREMENTS and keeps the configuration, which is the device's own
+     * `reset-all-measured`. It used to call `createSensorTable()`, restoring the seeded 123.45 L and
+     * 140.4 L/min — so the one control offering a clean slate handed back fabricated readings, and any
+     * attempt to check the aggregates started from 0.99 m3 of volume that had never flowed.
+     *
+     * Calibration survives deliberately: it is what somebody is usually editing when they want a run
+     * from zero, and the device keeps it too. A full return to defaults is a page reload.
+     */
+    setSensors((table) => resetMeasured(table));
     setPinnedValues({});
   }, []);
 
@@ -2076,11 +2135,7 @@ export function App() {
              * whose bottom frame IS the page the descent started from.
              */
             setSensors((table) =>
-              table.map((sensor) =>
-                action === "core.action.reset-session"
-                  ? { ...sensor, sessionLiters: 0 }
-                  : { ...sensor, sessionLiters: 0, cumulativeLiters: 0, maxFlowLpm: 0 }
-              )
+              action === "core.action.reset-session" ? resetSession(table) : resetMeasured(table)
             );
             const origin = navParentsRef.current[0];
             clearNavParents();
@@ -2298,12 +2353,10 @@ export function App() {
         targetScreenId: flow.targetScreenId
       });
       if (flow.actionId === "core.action.reset-session" || flow.actionId === "core.action.reset-all-measured") {
+        // Same two helpers as the keyboard path above — the three fields a measured reset clears had
+        // been written out by hand in both places, which is two chances to forget the third.
         setSensors((table) =>
-          table.map((sensor) =>
-            flow.actionId === "core.action.reset-session"
-              ? { ...sensor, sessionLiters: 0 }
-              : { ...sensor, sessionLiters: 0, cumulativeLiters: 0, maxFlowLpm: 0 }
-          )
+          flow.actionId === "core.action.reset-session" ? resetSession(table) : resetMeasured(table)
         );
       }
       if (flow.actionId === "core.action.factory-reset") {
@@ -2744,6 +2797,10 @@ export function App() {
                   onRunningChange={setLoopRunning}
                   onIntervalChange={setLoopIntervalMs}
                   onSingleTick={handleLoopTick}
+                  flowMode={flowMode}
+                  steadyFlowLpm={steadyFlowLpm}
+                  onFlowModeChange={setFlowMode}
+                  onSteadyFlowChange={setSteadyFlowLpm}
                   onResetValues={handleMemoryReset}
                 />
 

@@ -726,6 +726,38 @@ export function advanceSensorTick(sensor: SimulatedSensor, input: SensorTickInpu
 }
 
 /**
+ * `core.action.reset-all-measured` — clear every channel's measured values, keep its calibration.
+ *
+ * One home for what "reset the measurements" means, because App.tsx had spelled the three fields out
+ * twice inline and the loop panel's own reset did something different again: it rebuilt the table from
+ * `createSensorTable()`, which RESTORES the seeded 123.45 L and 140.4 L/min rather than clearing
+ * anything. A reset that puts fabricated readings back is not a reset, and it made the aggregates
+ * impossible to check by hand — a steady 60 L/min on eight channels showed 1.15 m3 after twenty
+ * seconds, being 0.99 m3 of seed plus the 0.16 m3 actually accumulated.
+ *
+ * `instantFlowLpm` is included, unlike the firmware's action, for a reason the firmware does not have:
+ * the device recomputes instant flow from pulses on its very next pass, so clearing it there would be
+ * redundant. Here the loop may be stopped, and a stopped simulator showing flow it is not producing is
+ * the same lie in a different place.
+ */
+export function resetMeasured(table: readonly SimulatedSensor[]): SimulatedSensor[] {
+  return table.map((sensor) =>
+    normalizeSensor({
+      ...sensor,
+      instantFlowLpm: 0,
+      sessionLiters: 0,
+      cumulativeLiters: 0,
+      maxFlowLpm: 0
+    })
+  );
+}
+
+/** `core.action.reset-session` — the session volume only, on every channel. */
+export function resetSession(table: readonly SimulatedSensor[]): SimulatedSensor[] {
+  return table.map((sensor) => normalizeSensor({ ...sensor, sessionLiters: 0 }));
+}
+
+/**
  * The pulse count that makes a channel read `targetFlowLpm` over an interval.
  *
  * The inverse of the engine's two lines — `frequency = pulses / elapsedSeconds` and

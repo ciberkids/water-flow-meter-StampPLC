@@ -94,7 +94,16 @@ export type ArmedCombo = "display-off" | "selector" | null;
 
 /** That projection, as the one implementation of it — the adapter must not re-derive it. */
 export function armedComboOf(state: ComboState): ArmedCombo {
-  if (state.selector.active) {
+  /**
+   * ARMED means "something is still pending", so a fired selector is not armed any more.
+   *
+   * Without the `!fired` test the panel went on announcing "Select Menu opens at 3 s" for as long as
+   * the three buttons stayed down — after the menu had already opened. The gesture worked perfectly and
+   * its only feedback said it had not happened yet, which was reported as the gesture being broken:
+   * "it behaves like all the buttons are pressed and nothing happens". Holding longer, which is what
+   * that message invites, does nothing at all — the machine fires once per grab.
+   */
+  if (state.selector.active && !state.selector.fired) {
     return "selector";
   }
   return state.displayOff.active ? "display-off" : null;

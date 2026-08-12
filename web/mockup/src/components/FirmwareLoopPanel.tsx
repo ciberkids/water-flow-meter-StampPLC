@@ -25,6 +25,21 @@ interface FirmwareLoopPanelProps {
     onIntervalChange: (intervalMs: number) => void;
     onSingleTick: () => void;
     onResetValues: () => void;
+    /**
+     * How the loop drives each channel's flow.
+     *
+     * `random` is the original: a fresh `Math.random()` per channel per tick, inside that channel's own
+     * q_max. Good for seeing the panel move, useless for checking arithmetic — the aggregate, the peak
+     * and the accumulated volume all change every tick, so there is nothing to compare against.
+     *
+     * `steady` holds every connected, ready channel at one figure, which makes all three verifiable by
+     * hand: the total is `channels x flow`, the peak settles at `flow`, and the volume after `t` seconds
+     * is `channels x flow x t / 60`.
+     */
+    flowMode: "random" | "steady";
+    steadyFlowLpm: number;
+    onFlowModeChange: (mode: "random" | "steady") => void;
+    onSteadyFlowChange: (lpm: number) => void;
 }
 
 const secondaryButton = {
@@ -46,7 +61,11 @@ export function FirmwareLoopPanel({
     onRunningChange,
     onIntervalChange,
     onSingleTick,
-    onResetValues
+    onResetValues,
+    flowMode,
+    steadyFlowLpm,
+    onFlowModeChange,
+    onSteadyFlowChange
 }: FirmwareLoopPanelProps) {
     return (
         <div className="firmware-loop-panel">
@@ -101,6 +120,35 @@ export function FirmwareLoopPanel({
                     />
                     <span style={{ minWidth: 42, textAlign: "right" }}>{intervalMs} ms</span>
                 </label>
+
+                {/* Flow source. Deliberately beside the interval: the two together are what decides
+                    whether a run is for watching or for checking. */}
+                <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#9caec6" }}>
+                    Flow:
+                    <select
+                        value={flowMode}
+                        onChange={(event) => onFlowModeChange(event.target.value as "random" | "steady")}
+                        style={{ fontSize: 11 }}
+                    >
+                        <option value="random">random per tick</option>
+                        <option value="steady">steady</option>
+                    </select>
+                </label>
+
+                {flowMode === "steady" ? (
+                    <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#9caec6" }}>
+                        at
+                        <input
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={steadyFlowLpm}
+                            onChange={(event) => onSteadyFlowChange(Number(event.target.value))}
+                            style={{ width: 64, fontSize: 11 }}
+                        />
+                        L/min per channel
+                    </label>
+                ) : null}
             </div>
 
             {/* Status: what the loop and the device are doing right now. */}
@@ -110,6 +158,13 @@ export function FirmwareLoopPanel({
                         <>
                             <span className="loop-dot" aria-hidden="true" />
                             Running — advancing device memory every {intervalMs} ms
+                            {flowMode === "steady" ? (
+                                <span style={{ opacity: 0.8 }}>
+                                    {" "}· steady {steadyFlowLpm} L/min x {connectedSensors} ready ={" "}
+                                    {(steadyFlowLpm * connectedSensors).toFixed(2)} L/min total, peak{" "}
+                                    {steadyFlowLpm.toFixed(2)}
+                                </span>
+                            ) : null}
                         </>
                     ) : (
                         "Stopped — memory holds its last values"

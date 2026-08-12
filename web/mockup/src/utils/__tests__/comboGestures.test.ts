@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyButtons,
+  armedComboOf,
   comboConsumed,
   initialComboState,
   kDisplayOffMaxMs,
@@ -382,5 +383,45 @@ describe("the machine is a value, not a mutable object", () => {
     // And replaying the same pass from the same state gives the same answer, which it could not
     // if the first call had consumed anything.
     expect(tickCombos(threeHeld, allThree, kSelectorHoldMs)).toEqual(opened);
+  });
+});
+
+describe("a fired selector is no longer ARMED", () => {
+  it("stops reporting 'armed' once it has opened, while the buttons stay down", () => {
+    /**
+     * The gesture always worked; its only feedback said otherwise. `armedComboOf` reported "selector"
+     * for as long as all three buttons were held, so the panel went on announcing "Select Menu opens at
+     * 3 s" after the menu had opened — and holding longer, which is what that message invites, does
+     * nothing, because the machine fires once per grab. It was reported as the gesture being broken.
+     */
+    const held = { up: true, down: true, enter: true };
+    let state = initialComboState();
+
+    state = applyButtons(state, held, 0).state;
+    expect(armedComboOf(state)).toBe("selector");
+
+    state = tickCombos(state, held, kSelectorHoldMs - 1).state;
+    expect(armedComboOf(state), "still pending one millisecond before the threshold").toBe("selector");
+
+    const fired = tickCombos(state, held, kSelectorHoldMs);
+    expect(fired.events.map((event) => event.kind)).toEqual(["open-pack-selector"]);
+    expect(armedComboOf(fired.state), "fired, so nothing is pending any more").toBeNull();
+
+    // And it stays unarmed for as long as the grab lasts, rather than re-arming on later passes.
+    const later = tickCombos(fired.state, held, kSelectorHoldMs + 5000);
+    expect(later.events).toEqual([]);
+    expect(armedComboOf(later.state)).toBeNull();
+  });
+
+  it("re-arms on a fresh grab", () => {
+    const held = { up: true, down: true, enter: true };
+    let state = applyButtons(initialComboState(), held, 0).state;
+    state = tickCombos(state, held, kSelectorHoldMs).state;
+    expect(armedComboOf(state)).toBeNull();
+
+    // Let go of one button, then take all three again: the attempt is discarded, `fired` included.
+    state = applyButtons(state, { up: true, down: false, enter: true }, 4000).state;
+    state = applyButtons(state, held, 5000).state;
+    expect(armedComboOf(state)).toBe("selector");
   });
 });

@@ -6,12 +6,14 @@ import {
   kSensorCount,
   mayUndersample,
   pulsesForFlow,
+  resetMeasured,
+  resetSession,
   resolveSensorBinding,
   sensorAt,
   sensorIndexForScreen,
   setSensor,
-  warningSensorNumbers,
-  type SimulatedSensor
+  type SimulatedSensor,
+  warningSensorNumbers
 } from "../sensorConfig";
 import manifest from "../../data/actionManifest.json";
 import type { FirmwareValueDefinition } from "../../types/firmwareActions";
@@ -361,5 +363,83 @@ describe("undersampling", () => {
     expect(resolveSensorBinding("config.sensor.undersamplingFlag", flagged, 3)).toBe("WARN");
     expect(resolveSensorBinding("config.sensor.undersamplingFlag", flagged, 4)).toBe("OK");
     expect(resolveSensorBinding("config.sensor.undersamplingFlag", flagged, 0)).toBe("-");
+  });
+});
+
+describe("the flow a caller asks for is the flow that comes back", () => {
+  it("round-trips a target through pulsesForFlow and advanceSensorTick", () => {
+    /**
+     * The guard the loop simulator needed and did not have.
+     *
+     * `pulsesForFlow` once multiplied by 60 to convert a caller's L/s; when storage moved to L/min
+     * (§2a) that conversion was correctly deleted, and App.tsx's loop was not updated — it went on
+     * passing `qMaxLpm / 60` under the name `ceilingLps`. So every simulated run drove the channels at
+     * one sixtieth of the intended flow for months, and nothing noticed, because a random target per
+     * tick produces no number anybody can check.
+     *
+     * This is that check: ask for a flow, get that flow.
+     */
+    const [sensor] = createSensorTable();
+    for (const targetLpm of [1, 30, 60, 149]) {
+      const ticked = advanceSensorTick(sensor, {
+        pulses: pulsesForFlow(sensor, targetLpm, 1000),
+        elapsedMs: 1000
+      });
+      expect(ticked.instantFlowLpm, `asked for ${targetLpm} L/min`).toBeCloseTo(targetLpm, 6);
+    }
+  });
+
+  it("accumulates the volume the flow implies", () => {
+    // 60 L/min for 30 s is 30 L. The loop panel's steady mode exists so this is checkable on screen;
+    // it is checkable here so a regression does not wait for somebody to look.
+    let sensor = { ...createSensorTable()[0], sessionLiters: 0, cumulativeLiters: 0, maxFlowLpm: 0 };
+    for (let tick = 0; tick < 30; tick += 1) {
+      sensor = advanceSensorTick(sensor, {
+        pulses: pulsesForFlow(sensor, 60, 1000),
+        elapsedMs: 1000
+      });
+    }
+    expect(sensor.sessionLiters).toBeCloseTo(30, 6);
+    expect(sensor.cumulativeLiters).toBeCloseTo(30, 6);
+    expect(sensor.maxFlowLpm).toBeCloseTo(60, 6);
+  });
+
+  it("clamps a steady target to the channel's own q_max rather than exceeding it", () => {
+    // What the loop does when the steady figure is above a channel's ceiling: the engine clamps, and
+    // the channel visibly runs slower than its neighbours instead of the panel hiding the difference.
+    const sensor = { ...createSensorTable()[0], qMaxLpm: 100 };
+    const ticked = advanceSensorTick(sensor, {
+      pulses: pulsesForFlow(sensor, 500, 1000),
+      elapsedMs: 1000
+    });
+    expect(ticked.instantFlowLpm).toBe(100);
+  });
+});
+
+describe("resetting measured values", () => {
+  it("clears the four readings and keeps the calibration", () => {
+    const table = createSensorTable();
+    const cleared = resetMeasured(table);
+    for (const sensor of cleared) {
+      expect(sensor.instantFlowLpm).toBe(0);
+      expect(sensor.sessionLiters).toBe(0);
+      expect(sensor.cumulativeLiters).toBe(0);
+      expect(sensor.maxFlowLpm).toBe(0);
+      // Calibration survives — the device's reset-all-measured keeps it, and it is usually what
+      // somebody is editing when they want a run from zero.
+      expect(sensor.qMaxLpm).toBe(150);
+      expect(sensor.multiplier).toBe(10);
+      expect(sensor.connected).toBe(true);
+    }
+  });
+
+  it("clears only the session volume for a session reset", () => {
+    const table = createSensorTable();
+    const cleared = resetSession(table);
+    for (const sensor of cleared) {
+      expect(sensor.sessionLiters).toBe(0);
+      expect(sensor.cumulativeLiters).toBeGreaterThan(0);
+      expect(sensor.maxFlowLpm).toBeGreaterThan(0);
+    }
   });
 });

@@ -105,14 +105,19 @@ function statusFor(armedCombo: ArmedCombo, displayOn: boolean, selectorOpen: boo
   text: string;
   modifier: string;
 } {
+  /**
+   * What HAPPENED outranks what is pending. `armedComboOf` no longer reports a fired selector as armed,
+   * so these two cannot both be true any more — but the order is the belt to that braces: the message
+   * an operator most needs is the one describing the state they are now in.
+   */
+  if (selectorOpen) {
+    return { text: "Select Menu open — firmware draws this page, not the dataset", modifier: "fired" };
+  }
   if (armedCombo === "selector") {
     return { text: "BtnA + BtnB + BtnC held — Select Menu opens at 3 s", modifier: "armed" };
   }
   if (armedCombo === "display-off") {
     return { text: "BtnA + BtnB held — release within 1 s for display off", modifier: "armed" };
-  }
-  if (selectorOpen) {
-    return { text: "Select Menu open — firmware draws this page, not the dataset", modifier: "fired" };
   }
   if (!displayOn) {
     return { text: "Display off — any button wakes it", modifier: "fired" };
