@@ -55,6 +55,7 @@ two to disagree about.
 | See a specific screen's agreed layout | `docs/Requirements/feature addition/Display_Per_Screen_Spec.md` |
 | Wire something new into the firmware | `docs/Requirements/feature addition/UI_Firmware_Interface.md` |
 | Work on SD-card menu packs | `docs/Requirements/feature addition/Loadable_UI_Menu_Packs.md` |
+| Switch the device to a different UI | Hold **UP + DOWN + ENTER for 3 s** — the Select Menu. It is firmware-drawn and in no screen table, so nothing on the panel advertises it; `docs/Requirements/Gesture_Reference.md` §3.6 |
 | Integrate over Modbus | [[Modbus Registers]] — the whole map, generated from the firmware headers |
 | Read telemetry into Home Assistant | [[MQTT]] |
 | Get a device onto a network | [[WiFi]] |

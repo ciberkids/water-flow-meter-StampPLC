@@ -140,6 +140,41 @@ Declared durations, from the generated table: reset totals **3000 ms**, reset se
 The UI is always at P0 on wake, because going idle clears the stack and discards any pending
 edit. That was **not** true until 2026-08-01; see §8.5.
 
+### 3.6. From anywhere: the Select Menu (pack selector)
+
+Added 2026-08-12. This file documented every gesture except this one, and the omission had a cost —
+someone reviewing the documentation could not find the UI-selection menu at all, because it appears in
+no gesture table, no navigation diagram and no screen list.
+
+| Gesture | Effect | Status |
+| --- | --- | --- |
+| UP + DOWN + ENTER held 3 s | Opens the Select Menu, from any screen at any depth | ✅ `recoveryGestureTests` |
+| UP/DOWN while it is open | Move the cursor. Any event kind, not just a tap | ✅ |
+| ENTER-short while it is open | Commit the choice — **the device reboots into that pack** | ✅ |
+| ENTER-long while it is open | Leave without selecting | ✅ |
+
+Four properties make it unlike every other gesture in this file:
+
+- **It fires while still held**, at 3 000 ms, not on release. Letting go early produces nothing at all.
+- **It swallows every discrete button event for the whole hold**, so releasing the three buttons cannot
+  also page the ring or open an editor underneath it.
+- **The page is firmware-drawn.** `UiRenderer` short-circuits to `drawPackSelector` before every
+  table-driven path, which is the requirement rather than an optimisation: §3.4.1 of
+  `feature addition/Loadable_UI_Menu_Packs.md` says the gesture must work "even if the active pack
+  draws nothing at all", and that is only true if the firmware draws this page itself. It is therefore
+  in no screen table, and a dataset-driven mockup cannot preview it.
+- **It is the only route in.** Which is a defect — see below.
+
+> **The discoverable route is specified and not built.** §3.4 requires the firmware to append a Select
+> Menu page to the end of the root level, "always reachable by paging with UP/DOWN", and §3.4.1 argues
+> the case at length: a hidden gesture is "precisely the anti-pattern we retired with the blind UP+DOWN
+> factory-reset combo — nothing on screen says it exists, nothing confirms you are partway through it,
+> and it cannot be documented on the device itself."
+>
+> The root ring has nine entries and none of them is the selector; nothing in the navigator or the
+> router appends one. So the shipped behaviour is the hidden gesture the requirement rejected, with the
+> paged entry it asked for absent. Recorded in `active_work/open_decisions.md`.
+
 ---
 
 ## 4. Why ENTER means different things

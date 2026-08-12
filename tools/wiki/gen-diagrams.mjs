@@ -137,6 +137,24 @@ function navigationTree() {
     out.push("    end");
   });
 
+  /**
+   * The one screen the dataset cannot describe, declared here because it has to appear somewhere.
+   *
+   * The Select Menu is FIRMWARE-DRAWN: `UiRenderer` short-circuits to `drawPackSelector` before every
+   * table-driven path, so it exists in no screen table and this generator has nothing to read. Leaving
+   * it out was worse than hardcoding it — a reader of a diagram titled "the navigation tree" concluded
+   * the pack selector did not exist, which is exactly what happened.
+   *
+   * It is drawn detached, with no edge from any level, because that is the truth: it is reachable ONLY
+   * by the three-button gesture, from anywhere, and `Loadable_UI_Menu_Packs.md` §3.4's root-level entry
+   * — the paged, discoverable route — is specified and not built.
+   */
+  out.push('    subgraph FW["Firmware-drawn, in no screen table"]');
+  out.push("        direction TB");
+  out.push('        pack_selector["Select Menu (pack selector)<br/><i>UP+DOWN+ENTER held 3 s, from any screen at any depth</i><br/><i>UP/DOWN move - ENTER selects and reboots - held ENTER leaves</i>"]');
+  out.push('        pack_note["NOT reachable by paging.<br/><i>Loadable_UI_Menu_Packs 3.4 specifies a root-level entry; it is not implemented,<br/>so the only route is the gesture and nothing on screen advertises it.</i>"]');
+  out.push("    end");
+
   // Descend edges, drawn after the subgraphs so mermaid places the levels first.
   for (const screen of dataset.screens) {
     const target = descendOf(screen);

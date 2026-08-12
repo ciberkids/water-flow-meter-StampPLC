@@ -67,10 +67,10 @@ a rule filed under "archive" is a rule nobody reads. Same class as the wire-enco
 
 ---
 
-## Two defects found and not yet fixed
+## Three defects found and not yet fixed
 
-Neither is a decision — both are known, both have a diagnosis, and they are here because this is the
-file that gets read before picking up work.
+None is a decision — each is known, each has a diagnosis, and they are here because this is the file
+that gets read before picking up work.
 
 ### The provisioning portal drops its own form submission 🔴
 
@@ -88,6 +88,32 @@ own `collectHeaders` comment warns about.
 
 **Fix.** Route `PortalForm::kFormAction` for `HTTP_POST` in the adapter. One line, and it wants a way
 to be tested that does not need a browser.
+
+### The Select Menu is reachable only by a hidden gesture 🟡
+
+`Loadable_UI_Menu_Packs.md` §3.4 requires the firmware to append a Select Menu page to the end of the
+root level, "always reachable by paging with UP/DOWN". §3.4.1 then argues the case explicitly: a hidden
+gesture is *"precisely the anti-pattern we retired with the blind UP+DOWN factory-reset combo — nothing
+on screen says it exists, nothing confirms you are partway through it, and it cannot be documented on
+the device itself."*
+
+**What shipped is the hidden gesture and not the page.** The root ring has nine entries — P0..P6, WiFi,
+MQTT — and none is the selector; nothing in `UiNavigator` or `UiScreenRouter` appends one. The
+UP+DOWN+ENTER 3 s recovery gesture works and is tested, so the selector is reachable; it is simply
+undiscoverable, which is the specific outcome §3.4.1 was written to prevent.
+
+Found 2026-08-12 by someone reviewing the documentation and being unable to locate the UI-selection
+menu — which is the failure mode in miniature: if a reader with the source open cannot find it, an
+operator with only the panel certainly cannot.
+
+**Decide.** Either append the root-level entry (a dataset row plus the navigator honouring a
+firmware-owned entry the packs cannot remove — note it must survive a pack that defines its own root
+level, which is the whole reason §3.4 puts it in the firmware), or amend §3.4 and §3.4.1 to record that
+the gesture is the only route and accept the discoverability cost. The gesture is now documented in
+`../Requirements/Gesture_Reference.md` §3.6 and drawn in `../diagrams/ui_navigation_tree.mermaid`, so
+at least it is findable on paper.
+
+**Blocks.** Nothing technically. It blocks an operator finding the feature.
 
 ### §3.1's held UP/DOWN navigation step is emitted and answered by nothing 🟡
 

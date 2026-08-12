@@ -97,6 +97,11 @@ flowchart TB
         confirm_reset_portal_login["Reset portal login?"]
         confirm_reset_portal_login_back["Reset portal login - Back"]
     end
+    subgraph FW["Firmware-drawn, in no screen table"]
+        direction TB
+        pack_selector["Select Menu (pack selector)<br/><i>UP+DOWN+ENTER held 3 s, from any screen at any depth</i><br/><i>UP/DOWN move - ENTER selects and reboots - held ENTER leaves</i>"]
+        pack_note["NOT reachable by paging.<br/><i>Loadable_UI_Menu_Packs 3.4 specifies a root-level entry; it is not implemented,<br/>so the only route is the gesture and nothing on screen advertises it.</i>"]
+    end
     info_p2_cumulative_m3 -- ENTER --> confirm_reset_totals
     info_p3_session_m3 -- ENTER --> confirm_reset_session
     info_p5_enter_config -- ENTER --> config_modbus
