@@ -25,3 +25,7 @@ web/mockup/test_output.txt
 
 # TypeScript incremental build cache.
 *.tsbuildinfo
+
+# The documentation gate's dependencies (tools/wiki/package.json). Its lockfile IS committed, so CI
+# installs exactly what was verified locally.
+tools/wiki/node_modules/

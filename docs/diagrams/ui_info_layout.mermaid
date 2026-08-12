@@ -1,7 +1,7 @@
 %% Info page layout — 240 x 135 px, LANDSCAPE
-%%
+
 %% Corrected 2026-08-12 against the dataset. What this diagram used to claim, and why each was wrong:
-%%
+
 %%   - "135 x 240" portrait, with a 20 px header, 200 px body and 20 px footer. Decision D3 settled the
 %%     panel as landscape 240 x 135; the firmware was already calling setRotation(1) and it was the
 %%     DATASET that had been authored portrait. Those band heights were portrait arithmetic.
@@ -10,7 +10,7 @@
 %%   - "ENTER = Countdown" in the header and "Long ENTER = Idle" in the footer. Neither is true: a
 %%     countdown lives on its own confirm screen reached by ENTER-short, and held ENTER ascends one
 %%     level. Display-off is UP+DOWN.
-%%
+
 %% Coordinates are the real element positions. Row pitch is 20 px, and the 6/7/8 px glyph metrics of
 %% Font0 are what make 40 columns x 17 rows the whole budget.
 flowchart TB

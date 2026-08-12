@@ -133,6 +133,17 @@ jobs:
             exit 1
           fi
 
+      # Diagram VALIDITY, which is a different property from the freshness check above and needs its
+      # own gate. Four diagrams shipped in the commit that added the freshness check and not one of
+      # them rendered: each carried a bare `%%` separator, which mermaid does not treat as a comment,
+      # so GitHub showed an error where the picture should be. The freshness gate passed throughout —
+      # correctly, because the generator was faithfully producing something invalid.
+      - name: Install the documentation gate's dependencies
+        run: npm ci --no-audit --no-fund --prefix tools/wiki
+
+      - name: Every diagram will actually render
+        run: node tools/wiki/check-diagrams.mjs
+
       # Dry run: builds every page and refuses if any repository path a page cites has moved.
       # A wiki page pointing at a renamed file is how a reader decides the docs are stale and
       # stops trusting the rest of them.

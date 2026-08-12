@@ -1,0 +1,13 @@
+{
+  "name": "wiki-tools",
+  "private": true,
+  "type": "module",
+  "description": "Dependencies for the documentation gates only. Kept out of web/mockup so the app's install is not carrying a Markdown parser, and out of the repo root so there is no ambiguity about which workspace owns what.",
+  "scripts": {
+    "check:diagrams": "node check-diagrams.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0",
+    "mermaid": "^11.16.1"
+  }
+}
