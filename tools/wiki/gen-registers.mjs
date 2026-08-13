@@ -74,6 +74,7 @@ const GLOBAL = [
   ["REG_MASTER_RESET_ALL_SENSORS", "w", "u16", "—", "Write `1` to clear every channel's totals, session and peak. Any other value is ignored."],
   ["REG_MASTER_RESET_ALL_MEASURED", "w", "u16", "—", "Write `1` to clear every channel's measured values but keep its calibration."],
   ["REG_MASTER_RESET_ALL_SESSION", "w", "u16", "—", "Write `1` to clear every channel's session volume only."],
+  ["REG_MASTER_RESET_ALL_MAX", "w", "u16", "—", "Write `1` to clear every channel's peak flow and nothing else. The cheapest reset here: the peak is volatile, never written to NVS, so a power cycle already clears it. Its own command because the alternatives destroy something — register 22 takes the session volume with it, register 21 the lifetime total."],
   ["REG_UNDERSAMPLING_FLAGS", "r", "u16", "—", "Bit *n* set = sensor *n+1* is pulsing faster than the sampler can count, so its readings are low. Also published on the MQTT diagnostics topic."],
   ["REG_LED_RED_VOLUME_STEP", "rw", "u16", "L", "How many litres of cumulative volume make the red LED pulse once."],
   ["REG_LED_RED_PULSE_PERIOD", "rw", "u16", "ms", "How long that pulse lasts."],
