@@ -65,7 +65,10 @@ jobs:
       # list. Nothing noticed, because nothing ran the generator.
       - name: Fail if the skeleton generator no longer reproduces the dataset
         run: |
-          node tools/skeleton/generate.mjs
+          # --write, WITHOUT WHICH THIS GATE CANNOT FAIL. The generator prints its summary and writes
+          # nothing unless asked, so the diff below was always empty and the check had been passing
+          # unconditionally — including across the several dataset changes made since it was added.
+          node tools/skeleton/generate.mjs --write
           cd "$GITHUB_WORKSPACE"
           if ! git diff --quiet -- web/mockup/src/data/screens.json; then
             echo "::error::tools/skeleton/generate.mjs no longer reproduces src/data/screens.json."

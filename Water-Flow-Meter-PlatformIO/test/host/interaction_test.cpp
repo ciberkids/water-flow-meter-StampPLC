@@ -1243,6 +1243,46 @@ void confirmSessionCountdownTests() {
   dev.tick(30);
 }
 
+/**
+ * P4's peak reset — the cheapest guard in the system, and a reversal.
+ *
+ * P4 deliberately claimed no gesture: it had descended into `confirm-reset-session`, which was removed
+ * because an operator looking at max flow got a screen warning about session totals, and because the peak
+ * is volatile so nothing persistent was there to reset. The second half of that was backwards — volatile
+ * is what makes a reset CHEAP, and a channel that spiked once went on showing the spike until the next
+ * power cycle unless somebody gave up real data to clear it.
+ */
+void maxFlowResetTests() {
+  std::printf("\n[P4 resets the peak, and only the peak]\n");
+
+  Device dev;
+  dev.boot();
+  check(walkToInfoPage(dev, UiPage::MaxFlow), "paged the info ring to P4");
+  dev.tap(ButtonInputManager::Button::Enter);
+  check(onScreen(dev, "confirm-reset-max-flow"),
+        "ENTER-short on P4 opens ITS OWN confirm, not the session one");
+
+  harness::writes.clear();
+  dev.press(ButtonInputManager::Button::Enter, true);
+  for (int i = 0; i < 12; ++i) dev.tick(50);   // ~600 ms in
+  check(!wroteOnce(plc::REG_MASTER_RESET_ALL_MAX), "600 ms is not enough — nothing issued yet");
+
+  for (int i = 0; i < 24; ++i) dev.tick(50);   // past 1500 ms
+  check(wroteOnce(plc::REG_MASTER_RESET_ALL_MAX),
+        "holding ENTER for 1.5 s issues the reset-max-flow command");
+  // The distinction that justifies a command of its own: neither of the destructive resets is issued.
+  check(!wroteOnce(plc::REG_MASTER_RESET_ALL_MEASURED),
+        "and NOT the measured reset, which would take the lifetime total");
+  check(!wroteOnce(plc::REG_MASTER_RESET_ALL_SESSION),
+        "and NOT the session reset, which would take the session volume");
+  check(onScreen(dev, "toast-max-flow-reset"), "its acknowledgement toast is shown");
+  for (int i = 0; i < 24; ++i) dev.tick(100);
+  check(dev.controller.navigator().depth() == 0 && onScreen(dev, "info-p4-max-flow"),
+        "and it returns to P4, the page the operator started from");
+  dev.press(ButtonInputManager::Button::Enter, false);
+  dev.tick(30);
+}
+
 void confirmAbortTests() {
   std::printf("\n[releasing ENTER before zero aborts — §4.3 note 1]\n");
 
@@ -2105,6 +2145,7 @@ int main() {
   repaintCadenceTests();
   confirmCountdownTests();
   confirmSessionCountdownTests();
+  maxFlowResetTests();
   confirmAbortTests();
   factoryResetHoldTests();
   linkApplyProtocolTests();

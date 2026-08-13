@@ -849,6 +849,21 @@ const CONFIRMS = [
     holdMs: 1500, action: "core.action.reset-session", toast: "toast-session-reset"
   },
   {
+    /**
+     * P4's own reset, and the cheapest one here: 1500 ms, matching the session reset rather than the
+     * 3 s of the totals.
+     *
+     * The peak is volatile — never written to NVS, so a power cycle already clears it — which is exactly
+     * why it earns a route of its own. Before this it was reachable only as a side effect of the session
+     * or measured resets, so clearing a spike after fixing the pipe that caused it meant giving up real
+     * data. A hold is still required, because it is still a reset and the panel has one vocabulary for
+     * those; it is simply the shortest one.
+     */
+    id: "confirm-reset-max-flow", name: "Reset peak flow?", title: "RESET PEAK FLOW?",
+    warn: "Clears the peak on every", warn2: "channel. Totals are kept.",
+    holdMs: 1500, action: "core.action.reset-max-flow", toast: "toast-max-flow-reset"
+  },
+  {
     id: "confirm-factory-reset", name: "Factory reset?", title: "FACTORY RESET?",
     warn: "Wipes NVS and reboots.", warn2: "This cannot be undone.",
     holdMs: 30000, action: "core.action.factory-reset", toast: null
@@ -913,6 +928,7 @@ const TOASTS = [
   { id: "toast-session-reset", name: "Session reset", message: "SESSION RESET" },
   // R8.2a. Names the credential explicitly rather than saying "done": the operator now has to go
   // and use admin/admin, and a toast that does not say so leaves them guessing what changed.
+  { id: "toast-max-flow-reset", name: "Peak flow reset", message: "PEAK RESET" },
   { id: "toast-portal-login-reset", name: "Portal login reset", message: "LOGIN: admin/admin" }
 ];
 for (const t of TOASTS) {
@@ -1083,19 +1099,24 @@ for (const s of kept) {
   }
   // Info pages: ENTER-short now descends into a confirm screen or Configuration.
   /**
-   * P4 has NO descent, and that is deliberate.
+   * P4 descends into a confirm of ITS OWN, which is a reversal worth recording.
    *
-   * It used to descend into `confirm-reset-session`, the same confirm P3 opens. Two problems. The
-   * operator was looking at max flow and got a screen titled RESET SESSION? warning about session
-   * totals, which reads as the wrong screen arriving. And the peak is VOLATILE by decision — a power
-   * cycle clears it — so there is no persistent thing on this page for a reset to act on.
+   * It used to descend into `confirm-reset-session` — the same confirm P3 opens — and that was removed
+   * for two good reasons: an operator looking at max flow got a screen titled RESET SESSION? warning
+   * about session totals, which reads as the wrong screen arriving; and the peak is volatile, so there
+   * was nothing persistent on the page for a reset to act on. The conclusion drawn at the time was that
+   * P4 should claim no gesture at all.
    *
-   * ENTER is therefore unattached here and simply ignored, which is the gesture contract: a screen
-   * either claims a gesture or the press does nothing.
+   * The second half of that reasoning was backwards. Volatile is not a reason to withhold a reset; it is
+   * what makes one CHEAP. A channel that spiked once keeps showing that spike until the next power cycle,
+   * and the only ways to clear it were the session and measured resets — both of which destroy real data
+   * to get at a number that costs nothing. So P4 now has its own confirm, its own action and its own
+   * register, and the first objection is answered by the screen being P4's rather than P3's.
    */
   const descend = {
     "info-p2-cumulative-m3": "confirm-reset-totals",
     "info-p3-session-m3": "confirm-reset-session",
+    "info-p4-max-flow": "confirm-reset-max-flow",
     "info-p5-enter-config": "config-modbus"
   }[s.id];
   // Every info page gets its ENTER flows rebuilt, not just those with a descent

@@ -27,6 +27,8 @@ inline constexpr ActionDescriptor kActionCatalogue[] = {
      "Persists the current configuration block to NVS and Modbus registers"},
     {"core.action.reset-session", "Reset session counters", "Issues the Reset Session Modbus command for all ready sensors"},
     {"core.action.reset-all-measured", "Reset all measured totals", "Issues the Reset All Measured Modbus command"},
+    {"core.action.reset-max-flow", "Reset peak flow",
+     "Issues the Reset Max Flow Modbus command; clears the volatile peak and nothing else"},
     {"core.action.factory-reset", "Factory reset", "Wipes NVS, clears Modbus config, and reboots"},
     {"core.action.reset-portal-login", "Reset portal login",
      "Restores the configuration portal login to admin/admin, leaving totals, calibration and "

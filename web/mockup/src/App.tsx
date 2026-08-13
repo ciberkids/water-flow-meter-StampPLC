@@ -61,6 +61,7 @@ import {
   SimulatedSensor,
   advanceSensorTick,
   createSensorTable,
+  resetMaxFlow,
   resetMeasured,
   resetSession,
   sensorAt,
@@ -2170,7 +2171,11 @@ export function App() {
                 activeScreenId = resolvedId;
               }
             }
-          } else if (action === "core.action.reset-session" || action === "core.action.reset-all-measured") {
+          } else if (
+            action === "core.action.reset-session" ||
+            action === "core.action.reset-all-measured" ||
+            action === "core.action.reset-max-flow"
+          ) {
             /**
              * A reset performed from level 0 RETURNS TO WHERE IT WAS STARTED — and actually resets.
              *
@@ -2186,7 +2191,11 @@ export function App() {
              * whose bottom frame IS the page the descent started from.
              */
             setSensors((table) =>
-              action === "core.action.reset-session" ? resetSession(table) : resetMeasured(table)
+              action === "core.action.reset-session"
+                ? resetSession(table)
+                : action === "core.action.reset-max-flow"
+                  ? resetMaxFlow(table)
+                  : resetMeasured(table)
             );
             const origin = navParentsRef.current[0];
             clearNavParents();
@@ -2403,11 +2412,19 @@ export function App() {
         actionParams: flow.actionParams ?? null,
         targetScreenId: flow.targetScreenId
       });
-      if (flow.actionId === "core.action.reset-session" || flow.actionId === "core.action.reset-all-measured") {
-        // Same two helpers as the keyboard path above — the three fields a measured reset clears had
-        // been written out by hand in both places, which is two chances to forget the third.
+      if (
+        flow.actionId === "core.action.reset-session" ||
+        flow.actionId === "core.action.reset-all-measured" ||
+        flow.actionId === "core.action.reset-max-flow"
+      ) {
+        // The same helpers as the keyboard path above — the fields each reset clears had been written out
+        // by hand in both places, which is two chances to forget one.
         setSensors((table) =>
-          flow.actionId === "core.action.reset-session" ? resetSession(table) : resetMeasured(table)
+          flow.actionId === "core.action.reset-session"
+            ? resetSession(table)
+            : flow.actionId === "core.action.reset-max-flow"
+              ? resetMaxFlow(table)
+              : resetMeasured(table)
         );
       }
       if (flow.actionId === "core.action.factory-reset") {

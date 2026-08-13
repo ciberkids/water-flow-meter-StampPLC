@@ -14,6 +14,19 @@ inline constexpr uint16_t REG_CONNECTED_SENSORS_BITMAP = 10;
 inline constexpr uint16_t REG_MASTER_RESET_ALL_SENSORS = 20;
 inline constexpr uint16_t REG_MASTER_RESET_ALL_MEASURED = 21;
 inline constexpr uint16_t REG_MASTER_RESET_ALL_SESSION = 22;
+/**
+ * Write 1 to clear every channel's peak flow, and nothing else.
+ *
+ * The cheapest reset in the system, and the only one that destroys nothing: the peak is volatile — it is
+ * never written to NVS, so a power cycle already clears it. That is exactly why it deserves its own
+ * command rather than being reachable only as a side effect of the two that do destroy something.
+ * `REG_MASTER_RESET_ALL_SESSION` clears the peak along with the session volume, and
+ * `REG_MASTER_RESET_ALL_MEASURED` takes the lifetime total with it, so before this an operator who
+ * wanted to clear a spike after fixing the pipe that caused it had to give up real data to do it.
+ *
+ * Appended at 23, leaving 24-29 free. The three older master resets at 20-22 keep their addresses.
+ */
+inline constexpr uint16_t REG_MASTER_RESET_ALL_MAX = 23;
 inline constexpr uint16_t REG_UNDERSAMPLING_FLAGS = 30;
 inline constexpr uint16_t REG_LED_RED_VOLUME_STEP = 31;
 inline constexpr uint16_t REG_LED_RED_PULSE_PERIOD = 32;

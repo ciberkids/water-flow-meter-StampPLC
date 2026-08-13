@@ -223,7 +223,8 @@ static constexpr ui_exporter::Element kInfoP4MaxFlowElements[] = {
 
 static constexpr ui_exporter::Flow kInfoP4MaxFlowFlows[] = {
     { "f-next", "Next page", "info-p5-enter-config", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous page", "info-p3-session-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 }
+    { "f-prev", "Previous page", "info-p3-session-m3", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Open", "confirm-reset-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
 static constexpr ui_exporter::TextPayload kInfoP5EnterConfig_InfoP5EnterConfigHdrTitle_Text = { "Configuration", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -1873,6 +1874,46 @@ static constexpr ui_exporter::Flow kConfirmResetSessionBackFlows[] = {
     { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
+static constexpr ui_exporter::TextPayload kConfirmResetMaxFlow_ConfirmResetMaxFlowTitle_Text = { "RESET PEAK FLOW?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfirmResetMaxFlow_ConfirmResetMaxFlowWarning1_Text = { "Clears the peak on every", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfirmResetMaxFlow_ConfirmResetMaxFlowWarning2_Text = { "channel. Totals are kept.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfirmResetMaxFlow_ConfirmResetMaxFlowTimerValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfirmResetMaxFlow_ConfirmResetMaxFlowFooterHint_Text = { "hold ENTER confirms  UP/DN back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kConfirmResetMaxFlowElements[] = {
+    { "overlay-bg", ui_exporter::ElementType::Box, 0, 0, 240, 135, nullptr, nullptr, nullptr },
+    { "title", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfirmResetMaxFlow_ConfirmResetMaxFlowTitle_Text, nullptr, nullptr },
+    { "warning-1", ui_exporter::ElementType::Text, 8, 48, 0, 0, &kConfirmResetMaxFlow_ConfirmResetMaxFlowWarning1_Text, nullptr, nullptr },
+    { "warning-2", ui_exporter::ElementType::Text, 8, 60, 0, 0, &kConfirmResetMaxFlow_ConfirmResetMaxFlowWarning2_Text, nullptr, nullptr },
+    { "timer-value", ui_exporter::ElementType::Value, 104, 84, 0, 0, &kConfirmResetMaxFlow_ConfirmResetMaxFlowTimerValue_Text, nullptr, "countdown.value" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmResetMaxFlow_ConfirmResetMaxFlowFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kConfirmResetMaxFlowFlows[] = {
+    { "f-next", "Next entry", "confirm-reset-max-flow-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "confirm-reset-max-flow-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-confirm", "Reset peak flow", "toast-max-flow-reset", ui_exporter::FlowTrigger::Timeout, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 1500, nullptr, nullptr, nullptr, "core.action.reset-max-flow", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kConfirmResetMaxFlowBack_ConfirmResetMaxFlowBackHdrTitle_Text = { "RESET PEAK FLOW?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfirmResetMaxFlowBack_ConfirmResetMaxFlowBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfirmResetMaxFlowBack_ConfirmResetMaxFlowBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kConfirmResetMaxFlowBackElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfirmResetMaxFlowBack_ConfirmResetMaxFlowBackHdrTitle_Text, nullptr, nullptr },
+    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfirmResetMaxFlowBack_ConfirmResetMaxFlowBackBackLabel_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmResetMaxFlowBack_ConfirmResetMaxFlowBackFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kConfirmResetMaxFlowBackFlows[] = {
+    { "f-next", "Next entry", "confirm-reset-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "confirm-reset-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
+};
+
 static constexpr ui_exporter::TextPayload kConfirmFactoryReset_ConfirmFactoryResetTitle_Text = { "FACTORY RESET?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfirmFactoryReset_ConfirmFactoryResetWarning1_Text = { "Wipes NVS and reboots.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfirmFactoryReset_ConfirmFactoryResetWarning2_Text = { "This cannot be undone.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -1981,6 +2022,20 @@ static constexpr ui_exporter::Flow kToastSessionResetFlows[] = {
     { "f-dismiss", "Dismiss", nullptr, ui_exporter::FlowTrigger::Timeout, ui_exporter::FlowButton::None, ui_exporter::FlowGesture::Short, 2000, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
+static constexpr ui_exporter::TextPayload kToastMaxFlowReset_ToastMaxFlowResetMessage_Text = { "PEAK RESET", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kToastMaxFlowReset_ToastMaxFlowResetSub_Text = { "Returning...", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kToastMaxFlowResetElements[] = {
+    { "overlay-bg", ui_exporter::ElementType::Box, 0, 0, 240, 135, nullptr, nullptr, nullptr },
+    { "message", ui_exporter::ElementType::Text, 8, 58, 0, 0, &kToastMaxFlowReset_ToastMaxFlowResetMessage_Text, nullptr, nullptr },
+    { "sub", ui_exporter::ElementType::Text, 8, 74, 0, 0, &kToastMaxFlowReset_ToastMaxFlowResetSub_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kToastMaxFlowResetFlows[] = {
+    { "f-dismiss", "Dismiss", nullptr, ui_exporter::FlowTrigger::Timeout, ui_exporter::FlowButton::None, ui_exporter::FlowGesture::Short, 2000, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
+};
+
 static constexpr ui_exporter::TextPayload kToastPortalLoginReset_ToastPortalLoginResetMessage_Text = { "LOGIN: admin/admin", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kToastPortalLoginReset_ToastPortalLoginResetSub_Text = { "Returning...", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
@@ -2062,12 +2117,15 @@ const ui_exporter::Screen kGeneratedScreens[] = {
     { "confirm-reset-totals-back", "Reset totals — Back", kConfirmResetTotalsBackElements, sizeof(kConfirmResetTotalsBackElements) / sizeof(kConfirmResetTotalsBackElements[0]), kConfirmResetTotalsBackFlows, sizeof(kConfirmResetTotalsBackFlows) / sizeof(kConfirmResetTotalsBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-reset-session", "Reset session?", kConfirmResetSessionElements, sizeof(kConfirmResetSessionElements) / sizeof(kConfirmResetSessionElements[0]), kConfirmResetSessionFlows, sizeof(kConfirmResetSessionFlows) / sizeof(kConfirmResetSessionFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-reset-session-back", "Reset session — Back", kConfirmResetSessionBackElements, sizeof(kConfirmResetSessionBackElements) / sizeof(kConfirmResetSessionBackElements[0]), kConfirmResetSessionBackFlows, sizeof(kConfirmResetSessionBackFlows) / sizeof(kConfirmResetSessionBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "confirm-reset-max-flow", "Reset peak flow?", kConfirmResetMaxFlowElements, sizeof(kConfirmResetMaxFlowElements) / sizeof(kConfirmResetMaxFlowElements[0]), kConfirmResetMaxFlowFlows, sizeof(kConfirmResetMaxFlowFlows) / sizeof(kConfirmResetMaxFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "confirm-reset-max-flow-back", "Reset peak flow — Back", kConfirmResetMaxFlowBackElements, sizeof(kConfirmResetMaxFlowBackElements) / sizeof(kConfirmResetMaxFlowBackElements[0]), kConfirmResetMaxFlowBackFlows, sizeof(kConfirmResetMaxFlowBackFlows) / sizeof(kConfirmResetMaxFlowBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-factory-reset", "Factory reset?", kConfirmFactoryResetElements, sizeof(kConfirmFactoryResetElements) / sizeof(kConfirmFactoryResetElements[0]), kConfirmFactoryResetFlows, sizeof(kConfirmFactoryResetFlows) / sizeof(kConfirmFactoryResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-factory-reset-back", "Factory reset — Back", kConfirmFactoryResetBackElements, sizeof(kConfirmFactoryResetBackElements) / sizeof(kConfirmFactoryResetBackElements[0]), kConfirmFactoryResetBackFlows, sizeof(kConfirmFactoryResetBackFlows) / sizeof(kConfirmFactoryResetBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-reset-portal-login", "Reset portal login?", kConfirmResetPortalLoginElements, sizeof(kConfirmResetPortalLoginElements) / sizeof(kConfirmResetPortalLoginElements[0]), kConfirmResetPortalLoginFlows, sizeof(kConfirmResetPortalLoginFlows) / sizeof(kConfirmResetPortalLoginFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-reset-portal-login-back", "Reset portal login — Back", kConfirmResetPortalLoginBackElements, sizeof(kConfirmResetPortalLoginBackElements) / sizeof(kConfirmResetPortalLoginBackElements[0]), kConfirmResetPortalLoginBackFlows, sizeof(kConfirmResetPortalLoginBackFlows) / sizeof(kConfirmResetPortalLoginBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "toast-totals-reset", "Totals reset", kToastTotalsResetElements, sizeof(kToastTotalsResetElements) / sizeof(kToastTotalsResetElements[0]), kToastTotalsResetFlows, sizeof(kToastTotalsResetFlows) / sizeof(kToastTotalsResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "toast-session-reset", "Session reset", kToastSessionResetElements, sizeof(kToastSessionResetElements) / sizeof(kToastSessionResetElements[0]), kToastSessionResetFlows, sizeof(kToastSessionResetFlows) / sizeof(kToastSessionResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "toast-max-flow-reset", "Peak flow reset", kToastMaxFlowResetElements, sizeof(kToastMaxFlowResetElements) / sizeof(kToastMaxFlowResetElements[0]), kToastMaxFlowResetFlows, sizeof(kToastMaxFlowResetFlows) / sizeof(kToastMaxFlowResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "toast-portal-login-reset", "Portal login reset", kToastPortalLoginResetElements, sizeof(kToastPortalLoginResetElements) / sizeof(kToastPortalLoginResetElements[0]), kToastPortalLoginResetFlows, sizeof(kToastPortalLoginResetFlows) / sizeof(kToastPortalLoginResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 }
 };
 
@@ -2092,7 +2150,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-11T13:44:47.574Z", 73, 630
+    "2026-08-13T06:48:19.537Z", 76, 643
 };
 
 }  // namespace ui_exporter

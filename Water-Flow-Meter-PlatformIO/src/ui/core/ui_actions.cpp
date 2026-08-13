@@ -147,6 +147,17 @@ void handleResetAllMeasured(const UiActionContext& ctx, const ui_exporter::Flow&
   ctx.modbus.applyHoldingWrite(plc::REG_MASTER_RESET_ALL_MEASURED, 1);
 }
 
+/**
+ * Clears the peak, and only the peak (P4's own reset).
+ *
+ * P4 had no reset route at all: the peak was reachable only through the session or measured resets, both
+ * of which destroy something persistent to get at a number that a power cycle clears for free.
+ */
+void handleResetMaxFlow(const UiActionContext& ctx, const ui_exporter::Flow&) {
+  ctx.controller.notifyInteraction(ctx.nowMs);
+  ctx.modbus.applyHoldingWrite(plc::REG_MASTER_RESET_ALL_MAX, 1);
+}
+
 void handleFactoryReset(const UiActionContext& ctx, const ui_exporter::Flow&) {
   ctx.controller.notifyInteraction(ctx.nowMs);
   if (ctx.factoryReset) {
@@ -347,6 +358,7 @@ constexpr UiActionBinding kDefaultBindings[] = {
     {"core.action.save-config", handleSaveConfig},
     {"core.action.reset-session", handleResetSession},
     {"core.action.reset-all-measured", handleResetAllMeasured},
+    {"core.action.reset-max-flow", handleResetMaxFlow},
     {"core.action.factory-reset", handleFactoryReset},
     {"core.action.reset-portal-login", handleResetPortalLogin},
     {"ui.action.nav.descend", handleNavDescend},

@@ -24,6 +24,7 @@ bool ModbusManager::isWritableAddress(uint16_t address) const {
       address == REG_MASTER_RESET_ALL_SENSORS ||
       address == REG_MASTER_RESET_ALL_MEASURED ||
       address == REG_MASTER_RESET_ALL_SESSION ||
+      address == REG_MASTER_RESET_ALL_MAX ||
       address == REG_LED_RED_VOLUME_STEP ||
       address == REG_LED_RED_PULSE_PERIOD ||
       address == REG_DISPLAY_FLOW_UNIT ||
@@ -184,6 +185,23 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
       deps_.ledController->markSessionsCleared();
       resetRuntimeCaches();
       evaluateSensorDiagnostics();
+      syncGlobalRegisters();
+    }
+    deps_.registers->setUint16(address, 0);
+    return true;
+  }
+
+  if (address == REG_MASTER_RESET_ALL_MAX) {
+    if (value == 1) {
+      for (std::size_t i = 0; i < deps_.sensorCount; ++i) {
+        if (deps_.sensors[i].inUse) {
+          deps_.sensors[i].maxFlowSinceReset = 0.0f;
+          syncSensorToHolding(i);
+        }
+      }
+      // Deliberately none of the rest of a measured reset: no NVS write, because the peak was never
+      // persisted; no markSessionsCleared, because the LED's pulse accounting follows VOLUME; and no
+      // touching the pending overrides, because nothing about the calibration has changed.
       syncGlobalRegisters();
     }
     deps_.registers->setUint16(address, 0);

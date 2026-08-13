@@ -32,6 +32,11 @@
       "description": "Issues the Reset All Measured Modbus command"
     },
     {
+      "id": "core.action.reset-max-flow",
+      "label": "Reset peak flow",
+      "description": "Issues the Reset Max Flow Modbus command; clears the volatile peak and nothing else"
+    },
+    {
       "id": "core.action.factory-reset",
       "label": "Factory reset",
       "description": "Wipes NVS, clears Modbus config, and reboots"

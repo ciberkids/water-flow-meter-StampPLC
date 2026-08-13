@@ -6,6 +6,7 @@ import {
   kSensorCount,
   mayUndersample,
   pulsesForFlow,
+  resetMaxFlow,
   resetMeasured,
   resetSession,
   resolveSensorBinding,
@@ -441,5 +442,32 @@ describe("resetting measured values", () => {
       expect(sensor.cumulativeLiters).toBeGreaterThan(0);
       expect(sensor.maxFlowLpm).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("resetting the peak only", () => {
+  it("clears max flow and keeps every volume", () => {
+    /**
+     * P4's own reset. The point of a separate helper is what it does NOT touch: the two resets that
+     * could previously reach the peak each destroy something persistent to get at a number a power
+     * cycle clears for free.
+     */
+    const cleared = resetMaxFlow(createSensorTable());
+    for (const sensor of cleared) {
+      expect(sensor.maxFlowLpm).toBe(0);
+      expect(sensor.sessionLiters).toBeGreaterThan(0);
+      expect(sensor.cumulativeLiters).toBeGreaterThan(0);
+      expect(sensor.instantFlowLpm).toBeGreaterThan(0);
+    }
+  });
+
+  it("is the only reset that keeps the session volume", () => {
+    const table = createSensorTable();
+    // Stated as a contrast, because the distinction is the whole reason it exists: a session reset takes
+    // the peak with it, so before this there was no way to clear one without the other.
+    expect(resetSession(table)[0].sessionLiters).toBe(0);
+    expect(resetMaxFlow(table)[0].sessionLiters).toBeGreaterThan(0);
+    expect(resetMeasured(table)[0].cumulativeLiters).toBe(0);
+    expect(resetMaxFlow(table)[0].cumulativeLiters).toBeGreaterThan(0);
   });
 });

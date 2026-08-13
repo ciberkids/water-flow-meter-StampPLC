@@ -752,6 +752,17 @@ export function resetMeasured(table: readonly SimulatedSensor[]): SimulatedSenso
   );
 }
 
+/**
+ * `core.action.reset-max-flow` — the peak only, on every channel.
+ *
+ * The cheapest reset in the system: the peak is volatile, so a power cycle already clears it, and nothing
+ * here is persisted. Its own function because the alternatives both destroy something — a session reset
+ * takes the session volume with it, a measured reset takes the lifetime total.
+ */
+export function resetMaxFlow(table: readonly SimulatedSensor[]): SimulatedSensor[] {
+  return table.map((sensor) => normalizeSensor({ ...sensor, maxFlowLpm: 0 }));
+}
+
 /** `core.action.reset-session` — the session volume only, on every channel. */
 export function resetSession(table: readonly SimulatedSensor[]): SimulatedSensor[] {
   return table.map((sensor) => normalizeSensor({ ...sensor, sessionLiters: 0 }));

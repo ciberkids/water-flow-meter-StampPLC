@@ -854,6 +854,17 @@
           },
           "targetScreenId": "info-p3-session-m3",
           "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-max-flow",
+          "actionId": "ui.action.nav.descend"
         }
       ]
     },
@@ -7511,6 +7522,168 @@
       ]
     },
     {
+      "id": "confirm-reset-max-flow",
+      "name": "Reset peak flow?",
+      "description": "Confirm screen. ENTER-short is unattached and ignored; ENTER held 1500 ms confirms, and releasing early abandons the countdown. UP/DOWN pages to < BACK.",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "kind": "box",
+          "x": 0,
+          "y": 0,
+          "width": 240,
+          "height": 135
+        },
+        {
+          "id": "title",
+          "kind": "text",
+          "x": 8,
+          "y": 30,
+          "content": "RESET PEAK FLOW?",
+          "emphasis": "strong"
+        },
+        {
+          "id": "warning-1",
+          "kind": "text",
+          "x": 8,
+          "y": 48,
+          "content": "Clears the peak on every",
+          "emphasis": "muted"
+        },
+        {
+          "id": "warning-2",
+          "kind": "text",
+          "x": 8,
+          "y": 60,
+          "content": "channel. Totals are kept.",
+          "emphasis": "muted"
+        },
+        {
+          "id": "timer-value",
+          "kind": "value",
+          "x": 104,
+          "y": 84,
+          "binding": "countdown.value",
+          "emphasis": "strong"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 8,
+          "y": 124,
+          "content": "hold ENTER confirms  UP/DN back",
+          "emphasis": "muted"
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-max-flow-back",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-max-flow-back",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-confirm",
+          "label": "Reset peak flow",
+          "trigger": {
+            "type": "timeout",
+            "durationMs": 1500,
+            "holdButton": "enter"
+          },
+          "actionId": "core.action.reset-max-flow",
+          "targetScreenId": "toast-max-flow-reset"
+        }
+      ]
+    },
+    {
+      "id": "confirm-reset-max-flow-back",
+      "name": "Reset peak flow — Back",
+      "description": "Ascends one level, out of RESET PEAK FLOW?.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "kind": "text",
+          "x": 8,
+          "y": 2,
+          "content": "RESET PEAK FLOW?"
+        },
+        {
+          "id": "back-label",
+          "kind": "text",
+          "x": 8,
+          "y": 50,
+          "content": "< BACK",
+          "emphasis": "strong"
+        },
+        {
+          "id": "footer-hint",
+          "kind": "text",
+          "x": 8,
+          "y": 124,
+          "content": "ENTER go back",
+          "emphasis": "muted"
+        },
+        {
+          "id": "level-position",
+          "kind": "scrollbar",
+          "x": 232,
+          "y": 14,
+          "width": 5,
+          "height": 104
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-max-flow",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-max-flow",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-back",
+          "label": "Back one level",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.nav.back"
+        }
+      ]
+    },
+    {
       "id": "confirm-factory-reset",
       "name": "Factory reset?",
       "description": "Confirm screen. ENTER-short is unattached and ignored; ENTER held 30000 ms confirms, and releasing early abandons the countdown. UP/DOWN pages to < BACK.",
@@ -7894,6 +8067,48 @@
           "x": 8,
           "y": 58,
           "content": "SESSION RESET",
+          "emphasis": "strong"
+        },
+        {
+          "id": "sub",
+          "kind": "text",
+          "x": 8,
+          "y": 74,
+          "content": "Returning...",
+          "emphasis": "muted"
+        }
+      ],
+      "flows": [
+        {
+          "id": "f-dismiss",
+          "label": "Dismiss",
+          "trigger": {
+            "type": "timeout",
+            "durationMs": 2000
+          },
+          "actionId": "ui.action.nav.back"
+        }
+      ]
+    },
+    {
+      "id": "toast-max-flow-reset",
+      "name": "Peak flow reset",
+      "description": "Acknowledgement toast. Auto-dismisses after 2 s with no button held (§3.8 auto timeout).",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "kind": "box",
+          "x": 0,
+          "y": 0,
+          "width": 240,
+          "height": 135
+        },
+        {
+          "id": "message",
+          "kind": "text",
+          "x": 8,
+          "y": 58,
+          "content": "PEAK RESET",
           "emphasis": "strong"
         },
         {
