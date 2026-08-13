@@ -85,18 +85,32 @@ const LONG_PRESS_HOLD_MS = 1650;
  */
 const CONFIRM_HOLD_MS = 3200;
 
-const COMBOS: { id: string; label: string; hint: string; buttons: PhysicalButton[] }[] = [
+/**
+ * The two multi-button gestures, each with the hold its own machine requires.
+ *
+ * These are CLICK-TO-PERFORM, like the two ENTER holds above and for the same reason: a control that
+ * demands three seconds of physically held mouse button is one people release early, and releasing the
+ * selector gesture early produces nothing at all — so the control looked broken every time. Reported as
+ * exactly that: "I click it and as soon as I release it releases."
+ *
+ * `ms` is the scripted duration, not the threshold. Display-off must be released INSIDE 1 s to count as a
+ * tap, so it gets a short press; the selector fires at 3000 ms while still held, so it gets a margin over
+ * that. Both then release, which is what the machine needs to see to settle.
+ */
+const COMBOS: { id: string; label: string; hint: string; buttons: PhysicalButton[]; ms: number }[] = [
   {
     id: "display-off",
     label: "BtnA + BtnB — tap",
     hint: "Display off and navigation reset to P0 (§3.1). Fires on RELEASE, within 1 s.",
-    buttons: ["up", "down"]
+    buttons: ["up", "down"],
+    ms: 200
   },
   {
     id: "selector",
     label: "BtnA + BtnB + BtnC — hold 3 s",
     hint: "Select Menu — the only way to switch UI pack (Loadable_UI_Menu_Packs §3.4.1). Fires WHILE held at 3 s; the panel draws it, because the firmware does.",
-    buttons: ["up", "down", "enter"]
+    buttons: ["up", "down", "enter"],
+    ms: CONFIRM_HOLD_MS
   }
 ];
 
@@ -134,6 +148,8 @@ export function ButtonPanel({
   onPressEnd
 }: ButtonPanelProps) {
   const [enterHeld, setEnterHeld] = useState<string | null>(null);
+  /** Which multi-button gesture is being performed for us right now, if any. */
+  const [comboHeld, setComboHeld] = useState<string | null>(null);
   const status = statusFor(armedCombo, displayOn, selectorOpen);
 
   /**
@@ -311,23 +327,37 @@ export function ButtonPanel({
         <div className="button-panel__combo-row">
           {COMBOS.map((combo) => {
             const held = combo.buttons.every((button) => pressed[button]);
+            const running = comboHeld === combo.id;
             return (
               <button
                 key={combo.id}
                 type="button"
-                className={held ? "combo active" : "combo"}
-                aria-pressed={held}
-                {...handlers(combo.buttons, held)}
+                className={held || running ? "combo active" : "combo"}
+                aria-pressed={held || running}
+                onClick={(event) => {
+                  event.preventDefault();
+                  if (comboHeld) return;
+                  setComboHeld(combo.id);
+                  combo.buttons.forEach(onPressStart);
+                  window.setTimeout(() => {
+                    combo.buttons.forEach(onPressEnd);
+                    setComboHeld(null);
+                  }, combo.ms);
+                }}
               >
                 <span className="combo__label">{combo.label}</span>
-                <span className="combo__hint">{combo.hint}</span>
+                <span className="combo__hint">
+                  {running ? `Holding ${combo.buttons.length} buttons…` : combo.hint}
+                </span>
               </button>
             );
           })}
         </div>
         <p className="button-panel__combos-hint">
-          One pointer can hold one pad, so these press their buttons together. The keyboard works too —
-          hold ↑ and ↓ (add ⏎ for the recovery gesture).
+          Click once and the panel performs the whole gesture, holding for as long as the device needs — a
+          three-second mouse hold is one people let go of early, and letting go early of the selector
+          gesture produces nothing. The keyboard still works by hand: hold ↑ and ↓, adding ⏎ for the
+          recovery gesture.
         </p>
       </div>
 
