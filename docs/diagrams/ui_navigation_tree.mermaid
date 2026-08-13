@@ -87,12 +87,17 @@ flowchart TB
         confirm_reset_session["Reset session?"]
         confirm_reset_session_back["Reset session - Back"]
     end
-    subgraph L10["Level: P6 - Factory Reset"]
+    subgraph L10["Level: P4 - Max Flow Since Reset"]
+        direction TB
+        confirm_reset_max_flow["Reset peak flow?"]
+        confirm_reset_max_flow_back["Reset peak flow - Back"]
+    end
+    subgraph L11["Level: P6 - Factory Reset"]
         direction TB
         confirm_factory_reset["Factory reset?"]
         confirm_factory_reset_back["Factory reset - Back"]
     end
-    subgraph L11["Level: W4 - Reset portal login"]
+    subgraph L12["Level: W4 - Reset portal login"]
         direction TB
         confirm_reset_portal_login["Reset portal login?"]
         confirm_reset_portal_login_back["Reset portal login - Back"]
@@ -104,6 +109,7 @@ flowchart TB
     end
     info_p2_cumulative_m3 -- ENTER --> confirm_reset_totals
     info_p3_session_m3 -- ENTER --> confirm_reset_session
+    info_p4_max_flow -- ENTER --> confirm_reset_max_flow
     info_p5_enter_config -- ENTER --> config_modbus
     config_modbus -- ENTER --> config_modbus_slave_id
     config_display -- ENTER --> config_display_led_volume
