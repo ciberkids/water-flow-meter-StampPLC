@@ -139,6 +139,8 @@ ModbusDependencies modbusDeps{.sensors = sensors,
                               .registers = &registerBank,
                               .net = &netSettings,
                               .ledController = &ledController,
+                              // So a session reset arriving by ANY route is dated (time/device_clock.h).
+                              .clock = &deviceClock,
                               .connectedBitmap = &connectedSensorsBitmap,
                               .undersamplingFlags = &undersamplingFlags,
                               .totalSessionLitersCache = &totalSessionLitersCache,

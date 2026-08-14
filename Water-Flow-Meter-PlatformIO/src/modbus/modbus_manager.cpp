@@ -170,6 +170,11 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
 
   if (address == REG_MASTER_RESET_ALL_MEASURED) {
     if (value == 1) {
+      // A measured reset clears the session volume as well, so it starts a new session and must be dated
+      // like one. Missing this would leave P3 showing a start time from before the totals were wiped.
+      if (deps_.clock) {
+        deps_.clock->noteSessionStart(millis());
+      }
       for (std::size_t i = 0; i < deps_.sensorCount; ++i) {
         if (deps_.sensors[i].inUse) {
           deps_.sensors[i].sessionLiters = 0.0f;
@@ -210,6 +215,11 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
 
   if (address == REG_MASTER_RESET_ALL_SESSION) {
     if (value == 1) {
+      // Dated here, where every route into a session reset converges — a master's write, the panel's
+      // confirm screen and the portal all arrive at this one command.
+      if (deps_.clock) {
+        deps_.clock->noteSessionStart(millis());
+      }
       for (std::size_t i = 0; i < deps_.sensorCount; ++i) {
         if (deps_.sensors[i].inUse) {
           deps_.sensors[i].sessionLiters = 0.0f;

@@ -14,6 +14,7 @@ class Preferences;
 #include "modbus/register_bank.h"
 #include "net/net_register_map.h"
 #include "modbus/register_map.h"
+#include "time/device_clock.h"
 #include "modbus/sensor_types.h"
 
 struct ModbusDependencies {
@@ -30,6 +31,18 @@ struct ModbusDependencies {
    */
   plc::NetSettings* net = nullptr;
   LedController* ledController = nullptr;
+  /**
+   * The device clock, so a session reset can be DATED. May be null.
+   *
+   * Reached from here for the same reason the network block is: this is where a session reset already
+   * lands, whether it came from a Modbus master, the panel or the portal. Stamping the time in
+   * firmware.cpp instead would mean finding every route into a reset and remembering each one — and the
+   * routes are exactly what this class exists to unify.
+   *
+   * Nullable because two host tests construct this struct and neither has a clock; the calls are guarded
+   * rather than the field being required, so adding it cannot break a test that has no opinion about time.
+   */
+  plc::DeviceClock* clock = nullptr;
   uint16_t* connectedBitmap = nullptr;
   uint16_t* undersamplingFlags = nullptr;
   double* totalSessionLitersCache = nullptr;
