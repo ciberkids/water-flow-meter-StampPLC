@@ -2150,7 +2150,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-13T06:48:19.537Z", 76, 643
+    "2026-08-14T06:52:05.515Z", 76, 643
 };
 
 }  // namespace ui_exporter

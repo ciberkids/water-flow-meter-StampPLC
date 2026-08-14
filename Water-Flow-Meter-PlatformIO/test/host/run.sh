@@ -28,6 +28,12 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/nav_test" \
 g++ "${CXXFLAGS[@]}" -o "$OUT/accel_test" \
   test/host/accel_test.cpp
 
+# The clock's trust model. Arduino-free on purpose: "does a device whose RTC lost power ever show a
+# timestamp" is a question that would otherwise need a bench and a power switch.
+g++ "${CXXFLAGS[@]}" -o "$OUT/device_clock_test" \
+  test/host/device_clock_test.cpp \
+  src/time/device_clock.cpp
+
 g++ "${CXXFLAGS[@]}" -o "$OUT/led_test" \
   test/host/led_test.cpp
 
@@ -151,6 +157,7 @@ g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/interaction_test" \
 "$OUT/nav_test"
 echo
 "$OUT/accel_test"
+"$OUT/device_clock_test"
 echo
 "$OUT/led_test"
 echo

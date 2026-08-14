@@ -56,6 +56,8 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "ui/core/ui_screen_router.h"
 #include "ui/core/ui_value_catalogue.h"
 #include "ui/pack/ui_pack_storage_sd.h"
+#include "time/device_clock.h"
+#include "time/rtc_boot_probe.h"
 #include "units.h"
 
 using namespace plc;
@@ -96,6 +98,15 @@ TaskHandle_t LogicTask;
 RegisterBank registerBank;
 LinkSettingsManager linkSettings;
 LedController ledController;
+
+/**
+ * Wall-clock time and whether it can be trusted (time/device_clock.h).
+ *
+ * Module-level like the LED controller because three surfaces read it — the panel, the Modbus block and
+ * MQTT — and a clock passed by argument through all three would be three chances to hand one of them a
+ * stale copy.
+ */
+plc::DeviceClock deviceClock;
 ButtonInputManager buttonInput;
 uint16_t connectedSensorsBitmap = 0;
 /**
@@ -1134,8 +1145,28 @@ void logicTaskCode(void * pvParameters) {
 // SETUP: Initializes hardware and creates the tasks
 //===================================================================
 void setup() {
+  /**
+   * BEFORE `begin()`, and this ordering is the whole design.
+   *
+   * `M5StamPLC.begin()` clears the RX8130CE's flag register, VLF included, and the library exposes no
+   * reader for it — so this single line is the only moment in the device's life when it can be known
+   * whether the clock ran across the last power cut. Moved below `begin()` it would always report a
+   * healthy clock, and a device whose RTC had lost power would publish a confident year-2000 timestamp
+   * to the panel, to Modbus and to MQTT. See time/rtc_boot_probe.h.
+   */
+  const bool rtcLostPower = plc::readRtcVoltageLowFlag();
+
   M5StamPLC.begin();
   Serial.begin(115200);
+
+  // Now that the bus and the library are up the calendar can be read — and believed only if the flag
+  // above says it survived. `noteBootTrust` discards the value entirely when it did not.
+  deviceClock.noteBootTrust(rtcLostPower, plc::readRtcEpoch(), millis());
+  if (!deviceClock.isSet()) {
+    Serial.println(
+        "[clock] RTC time is not trusted (VLF set or an implausible date). Timestamps read UNSET "
+        "until an operator or NTP supplies one.");
+  }
   // A screen ID the router expects but the exported dataset does not define
   // renders as a blank page with no other symptom, so say so at boot. The
   // exporter's manifest-screen-coverage check is the build-time counterpart.
