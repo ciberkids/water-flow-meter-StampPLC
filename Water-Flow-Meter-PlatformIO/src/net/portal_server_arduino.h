@@ -50,6 +50,25 @@ class ArduinoPortalServer {
     }
     server_.on("/", HTTP_GET, [this] { handleGet(); });
     server_.on("/", HTTP_POST, [this] { handlePost(); });
+    /**
+     * The path the FORM actually posts to, which was routed nowhere.
+     *
+     * `PortalForm::kFormAction` is `/save` and its own comment states the contract — "the adapter must
+     * route this exact path (R7.11 commits on POST only)". This adapter routed `POST` on `/` alone, and
+     * ESP32's `Uri::canHandle` is `_uri == requestUri`, exact string equality. So every submission fell
+     * through to `onNotFound`, got a 302 to `/`, and the browser re-issued it as a GET: the configuration
+     * was discarded with no error shown, on the ONLY provisioning route a device without a Modbus master
+     * has.
+     *
+     * `/` keeps its POST handler as well. Removing it would break nothing that exists today, but a form
+     * that posts to the page it came from is the obvious thing for a future edit to do, and having both
+     * routed costs one line against a silent failure that took a field report to find.
+     *
+     * Not caught by PortalForm's 226 host checks, and it could not be: they exercise the form against
+     * strings, and routing lives here — in the adapter no host test can construct. The same blind spot the
+     * `collectHeaders` comment below warns about.
+     */
+    server_.on(PortalForm::kFormAction, HTTP_POST, [this] { handlePost(); });
     // Anything else redirects to "/". That IS the captive-portal behaviour: phones probe a
     // vendor-specific URL and treat a redirect as "a login page is waiting", which is what makes the
     // portal appear without the operator typing an address.

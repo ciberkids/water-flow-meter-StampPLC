@@ -67,12 +67,12 @@ a rule filed under "archive" is a rule nobody reads. Same class as the wire-enco
 
 ---
 
-## Three defects found and not yet fixed
+## Defects found — one fixed, two open
 
 None is a decision — each is known, each has a diagnosis, and they are here because this is the file
 that gets read before picking up work.
 
-### The provisioning portal drops its own form submission 🔴
+### ~~The provisioning portal drops its own form submission~~ ✅ FIXED 2026-08-14
 
 `PortalForm` renders `action="/save"`, and its header states the contract: *"the adapter must route
 this exact path"*. `portal_server_arduino.h` registers `POST` on `/` only. ESP32's `Uri::canHandle` is
@@ -86,8 +86,13 @@ provisioning is unaffected and works.
 The routing lives in the Arduino adapter, which no host test can construct — the same blind spot its
 own `collectHeaders` comment warns about.
 
-**Fix.** Route `PortalForm::kFormAction` for `HTTP_POST` in the adapter. One line, and it wants a way
-to be tested that does not need a browser.
+**Fixed** by routing `PortalForm::kFormAction` for `HTTP_POST` in the adapter, alongside the existing `/`
+handler. Firmware compiles; the host suite is unchanged because it cannot reach this code.
+
+**Still open, and the reason this defect lasted:** routing lives in the Arduino adapter, which no host
+test can construct, so nothing verifies it. A seam that let a fake server double be driven would have
+caught it — and would catch the next one. That is a real gap, not a nicety: two of the three portal
+defects found this year were in the adapter rather than the form.
 
 ### The Select Menu is reachable only by a hidden gesture 🟡
 
