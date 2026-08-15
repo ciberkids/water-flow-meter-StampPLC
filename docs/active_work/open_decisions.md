@@ -95,8 +95,14 @@ mutation-tested.
 `meetsNyquistLimit` computed the formula ceiling only and returned false on `f_multiplier == 0` — the
 correct, normal state of a channel calibrated by pulses per litre. So every valid pulses-per-litre
 channel failed the sampling check permanently: `evaluateSensorDiagnostics` ORs in `valid && !meets`, so
-its bit in `REG_UNDERSAMPLING_FLAGS` stayed lit forever, the panel wore the warning banner, and the
-figures could only be installed by writing them twice through the §5.5 override handshake.
+its bit in `REG_UNDERSAMPLING_FLAGS` stayed lit forever, the panel's warning path was engaged for a
+channel inside budget, and the figures could only be installed by writing them twice through the §5.5
+override handshake.
+
+Register 30 lying is the half that is verified and asserted. What the engaged warning path actually
+PAINTS is the two entries below: the banner is at y=34 rather than §2c's y=116 and is overpainted by the
+screen's own rows, and its text reaches no bound element at all. Stated separately on purpose — the
+register was wrong regardless of what the panel did with it.
 
 **Fixed** with a per-form ceiling taken from the engine's own inversions: `f_multiplier*q_max + adjust`
 for the formula, `K*q_max/60` for pulses per litre. Both directions pinned — in-budget accepted on the
