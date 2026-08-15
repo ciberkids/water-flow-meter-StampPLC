@@ -1843,8 +1843,22 @@ export function App() {
     []
   );
 
+  /**
+   * `undersampling` joins the two booleans this already carried, because without it two of
+   * `telemetry.status`'s five states and two of `legend.warning`'s were UNREACHABLE in the running
+   * mockup while their unit tests passed — the sampling-fault line, and the combined line that is the
+   * whole point of keeping the two counts distinct. Nothing else in the app ever set the flag true:
+   * `normalizeSensor` forces it false on a disconnected channel and `resetCalibration` clears it, so
+   * `warningSensorNumbers()` could only ever return an empty list and P0's precedence rule could not be
+   * seen. This is the same reason the clock became an explicit control rather than a value pin.
+   *
+   * It is a MOCKUP-ONLY control with no device-side field to mirror. On the hardware the flag is
+   * recomputed every pass by `evaluateSensorDiagnostics` from the polling rate and the Nyquist limit,
+   * neither of which is per-sensor state this table models — so the flag is an input here exactly as
+   * "is the clock trusted" is.
+   */
   const handleSensorFieldChange = useCallback(
-    (sensorNumber: number, field: "connected" | "ready", value: boolean) => {
+    (sensorNumber: number, field: "connected" | "ready" | "undersampling", value: boolean) => {
       setSensors((table) => setSensor(table, sensorNumber, { [field]: value }));
     },
     []

@@ -36,6 +36,11 @@ interface SensorRow {
   number: number;
   connected: boolean;
   ready: boolean;
+  /**
+   * The diagnostics flag `REG_UNDERSAMPLING_FLAGS` publishes per channel. Needed here because it is an
+   * INPUT in the mockup — the device recomputes it from the polling rate, which is not per-sensor state.
+   */
+  undersampling: boolean;
   /** L/min. Editable here, unlike every other reading — see `onSensorFlowChange`. */
   instantFlowLpm: number;
 }
@@ -66,7 +71,11 @@ interface FirmwareValuesPanelProps {
   selectionFromNavigation: boolean;
   /** What the device would draw for that sensor's flow row, so the effect of a toggle is visible. */
   sensorPreview: (sensorNumber: number) => string;
-  onSensorFieldChange: (sensorNumber: number, field: "connected" | "ready", value: boolean) => void;
+  onSensorFieldChange: (
+    sensorNumber: number,
+    field: "connected" | "ready" | "undersampling",
+    value: boolean
+  ) => void;
   /**
    * Sets one channel's instantaneous flow directly, in L/min.
    *
@@ -329,6 +338,28 @@ export function FirmwareValuesPanel({
                       onChange={(event) => onSensorFieldChange(sensorNumber, "ready", event.target.checked)}
                     />
                     ready
+                  </label>
+
+                  {/* The undersampling flag, which nothing could raise before this — so P0's
+                      sampling-fault line and its combined "both kinds" line were unreachable in the
+                      running mockup, which is precisely where the precedence rule needs to be seen.
+
+                      DISABLED ON `connected`, NOT ON `ready`: `evaluateSensorDiagnostics` skips a
+                      channel that is not `inUse` and then tests `valid && !meetsNyquistLimit`, so an
+                      in-use channel carries this flag independently of its calibration — and it is that
+                      independence that makes one uncalibrated plus one undersampling channel possible
+                      at all. Gating it on `ready` would have re-hidden the state it exists to expose.
+                      `normalizeSensor` clears it on disconnect, mirroring the same firmware check. */}
+                  <label className="sensor-row__toggle">
+                    <input
+                      type="checkbox"
+                      checked={sensor.undersampling}
+                      disabled={!sensor.connected}
+                      onChange={(event) =>
+                        onSensorFieldChange(sensorNumber, "undersampling", event.target.checked)
+                      }
+                    />
+                    undersampling
                   </label>
 
                   {/* The flow is an INPUT here, not a readout — see `onSensorFlowChange`. Disabled when
