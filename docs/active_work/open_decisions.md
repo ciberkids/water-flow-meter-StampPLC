@@ -67,10 +67,96 @@ a rule filed under "archive" is a rule nobody reads. Same class as the wire-enco
 
 ---
 
-## Defects found — one fixed, two open
+## Defects found — three fixed, six open
 
 None is a decision — each is known, each has a diagnosis, and they are here because this is the file
 that gets read before picking up work.
+
+### ~~A channel with no calibration could never be given one~~ ✅ FIXED 2026-08-15
+
+`prepareConfigUpdate` refused every candidate failing `configIsValid`, and every register arm builds its
+candidate from the config already in force and changes one field — so from an all-zero configuration both
+entry orders were refused (`q_max` alone still fails on `f_multiplier == 0`, the multiplier alone on
+`q_max == 0`, and the two cannot arrive in one single-register write). A channel with no valid
+configuration could not be given one by any route: not over Modbus, and not from the panel's editors,
+which route through the same gate.
+
+It shipped unnoticed because a channel whose NVS already held a valid configuration kept working and
+stayed editable. `OFF_CMD_RESET_CALIBRATION` is what made it reachable on purpose — the S.RESET row gave
+the operator a way *into* that state, so S.RESET was a one-way door until this was fixed.
+
+**Fixed** by accepting an invalid candidate only when the channel had no valid configuration to lose. A
+validly calibrated channel still cannot be demolished field by field, so "not set" remains expressible
+only as a command — the property `register_map.h`'s offset-25 note rests on. 54 new host checks;
+mutation-tested.
+
+### ~~The pulses-per-litre form was flagged for a check it could not pass~~ ✅ FIXED 2026-08-15
+
+`meetsNyquistLimit` computed the formula ceiling only and returned false on `f_multiplier == 0` — the
+correct, normal state of a channel calibrated by pulses per litre. So every valid pulses-per-litre
+channel failed the sampling check permanently: `evaluateSensorDiagnostics` ORs in `valid && !meets`, so
+its bit in `REG_UNDERSAMPLING_FLAGS` stayed lit forever, the panel wore the warning banner, and the
+figures could only be installed by writing them twice through the §5.5 override handshake.
+
+**Fixed** with a per-form ceiling taken from the engine's own inversions: `f_multiplier*q_max + adjust`
+for the formula, `K*q_max/60` for pulses per litre. Both directions pinned — in-budget accepted on the
+first write with register 30 at 0, out-of-budget still refused and parked.
+
+**Note for G1:** this changes *which* frequency the budget is computed from, not whether the budget is
+right. The 3.3 kHz polling rate it is compared against is still unmeasured on hardware.
+
+### The warning banner is drawn where §2c decided it must not be 🔴
+
+**§2c is decided and its firmware half was never done.** `Display_Per_Screen_Spec.md` §2c rules
+`bannerY = 116` so the banner covers the footer row, and §8 still lists it as an outstanding one-line
+change. `ui_renderer.cpp:497` says `bannerY = 34`.
+
+Everything downstream already assumes 116. `tools/audit/screen-spec.ts` validates every screen against
+`kBannerTop = 116` / `kBannerBottom = 134`; the 61 spec files under `screens/` are clean against that
+band; each declares its footer hint as the one element the banner may replace (`bannerReplaces`); and
+every `level-position` scrollbar was shortened to 100 px so it stops clear of y=116. **So the collision
+gate protecting the banner's band is checking a band the firmware does not use** — and the real band at
+y 34…52 is unchecked on every one of the dataset's 80 screens. §2c's own argument names the worst case:
+on P1 the banner's second row sits at y=44, hiding sensors 2 and 6 *while naming a sensor*.
+
+**§2c calls this one line. It is two.** `drawWarningBanner` is called BEFORE `drawScreen`
+(`ui_renderer.cpp:181`), and text elements paint with an opaque background (`bg = backgroundColor_` in
+`drawTextElement`), so the screen's own rows stamp background-coloured cells into the banner. At y=34
+that already disfigures the band; at y=116 the footer hint at y=124 would punch its text straight through
+it, and "the banner replaces the footer" would be false. Moving the banner therefore needs the draw order
+moved too, or the footer suppressed while a warning is live.
+
+**Not fixed here, deliberately.** It changes what every screen does while a warning is live, and the
+countdown-overlay interaction has not been checked for elements at y≥116. It wants its own round with the
+audit re-run.
+
+### The commissioning gap reaches no summary line on the panel 🟡
+
+The uncalibrated-channel work is complete in the firmware and reaches the operator almost nowhere.
+`warningSummary` is composed with uncalibrated outranking under-sampling, and both its consumers are
+weaker than they look:
+
+- **`drawWarningBanner` returns early on `!context.hasWarnings`**, which means sampling faults only. So
+  the two uncalibrated-only strings ("3 channels not calibrated") are composed every pass and never
+  painted. Deliberate — `UiRenderContext`'s comment argues that widening `hasWarnings` would make a
+  factory-fresh device wear the banner permanently over the very screens that clear it. Sound, and it
+  leaves the string with no route out.
+- **`telemetry.status` and `legend.warning` are bound by NO dataset element.** Confirmed against
+  `screens.json` and `GeneratedUi.cpp`: neither id appears. `telemetry.status`'s five states are
+  resolvable and unpainted, and the `legend.warning` colour rule at `ui_renderer.cpp:459` is dead code.
+  The exporter says so on every run — the `diagnostics-banner` gate's standing WARNING is exactly this.
+
+**Net effect today:** only the combined case (`uncalibrated > 0 && warnings > 0`) changes anything an
+operator sees, because the banner is already up for the sampling half. The gap does reach them by other
+routes — the green LED refuses to light (`SensorStateEngine`) and each channel row says `SET?` — but no
+summary line says how many or why.
+
+**Decide where the commissioning line lives.** Either bind a row (P0 carried `telemetry.status` before
+the §3 redesign dropped it for the walking dots; the owner's ruling then was "the banner is enough for
+now", made about *undersampling* and before an uncalibrated count existed), or widen the banner's gate
+and accept losing the footer hint until the device is commissioned, or state that the LED and `SET?` are
+the intended route and delete the unreachable strings. All three are cheap; leaving it is what ships a
+tested string nothing draws.
 
 ### ~~The provisioning portal drops its own form submission~~ ✅ FIXED 2026-08-14
 
@@ -132,6 +218,41 @@ simulator now matches the firmware, and `heldRepeatScopeTests` pins the real beh
 
 **Decide one way or the other:** declare `hold` flows on the info ring so §3.1 is implemented, or
 amend §3.1 to drop the repeat. Leaving it half-present is what cost the three reports.
+
+### `OFF_CMD_RESET_CONFIG` leaves the Nyquist override latched 🟡
+
+Offset 19 wipes `SensorData` and the configuration but does not clear `overridePending_`,
+`overrideActive_` or `pendingOverrides_`. A latched override makes `prepareConfigUpdate` accept the FIRST
+candidate offered without a sampling check, so the exemption granted to a decommissioned meter is
+inherited by whatever replaces it — and `evaluateSensorDiagnostics` ORs both flags in, so the
+undersampling bit stays lit on a channel with no configuration to undersample.
+
+Offset 25 (`OFF_CMD_RESET_CALIBRATION`) clears all three, which is what makes this visible as an
+inconsistency rather than a design. **Pinned rather than fixed**, deliberately: offset 19's behaviour is
+asserted as-is in `modbus_reset_calibration_test.cpp` so narrowing a shipped command later is a
+deliberate act with a failing test attached. Any Modbus master already issuing 19 expects what it does.
+
+**Decide:** clear the override state on 19 too (a three-line change, and the test that pins the current
+behaviour then has to be inverted), or record that 19 is frozen and 25 is the command to use.
+
+### The simulator's two newest device facts have no test that could fail 🟡
+
+Both are recorded by the commits that added them, and both are the same shape — a green suite over
+something only a human can reach:
+
+- **`SimulatedSensor.undersampling` is a mockup-only control** with no automated coverage. All five
+  states of `statusSummaryText` and `warningSummaryText` are pinned in `sensorConfig.test.ts`, but they
+  construct `{ undersampling: true }` by hand — the checkbox that lets the running app reach that state
+  is asserted by nothing, because there is no component-test harness (no `@testing-library`). Removing
+  the control would make four firmware strings unreachable in the mockup again with the suite still
+  green.
+- **`ready` is a stored boolean that nothing recomputes** when the configuration changes, so writing
+  `qMaxLpm = 0` through the Values panel leaves the row saying `OK` while the device would say `SET?`.
+  Fixing it means deriving `ready` in `normalizeSensor`, which changes what every producer in
+  `sensorConfig.ts` means by the field.
+
+**Decide:** add a component-test dependency and pin the controls, or accept that the mockup's inputs are
+verified by driving the app and record that as the standing rule.
 
 ---
 
