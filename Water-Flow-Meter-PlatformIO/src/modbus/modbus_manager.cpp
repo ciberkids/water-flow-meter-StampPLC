@@ -594,13 +594,57 @@ ModbusMessage ModbusManager::handleWriteMultiple(ModbusMessage request) {
   return response;
 }
 
+/**
+ * Can the sampler keep up with the highest frequency this channel can produce?
+ *
+ * EACH CALIBRATION FORM HAS ITS OWN CEILING, because each states the meter differently. This used to
+ * compute the formula ceiling only and `return false` on `f_multiplier == 0` — which is the CORRECT and
+ * normal state of a channel calibrated by pulses per litre, whose multiplier field is unused and reads
+ * `--` on the panel by design (ui_settings_types.cpp). So every valid pulses-per-litre channel failed a
+ * check it was never given a chance to pass, with two consequences on a device nobody had misconfigured:
+ *
+ *   - `evaluateSensorDiagnostics` ORs in `valid && !meets`, so the channel's bit in
+ *     REG_UNDERSAMPLING_FLAGS stayed lit forever. Register 30 reported a fault that did not exist, the
+ *     panel wore the warning banner permanently, and the P0 summary counted the channel as
+ *     undersampling beside genuinely undersampling ones.
+ *   - `prepareConfigUpdate` parks a candidate that fails this check, so the figures could only be
+ *     installed by writing the same value twice — the §5.5 override handshake, demanded for a
+ *     configuration that never needed overriding. An operator following the datasheet would see
+ *     "Sampling too slow" on a meter well inside the sampler's budget.
+ *
+ * The ceilings are the ENGINE'S OWN inversions, read back from sensor_state_engine.cpp rather than
+ * re-derived: it computes `flow = (F - adjust) / f_multiplier` for the formula and `flow = F * 60 / K`
+ * for pulses per litre, so at `flow == q_max` the frequencies are `f_multiplier * q_max + adjust` and
+ * `K * q_max / 60`. Anything else here would budget against a frequency the device does not actually
+ * expect to see.
+ *
+ * `q_max == 0` stays fatal for both forms: with no nominal maximum there is no ceiling flow to convert.
+ * The per-form divisor is fatal only for the form that uses it — and `configIsValid` already refuses
+ * both of those cases, so a caller reaching here with one is asking about a configuration that will not
+ * be installed either way.
+ */
 bool ModbusManager::meetsNyquistLimit(const SensorCharacteristics& cfg) const {
-  if (cfg.q_max == 0 || cfg.f_multiplier == 0) {
+  if (cfg.q_max == 0) {
     return false;
   }
-  const double theoreticalFrequency =
-      std::max(0.0, static_cast<double>(cfg.f_multiplier) * static_cast<double>(cfg.q_max) +
-                           static_cast<double>(cfg.adjust));
+  double theoreticalFrequency = 0.0;
+  if (cfg.calibration == CalibrationType::PulsesPerLitre) {
+    if (cfg.pulses_per_litre == 0) {
+      return false;
+    }
+    // q_max is L/min and K is pulses per LITRE, so the 60 converts the rate to litres per second. It is
+    // the same division the engine performs in reverse, kept in double so a 65535 x 65535 product
+    // cannot overflow on the way to the comparison.
+    theoreticalFrequency =
+        static_cast<double>(cfg.pulses_per_litre) * static_cast<double>(cfg.q_max) / 60.0;
+  } else {
+    if (cfg.f_multiplier == 0) {
+      return false;
+    }
+    theoreticalFrequency =
+        std::max(0.0, static_cast<double>(cfg.f_multiplier) * static_cast<double>(cfg.q_max) +
+                             static_cast<double>(cfg.adjust));
+  }
   const double pollingHz = static_cast<double>(*deps_.pollingRateKhz) * 1000.0;
   if (theoreticalFrequency <= 0.0) {
     return true;
@@ -615,11 +659,42 @@ bool ModbusManager::prepareConfigUpdate(std::size_t index,
     *acceptedOverride = false;
   }
 
+  /**
+   * AN INCOMPLETE CANDIDATE IS NOT A BAD ONE. It is what every field-by-field entry looks like before
+   * the last field arrives, and refusing all of them deadlocked the device.
+   *
+   * This used to `return false` outright, which made a channel holding an all-zero configuration
+   * impossible to configure BY ANY ROUTE. Every arm above builds its candidate from the config already
+   * in force and changes one field, so from all zeros both entry orders are refused: q_max alone still
+   * fails on `f_multiplier == 0` (or `pulses_per_litre == 0` in the pulses form), and the multiplier
+   * alone still fails on `q_max == 0`. There is no third order — the two fields `configIsValid` demands
+   * cannot both arrive in one single-register write. A factory-fresh channel therefore shipped
+   * unconfigurable, and it went unnoticed because a channel whose NVS already held a valid
+   * configuration kept working and stayed editable. `OFF_CMD_RESET_CALIBRATION` is what made it
+   * reachable on purpose: the panel now offers the operator a way INTO that state, so a way out of it
+   * is no longer optional.
+   *
+   * THE PROPERTY THAT MATTERS IS PRESERVED, and it is the one `register_map.h` relies on: a channel that
+   * IS validly calibrated still cannot be demolished field by field, because each such write would
+   * invalidate a valid configuration and is refused here. "Not set" remains expressible only as a
+   * command, never as a value write. What changes is the mirror case, which was never the point of the
+   * rule: an already-invalid channel may take a field on the way to becoming valid.
+   *
+   * Nothing downstream needs an incomplete config to be special-cased. Readiness is DERIVED
+   * (`configIsValid(configs[n])`, evaluated wherever it is asked), so a half-entered channel renders
+   * `SET?`, counts as uncalibrated in the panel summary, and produces no flow — exactly as it did while
+   * every field was still zero. The sampling check is not skipped either, only deferred to the write
+   * that completes the configuration, which is the first candidate a frequency can be computed from at
+   * all.
+   *
+   * The override state is cleared on this path either way: whatever candidate was parked awaiting a
+   * §5.5 confirmation is not the one being written now.
+   */
   if (!configIsValid(candidate)) {
     overridePending_[index] = false;
     overrideActive_[index] = false;
     pendingOverrides_[index] = SensorCharacteristics{};
-    return false;
+    return !configIsValid(deps_.configs[index]);
   }
 
   if (meetsNyquistLimit(candidate)) {

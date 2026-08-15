@@ -114,9 +114,12 @@ inline constexpr uint16_t OFF_CFG_PULSES_PER_L = 24;
  * and narrowing a shipped command's effect silently is worse than adding a second one that says what it
  * does.
  *
- * Nor could the panel achieve this by writing zeros to offsets 20-24: `prepareConfigUpdate` refuses any
- * candidate that fails `configIsValid`, and q_max = 0 fails it by definition. Returning a channel to
- * "not set" is therefore only expressible as a command, not as a value write.
+ * Nor could the panel achieve this by writing zeros to offsets 20-24: `prepareConfigUpdate` refuses a
+ * candidate that fails `configIsValid` when the channel currently holds one that passes, and q_max = 0
+ * fails it by definition. Returning a channel to "not set" is therefore only expressible as a command,
+ * not as a value write. (It accepts an invalid candidate on a channel that was ALREADY invalid, which is
+ * how a field-by-field entry reaches a complete configuration at all — see the reasoning there. That
+ * direction cannot demolish anything, because there is nothing valid left to demolish.)
  *
  * ADDITIVE, like 23-24 before it. Offsets 0-24 were in use and `SENSOR_BLOCK_SIZE` is 40, so this
  * needed no block resize and no existing offset moved.

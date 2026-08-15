@@ -115,6 +115,11 @@ struct Device {
   static uint16_t resetCalAddress(std::size_t index) {
     return static_cast<uint16_t>(plc::sensorBaseAddress(index) + plc::OFF_CMD_RESET_CALIBRATION);
   }
+
+  /** Any offset within a channel's block, 0-BASED index — the config registers this file writes. */
+  static uint16_t cfgAddress(std::size_t index, uint16_t offset) {
+    return static_cast<uint16_t>(plc::sensorBaseAddress(index) + offset);
+  }
 };
 
 void clearsTheCalibrationAndKeepsEveryMeasurement() {
@@ -295,6 +300,216 @@ void theDecommissionArmIsStillDifferentInBothWays() {
   check(dev.sensors[2].inUse, "though it does keep the channel in use");
 }
 
+/**
+ * ── THE OTHER HALF OF THE SWAP: can the REPLACEMENT meter's figures be entered? ─────────────
+ *
+ * Everything above proves the reset does the right thing. It says nothing about whether the channel it
+ * produces can ever be configured again — and until `prepareConfigUpdate` was changed, it could not, by
+ * any route. That made the command above a one-way door: a working channel could be sent to `SET?` from
+ * the panel and never brought back, on a device with no factory reset short of wiping every channel.
+ *
+ * Each case enters channel 3 field by field, exactly as the panel's editors and a Modbus master both do
+ * — one single-register write per field, each candidate built from the config already in force. The
+ * FIRST write of every pair is the one that used to be refused, so asserting it is accepted is the whole
+ * point; asserting the channel is still not ready after it is what stops "accepted" from being read as
+ * "installed a configuration that cannot produce a reading".
+ */
+void bothEntryOrdersReachAValidConfigurationFromAllZeros() {
+  std::printf("\n[after the reset, the replacement meter's figures can be entered - both orders]\n");
+
+  Device dev;
+  dev.armChannel(1, 60, 111.0);   // channel 2, a neighbour that must not move
+  dev.armChannel(2, 100, 222.0);  // channel 3, the target
+  dev.armChannel(3, 250, 333.0);  // channel 4, the other neighbour
+  ModbusManager modbus(dev.deps());
+
+  check(modbus.applyHoldingWrite(Device::resetCalAddress(2), 1), "channel 3's calibration is reset");
+  check(dev.configs[2] == SensorCharacteristics{}, "so it holds an all-zero configuration");
+
+  // Q FIRST. The candidate is {q_max=120, f_multiplier=0}, which fails configIsValid on the multiplier —
+  // this is the write that returned false before, and there was no other order that got further.
+  check(modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_Q_MAX), 120),
+        "Q alone is ACCEPTED on a channel with nothing to lose");
+  check(dev.configs[2].q_max == 120, "and it is actually stored, not merely acknowledged");
+  check(!configIsValid(dev.configs[2]),
+        "the channel is still NOT ready though - half a specification is not a calibration");
+
+  check(modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_F_MULT), 6),
+        "the multiplier completes it");
+  check(configIsValid(dev.configs[2]) && dev.configs[2].f_multiplier == 6,
+        "and NOW the channel is ready - which is what clears SET? on the panel");
+
+  // THE REVERSE ORDER, on the same channel, because a fix that only worked one way round would leave the
+  // operator guessing which row to edit first.
+  check(modbus.applyHoldingWrite(Device::resetCalAddress(2), 1), "reset again, to enter it the other way");
+  check(modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_F_MULT), 6),
+        "the multiplier alone is accepted first this time");
+  check(!configIsValid(dev.configs[2]), "still not ready with no Q to clamp to");
+  check(modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_Q_MAX), 120),
+        "and Q completes it from the other direction");
+  check(configIsValid(dev.configs[2]) && dev.configs[2].q_max == 120, "the channel is ready either way");
+
+  // The wrong-channel guard the whole file is built around: entry writes are per-channel too.
+  check(configIsValid(dev.configs[1]) && dev.configs[1].q_max == 60,
+        "channel 2 was never touched by any of it");
+  check(configIsValid(dev.configs[3]) && dev.configs[3].q_max == 250, "nor was channel 4");
+  check(dev.sensors[2].cumulativeLiters == 222.0,
+        "and channel 3 still carries the volume the OLD meter measured, through the whole re-entry");
+}
+
+void thePulsesPerLitreFormCanBeEnteredToo() {
+  std::printf("\n[the pulses-per-litre form, entered from all zeros in three writes]\n");
+
+  Device dev;
+  dev.armChannel(2, 100, 444.0);
+  ModbusManager modbus(dev.deps());
+  check(modbus.applyHoldingWrite(Device::resetCalAddress(2), 1), "channel 3's calibration is reset");
+
+  /**
+   * Three fields, and the FORM has to be settable before the figure it selects exists.
+   *
+   * `configIsValid` reads `pulses_per_litre` only once `calibration == PulsesPerLitre`, so switching the
+   * form first leaves a candidate that fails on both q_max and the pulse figure — the most invalid state
+   * of any entry path, and the one most likely to have been missed by a narrower fix.
+   */
+  check(modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_CAL_TYPE),
+                                 static_cast<uint16_t>(CalibrationType::PulsesPerLitre)),
+        "the calibration FORM can be switched on an unset channel");
+  check(dev.configs[2].calibration == CalibrationType::PulsesPerLitre, "and the switch is stored");
+  check(modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_PULSES_PER_L), 450),
+        "450 pulses/L is accepted next, with Q still zero");
+  check(!configIsValid(dev.configs[2]), "not ready yet - the pulses form still needs its Q");
+  check(modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_Q_MAX), 100),
+        "and Q completes the pulses form");
+  check(configIsValid(dev.configs[2]) && dev.configs[2].pulses_per_litre == 450,
+        "the channel is ready on the pulses-per-litre form");
+}
+
+/**
+ * ── THE PULSES-PER-LITRE FORM HAS ITS OWN SAMPLING CEILING ──────────────────────────────────
+ *
+ * Found by the case above failing. `meetsNyquistLimit` computed the FORMULA ceiling only and returned
+ * false on `f_multiplier == 0` — the correct, normal state of a channel calibrated by pulses — so a
+ * perfectly ordinary 450 p/L meter was refused a check it could not pass, then flagged for it forever.
+ *
+ * Both directions are asserted here, and the pair is the point: a fix that merely stopped failing PPL
+ * configs would pass the first case and quietly exempt the form from the check altogether. The second
+ * case is the one that proves the ceiling is computed rather than skipped.
+ *
+ * 3.3 kHz sampler throughout (`Device::pollingRateKhz`), against `F = K*Q/60`:
+ *   K=450, Q=100  ->   750 Hz, needs 1500 -> inside the budget
+ *   K=450, Q=1000 ->  7500 Hz, needs 15000 -> four and a half times over it
+ */
+void aPulsesPerLitreChannelIsSamplingCheckedOnItsOwnTerms() {
+  std::printf("\n[the pulses form is checked against K*Q/60, not against a multiplier it does not use]\n");
+
+  Device dev;
+  dev.armChannel(2, 100, 888.0);
+  ModbusManager modbus(dev.deps());
+  check(modbus.applyHoldingWrite(Device::resetCalAddress(2), 1), "channel 3's calibration is reset");
+  check(modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_CAL_TYPE),
+                                 static_cast<uint16_t>(CalibrationType::PulsesPerLitre)),
+        "the pulses form is selected");
+  check(modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_PULSES_PER_L), 450),
+        "450 p/L is entered");
+
+  // ONE write, not two. This is what the override handshake used to be demanded for.
+  check(modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_Q_MAX), 100),
+        "a 100 L/min ceiling - 750 Hz - is accepted on the FIRST write, with no override to confirm");
+  check(configIsValid(dev.configs[2]) && dev.configs[2].q_max == 100, "the channel is ready");
+  check(!modbus.nyquistOverridePending(2), "and nothing is parked awaiting a confirmation");
+
+  /**
+   * REGISTER 30 IS THE OBSERVABLE HALF. `evaluateSensorDiagnostics` ORs in `valid && !meets`, so before
+   * this fix the bit was lit here — a master polling it saw a permanent sampling fault on a channel
+   * inside budget, and the panel wore the warning banner over it.
+   */
+  check((dev.undersamplingFlags & 0x04) == 0, "no undersampling flag is raised on a channel in budget");
+  check(dev.registers.at(plc::REG_UNDERSAMPLING_FLAGS) == 0,
+        "and register 30 says so too, not just the shadow variable");
+
+  // THE OTHER DIRECTION: the check is real for this form, not disabled for it.
+  Device fast;
+  fast.armChannel(2, 100, 999.0);
+  ModbusManager fastModbus(fast.deps());
+  check(fastModbus.applyHoldingWrite(Device::resetCalAddress(2), 1), "a second channel 3 is reset");
+  check(fastModbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_CAL_TYPE),
+                                     static_cast<uint16_t>(CalibrationType::PulsesPerLitre)),
+        "the pulses form is selected again");
+  check(fastModbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_PULSES_PER_L), 450),
+        "with the same 450 p/L meter");
+  check(!fastModbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_Q_MAX), 1000),
+        "but a 1000 L/min ceiling - 7500 Hz - IS refused, four times past the sampler");
+  check(fastModbus.nyquistOverridePending(2), "and parked for the §5.5 confirmation");
+  check((fast.undersamplingFlags & 0x04) != 0, "with the flag lit while it waits");
+  check(fastModbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_Q_MAX), 1000),
+        "repeating it overrides deliberately, exactly as the formula form does");
+  check(configIsValid(fast.configs[2]) && fast.configs[2].q_max == 1000,
+        "and only then is the out-of-budget figure installed");
+}
+
+void aValidCalibrationStillCannotBeDemolishedFieldByField() {
+  std::printf("\n[the guard that must NOT have been widened: zeros over a WORKING channel]\n");
+
+  Device dev;
+  dev.armChannel(2, 100, 555.0);
+  dev.armChannel(3, 250, 666.0);
+  ModbusManager modbus(dev.deps());
+  check(configIsValid(dev.configs[2]), "channel 3 starts validly calibrated");
+
+  /**
+   * THIS IS THE ASSERTION THAT KEEPS THE ONE ABOVE HONEST.
+   *
+   * `register_map.h`'s OFF_CMD_RESET_CALIBRATION note rests on exactly this: returning a channel to "not
+   * set" is expressible only as a command, never as a value write. A fix that simply stopped checking
+   * `configIsValid` would pass every entry case above and silently give a Modbus master a second,
+   * undocumented way to unset a channel - one that skips the override clearing the command performs.
+   */
+  check(!modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_Q_MAX), 0),
+        "Q = 0 over a valid calibration is REFUSED");
+  check(dev.configs[2].q_max == 100, "and the calibration is untouched, not partially applied");
+  check(!modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_F_MULT), 0),
+        "a zero multiplier is refused for the same reason");
+  check(dev.configs[2].f_multiplier == 6, "and that field is untouched too");
+  check(configIsValid(dev.configs[2]), "so the channel is still ready - nothing was demolished");
+  check(configIsValid(dev.configs[3]), "and channel 4 is still ready as well");
+}
+
+void theSamplingCheckIsDeferredByEntryAndNotSkipped() {
+  std::printf("\n[an incomplete entry does not smuggle a figure past the Nyquist check]\n");
+
+  Device dev;
+  dev.armChannel(2, 100, 777.0);
+  ModbusManager modbus(dev.deps());
+  check(modbus.applyHoldingWrite(Device::resetCalAddress(2), 1), "channel 3's calibration is reset");
+
+  /**
+   * The worry this answers: if an invalid candidate is now accepted, does a channel entered field by
+   * field ever get sampling-checked at all?
+   *
+   * It does, on the write that COMPLETES the configuration - which is the first candidate a frequency
+   * can be computed from. `meetsNyquistLimit` needs f_multiplier and q_max together, so checking the
+   * halves would be checking nothing. Here Q is entered alone (accepted, incomplete, unchecked), and the
+   * multiplier that completes it puts the theoretical frequency at 65000 Hz against a 3.3 kHz sampler -
+   * refused, and parked for the §5.5 two-write confirmation exactly as it would be on any other edit.
+   */
+  check(modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_Q_MAX), 65000),
+        "an enormous Q is accepted while the configuration is incomplete");
+  check((dev.undersamplingFlags & 0x04) == 0,
+        "and no undersampling flag is raised yet - there is no frequency to compute");
+
+  check(!modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_F_MULT), 1),
+        "the multiplier that COMPLETES it is refused - the sampling check finally has both terms");
+  check(dev.configs[2].f_multiplier == 0, "so the completing field was not stored");
+  check(!configIsValid(dev.configs[2]), "the channel stays unset rather than becoming a wrong reading");
+  check((dev.undersamplingFlags & 0x04) != 0, "and the channel's undersampling flag is lit");
+
+  check(modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_F_MULT), 1),
+        "repeating the write confirms the override, as §5.5 requires");
+  check(configIsValid(dev.configs[2]),
+        "and only THEN is the channel ready - the operator overrode it deliberately");
+}
+
 }  // namespace
 
 int main() {
@@ -306,6 +521,11 @@ int main() {
   anUnwiredChannelRefusesTheCommand();
   clearsTheNyquistOverrideWithTheCalibration();
   theDecommissionArmIsStillDifferentInBothWays();
+  bothEntryOrdersReachAValidConfigurationFromAllZeros();
+  thePulsesPerLitreFormCanBeEnteredToo();
+  aPulsesPerLitreChannelIsSamplingCheckedOnItsOwnTerms();
+  aValidCalibrationStillCannotBeDemolishedFieldByField();
+  theSamplingCheckIsDeferredByEntryAndNotSkipped();
   if (failures > 0) {
     std::printf("\nFAILURES (%d of %d)\n", failures, checks);
     return 1;
