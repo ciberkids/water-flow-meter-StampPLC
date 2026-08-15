@@ -115,8 +115,38 @@ struct UiRenderContext {
   bool clockSet = false;
   uint32_t sessionStartEpoch = 0;
   bool sessionStartAwaitingClock = false;
+  /**
+   * A SAMPLING fault is present: `REG_UNDERSAMPLING_FLAGS` is non-zero.
+   *
+   * Deliberately NOT widened to mean "something is wrong". It gates the warning banner
+   * (`UiRenderer::drawWarningBanner`), which paints edge to edge over y=34..52 on whatever screen is
+   * showing — including the config rows an operator uses to calibrate a channel. An uncalibrated
+   * channel therefore must not raise it: a factory-fresh device with channels declared and no
+   * calibration yet would wear that banner permanently, over the very screens that clear it.
+   */
   bool hasWarnings = false;
   uint8_t warningCount = 0;
+  /**
+   * How many IN-USE channels have no valid calibration — the `SET?` channels, counted.
+   *
+   * A COMMISSIONING GAP, kept as its own number rather than added to `warningCount`, because the two
+   * facts ask different things of the operator: an under-sampling channel is a reading that is wrong,
+   * an uncalibrated one is a channel nobody has finished setting up. "2 warnings" covering one of each
+   * tells them neither.
+   *
+   * IN USE is part of the definition, not a filter bolted on: a channel that is not in the connected
+   * bitmap is ABSENT, not uncalibrated, and counting all eight would report eight problems on a device
+   * with one sensor wired. `SensorStateEngine::update` already draws that line for the green LED
+   * (sensor_state_engine.cpp:73-83, whose comment records a two-sensor install that could never go
+   * green), and this is the same predicate counted rather than reduced to a boolean — the engine
+   * answers "is everything ready" for the LED, this answers "how many are not, and why" for the panel.
+   *
+   * Published rather than derived in the resolver only because `warningSummary` is composed here and
+   * needs the same count; it is a PROJECTION rebuilt every pass from `SensorSnapshot::ready`, which is
+   * itself rebuilt from the configuration every pass. Nothing caches it — the cached readiness bit is
+   * exactly what lied across a reboot.
+   */
+  uint8_t uncalibratedCount = 0;
   std::string warningSummary;
   std::array<SensorSnapshot, plc::kNumSensors> sensors{};
 };

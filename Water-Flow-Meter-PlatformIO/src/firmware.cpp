@@ -1003,11 +1003,19 @@ void logicTaskCode(void * pvParameters) {
       // Telemetry. tick() owns the cadence — publish-on-change rate-limited to publishPeriod, plus
       // §4.3.2's full set at least every 60 s — so this hands it the state and lets it decide.
       plc::MqttSnapshot snapshot;
+      uint16_t uncalibratedFlags = 0;
       for (std::size_t i = 0; i < kNumSensors; ++i) {
         auto& out = snapshot.sensors[i];
         out.present = sensors[i].inUse;
         if (!out.present) {
           continue;  // a disconnected sensor publishes nothing at all — see task #1
+        }
+        // Built in THIS loop rather than in a pass of its own, so "in use" can only ever mean what the
+        // line above means. An uncalibrated channel still publishes its topic — the totals it measured
+        // before its meter was swapped out are real — and every reading in it is zero, which this bit is
+        // what explains.
+        if (!configIsValid(configs[i])) {
+          uncalibratedFlags |= static_cast<uint16_t>(1u << i);
         }
         // §2a: storage IS L/min now, so the ×60 this used to carry is gone.
         out.flowLPerMin = sensors[i].instantFlow_L_min;
@@ -1020,6 +1028,7 @@ void logicTaskCode(void * pvParameters) {
       snapshot.total.sessionLiters = static_cast<float>(totalSessionLitersCache);
       snapshot.diagnostics.pollingRateKhz = pollingRate_kHz;
       snapshot.diagnostics.undersamplingFlags = undersamplingFlags;
+      snapshot.diagnostics.uncalibratedFlags = uncalibratedFlags;
       snapshot.diagnostics.uptimeSeconds = now / 1000;
       snapshot.diagnostics.wifiRssiDbm = static_cast<int8_t>(wifiManager.rssiDbm());
       mqttPublisher.tick(now, snapshot);

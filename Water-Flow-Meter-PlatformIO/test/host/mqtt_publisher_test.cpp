@@ -656,6 +656,10 @@ void payloadTests() {
   snap.diagnostics.pollingRateKhz = 4.5f;
   snap.diagnostics.baselineRateKhz = 4.75f;
   snap.diagnostics.undersamplingFlags = 3;
+  // A DIFFERENT bitmap from the undersampling one, deliberately: the two mean opposite things — a
+  // reading that is wrong versus no reading at all — and an assertion where both read 3 would pass
+  // just as happily with the two fields swapped.
+  snap.diagnostics.uncalibratedFlags = 0x84;
   snap.diagnostics.boardTemperatureC = 31.5f;
   snap.diagnostics.uptimeSeconds = 86400;
   snap.diagnostics.wifiRssiDbm = -67;
@@ -671,9 +675,13 @@ void payloadTests() {
   checkStr(lastPayloadFor(sink, "wm/total/state").c_str(),
            "{\"flow\":1.500,\"session\":250.25,\"total\":1.500000,\"sensors\":2}",
            "the aggregate on <base>/total/state");
+  // `uncalibrated` is the only route to the commissioning gap over MQTT: a sensor payload is five
+  // readings with no status field, so an uncalibrated channel publishes honest zeros that a subscriber
+  // cannot tell from no water. Beside `undersampling` because they are the same shape and the two
+  // opposite explanations for a flow of 0.
   checkStr(lastPayloadFor(sink, "wm/diagnostics/state").c_str(),
-           "{\"pollingRateKhz\":4.500,\"baselineKhz\":4.750,\"undersampling\":3,\"tempC\":31.5,"
-           "\"uptimeS\":86400,\"rssi\":-67}",
+           "{\"pollingRateKhz\":4.500,\"baselineKhz\":4.750,\"undersampling\":3,"
+           "\"uncalibrated\":132,\"tempC\":31.5,\"uptimeS\":86400,\"rssi\":-67}",
            "and the R2.1.2 pair travels together, so a regression is visible in HA");
 
   check(countTopic(sink, "wm/sensor/8/state") == 1, "the eighth sensor publishes when present");

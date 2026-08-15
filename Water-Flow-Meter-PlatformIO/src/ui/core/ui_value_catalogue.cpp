@@ -133,7 +133,8 @@ constexpr SimpleValue kSimpleValues[] = {
     {"telemetry.total", ValueCategory::System, ValueType::String, nullptr, kNoRegister,
      ValueSource::Telemetry, false, "Aggregate volume and flow summary line"},
     {"telemetry.status", ValueCategory::System, ValueType::String, nullptr, kNoRegister,
-     ValueSource::Telemetry, false, "Readiness / warning summary"},
+     ValueSource::Telemetry, false,
+     "Uncalibrated channels, else sampling warnings, else all-ready"},
     {"diagnostics.pollingRateKhz", ValueCategory::System, ValueType::Number, "kHz",
      REG_POLLING_RATE_KHZ, ValueSource::Diagnostics, false, "Measured core-0 polling rate"},
     {"diagnostics.undersampling", ValueCategory::System, ValueType::Number, nullptr,
@@ -147,8 +148,16 @@ constexpr SimpleValue kSimpleValues[] = {
      */
     {"legend.status", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
      ValueSource::UiState, false, "Combined WiFi, MQTT and LED-pulse legend for the status page"},
+    /**
+     * The same string the warning banner prints, so a pack that binds it cannot contradict the banner.
+     *
+     * The description said "Active sampling-warning summary" while the string it names now leads with
+     * the commissioning gap — uncalibrated channels outrank a sampling fault. This text is what the
+     * designer's value picker shows, so a stale one sends an author looking for a second binding that
+     * does not exist.
+     */
     {"legend.warning", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
-     ValueSource::UiState, false, "Active sampling-warning summary"},
+     ValueSource::UiState, false, "Uncalibrated channels or active sampling warnings"},
     /**
      * Where in the tree the operator is: `L2 3/8` — level 2, entry 3 of 8.
      *

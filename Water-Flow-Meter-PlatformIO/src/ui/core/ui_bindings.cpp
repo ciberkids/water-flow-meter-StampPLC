@@ -355,14 +355,59 @@ bool UiBindingResolver::resolveTelemetryBinding(const UiRenderContext& context,
                   static_cast<unsigned>(owner));
     return true;
   }
+  /**
+   * The summary page's one-line verdict, and it may not claim readiness it cannot support.
+   *
+   * It used to have two states, both fed by `REG_UNDERSAMPLING_FLAGS` alone: `%u warning%s` or
+   * `All sensors ready`. An uncalibrated channel appears in neither — `evaluateSensorDiagnostics`
+   * skips a channel whose configuration is invalid — so a device with three channels sitting at
+   * `SET?` reported "All sensors ready" while the rows beside it said otherwise and the green LED
+   * (which has always read `allSensorsReady`) stayed dark. Three surfaces, one truth, one of them
+   * lying.
+   *
+   * The two counts stay DISTINCT, in this order:
+   *   nothing in use       "No channels in use"          nothing to be ready — see warningSummary
+   *   both kinds present   "3 channels not calibrated | 2 warnings"
+   *   commissioning gap    "3 channels not calibrated"   nobody has set these up
+   *   sampling fault       "2 warnings"                  unchanged wording, unchanged meaning
+   *   neither              "All sensors ready"           now the only route to that sentence
+   *
+   * "not calibrated" rather than "not ready" or "SET?": readiness is the retired vocabulary of the
+   * cached bit that lied, and `SET?` is a four-character cell that reads as a question in a sentence.
+   * The word also names the rows that fix it — S2..S6 are the calibration settings, and the panel's
+   * per-channel reset says CALIBRATION for the same reason.
+   *
+   * ONE VOCABULARY ACROSS THE STATES OF THIS ROW: the phrase is `%u channel%s not calibrated` whether
+   * or not a sampling count follows it. The combined line was `%u not calibrated | ...` first, dropping
+   * the noun to save four characters — and two adjacent states of one row then described the same fact
+   * two ways for no reason, because the full phrase fits: 38 characters at worst ("8 channels not
+   * calibrated | 8 warnings") against the 40 a 6 px row holds. `warningSummary` cannot afford the same
+   * noun in its combined line and says why there; the banner has 37 columns, not 40.
+   */
   if (binding == "telemetry.status") {
+    if (context.connectedBitmap == 0) {
+      return copyLiteral("No channels in use", buffer, bufferSize);
+    }
+    if (context.uncalibratedCount > 0 && context.warningCount > 0) {
+      std::snprintf(buffer, bufferSize, "%u channel%s not calibrated | %u warning%s",
+                    static_cast<unsigned>(context.uncalibratedCount),
+                    context.uncalibratedCount == 1 ? "" : "s",
+                    static_cast<unsigned>(context.warningCount),
+                    context.warningCount == 1 ? "" : "s");
+      return true;
+    }
+    if (context.uncalibratedCount > 0) {
+      std::snprintf(buffer, bufferSize, "%u channel%s not calibrated",
+                    static_cast<unsigned>(context.uncalibratedCount),
+                    context.uncalibratedCount == 1 ? "" : "s");
+      return true;
+    }
     if (context.hasWarnings) {
       std::snprintf(buffer, bufferSize, "%u warning%s", context.warningCount,
                     context.warningCount == 1 ? "" : "s");
-    } else {
-      copyLiteral("All sensors ready", buffer, bufferSize);
+      return true;
     }
-    return true;
+    return copyLiteral("All sensors ready", buffer, bufferSize);
   }
   return false;
 }

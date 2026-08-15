@@ -215,6 +215,109 @@ export function warningSensorNumbers(table: readonly SimulatedSensor[]): number[
 }
 
 /**
+ * The 1-based numbers of the channels that are IN USE and have no calibration — the `SET?` rows.
+ *
+ * Mirrors the count `UiController::update` keeps beside its warning loop, which reads
+ * `enabled && !ready` off the snapshot it has just built (ui/core/ui_controller.cpp). IN USE is part of
+ * the definition and not a filter on top: a disconnected channel is ABSENT, not uncalibrated, and
+ * counting all eight would report eight problems on a device with one sensor wired.
+ *
+ * `ready` IS THE PREDICATE, deliberately — not a `configIsValid` recomputed here. The row beside the
+ * summary renders `!connected ? "--" : ready ? "OK" : "SET?"` from that same boolean, so deriving the
+ * count from the configuration instead would let a row read `OK` while the summary said "1 channel not
+ * calibrated" on the same screen. The device cannot disagree with itself there because it derives both
+ * from one projection; this table's `ready` is a stored boolean, so agreeing with the row is the closest
+ * available equivalent.
+ *
+ * THE DIVERGENCE THAT COMES WITH THAT, inherited from `resetCalibration` which records it too: nothing
+ * recomputes `ready` when the configuration changes, so writing `qMaxLpm` to 0 through the Values panel
+ * leaves the row saying `OK` and this count saying the channel is calibrated. The device would say
+ * `SET?` for both. Fixing it means deriving `ready` in `normalizeSensor`, which is a change to what
+ * every producer in this file means by the field, and is left for its own round rather than smuggled in
+ * behind a summary line.
+ */
+export function uncalibratedSensorNumbers(table: readonly SimulatedSensor[]): number[] {
+  return table.filter((sensor) => sensor.connected && !sensor.ready).map((s) => s.number);
+}
+
+/**
+ * `telemetry.status` — the summary page's one-line verdict (ui/core/ui_bindings.cpp).
+ *
+ * Five states in the firmware's own order. It used to have two, both fed by the undersampling flags
+ * alone, so a device whose channels all sat at `SET?` reported "All sensors ready" — the lie this
+ * mirrors the fix for:
+ *
+ *   nothing in use       "No channels in use"
+ *   both kinds present   "3 channels not calibrated | 2 warnings"
+ *   commissioning gap    "3 channels not calibrated"
+ *   sampling fault       "2 warnings"
+ *   neither              "All sensors ready"
+ *
+ * The two counts stay DISTINCT: an uncalibrated channel is a channel nobody has set up, an
+ * under-sampling one is a reading that is wrong, and one number covering both tells an operator
+ * neither. Uncalibrated leads because a device nobody has finished commissioning is the more urgent
+ * fact. The phrase is the same in both states that carry it — 38 characters at worst, inside the 40 a
+ * 6 px row holds, so there is no reason for adjacent states of one row to name the fact two ways.
+ */
+export function statusSummaryText(table: readonly SimulatedSensor[]): string {
+  const inUse = table.filter((sensor) => sensor.connected).length;
+  if (inUse === 0) {
+    // FIRST here and LAST in warningSummaryText below, mirroring each side's own implementation: the
+    // firmware answers this binding in `resolveTelemetryBinding`, which tests `connectedBitmap == 0`
+    // before anything else, while the summary string is composed in `UiController::update` after both
+    // counts. The orders cannot disagree — no channel in use forces both counts to zero — so each
+    // mirror follows the code it mirrors rather than a shared order neither side has.
+    //
+    // The device reads this off `connectedBitmap == 0`, which comes out of NVS with a default of 0, so
+    // it is the state a device ships in rather than an edge case.
+    return "No channels in use";
+  }
+  const uncalibrated = uncalibratedSensorNumbers(table).length;
+  const warnings = warningSensorNumbers(table).length;
+  if (uncalibrated > 0 && warnings > 0) {
+    return `${uncalibrated} channel${uncalibrated === 1 ? "" : "s"} not calibrated | ${warnings} warning${warnings === 1 ? "" : "s"}`;
+  }
+  if (uncalibrated > 0) {
+    return `${uncalibrated} channel${uncalibrated === 1 ? "" : "s"} not calibrated`;
+  }
+  if (warnings > 0) {
+    return `${warnings} warning${warnings === 1 ? "" : "s"}`;
+  }
+  return "All sensors ready";
+}
+
+/**
+ * `legend.warning`, and the text of the firmware's warning banner — one string, two consumers.
+ *
+ * Composed in `UiController::update` rather than in the resolver, so the banner and the legend row
+ * cannot disagree; this mirrors the same precedence with the same wording.
+ *
+ * The sampling case NAMES the channels, as the device does, but only when it is alone: naming both sets
+ * needs more than the 37 characters the banner has at x=16 with 6 px glyphs, so when both kinds are
+ * present the list is traded for a count — and so is the word "channels", because "8 channels not
+ * calibrated, 8 undersampling" is 42. This is the one line that drops it; `statusSummaryText` keeps it
+ * in every state. Channel identity is not lost either way — the flagged rows are drawn in the warning
+ * colour and an uncalibrated row says `SET?` itself.
+ */
+export function warningSummaryText(table: readonly SimulatedSensor[]): string {
+  const uncalibrated = uncalibratedSensorNumbers(table).length;
+  const flagged = warningSensorNumbers(table);
+  if (uncalibrated > 0 && flagged.length > 0) {
+    return `${uncalibrated} not calibrated, ${flagged.length} undersampling`;
+  }
+  if (uncalibrated > 0) {
+    return `${uncalibrated} channel${uncalibrated === 1 ? "" : "s"} not calibrated`;
+  }
+  if (flagged.length > 0) {
+    return `Sampling warning on sensors ${flagged.join(", ")}`;
+  }
+  if (table.every((sensor) => !sensor.connected)) {
+    return "No channels in use";
+  }
+  return "All sensors nominal";
+}
+
+/**
  * `config-sensor-<n>` in the ANCESTOR chain fixes which sensor the level below applies to.
  *
  * Mirrors `UiNavigator`: `descend()` reads the index off the screen being LEFT

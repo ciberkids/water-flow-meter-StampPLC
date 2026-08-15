@@ -1082,7 +1082,7 @@
       "category": "system",
       "type": "string",
       "readOnly": true,
-      "description": "Readiness / warning summary"
+      "description": "Uncalibrated channels, else sampling warnings, else all-ready"
     },
     {
       "id": "diagnostics.pollingRateKhz",
@@ -1120,7 +1120,7 @@
       "category": "derived",
       "type": "string",
       "readOnly": true,
-      "description": "Active sampling-warning summary"
+      "description": "Uncalibrated channels or active sampling warnings"
     },
     {
       "id": "telemetry.flowUnitLabel",

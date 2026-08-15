@@ -243,10 +243,14 @@ void MqttPublisher::formatDiagnostics(const MqttDiagnosticsTelemetry& d, char* o
   jsonNumber(temperature, sizeof(temperature), d.boardTemperatureC, 1);
   // The R2.1.2 pair travels together on purpose: the live rate alone cannot show a regression, and
   // a regression that is only visible in a lab is the failure §2.1 is written to prevent.
+  // `uncalibrated` sits beside `undersampling` because they are the same shape and the opposite
+  // problem: one says a reading is wrong, the other says there is no reading to be wrong. A
+  // subscriber seeing 0 flow needs both to tell which.
   std::snprintf(out, size,
-                "{\"pollingRateKhz\":%s,\"baselineKhz\":%s,\"undersampling\":%u,\"tempC\":%s,"
-                "\"uptimeS\":%lu,\"rssi\":%d}",
-                rate, baseline, static_cast<unsigned>(d.undersamplingFlags), temperature,
+                "{\"pollingRateKhz\":%s,\"baselineKhz\":%s,\"undersampling\":%u,"
+                "\"uncalibrated\":%u,\"tempC\":%s,\"uptimeS\":%lu,\"rssi\":%d}",
+                rate, baseline, static_cast<unsigned>(d.undersamplingFlags),
+                static_cast<unsigned>(d.uncalibratedFlags), temperature,
                 static_cast<unsigned long>(d.uptimeSeconds), static_cast<int>(d.wifiRssiDbm));
 }
 

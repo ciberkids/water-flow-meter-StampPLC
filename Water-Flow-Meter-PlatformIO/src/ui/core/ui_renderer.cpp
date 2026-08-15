@@ -457,7 +457,11 @@ uint16_t UiRenderer::colorForText(const ui_exporter::Element& element,
     }
   }
   if (bindingId && std::strcmp(bindingId, "legend.warning") == 0) {
-    color = context.hasWarnings ? warningColor_ : legendColor_;
+    // Uncalibrated channels colour this row too, because the row now SAYS so: it reports the
+    // commissioning gap ahead of any sampling fault, and a sentence about channels nobody has set up,
+    // drawn in the muted legend colour, would read as the reassurance it replaced. `hasWarnings` stays
+    // the banner's own gate and is deliberately not widened — see UiRenderContext.
+    color = (context.hasWarnings || context.uncalibratedCount > 0) ? warningColor_ : legendColor_;
   }
   return color;
 }

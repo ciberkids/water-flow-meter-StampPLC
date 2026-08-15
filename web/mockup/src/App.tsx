@@ -82,8 +82,9 @@ import {
   flowUnitLabel,
   readSensorSettingRaw,
   setSensor,
+  statusSummaryText,
   writeSensorSetting,
-  warningSensorNumbers
+  warningSummaryText
 } from "./utils/sensorConfig";
 
 const clamp = (value: number, min: number, max: number) =>
@@ -1411,7 +1412,8 @@ export function App() {
    * `telemetry.totalVolumeLiters` is the same quantity as the volume inside `telemetry.total`
    * (ui_bindings.cpp:233-235). Formats are the firmware's, quoted:
    *   telemetry.total   -> "Total %.2f L | Flow %.2f L/s"   (ui_bindings.cpp:224)
-   *   telemetry.status  -> "%u warning%s" or "All sensors ready" (ui_bindings.cpp:237-244)
+   *   telemetry.status  -> five states, uncalibrated channels first (statusSummaryText, mirroring
+   *                        resolveTelemetryBinding — it is no longer "N warnings or all ready")
    *
    * P0 is the screen the app opens on, and `telemetry.total` is the only aggregate any element binds —
    * so while these came from the sample table, disconnecting every sensor left the landing screen
@@ -1448,7 +1450,6 @@ export function App() {
     const out: Record<string, string> = {};
     const inUse = sensors.filter((sensor) => sensor.connected);
     const totalSessionLiters = inUse.reduce((sum, sensor) => sum + sensor.sessionLiters, 0);
-    const warnings = warningSensorNumbers(sensors).length;
 
     /**
      * The peak across enabled channels and which channel holds it, mirroring
@@ -1587,8 +1588,22 @@ export function App() {
           return netState("mqtt");
         case "legend.status":
           return legendRow();
+        /**
+         * Both summary lines, from the pure mirrors in sensorConfig.ts.
+         *
+         * `telemetry.status` used to be resolved inline as `warnings > 0 ? ... : "All sensors ready"`,
+         * which reproduced the firmware's own defect faithfully: the undersampling flags were the only
+         * input, so a device with every channel at `SET?` reported "All sensors ready" here too. The
+         * precedence and the wording live beside the sensor table now, where the web unit tests reach
+         * them directly rather than through a React memo.
+         *
+         * `legend.warning` had no arm at all and fell through to sampleValues' `(not set)`, so the
+         * values panel showed a placeholder for a string the device always resolves.
+         */
         case "telemetry.status":
-          return warnings > 0 ? `${warnings} warning${warnings === 1 ? "" : "s"}` : "All sensors ready";
+          return statusSummaryText(sensors);
+        case "legend.warning":
+          return warningSummaryText(sensors);
         default:
           return undefined;
       }

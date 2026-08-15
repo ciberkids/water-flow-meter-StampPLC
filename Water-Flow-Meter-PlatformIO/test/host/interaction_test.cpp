@@ -177,6 +177,13 @@ struct Device {
   plc::DeviceClock clock;
   ui::SettingsAccess settings;
   uint16_t connectedBitmap = 0xFF;
+  /**
+   * `REG_UNDERSAMPLING_FLAGS`, as the display sees it. Test-settable for the same reason `netStatus`
+   * above is: `tick()` passed a hard-coded 0 to `UiController::update`, so no test could put the device
+   * in a warned state at all and every warning surface — the summary line, the banner text, the row
+   * colour — was unreachable from this harness while looking covered by it.
+   */
+  uint16_t undersamplingFlags = 0;
   /** What the last tick()'s InteractionHandler::update() returned. */
   plc::InteractionResult lastResult{};
   ModbusManager modbus{ModbusDependencies{}};
@@ -283,8 +290,11 @@ struct Device {
     // — including how much I2C traffic it generates — passed for the wrong reason.
     leds.setSuspended(result.ledsSuspended);
     leds.update(now, 0.0, 0.0, true, false);
-    controller.update(now, sensors, configs, 0, 0xFF, 0.0, 0.0, 0.0f, leds, result.countdown,
-                      netStatus, clock);
+    // The two bitmaps come from the FIELDS, not from literals. `0xFF` was passed straight through here
+    // while `settings.connectedBitmap` pointed at the member, so a harness that switched a channel off
+    // through the settings still showed the display eight connected channels.
+    controller.update(now, sensors, configs, undersamplingFlags, connectedBitmap, 0.0, 0.0, 0.0f, leds,
+                      result.countdown, netStatus, clock);
     // firmware.cpp:446 — the renderer runs on every pass of the logic loop and decides for
     // itself whether to paint. That decision is what the cadence tests below measure.
     renderer.update(now, controller.context());
@@ -2351,6 +2361,152 @@ void networkBindingTests() {
   check(allResolve, "and every one of them resolves — no declared value renders blank");
 }
 
+/**
+ * A channel nobody has calibrated is a COMMISSIONING GAP, and the summary must say so.
+ *
+ * The gap these pin: `warningCount` came from `REG_UNDERSAMPLING_FLAGS` alone, and
+ * `evaluateSensorDiagnostics` only ever flags a channel whose configuration is VALID
+ * (`valid && !meetsNyquistLimit`) — so an uncalibrated channel could not raise a bit, and a device
+ * whose eight channels all sat at `SET?` reported "All sensors ready" beside rows saying otherwise.
+ *
+ * A valid configuration here is q_max and f_multiplier both non-zero on the Formula form, which is
+ * exactly what `configIsValid` asks for; the undersampling bits are set on the harness rather than
+ * provoked through the Nyquist check, because what is under test is the SUMMARY's arithmetic, not
+ * the diagnostic that produces the bits.
+ */
+void commissioningSummaryTests() {
+  std::printf("\n[an uncalibrated channel is counted, and outranks a sampling warning]\n");
+
+  SensorCharacteristics calibrated{};
+  calibrated.q_max = 150;
+  calibrated.f_multiplier = 10;
+
+  Device dev;
+  dev.boot();
+
+  // ── Every channel in use, none calibrated: the harness's own boot state ────────
+  //
+  // `configs[8] = {}` is q_max = 0 throughout, which is what a device out of the box holds.
+  dev.tick(10);
+  check(dev.controller.context().uncalibratedCount == 8, "eight in-use channels, none calibrated");
+  checkStr(renderBinding(dev, "telemetry.status"), "8 channels not calibrated",
+           "the summary counts them rather than claiming readiness");
+  checkStr(renderBinding(dev, "legend.warning"), "8 channels not calibrated",
+           "and the legend row says the same thing, not \"All sensors nominal\"");
+
+  // ── Calibrate all but three ───────────────────────────────────────────────────
+  for (std::size_t i = 3; i < plc::kNumSensors; ++i) {
+    dev.configs[i] = calibrated;
+  }
+  dev.tick(10);
+  check(dev.controller.context().uncalibratedCount == 3, "three left uncalibrated");
+  checkStr(renderBinding(dev, "telemetry.status"), "3 channels not calibrated",
+           "N channels uncalibrated says N");
+
+  // ── One left: the plural has to go ────────────────────────────────────────────
+  dev.configs[1] = calibrated;
+  dev.configs[2] = calibrated;
+  dev.tick(10);
+  checkStr(renderBinding(dev, "telemetry.status"), "1 channel not calibrated",
+           "one channel is singular — the same %s the warning count already used");
+
+  // ── PRECEDENCE: a sampling fault as well ──────────────────────────────────────
+  //
+  // Channels 5 and 6 undersampling (bits 4 and 5) while channel 1 is still uncalibrated. Both facts
+  // are reported, uncalibrated FIRST, and the counts stay separate: "3 warnings" for one
+  // uncalibrated channel and two under-sampling ones would tell the operator neither.
+  dev.undersamplingFlags = 0x30;
+  dev.tick(10);
+  checkStr(renderBinding(dev, "telemetry.status"), "1 channel not calibrated | 2 warnings",
+           "commissioning gap leads, sampling faults follow, neither absorbed into the other");
+  checkStr(renderBinding(dev, "legend.warning"), "1 not calibrated, 2 undersampling",
+           "the banner's string reports both too — and trades the channel list for a count to fit");
+  check(dev.controller.context().hasWarnings,
+        "hasWarnings still means a SAMPLING fault, so the banner's gate is unchanged");
+
+  // One of each: both singulars at once, which is the case a `%s` on the wrong count would survive.
+  dev.undersamplingFlags = 0x10;
+  dev.tick(10);
+  checkStr(renderBinding(dev, "telemetry.status"), "1 channel not calibrated | 1 warning",
+           "one of each is singular twice over");
+  checkStr(renderBinding(dev, "legend.warning"), "1 not calibrated, 1 undersampling",
+           "and the legend counts them without pluralising a count of one either");
+
+  // ── Sampling only: the original wording, untouched ────────────────────────────
+  dev.configs[0] = calibrated;
+  dev.undersamplingFlags = 0x30;  // back to two, so the list below has two channels to name
+  dev.tick(10);
+  check(dev.controller.context().uncalibratedCount == 0, "nothing uncalibrated now");
+  checkStr(renderBinding(dev, "telemetry.status"), "2 warnings",
+           "a sampling-only device reads exactly as it did before this change");
+  checkStr(renderBinding(dev, "legend.warning"), "Sampling warning on sensors 5, 6",
+           "and its summary still NAMES the channels, which is only affordable alone");
+
+  // ── Everything calibrated, nothing flagged: all-ready survives ────────────────
+  dev.undersamplingFlags = 0;
+  dev.tick(10);
+  checkStr(renderBinding(dev, "telemetry.status"), "All sensors ready",
+           "a fully commissioned, unflagged device still says so");
+  checkStr(renderBinding(dev, "legend.warning"), "All sensors nominal",
+           "and the legend row keeps its own wording for that state");
+
+  // ── A DISCONNECTED channel is ABSENT, not uncalibrated ────────────────────────
+  //
+  // The distinction the whole count rests on. Channels 2-8 are switched out of the bitmap and their
+  // configurations wiped: a device with one sensor wired and seven bare terminals has ONE channel to
+  // commission, and reporting eight problems would bury the one that is real.
+  dev.connectedBitmap = 0x01;
+  for (std::size_t i = 1; i < plc::kNumSensors; ++i) {
+    dev.configs[i] = SensorCharacteristics{};
+  }
+  dev.tick(10);
+  check(dev.controller.context().uncalibratedCount == 0,
+        "seven disconnected, uncalibrated channels count for nothing");
+  checkStr(renderBinding(dev, "telemetry.status"), "All sensors ready",
+           "so a one-sensor installation is ready when its one sensor is");
+  checkStr(renderBinding(dev, "sensor.2.status"), "--",
+           "and the row for one of them still says NOT IN SERVICE rather than SET?");
+
+  // The one that IS wired, left uncalibrated: one problem, not eight.
+  dev.configs[0] = SensorCharacteristics{};
+  dev.tick(10);
+  check(dev.controller.context().uncalibratedCount == 1, "only the wired channel is counted");
+  checkStr(renderBinding(dev, "telemetry.status"), "1 channel not calibrated",
+           "one wired channel needing setup reports one problem");
+  checkStr(renderBinding(dev, "sensor.1.status"), "SET?",
+           "and its own row agrees — the summary is the rows, counted");
+
+  // ── Nothing in use at all: the factory-fresh device ───────────────────────────
+  //
+  // The connected bitmap comes out of NVS with a default of 0 (firmware.cpp), so this is the state a
+  // device ships in. Both counts are legitimately zero, which is why "All sensors ready" survived the
+  // count alone and needed a state of its own.
+  dev.connectedBitmap = 0;
+  dev.tick(10);
+  check(dev.controller.context().uncalibratedCount == 0, "no channel is in use, so none is counted");
+  checkStr(renderBinding(dev, "telemetry.status"), "No channels in use",
+           "a device with nothing wired does not claim its sensors are ready");
+  checkStr(renderBinding(dev, "legend.warning"), "No channels in use",
+           "and neither does the legend row");
+
+  // ── Every string fits the panel ───────────────────────────────────────────────
+  //
+  // 40 characters is one 6 px row; the banner starts at x=16 and holds 37. Asserted rather than
+  // eyeballed because the worst case only appears with eight channels of each kind at once.
+  dev.connectedBitmap = 0xFF;
+  dev.undersamplingFlags = 0xFF;
+  dev.tick(10);
+  checkStr(renderBinding(dev, "telemetry.status"), "8 channels not calibrated | 8 warnings",
+           "the widest line the summary can draw");
+  checkStr(renderBinding(dev, "legend.warning"), "8 not calibrated, 8 undersampling",
+           "and the widest the banner can — the one line that cannot afford the noun");
+  const std::size_t statusLen = std::strlen(renderBinding(dev, "telemetry.status"));
+  const std::size_t legendLen = std::strlen(renderBinding(dev, "legend.warning"));
+  std::printf("      worst case: status %zu chars, legend %zu chars\n", statusLen, legendLen);
+  check(statusLen <= 40, "the widest telemetry.status fits a 40-column row");
+  check(legendLen <= 37, "the widest legend.warning fits the banner's 37 columns from x=16");
+}
+
 }  // namespace
 
 int main() {
@@ -2385,6 +2541,7 @@ int main() {
   portalLoginResetMenuTests();
   sessionStartRenderTests();
   networkBindingTests();
+  commissioningSummaryTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

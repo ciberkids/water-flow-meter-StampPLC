@@ -34,7 +34,17 @@ const kByBinding: Record<string, string> = {
   "telemetry.total": "Total 1234.56 L | Flow 2.34 L/s",
   "telemetry.totalFlowLps": "2.34",
   "telemetry.totalVolumeLiters": "1234.56",
-  "telemetry.status": "All sensors ready",
+  /**
+   * The DECLARED WORST CASE, 38 characters — not the happy string it used to hold.
+   *
+   * It read "All sensors ready" (17), which stopped being the widest thing this binding can say when the
+   * summary learned to report uncalibrated channels: with eight of each kind at once the device draws
+   * "8 channels not calibrated | 8 warnings". Same reasoning as `nav.position` below — tools/audit/screen-geometry.ts
+   * measures the SAMPLE, so a sample narrower than the string would let the audit pass a row that
+   * overflows on the panel. The live app resolves this from the sensor table via `aggregate()`, which is
+   * also why `legend.warning` needs no entry: nothing but the audit ever reads one, and no screen binds it.
+   */
+  "telemetry.status": "8 channels not calibrated | 8 warnings",
   "diagnostics.pollingRate": "3.31",
   "diagnostics.undersampling": "",
 

@@ -1,6 +1,7 @@
 #include "ui/core/ui_controller.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 
 void UiController::begin(uint32_t nowMs) {
@@ -165,10 +166,27 @@ void UiController::update(uint32_t nowMs,
   }
   context_.hasWarnings = warningFlags != 0;
   context_.warningCount = 0;
-  context_.warningSummary.clear();
+  context_.uncalibratedCount = 0;
 
   // The P0 flow indicator is driven straight from aggregateFlowLpm by
   // UiRenderer::drawFlowDots(); no frame counter is kept here.
+
+  /**
+   * The flagged channels as a list, built into a fixed buffer rather than appended straight onto
+   * `warningSummary`.
+   *
+   * Two reasons. The summary now has to choose between phrasings AFTER both counts are known — a list
+   * appended as the loop went would have to be unpicked when an uncalibrated channel outranks it — and
+   * the buffer replaces the per-channel `std::to_string` this loop used to run on every pass of the
+   * logic loop, so the summary costs one assignment into a string that keeps its capacity.
+   *
+   * 32 bytes holds "1, 2, 3, 4, 5, 6, 7, 8" (22) with room to spare, and the guard below stops short of
+   * the next entry rather than truncating mid-number. It leaves headroom for a two-digit channel too,
+   * which `-Werror=format-truncation` then proves fits inside `summary` below — the first size chosen
+   * here was 40, and the compiler pointed out that 28 characters of prose plus 39 of list does not.
+   */
+  char samplingList[32] = {};
+  std::size_t listUsed = 0;
 
   for (std::size_t i = 0; i < plc::kNumSensors; ++i) {
     auto& dst = context_.sensors[i];
@@ -183,20 +201,65 @@ void UiController::update(uint32_t nowMs,
     dst.sessionLiters = src.sessionLiters;
     dst.maxFlow = src.maxFlowSinceReset;
 
+    // IN USE and no valid calibration — the state the row already renders as `SET?` (§4.4). Read off
+    // the two projections just assigned, so the summary cannot disagree with the rows beside it.
+    if (dst.enabled && !dst.ready) {
+      context_.uncalibratedCount++;
+    }
+
     if ((warningFlags >> i) & 0x01) {
-      if (context_.warningCount == 0) {
-        context_.warningSummary = "Sampling warning on sensors ";
-      } else {
-        context_.warningSummary += ", ";
+      if (listUsed + 6 < sizeof(samplingList)) {
+        listUsed += static_cast<std::size_t>(std::snprintf(samplingList + listUsed,
+                                                           sizeof(samplingList) - listUsed,
+                                                           listUsed ? ", %u" : "%u",
+                                                           static_cast<unsigned>(i + 1)));
       }
-      context_.warningSummary += std::to_string(i + 1);
       context_.warningCount++;
     }
   }
 
-  if (!context_.hasWarnings) {
-    context_.warningSummary = "All sensors nominal";
+  /**
+   * One summary line, one precedence rule, and two consumers that therefore cannot disagree: the
+   * warning banner prints this string and so does `legend.warning`.
+   *
+   * UNCALIBRATED OUTRANKS UNDER-SAMPLING. A device nobody has finished commissioning is the more
+   * urgent fact — the readings are not merely suspect, there are none — so it takes the line. Before
+   * this, the line read "All sensors nominal" on a device whose channels all sat at `SET?`, because
+   * the only input was `REG_UNDERSAMPLING_FLAGS`, which an uncalibrated channel cannot set:
+   * `evaluateSensorDiagnostics` tests `valid && !meetsNyquistLimit`, so an invalid configuration is
+   * skipped by the very check that would have reported it (modbus_manager.cpp).
+   *
+   * WHEN BOTH ARE PRESENT THE CHANNEL LIST IS TRADED FOR A COUNT, and so is the word "channels".
+   * Naming both sets needs more than the 37 characters the banner has at x=16 with 6 px glyphs, and
+   * "8 channels not calibrated, 8 undersampling" is 42 — five over, which is why this line is the one
+   * place the noun is dropped. `telemetry.status` keeps it in every state, having 40 columns from x=2
+   * and no channel list to carry. Channel identity is not lost either way: the flagged rows are drawn
+   * in the warning colour from `warningFlags` and an uncalibrated row says `SET?` itself, so the panel
+   * still says WHICH — this row says how many and which kind.
+   *
+   * `No channels in use` is not a cosmetic fifth case: the connected bitmap comes out of NVS with a
+   * default of 0 (firmware.cpp), so a factory-fresh device has nothing in use at all, and both counts
+   * are legitimately zero. "All sensors nominal" for a device with no sensors is the same vacuous claim
+   * this change exists to delete — `telemetry.maxFlowLpm` already refuses it with `Max Flow: --`, and
+   * `SensorStateEngine` already refuses it for the green LED (`activeSensors == 0` clears allReady).
+   */
+  char summary[64] = {};
+  if (context_.uncalibratedCount > 0 && context_.warningCount > 0) {
+    std::snprintf(summary, sizeof(summary), "%u not calibrated, %u undersampling",
+                  static_cast<unsigned>(context_.uncalibratedCount),
+                  static_cast<unsigned>(context_.warningCount));
+  } else if (context_.uncalibratedCount > 0) {
+    std::snprintf(summary, sizeof(summary), "%u channel%s not calibrated",
+                  static_cast<unsigned>(context_.uncalibratedCount),
+                  context_.uncalibratedCount == 1 ? "" : "s");
+  } else if (context_.warningCount > 0) {
+    std::snprintf(summary, sizeof(summary), "Sampling warning on sensors %s", samplingList);
+  } else if (connectedBitmap == 0) {
+    std::snprintf(summary, sizeof(summary), "No channels in use");
+  } else {
+    std::snprintf(summary, sizeof(summary), "All sensors nominal");
   }
+  context_.warningSummary = summary;
 }
 
 void UiController::updateIdleState(uint32_t nowMs) {

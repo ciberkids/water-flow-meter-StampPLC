@@ -141,6 +141,22 @@ struct MqttDiagnosticsTelemetry {
   float pollingRateKhz = 0.0f;
   float baselineRateKhz = 0.0f;
   uint16_t undersamplingFlags = 0;
+  /**
+   * Bits 0-7: an IN-USE channel with no valid calibration, i.e. one the panel draws as `SET?`.
+   *
+   * The only route to this fact over MQTT. A sensor payload is `flow/session/total/max/pulses` with no
+   * status field at all, and an uncalibrated channel publishes a topic full of honest zeros — so a
+   * subscriber could not tell "no water" from "nobody has commissioned this channel", which are the two
+   * explanations for a flow of 0 and want opposite responses.
+   *
+   * A BITMAP beside `undersamplingFlags` rather than a count, because a remote consumer wants to name
+   * the channel in an alert and the panel's own count is a 40-column concession this payload does not
+   * share. It is a diagnostics FIELD and deliberately not a Home Assistant entity: `baselineKhz` and
+   * `uptimeS` in this same payload are not entities either, and adding one means naming it in
+   * ha_discovery, which republishes discovery to every existing install (R4.4.6) — a dashboard
+   * decision, not a side effect of telling the truth here.
+   */
+  uint16_t uncalibratedFlags = 0;
   float boardTemperatureC = 0.0f;
   uint32_t uptimeSeconds = 0;
   int8_t wifiRssiDbm = 0;
