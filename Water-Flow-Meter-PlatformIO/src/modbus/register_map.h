@@ -100,6 +100,28 @@ inline constexpr uint16_t OFF_CFG_ADJUST = 22;
  */
 inline constexpr uint16_t OFF_CFG_CAL_TYPE = 23;
 inline constexpr uint16_t OFF_CFG_PULSES_PER_L = 24;
+/**
+ * Write `1` to return THIS channel's calibration to defaults, keeping every measurement it has taken.
+ *
+ * Exists because OFF_CMD_RESET_CONFIG (19) does not do this, despite its name. Nineteen assigns
+ * `SensorData{}` over the whole runtime struct — cumulative litres, session litres, the peak and the
+ * pulse count — and then calls `saveCumulativeToNvs`, so the zeroed lifetime total is persisted too.
+ * It is a config AND measurement wipe. That is the right command for decommissioning a channel and the
+ * wrong one for the case this register serves: a broken meter swapped for one with different
+ * characteristics, where the volume the old meter measured was real and has to keep accumulating.
+ *
+ * Nineteen is left exactly as it is. Any Modbus master already issuing it expects the wipe it performs,
+ * and narrowing a shipped command's effect silently is worse than adding a second one that says what it
+ * does.
+ *
+ * Nor could the panel achieve this by writing zeros to offsets 20-24: `prepareConfigUpdate` refuses any
+ * candidate that fails `configIsValid`, and q_max = 0 fails it by definition. Returning a channel to
+ * "not set" is therefore only expressible as a command, not as a value write.
+ *
+ * ADDITIVE, like 23-24 before it. Offsets 0-24 were in use and `SENSOR_BLOCK_SIZE` is 40, so this
+ * needed no block resize and no existing offset moved.
+ */
+inline constexpr uint16_t OFF_CMD_RESET_CALIBRATION = 25;
 
 inline constexpr uint16_t sensorBaseAddress(std::size_t index) {
   return SENSOR_1_BASE_ADDR + static_cast<uint16_t>(index) * SENSOR_BLOCK_SIZE;

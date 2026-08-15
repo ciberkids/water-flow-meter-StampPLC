@@ -1418,7 +1418,7 @@ static constexpr ui_exporter::Element kConfigS6MaxFlowElements[] = {
 
 
 static constexpr ui_exporter::Flow kConfigS6MaxFlowFlows[] = {
-    { "f-next", "Next entry", "config-sensor-settings-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-next", "Next entry", "config-sensor-settings-reset-cal", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
     { "f-prev", "Previous entry", "config-s5-adjust", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-enter", "Edit value", "config-s6-max-flow-edit", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
@@ -1464,6 +1464,30 @@ static constexpr ui_exporter::Flow kConfigS6MaxFlowEditFlows[] = {
     { "f-discard", "Discard and go back", "config-s6-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Long, 0, nullptr, nullptr, nullptr, "config.action.value.discard", nullptr, 0 }
 };
 
+static constexpr ui_exporter::TextPayload kConfigSensorSettingsResetCal_ConfigSensorSettingsResetCalHdrTitle_Text = { "Sensor > Reset cal.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigSensorSettingsResetCal_ConfigSensorSettingsResetCalNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensorSettingsResetCal_ConfigSensorSettingsResetCalSensorIndex_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfigSensorSettingsResetCal_ConfigSensorSettingsResetCalFieldLabel_Text = { "Calibration back to unset", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfigSensorSettingsResetCal_ConfigSensorSettingsResetCalKeepsNote_Text = { "Totals are kept", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfigSensorSettingsResetCal_ConfigSensorSettingsResetCalFooterHint_Text = { "UP/DN pages  ENTER opens", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kConfigSensorSettingsResetCalElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 2, 2, 0, 0, &kConfigSensorSettingsResetCal_ConfigSensorSettingsResetCalHdrTitle_Text, nullptr, nullptr },
+    { "nav-position", ui_exporter::ElementType::Text, 168, 2, 0, 0, &kConfigSensorSettingsResetCal_ConfigSensorSettingsResetCalNavPosition_Text, nullptr, "nav.position" },
+    { "sensor-index", ui_exporter::ElementType::Value, 210, 2, 0, 0, &kConfigSensorSettingsResetCal_ConfigSensorSettingsResetCalSensorIndex_Text, nullptr, "config.selectedSensor" },
+    { "field-label", ui_exporter::ElementType::Text, 2, 24, 0, 0, &kConfigSensorSettingsResetCal_ConfigSensorSettingsResetCalFieldLabel_Text, nullptr, nullptr },
+    { "keeps-note", ui_exporter::ElementType::Text, 2, 44, 0, 0, &kConfigSensorSettingsResetCal_ConfigSensorSettingsResetCalKeepsNote_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kConfigSensorSettingsResetCal_ConfigSensorSettingsResetCalFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kConfigSensorSettingsResetCalFlows[] = {
+    { "f-next", "Next entry", "config-sensor-settings-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "config-s6-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-enter", "Open reset confirm", "confirm-reset-calibration", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
+};
+
 static constexpr ui_exporter::TextPayload kConfigSensorSettingsBack_ConfigSensorSettingsBackHdrTitle_Text = { "Sensor", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfigSensorSettingsBack_ConfigSensorSettingsBackNavPosition_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfigSensorSettingsBack_ConfigSensorSettingsBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
@@ -1480,7 +1504,7 @@ static constexpr ui_exporter::Element kConfigSensorSettingsBackElements[] = {
 
 static constexpr ui_exporter::Flow kConfigSensorSettingsBackFlows[] = {
     { "f-next", "Next entry", "config-s1-connected", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
-    { "f-prev", "Previous entry", "config-s6-max-flow", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-prev", "Previous entry", "config-sensor-settings-reset-cal", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
     { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
@@ -1918,6 +1942,48 @@ static constexpr ui_exporter::Flow kConfirmResetMaxFlowBackFlows[] = {
     { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
+static constexpr ui_exporter::TextPayload kConfirmResetCalibration_ConfirmResetCalibrationSensorIndex_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfirmResetCalibration_ConfirmResetCalibrationTitle_Text = { "RESET CALIBRATION?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfirmResetCalibration_ConfirmResetCalibrationWarning1_Text = { "Channel returns to SET? until", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfirmResetCalibration_ConfirmResetCalibrationWarning2_Text = { "new figures. Totals are kept.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kConfirmResetCalibration_ConfirmResetCalibrationTimerValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfirmResetCalibration_ConfirmResetCalibrationFooterHint_Text = { "hold ENTER confirms  UP/DN back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kConfirmResetCalibrationElements[] = {
+    { "overlay-bg", ui_exporter::ElementType::Box, 0, 0, 240, 135, nullptr, nullptr, nullptr },
+    { "sensor-index", ui_exporter::ElementType::Value, 200, 2, 0, 0, &kConfirmResetCalibration_ConfirmResetCalibrationSensorIndex_Text, nullptr, "config.selectedSensor" },
+    { "title", ui_exporter::ElementType::Text, 8, 30, 0, 0, &kConfirmResetCalibration_ConfirmResetCalibrationTitle_Text, nullptr, nullptr },
+    { "warning-1", ui_exporter::ElementType::Text, 8, 48, 0, 0, &kConfirmResetCalibration_ConfirmResetCalibrationWarning1_Text, nullptr, nullptr },
+    { "warning-2", ui_exporter::ElementType::Text, 8, 60, 0, 0, &kConfirmResetCalibration_ConfirmResetCalibrationWarning2_Text, nullptr, nullptr },
+    { "timer-value", ui_exporter::ElementType::Value, 104, 84, 0, 0, &kConfirmResetCalibration_ConfirmResetCalibrationTimerValue_Text, nullptr, "countdown.value" },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmResetCalibration_ConfirmResetCalibrationFooterHint_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kConfirmResetCalibrationFlows[] = {
+    { "f-next", "Next entry", "confirm-reset-calibration-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "confirm-reset-calibration-back", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-confirm", "Reset calibration", "toast-calibration-reset", ui_exporter::FlowTrigger::Timeout, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 3000, nullptr, nullptr, nullptr, "core.action.reset-calibration", nullptr, 0 }
+};
+
+static constexpr ui_exporter::TextPayload kConfirmResetCalibrationBack_ConfirmResetCalibrationBackHdrTitle_Text = { "RESET CALIBRATION?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kConfirmResetCalibrationBack_ConfirmResetCalibrationBackBackLabel_Text = { "< BACK", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kConfirmResetCalibrationBack_ConfirmResetCalibrationBackFooterHint_Text = { "ENTER go back", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kConfirmResetCalibrationBackElements[] = {
+    { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfirmResetCalibrationBack_ConfirmResetCalibrationBackHdrTitle_Text, nullptr, nullptr },
+    { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfirmResetCalibrationBack_ConfirmResetCalibrationBackBackLabel_Text, nullptr, nullptr },
+    { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmResetCalibrationBack_ConfirmResetCalibrationBackFooterHint_Text, nullptr, nullptr },
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kConfirmResetCalibrationBackFlows[] = {
+    { "f-next", "Next entry", "confirm-reset-calibration", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.next", nullptr, 0 },
+    { "f-prev", "Previous entry", "confirm-reset-calibration", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.page.previous", nullptr, 0 },
+    { "f-back", "Back one level", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
+};
+
 static constexpr ui_exporter::TextPayload kConfirmFactoryReset_ConfirmFactoryResetTitle_Text = { "FACTORY RESET?", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kConfirmFactoryReset_ConfirmFactoryResetWarning1_Text = { "Wipes NVS and reboots.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kConfirmFactoryReset_ConfirmFactoryResetWarning2_Text = { "This cannot be undone.", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
@@ -2054,6 +2120,20 @@ static constexpr ui_exporter::Flow kToastPortalLoginResetFlows[] = {
     { "f-dismiss", "Dismiss", nullptr, ui_exporter::FlowTrigger::Timeout, ui_exporter::FlowButton::None, ui_exporter::FlowGesture::Short, 2000, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
 };
 
+static constexpr ui_exporter::TextPayload kToastCalibrationReset_ToastCalibrationResetMessage_Text = { "CAL CLEARED", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kToastCalibrationReset_ToastCalibrationResetSub_Text = { "Returning...", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+
+static constexpr ui_exporter::Element kToastCalibrationResetElements[] = {
+    { "overlay-bg", ui_exporter::ElementType::Box, 0, 0, 240, 135, nullptr, nullptr, nullptr },
+    { "message", ui_exporter::ElementType::Text, 8, 58, 0, 0, &kToastCalibrationReset_ToastCalibrationResetMessage_Text, nullptr, nullptr },
+    { "sub", ui_exporter::ElementType::Text, 8, 74, 0, 0, &kToastCalibrationReset_ToastCalibrationResetSub_Text, nullptr, nullptr }
+};
+
+
+static constexpr ui_exporter::Flow kToastCalibrationResetFlows[] = {
+    { "f-dismiss", "Dismiss", nullptr, ui_exporter::FlowTrigger::Timeout, ui_exporter::FlowButton::None, ui_exporter::FlowGesture::Short, 2000, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 }
+};
+
 const ui_exporter::Screen kGeneratedScreens[] = {
     { "info-p0-global-status", "P0 — Global Status", kInfoP0GlobalStatusElements, sizeof(kInfoP0GlobalStatusElements) / sizeof(kInfoP0GlobalStatusElements[0]), kInfoP0GlobalStatusFlows, sizeof(kInfoP0GlobalStatusFlows) / sizeof(kInfoP0GlobalStatusFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "info-p1-instant-flow", "P1 — Instant Flow", kInfoP1InstantFlowElements, sizeof(kInfoP1InstantFlowElements) / sizeof(kInfoP1InstantFlowElements[0]), kInfoP1InstantFlowFlows, sizeof(kInfoP1InstantFlowFlows) / sizeof(kInfoP1InstantFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
@@ -2104,6 +2184,7 @@ const ui_exporter::Screen kGeneratedScreens[] = {
     { "config-s5-adjust-edit", "S5.V — Edit Adjust", kConfigS5AdjustEditElements, sizeof(kConfigS5AdjustEditElements) / sizeof(kConfigS5AdjustEditElements[0]), kConfigS5AdjustEditFlows, sizeof(kConfigS5AdjustEditFlows) / sizeof(kConfigS5AdjustEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, "config.sensor.calibrationType", 0 },
     { "config-s6-max-flow", "S6 — Max Flow (Q)", kConfigS6MaxFlowElements, sizeof(kConfigS6MaxFlowElements) / sizeof(kConfigS6MaxFlowElements[0]), kConfigS6MaxFlowFlows, sizeof(kConfigS6MaxFlowFlows) / sizeof(kConfigS6MaxFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-s6-max-flow-edit", "S6.V — Edit Max Flow (Q)", kConfigS6MaxFlowEditElements, sizeof(kConfigS6MaxFlowEditElements) / sizeof(kConfigS6MaxFlowEditElements[0]), kConfigS6MaxFlowEditFlows, sizeof(kConfigS6MaxFlowEditFlows) / sizeof(kConfigS6MaxFlowEditFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "config-sensor-settings-reset-cal", "S.RESET — Reset calibration", kConfigSensorSettingsResetCalElements, sizeof(kConfigSensorSettingsResetCalElements) / sizeof(kConfigSensorSettingsResetCalElements[0]), kConfigSensorSettingsResetCalFlows, sizeof(kConfigSensorSettingsResetCalFlows) / sizeof(kConfigSensorSettingsResetCalFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-sensor-settings-back", "S.BACK — Back", kConfigSensorSettingsBackElements, sizeof(kConfigSensorSettingsBackElements) / sizeof(kConfigSensorSettingsBackElements[0]), kConfigSensorSettingsBackFlows, sizeof(kConfigSensorSettingsBackFlows) / sizeof(kConfigSensorSettingsBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-wifi-root", "WIFI — WiFi", kNetWifiRootElements, sizeof(kNetWifiRootElements) / sizeof(kNetWifiRootElements[0]), kNetWifiRootFlows, sizeof(kNetWifiRootFlows) / sizeof(kNetWifiRootFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "net-mqtt-root", "MQTT — MQTT", kNetMqttRootElements, sizeof(kNetMqttRootElements) / sizeof(kNetMqttRootElements[0]), kNetMqttRootFlows, sizeof(kNetMqttRootFlows) / sizeof(kNetMqttRootFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
@@ -2123,6 +2204,8 @@ const ui_exporter::Screen kGeneratedScreens[] = {
     { "confirm-reset-session-back", "Reset session — Back", kConfirmResetSessionBackElements, sizeof(kConfirmResetSessionBackElements) / sizeof(kConfirmResetSessionBackElements[0]), kConfirmResetSessionBackFlows, sizeof(kConfirmResetSessionBackFlows) / sizeof(kConfirmResetSessionBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-reset-max-flow", "Reset peak flow?", kConfirmResetMaxFlowElements, sizeof(kConfirmResetMaxFlowElements) / sizeof(kConfirmResetMaxFlowElements[0]), kConfirmResetMaxFlowFlows, sizeof(kConfirmResetMaxFlowFlows) / sizeof(kConfirmResetMaxFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-reset-max-flow-back", "Reset peak flow — Back", kConfirmResetMaxFlowBackElements, sizeof(kConfirmResetMaxFlowBackElements) / sizeof(kConfirmResetMaxFlowBackElements[0]), kConfirmResetMaxFlowBackFlows, sizeof(kConfirmResetMaxFlowBackFlows) / sizeof(kConfirmResetMaxFlowBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "confirm-reset-calibration", "Reset calibration?", kConfirmResetCalibrationElements, sizeof(kConfirmResetCalibrationElements) / sizeof(kConfirmResetCalibrationElements[0]), kConfirmResetCalibrationFlows, sizeof(kConfirmResetCalibrationFlows) / sizeof(kConfirmResetCalibrationFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "confirm-reset-calibration-back", "Reset calibration — Back", kConfirmResetCalibrationBackElements, sizeof(kConfirmResetCalibrationBackElements) / sizeof(kConfirmResetCalibrationBackElements[0]), kConfirmResetCalibrationBackFlows, sizeof(kConfirmResetCalibrationBackFlows) / sizeof(kConfirmResetCalibrationBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-factory-reset", "Factory reset?", kConfirmFactoryResetElements, sizeof(kConfirmFactoryResetElements) / sizeof(kConfirmFactoryResetElements[0]), kConfirmFactoryResetFlows, sizeof(kConfirmFactoryResetFlows) / sizeof(kConfirmFactoryResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-factory-reset-back", "Factory reset — Back", kConfirmFactoryResetBackElements, sizeof(kConfirmFactoryResetBackElements) / sizeof(kConfirmFactoryResetBackElements[0]), kConfirmFactoryResetBackFlows, sizeof(kConfirmFactoryResetBackFlows) / sizeof(kConfirmFactoryResetBackFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "confirm-reset-portal-login", "Reset portal login?", kConfirmResetPortalLoginElements, sizeof(kConfirmResetPortalLoginElements) / sizeof(kConfirmResetPortalLoginElements[0]), kConfirmResetPortalLoginFlows, sizeof(kConfirmResetPortalLoginFlows) / sizeof(kConfirmResetPortalLoginFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
@@ -2130,7 +2213,8 @@ const ui_exporter::Screen kGeneratedScreens[] = {
     { "toast-totals-reset", "Totals reset", kToastTotalsResetElements, sizeof(kToastTotalsResetElements) / sizeof(kToastTotalsResetElements[0]), kToastTotalsResetFlows, sizeof(kToastTotalsResetFlows) / sizeof(kToastTotalsResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "toast-session-reset", "Session reset", kToastSessionResetElements, sizeof(kToastSessionResetElements) / sizeof(kToastSessionResetElements[0]), kToastSessionResetFlows, sizeof(kToastSessionResetFlows) / sizeof(kToastSessionResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
     { "toast-max-flow-reset", "Peak flow reset", kToastMaxFlowResetElements, sizeof(kToastMaxFlowResetElements) / sizeof(kToastMaxFlowResetElements[0]), kToastMaxFlowResetFlows, sizeof(kToastMaxFlowResetFlows) / sizeof(kToastMaxFlowResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "toast-portal-login-reset", "Portal login reset", kToastPortalLoginResetElements, sizeof(kToastPortalLoginResetElements) / sizeof(kToastPortalLoginResetElements[0]), kToastPortalLoginResetFlows, sizeof(kToastPortalLoginResetFlows) / sizeof(kToastPortalLoginResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 }
+    { "toast-portal-login-reset", "Portal login reset", kToastPortalLoginResetElements, sizeof(kToastPortalLoginResetElements) / sizeof(kToastPortalLoginResetElements[0]), kToastPortalLoginResetFlows, sizeof(kToastPortalLoginResetFlows) / sizeof(kToastPortalLoginResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 },
+    { "toast-calibration-reset", "Calibration reset", kToastCalibrationResetElements, sizeof(kToastCalibrationResetElements) / sizeof(kToastCalibrationResetElements[0]), kToastCalibrationResetFlows, sizeof(kToastCalibrationResetFlows) / sizeof(kToastCalibrationResetFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 }
 };
 
 static constexpr ui_exporter::ThemeColor kThemeColors[] = {
@@ -2154,7 +2238,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-15T07:17:08.886Z", 76, 645
+    "2026-08-15T07:39:07.280Z", 80, 666
 };
 
 }  // namespace ui_exporter

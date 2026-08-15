@@ -6,6 +6,7 @@ import {
   kSensorCount,
   mayUndersample,
   pulsesForFlow,
+  resetCalibration,
   resetMaxFlow,
   resetMeasured,
   resetSession,
@@ -469,5 +470,77 @@ describe("resetting the peak only", () => {
     expect(resetMaxFlow(table)[0].sessionLiters).toBeGreaterThan(0);
     expect(resetMeasured(table)[0].cumulativeLiters).toBe(0);
     expect(resetMaxFlow(table)[0].cumulativeLiters).toBeGreaterThan(0);
+  });
+});
+
+describe("resetting one channel's calibration", () => {
+  it("clears the five calibration fields and keeps every measurement", () => {
+    /**
+     * The meter swap: a broken sensor replaced by one with different characteristics. The calibration
+     * describes the meter, so it goes; the volume was measured truthfully before the failure, so it
+     * stays. Mirrors `OFF_CMD_RESET_CALIBRATION`, whose host test asserts the same split field for field.
+     */
+    const table = createSensorTable();
+    const after = resetCalibration(table, 3);
+    const channel = sensorAt(after, 3);
+    if (!channel) throw new Error("channel 3 should exist in an eight-row table");
+
+    expect(channel.qMaxLpm).toBe(0);
+    expect(channel.multiplier).toBe(0);
+    expect(channel.adjust).toBe(0);
+    expect(channel.pulsesPerLitre).toBe(0);
+    expect(channel.calibration).toBe(0);
+
+    // The contrast, stated the way resetMaxFlow's tests state theirs: what SURVIVES is the requirement.
+    const before = sensorAt(table, 3);
+    if (!before) throw new Error("channel 3 should exist before the reset too");
+    expect(channel.cumulativeLiters).toBe(before.cumulativeLiters);
+    expect(channel.cumulativeLiters).toBeGreaterThan(0);
+    expect(channel.sessionLiters).toBe(before.sessionLiters);
+    expect(channel.sessionLiters).toBeGreaterThan(0);
+    expect(channel.maxFlowLpm).toBe(before.maxFlowLpm);
+    expect(channel.maxFlowLpm).toBeGreaterThan(0);
+    expect(channel.connected).toBe(true);
+  });
+
+  it("makes the channel render SET?, which is the whole visible effect", () => {
+    /**
+     * `resolveSensorMetric` decides `SET?` from the `ready` FLAG, while the firmware derives readiness
+     * from `configIsValid` and so flips the moment the config clears. The helper therefore has to set
+     * `ready` itself — and this is the test that would fail if it stopped, which is the only reason the
+     * simulator and the device agree about what a just-swapped channel looks like.
+     */
+    const after = resetCalibration(createSensorTable(), 3);
+    expect(resolveSensorBinding("sensor.3.status", after, 3)).toBe("SET?");
+    expect(resolveSensorBinding("sensor.3.instantFlow", after, 3)).toBe("SET?");
+    // And it is the peak's row too, not only the live one: every metric on an unset channel says so.
+    expect(resolveSensorBinding("sensor.3.maxFlow", after, 3)).toBe("SET?");
+    // `normalizeSensor` owns this, not the helper: a channel that cannot produce a reading reads 0.
+    const channel = sensorAt(after, 3);
+    expect(channel?.instantFlowLpm).toBe(0);
+  });
+
+  it("touches exactly one channel", () => {
+    // The wrong-channel assertion, and the reason the helper takes a number at all: the other three
+    // resets map the whole table, so a per-channel one that did the same would be indistinguishable
+    // from them in every test that only looked at the channel it aimed for.
+    const after = resetCalibration(createSensorTable(), 3);
+    for (const sensor of after) {
+      if (sensor.number === 3) continue;
+      expect(sensor.qMaxLpm).toBeGreaterThan(0);
+      expect(sensor.ready).toBe(true);
+      expect(resolveSensorBinding(`sensor.${sensor.number}.status`, after, sensor.number)).toBe("OK");
+    }
+  });
+
+  it("changes nothing for a channel number no row carries", () => {
+    // 0 is the navigator's "no sensor level was entered" sentinel, and the firmware handler returns
+    // before writing anything when it sees it. Both ends have to agree that it is a no-op.
+    const table = createSensorTable();
+    for (const number of [0, 9, -1]) {
+      const after = resetCalibration(table, number);
+      expect(after.map((s) => s.qMaxLpm)).toEqual(table.map((s) => s.qMaxLpm));
+      expect(after.every((s) => s.ready)).toBe(true);
+    }
   });
 });

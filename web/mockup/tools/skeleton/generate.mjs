@@ -476,7 +476,19 @@ const SENSOR_SETTINGS = [
   // hidden. Neither is Connected, and neither is the question itself.
   { page: "S6", id: "config-s6-max-flow", title: "Max Flow (Q)", binding: "config.sensor.maxFlow" }
 ];
-const S_RING = [...SENSOR_SETTINGS.map((s) => s.id), "config-sensor-settings-back"];
+/**
+ * The reset row is NOT in SENSOR_SETTINGS, and that is the point.
+ *
+ * Everything in that table is a setting: the loop below emits a value page AND an `-edit` editor for
+ * each, and `assertCoversEverySetting` reads the table as the answer to "which manifest setting is
+ * editable where". This row edits nothing — it descends into a hold-to-confirm, like P4's peak reset —
+ * so it joins the RING without joining the table, exactly as the back row does.
+ *
+ * Hence the `S.RESET` name rather than an `S7` one: the S-numbers mean "setting n of this level", and
+ * `config-s7-*` would also promise a spec file for an `-edit` screen that does not and must not exist.
+ */
+const SENSOR_RESET_CAL_ID = "config-sensor-settings-reset-cal";
+const S_RING = [...SENSOR_SETTINGS.map((s) => s.id), SENSOR_RESET_CAL_ID, "config-sensor-settings-back"];
 
 SENSOR_SETTINGS.forEach((s, i) => {
   const v = byId.get(s.binding);
@@ -506,6 +518,37 @@ SENSOR_SETTINGS.forEach((s, i) => {
     page: s.page, screenId: editorId(s.id), title: s.title,
     binding: s.binding, parentId: s.id, visibleWhen: s.visibleWhen
   }));
+});
+/**
+ * S.RESET — the meter swap, one channel at a time.
+ *
+ * A broken sensor gets replaced by one with different characteristics, and the operator needs the old
+ * meter's figures gone before the new one's can go in. What must NOT go is the volume: the old meter was
+ * measuring truthfully right up to the failure, so the totals are real and carry on from where they
+ * stopped. Every row above edits one calibration field; this one returns all of them to unset at once,
+ * which is the same thing as returning the channel to `SET?`.
+ *
+ * The label says "calibration", never "values" or "sensor". The request was phrased as resetting the
+ * sensor's values, but the accumulated values are precisely what survives, and a row promising to reset
+ * what it keeps would be the panel lying to the person holding the datasheet. The confirm below then
+ * says "Totals are kept" outright rather than leaving it to be inferred from a title.
+ */
+screens.push({
+  id: SENSOR_RESET_CAL_ID,
+  name: "S.RESET — Reset calibration",
+  description: "Sensor settings action row: opens the reset-calibration confirm for the sensor of the current level.",
+  elements: [
+    text("hdr-title", L.headerY, "Sensor > Reset cal."),
+    value("sensor-index", L.headerY, "config.selectedSensor", { emphasis: "muted", x: 200 }),
+    text("field-label", L.bodyY, "Calibration back to unset", { emphasis: "muted" }),
+    text("keeps-note", L.valueY, "Totals are kept", { emphasis: "strong" }),
+    text("footer-hint", L.footerY, "UP/DN pages  ENTER opens", { emphasis: "muted" }),
+    scrollbar()
+  ],
+  flows: [
+    ...ringFlows(S_RING, S_RING.length - 2),
+    btn("f-enter", "Open reset confirm", "enter", "short", A.descend, "confirm-reset-calibration")
+  ]
 });
 screens.push({
   id: "config-sensor-settings-back",
@@ -864,6 +907,27 @@ const CONFIRMS = [
     holdMs: 1500, action: "core.action.reset-max-flow", toast: "toast-max-flow-reset"
   },
   {
+    /**
+     * 3000 ms, and per CHANNEL rather than per device — the only confirm here that is.
+     *
+     * Against the existing vocabulary: 1500 is the tier for state a power cycle already clears, which
+     * is why the session volume and the peak sit there. The calibration is not that. It is persisted
+     * (firmware.cpp's 60 s dirty check writes `cfg_q/cfg_f/cfg_a` to NVS), and while it is unset the
+     * channel measures nothing at all — pulses arrive and are discarded, because `configIsValid` is
+     * false. So it belongs with the 3 s group, beside the totals reset and the portal login: persistent
+     * state, gone until someone does something about it. It is emphatically not the 30 s tier, which is
+     * reserved for wiping the whole device.
+     *
+     * `showSensor` puts the channel number on the screen. Every other confirm acts on all eight, so
+     * none of them needed to name one; this one does, and a hold-to-destroy screen that will not say
+     * WHICH channel it is about is the one place that ambiguity actually costs something.
+     */
+    id: "confirm-reset-calibration", name: "Reset calibration?", title: "RESET CALIBRATION?",
+    warn: "Channel returns to SET? until", warn2: "new figures. Totals are kept.",
+    holdMs: 3000, action: "core.action.reset-calibration", toast: "toast-calibration-reset",
+    showSensor: true
+  },
+  {
     id: "confirm-factory-reset", name: "Factory reset?", title: "FACTORY RESET?",
     warn: "Wipes NVS and reboots.", warn2: "This cannot be undone.",
     holdMs: 30000, action: "core.action.factory-reset", toast: null
@@ -902,6 +966,11 @@ for (const c of CONFIRMS) {
                  `confirms, and releasing early abandons the countdown. UP/DOWN pages to < BACK.`,
     elements: [
       overlay(),
+      // Only for a confirm that acts on ONE channel. Spread rather than conditionally pushed so the
+      // device-wide confirms emit byte-for-byte what they emitted before this field existed.
+      ...(c.showSensor
+        ? [value("sensor-index", L.headerY, "config.selectedSensor", { emphasis: "muted", x: 200 })]
+        : []),
       text("title", L.bodyY, c.title, { emphasis: "strong" }),
       text("warning-1", L.bodyY + 18, c.warn, { emphasis: "muted" }),
       text("warning-2", L.bodyY + 30, c.warn2, { emphasis: "muted" }),
@@ -929,7 +998,11 @@ const TOASTS = [
   // R8.2a. Names the credential explicitly rather than saying "done": the operator now has to go
   // and use admin/admin, and a toast that does not say so leaves them guessing what changed.
   { id: "toast-max-flow-reset", name: "Peak flow reset", message: "PEAK RESET" },
-  { id: "toast-portal-login-reset", name: "Portal login reset", message: "LOGIN: admin/admin" }
+  { id: "toast-portal-login-reset", name: "Portal login reset", message: "LOGIN: admin/admin" },
+  // Says CAL, not "DONE": the operator's next move is to walk back up the level and type the new
+  // meter's figures in, and a toast that only acknowledges leaves them wondering whether the totals
+  // went with it. "CAL CLEARED" names the one thing that changed.
+  { id: "toast-calibration-reset", name: "Calibration reset", message: "CAL CLEARED" }
 ];
 for (const t of TOASTS) {
   screens.push({

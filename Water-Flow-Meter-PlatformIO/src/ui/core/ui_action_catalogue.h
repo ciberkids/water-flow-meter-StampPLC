@@ -29,6 +29,13 @@ inline constexpr ActionDescriptor kActionCatalogue[] = {
     {"core.action.reset-all-measured", "Reset all measured totals", "Issues the Reset All Measured Modbus command"},
     {"core.action.reset-max-flow", "Reset peak flow",
      "Issues the Reset Max Flow Modbus command; clears the volatile peak and nothing else"},
+    // Named for the calibration, not for "the sensor" or "the values". The owner asked for a way to
+    // "reset sensor values", but this keeps every accumulated volume on purpose, and a menu entry that
+    // promises to reset values it then keeps is a label the panel would be lying with. What it actually
+    // returns to defaults is the calibration, so that is what it is called, here and on the confirm.
+    {"core.action.reset-calibration", "Reset calibration",
+     "Returns the SELECTED channel's calibration to defaults so a replacement meter can be entered; "
+     "cumulative, session and peak readings are kept"},
     {"core.action.factory-reset", "Factory reset", "Wipes NVS, clears Modbus config, and reboots"},
     {"core.action.reset-portal-login", "Reset portal login",
      "Restores the configuration portal login to admin/admin, leaving totals, calibration and "

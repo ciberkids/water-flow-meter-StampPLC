@@ -1168,6 +1168,43 @@ bool wroteOnce(uint16_t address) {
          harness::writes[0].value == 1;
 }
 
+/**
+ * Walks from a fresh boot down to the sensor-settings ring of a chosen 1-BASED channel.
+ *
+ * Four descents, and the third is the one that matters: `UiNavigator::descend` fixes `sensorIndex_`
+ * from the id of the screen being LEFT, so it is paging the sensor LIST to `config-sensor-<n>` before
+ * pressing ENTER that decides which channel everything below applies to. A helper that always left from
+ * `config-sensor-1` would make every per-sensor test agree with a broken index.
+ */
+bool walkToSensorSettings(Device& dev, unsigned sensorNumber) {
+  for (int i = 0; i < 16 && dev.controller.page() != UiPage::EnterConfiguration; ++i) {
+    dev.tap(ButtonInputManager::Button::Down);
+  }
+  dev.tap(ButtonInputManager::Button::Enter);
+  for (int i = 0; i < 8 && !onScreen(dev, "config-sensors"); ++i) {
+    dev.tap(ButtonInputManager::Button::Down);
+  }
+  if (!onScreen(dev, "config-sensors")) return false;
+  dev.tap(ButtonInputManager::Button::Enter);
+
+  char wanted[24] = {};
+  std::snprintf(wanted, sizeof(wanted), "config-sensor-%u", sensorNumber);
+  for (int i = 0; i < 16 && !onScreen(dev, wanted); ++i) {
+    dev.tap(ButtonInputManager::Button::Down);
+  }
+  if (!onScreen(dev, wanted)) return false;
+  dev.tap(ButtonInputManager::Button::Enter);
+  return dev.controller.navigator().sensorIndex() == sensorNumber;
+}
+
+/** Pages the sensor-settings ring to a screen id, stepping over whatever the calibration form hides. */
+bool pageSensorRingTo(Device& dev, const char* id) {
+  for (int i = 0; i < 12 && !onScreen(dev, id); ++i) {
+    dev.tap(ButtonInputManager::Button::Down);
+  }
+  return onScreen(dev, id);
+}
+
 void confirmCountdownTests() {
   std::printf("\n[confirm screens can be confirmed — §4.3]\n");
 
@@ -1288,6 +1325,104 @@ void maxFlowResetTests() {
   for (int i = 0; i < 24; ++i) dev.tick(100);
   check(dev.controller.navigator().depth() == 0 && onScreen(dev, "info-p4-max-flow"),
         "and it returns to P4, the page the operator started from");
+  dev.press(ButtonInputManager::Button::Enter, false);
+  dev.tick(30);
+}
+
+/**
+ * S.RESET reaches the reset-calibration command, ON THE CHANNEL THE OPERATOR IS LOOKING AT.
+ *
+ * What this file can assert and what it deliberately leaves to modbus_reset_calibration_test.cpp: here
+ * `ModbusManager::applyHoldingWrite` is the harness stand-in that records the address and returns, so
+ * every claim about what the command DOES — the config cleared, the totals kept, the override dropped —
+ * belongs to the file that links the real one. What lives here is the half that file cannot see: the
+ * gesture, the hold threshold, the navigation, and THE ADDRESS.
+ *
+ * The address IS the wrong-channel test. `handleResetCalibration` turns a 1-based navigator index into a
+ * 0-based register slot, and on channel 1 the off-by-one and the right answer are the same address — so
+ * this walks to channel 3 and pins 180 + 25, then states the two addresses a slip in either direction
+ * would have produced. Channel 3 rather than channel 1 for exactly that reason.
+ */
+void resetCalibrationEntryTests() {
+  std::printf("\n[S.RESET issues the per-channel calibration reset, on the selected channel]\n");
+
+  Device dev;
+  dev.boot();
+  check(walkToSensorSettings(dev, 3), "walked to sensor 3's settings ring, leaving from config-sensor-3");
+  check(dev.controller.navigator().sensorIndex() == 3, "and the navigator holds channel 3");
+
+  check(pageSensorRingTo(dev, "config-sensor-settings-reset-cal"),
+        "paging the S ring reaches the S.RESET entry");
+  // The entry joined the ring rather than the settings table, so it must NOT have brought an editor
+  // with it: every S1..S6 row has a `-edit` child and this one has nothing to edit.
+  check(!dev.controller.editor().active, "which opens no editor, having no value to edit");
+  /**
+   * EIGHT here, and 6 or 7 on the device — the difference is the harness, not the ring.
+   *
+   * `UiNavigator::screenVisible` returns true for a gated screen when `visibility_` is unbound, which is
+   * the deliberate safe default (hiding a row because the question could not be asked would make a
+   * setting unreachable). Only firmware.cpp binds that callback, so every declared member counts here,
+   * including the pulses-per-litre row the Formula form hides. On the device the visible ring is 6 with
+   * Pulses/L and 7 with Formula.
+   *
+   * Asserted anyway, because 8 is the number the GEOMETRY depends on: `nav.position` renders "L%u %u/%u"
+   * into a 7-character gap, its declared worst case is `L3 8/8` at six, and this entry is what took the
+   * ring from 7 to 8. A visible ring of 10 makes that string 8 characters and it collides with the
+   * sensor number beside it — which the geometry audit has already caught this field doing once. It is
+   * also well under the unguarded `kMaxRing` of 16, whose overflow truncates a ring silently.
+   */
+  check(dev.controller.context().ringCount == 8,
+        "the declared ring is 8 - one more than before, and still six characters of nav.position");
+  check(dev.controller.context().ringIndex == 6, "with S.RESET second-to-last, just above < BACK");
+
+  dev.tap(ButtonInputManager::Button::Enter);
+  check(onScreen(dev, "confirm-reset-calibration"), "ENTER-short on S.RESET opens its confirm");
+  check(dev.controller.navigator().depth() == 4, "which sits at depth 4, alongside the value editors");
+  check(dev.controller.navigator().sensorIndex() == 3,
+        "and the channel SURVIVES the descent onto a screen whose id names no sensor");
+
+  // 1500 ms is the tier this deliberately does NOT use: the calibration is persisted, unlike the peak.
+  harness::writes.clear();
+  dev.press(ButtonInputManager::Button::Enter, true);
+  for (int i = 0; i < 34; ++i) dev.tick(50);  // ~1700 ms in, past the peak reset's threshold
+  check(harness::writes.empty(),
+        "1700 ms issues nothing - this is a 3 s hold, not the peak reset's 1.5 s");
+
+  for (int i = 0; i < 30; ++i) dev.tick(50);  // past 3000 ms
+  const uint16_t expected =
+      static_cast<uint16_t>(plc::sensorBaseAddress(2) + plc::OFF_CMD_RESET_CALIBRATION);
+  check(expected == 205, "channel 3's command register is 180 + 25 = 205");
+  check(wroteOnce(expected),
+        "holding ENTER for 3 s writes 1 to CHANNEL 3's reset-calibration register, and nothing else");
+
+  // The negatives. Each names a specific way of getting this wrong, which is what makes them worth
+  // asserting rather than a restatement of the line above.
+  check(!wroteOnce(static_cast<uint16_t>(plc::sensorBaseAddress(0) +
+                                        plc::OFF_CMD_RESET_CALIBRATION)),
+        "not channel 1's - the 1-based index was not used as a 0-based slot");
+  check(!wroteOnce(static_cast<uint16_t>(plc::sensorBaseAddress(3) +
+                                        plc::OFF_CMD_RESET_CALIBRATION)),
+        "nor channel 4's - nor the other way round");
+  check(!wroteOnce(static_cast<uint16_t>(plc::sensorBaseAddress(2) + plc::OFF_CMD_RESET_CONFIG)),
+        "and NOT offset 19, which would have destroyed the totals it exists to keep");
+  check(!wroteOnce(plc::REG_MASTER_RESET_ALL_MEASURED),
+        "nor the device-wide measured reset, on eight channels instead of one");
+  check(!wroteOnce(plc::REG_MASTER_RESET_ALL_SESSION), "nor the device-wide session reset");
+
+  check(onScreen(dev, "toast-calibration-reset"), "its acknowledgement toast is shown");
+  for (int i = 0; i < 24; ++i) dev.tick(100);
+  /**
+   * It returns to the S.RESET ROW, not to P0.
+   *
+   * The other resets are reached from a level-0 info page and unwind to depth 0, which is right for
+   * them and would be wrong here: the operator's next move is to page back up this very ring and enter
+   * the replacement meter's figures, and being thrown out to the status page would mean walking four
+   * levels back down first. The toast replaces the confirm at depth 4, so its own `nav.back` lands here.
+   */
+  check(dev.controller.navigator().depth() == 3 &&
+            onScreen(dev, "config-sensor-settings-reset-cal"),
+        "and it returns to the S.RESET row, where the new figures are four presses away");
+  check(dev.controller.navigator().sensorIndex() == 3, "still on channel 3");
   dev.press(ButtonInputManager::Button::Enter, false);
   dev.tick(30);
 }
@@ -2242,6 +2377,7 @@ int main() {
   confirmCountdownTests();
   confirmSessionCountdownTests();
   maxFlowResetTests();
+  resetCalibrationEntryTests();
   confirmAbortTests();
   factoryResetHoldTests();
   linkApplyProtocolTests();

@@ -769,6 +769,62 @@ export function resetSession(table: readonly SimulatedSensor[]): SimulatedSensor
 }
 
 /**
+ * `core.action.reset-calibration` — one channel's calibration, keeping everything it measured.
+ *
+ * The only per-channel reset in the file, hence the second argument: the other three act on all eight
+ * because the commands behind them are the device-wide master registers, while this one is
+ * `OFF_CMD_RESET_CALIBRATION` inside a single sensor's block. Matched on the `number` FIELD via
+ * `sensorAt`, not on position — the file header records what happened when two lookup rules for one
+ * fact disagreed.
+ *
+ * The four fields it zeroes are exactly `SensorCharacteristics{}`: q_max, f_multiplier, adjust and
+ * pulses_per_litre, with `calibration` back to 0 (Formula), which is the struct's own default. The
+ * three accumulated readings are not in that list on purpose — this is the meter swap, and the volume
+ * the old meter measured was true when it measured it.
+ *
+ * `ready: false` IS THE FIRMWARE'S DERIVATION, WRITTEN OUT BY HAND. The device has no stored readiness
+ * bit at all: `SensorData` deliberately dropped `isReady`, and readiness is recomputed as
+ * `configIsValid(configs[n])` every frame (modbus/sensor_types.h). A defaulted config has q_max = 0, so
+ * the device's answer flips to false the instant the config clears, and the channel renders `SET?`.
+ * Here `ready` is still a separate boolean that nothing recomputes, so leaving it alone would give a
+ * channel with no calibration still reporting `OK` and printing flow figures for a meter that is not
+ * there. Setting it is the local fix; the general divergence is wider than this function — writing
+ * `qMaxLpm` to 0 through the Values panel still leaves `ready` true — and is reported, not fixed here.
+ *
+ * `instantFlowLpm` is left to `normalizeSensor`, which zeroes it once `calibrated` goes false. Asserting
+ * that rather than assigning it is what keeps this helper honest about where the rule lives.
+ */
+export function resetCalibration(
+  table: readonly SimulatedSensor[],
+  sensorNumber: number
+): SimulatedSensor[] {
+  // A number no row carries — 0 included, which is the "no sensor level entered" sentinel the
+  // navigator uses — must change nothing. The firmware's own guard is the same one:
+  // `handleResetCalibration` returns before writing when `sensorIndex()` is 0.
+  if (sensorAt(table, sensorNumber) === undefined) {
+    return table.map((sensor) => normalizeSensor({ ...sensor }));
+  }
+  return table.map((sensor) =>
+    sensor.number === sensorNumber
+      ? normalizeSensor({
+          ...sensor,
+          qMaxLpm: 0,
+          multiplier: 0,
+          adjust: 0,
+          calibration: 0,
+          pulsesPerLitre: 0,
+          ready: false,
+          // Mirrors `evaluateSensorDiagnostics`, which recomputes the undersampling bit from the config
+          // and drops it for a channel whose config is invalid. A channel with no calibration cannot be
+          // undersampling anything, and the firmware register arm clears the Nyquist override with the
+          // config for the same reason: it described the OLD meter.
+          undersampling: false
+        })
+      : normalizeSensor({ ...sensor })
+  );
+}
+
+/**
  * The pulse count that makes a channel read `targetFlowLpm` over an interval.
  *
  * The inverse of the engine's two lines — `frequency = pulses / elapsedSeconds` and

@@ -67,6 +67,7 @@ import {
   SimulatedSensor,
   advanceSensorTick,
   createSensorTable,
+  resetCalibration,
   resetMaxFlow,
   resetMeasured,
   resetSession,
@@ -2210,6 +2211,40 @@ export function App() {
                 activeScreenId = resolvedId;
               }
             }
+          } else if (action === "core.action.reset-calibration") {
+            /**
+             * The per-channel reset, and the one that must NOT unwind to depth 0.
+             *
+             * It gets its own branch rather than joining the three below for two reasons that both come
+             * from it being reached three levels down instead of from an info page. It needs a CHANNEL,
+             * which the others do not. And the "return to where the descent started" dance below is
+             * wrong here: `navParentsRef.current[0]` is the ROOT frame, so reusing it would answer a
+             * reset performed inside the sensor settings by throwing the operator out to P0 — when what
+             * they are about to do is walk one row back up and type the new meter's figures in.
+             *
+             * So the stack is left alone and the toast simply replaces the confirm at the same depth,
+             * which is the rule `fireHoldFlow` already documents: the toast's own `nav.back` then lands
+             * on the S.RESET row it was opened from.
+             *
+             * The channel comes from the ANCESTOR CHAIN, not from `selectedSensor`. That is the faithful
+             * mirror: `UiNavigator` fixes `sensorIndex_` when it descends out of a `config-sensor-<n>`
+             * page and the firmware handler does nothing at all when the answer is 0, whereas
+             * `selectedSensor` falls back to the Values panel's manual pick — a fallback that exists for
+             * displaying a value and would here mean resetting a channel nothing on screen names.
+             */
+            const target = sensorIndexForScreen(
+              selectedScreen?.id ?? "",
+              navParentsRef.current
+            );
+            setSensors((table) => resetCalibration(table, target));
+            // No setSessionStartEpoch: no session restarted. The clock dates a volume, and this reset
+            // is the one that deliberately leaves every volume running.
+            if (flow.targetScreenId) {
+              const resolvedId = selectById(flow.targetScreenId);
+              if (resolvedId) {
+                activeScreenId = resolvedId;
+              }
+            }
           } else if (
             action === "core.action.reset-session" ||
             action === "core.action.reset-all-measured" ||
@@ -2480,6 +2515,15 @@ export function App() {
           setSessionStartEpoch(Math.floor(Date.now() / 1000));
           setClockState(clockAfterSessionReset);
         }
+      }
+      // The per-channel one. This is the site that actually runs for the confirm screen — a confirm's
+      // `f-confirm` is a hold, so it arrives here and not through the button path — but both are
+      // patched, because a dataset change that turned it into a button flow would otherwise silently
+      // stop resetting anything. The channel is read off the ancestor chain for the reason given at the
+      // button site: it is what the navigator does, and `selectedSensor`'s manual-pick fallback is not.
+      if (flow.actionId === "core.action.reset-calibration") {
+        const target = sensorIndexForScreen(screen.id, navParentsRef.current);
+        setSensors((table) => resetCalibration(table, target));
       }
       if (flow.actionId === "core.action.factory-reset") {
         setSensors(createSensorTable());

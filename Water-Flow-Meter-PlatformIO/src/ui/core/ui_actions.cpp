@@ -158,6 +158,40 @@ void handleResetMaxFlow(const UiActionContext& ctx, const ui_exporter::Flow&) {
   ctx.modbus.applyHoldingWrite(plc::REG_MASTER_RESET_ALL_MAX, 1);
 }
 
+/**
+ * Returns ONE channel's calibration to defaults — the meter swap.
+ *
+ * The scenario it serves: a broken sensor is replaced by one with different characteristics. Everything
+ * the old meter measured was true when it measured it, so the totals stay and keep accumulating; only
+ * the figures describing the meter go back to unset, which is what puts the channel back to `SET?` and
+ * invites the new datasheet's numbers.
+ *
+ * THE CHANNEL IS THE ONE THE NAVIGATOR SELECTED, and the index arithmetic is the whole risk in this
+ * function. `navigator().sensorIndex()` is ONE-BASED with 0 meaning "no sensor level was entered" —
+ * `sensorIndexFromId` parses it out of a `config-sensor-<n>` id — while `sensorBaseAddress` takes a
+ * ZERO-BASED slot. Subtracting without the guard would turn "no sensor" into channel 1 and silently
+ * reset a channel the operator was not even looking at. The same off-by-one is why `sensorSlot()` in
+ * ui_settings.cpp exists rather than being open-coded at each call.
+ *
+ * `sensorIndex_` is sticky across the descent, which is what makes this work from a confirm screen:
+ * `UiNavigator::descend` only reassigns it when the screen being LEFT parses as a sensor, and clears it
+ * only on ascending to depth 0 or escaping. So standing on `confirm-reset-calibration` — two levels
+ * below `config-sensor-3` — it still reads 3.
+ *
+ * Routed through the documented command register rather than assigning `configs[n]` here, for the reason
+ * §4.3 note 3 gives for the other resets: the manager owns the override state, the diagnostics flags and
+ * the holding-register mirror that all have to move together.
+ */
+void handleResetCalibration(const UiActionContext& ctx, const ui_exporter::Flow&) {
+  ctx.controller.notifyInteraction(ctx.nowMs);
+  const uint8_t sensor = ctx.controller.navigator().sensorIndex();
+  if (sensor == 0 || sensor > plc::kNumSensors) {
+    return;
+  }
+  const uint16_t base = plc::sensorBaseAddress(static_cast<std::size_t>(sensor - 1));
+  ctx.modbus.applyHoldingWrite(base + plc::OFF_CMD_RESET_CALIBRATION, 1);
+}
+
 void handleFactoryReset(const UiActionContext& ctx, const ui_exporter::Flow&) {
   ctx.controller.notifyInteraction(ctx.nowMs);
   if (ctx.factoryReset) {
@@ -359,6 +393,7 @@ constexpr UiActionBinding kDefaultBindings[] = {
     {"core.action.reset-session", handleResetSession},
     {"core.action.reset-all-measured", handleResetAllMeasured},
     {"core.action.reset-max-flow", handleResetMaxFlow},
+    {"core.action.reset-calibration", handleResetCalibration},
     {"core.action.factory-reset", handleFactoryReset},
     {"core.action.reset-portal-login", handleResetPortalLogin},
     {"ui.action.nav.descend", handleNavDescend},

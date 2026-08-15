@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-15T07:17:08.886Z",
-  "screenCount": 76,
-  "elementCount": 645,
+  "generatedAt": "2026-08-15T07:39:07.280Z",
+  "screenCount": 80,
+  "elementCount": 666,
   "dataset": [
     {
       "id": "info-p0-global-status",
@@ -9546,7 +9546,7 @@
             "button": "down",
             "gesture": "short"
           },
-          "targetScreenId": "config-sensor-settings-back",
+          "targetScreenId": "config-sensor-settings-reset-cal",
           "actionId": "ui.action.page.next"
         },
         {
@@ -9868,6 +9868,162 @@
       "submenus": []
     },
     {
+      "id": "config-sensor-settings-reset-cal",
+      "name": "S.RESET — Reset calibration",
+      "description": "Sensor settings action row: opens the reset-calibration confirm for the sensor of the current level. — laid out to the §7 per-sensor template, minus the editor rows it has no value to edit.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 2,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Sensor > Reset cal.",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "nav-position",
+          "position": {
+            "x": 168,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "nav.position"
+        },
+        {
+          "id": "sensor-index",
+          "position": {
+            "x": 210,
+            "y": 2
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "config.selectedSensor"
+        },
+        {
+          "id": "field-label",
+          "position": {
+            "x": 2,
+            "y": 24
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Calibration back to unset",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "keeps-note",
+          "position": {
+            "x": 2,
+            "y": 44
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Totals are kept",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 2,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "UP/DN pages  ENTER opens",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 100
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 100
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-sensor-settings-back",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "config-s6-max-flow",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-enter",
+          "label": "Open reset confirm",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-calibration",
+          "actionId": "ui.action.nav.descend"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
       "id": "config-sensor-settings-back",
       "name": "S.BACK — Back",
       "description": "Ascends from sensor settings to the sensor list. — laid out to the §7 back template.",
@@ -9973,7 +10129,7 @@
             "button": "up",
             "gesture": "short"
           },
-          "targetScreenId": "config-s6-max-flow",
+          "targetScreenId": "config-sensor-settings-reset-cal",
           "actionId": "ui.action.page.previous"
         },
         {
@@ -12788,6 +12944,270 @@
       "submenus": []
     },
     {
+      "id": "confirm-reset-calibration",
+      "name": "Reset calibration?",
+      "description": "Confirm screen. ENTER-short is unattached and ignored; ENTER held 3000 ms confirms, and releasing early abandons the countdown. UP/DOWN pages to < BACK.",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "kind": {
+            "type": "box",
+            "payload": {
+              "width": 240,
+              "height": 135
+            }
+          },
+          "size": {
+            "width": 240,
+            "height": 135
+          }
+        },
+        {
+          "id": "sensor-index",
+          "position": {
+            "x": 200,
+            "y": 2
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          },
+          "binding": "config.selectedSensor"
+        },
+        {
+          "id": "title",
+          "position": {
+            "x": 8,
+            "y": 30
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "RESET CALIBRATION?",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "warning-1",
+          "position": {
+            "x": 8,
+            "y": 48
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Channel returns to SET? until",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "warning-2",
+          "position": {
+            "x": 8,
+            "y": 60
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "new figures. Totals are kept.",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "timer-value",
+          "position": {
+            "x": 104,
+            "y": 84
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "countdown.value"
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "hold ENTER confirms  UP/DN back",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-calibration-back",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-calibration-back",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-confirm",
+          "label": "Reset calibration",
+          "trigger": {
+            "type": "timeout",
+            "durationMs": 3000,
+            "holdButton": "enter"
+          },
+          "actionId": "core.action.reset-calibration",
+          "targetScreenId": "toast-calibration-reset"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "confirm-reset-calibration-back",
+      "name": "Reset calibration — Back",
+      "description": "Ascends one level, out of RESET CALIBRATION?.",
+      "elements": [
+        {
+          "id": "hdr-title",
+          "position": {
+            "x": 8,
+            "y": 2
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "RESET CALIBRATION?",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "back-label",
+          "position": {
+            "x": 8,
+            "y": 50
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "< BACK",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "footer-hint",
+          "position": {
+            "x": 8,
+            "y": 124
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "ENTER go back",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "level-position",
+          "position": {
+            "x": 232,
+            "y": 14
+          },
+          "kind": {
+            "type": "scrollbar",
+            "payload": {
+              "width": 5,
+              "height": 104
+            }
+          },
+          "size": {
+            "width": 5,
+            "height": 104
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-next",
+          "label": "Next entry",
+          "trigger": {
+            "type": "button",
+            "button": "down",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-calibration",
+          "actionId": "ui.action.page.next"
+        },
+        {
+          "id": "f-prev",
+          "label": "Previous entry",
+          "trigger": {
+            "type": "button",
+            "button": "up",
+            "gesture": "short"
+          },
+          "targetScreenId": "confirm-reset-calibration",
+          "actionId": "ui.action.page.previous"
+        },
+        {
+          "id": "f-back",
+          "label": "Back one level",
+          "trigger": {
+            "type": "button",
+            "button": "enter",
+            "gesture": "short"
+          },
+          "actionId": "ui.action.nav.back"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
       "id": "confirm-factory-reset",
       "name": "Factory reset?",
       "description": "Confirm screen. ENTER-short is unattached and ignored; ENTER held 30000 ms confirms, and releasing early abandons the countdown. UP/DOWN pages to < BACK.",
@@ -13525,6 +13945,76 @@
             "type": "text",
             "payload": {
               "text": "LOGIN: admin/admin",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "sub",
+          "position": {
+            "x": 8,
+            "y": 74
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Returning...",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "events": [],
+      "flows": [
+        {
+          "id": "f-dismiss",
+          "label": "Dismiss",
+          "trigger": {
+            "type": "timeout",
+            "durationMs": 2000
+          },
+          "actionId": "ui.action.nav.back"
+        }
+      ],
+      "assets": [],
+      "animations": [],
+      "submenus": []
+    },
+    {
+      "id": "toast-calibration-reset",
+      "name": "Calibration reset",
+      "description": "Acknowledgement toast. Auto-dismisses after 2 s with no button held (§3.8 auto timeout).",
+      "elements": [
+        {
+          "id": "overlay-bg",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "kind": {
+            "type": "box",
+            "payload": {
+              "width": 240,
+              "height": 135
+            }
+          },
+          "size": {
+            "width": 240,
+            "height": 135
+          }
+        },
+        {
+          "id": "message",
+          "position": {
+            "x": 8,
+            "y": 58
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "CAL CLEARED",
               "emphasis": "strong",
               "align": "left"
             }

@@ -37,6 +37,11 @@
       "description": "Issues the Reset Max Flow Modbus command; clears the volatile peak and nothing else"
     },
     {
+      "id": "core.action.reset-calibration",
+      "label": "Reset calibration",
+      "description": "Returns the SELECTED channel's calibration to defaults so a replacement meter can be entered; cumulative, session and peak readings are kept"
+    },
+    {
       "id": "core.action.factory-reset",
       "label": "Factory reset",
       "description": "Wipes NVS, clears Modbus config, and reboots"

@@ -112,12 +112,13 @@ const SENSOR = [
   ["OFF_MAX_FLOW", "r", "f32", "L/min", "Peak flow since the last reset. Volatile — it is not persisted across a reboot."],
   ["OFF_CMD_RESET_SESSION", "w", "u16", "—", "Write `1` to clear this channel's session volume."],
   ["OFF_CMD_RESET_ALL", "w", "u16", "—", "Write `1` to clear this channel's totals, session and peak."],
-  ["OFF_CMD_RESET_CONFIG", "w", "u16", "—", "Write `1` to return this channel's calibration to defaults."],
+  ["OFF_CMD_RESET_CONFIG", "w", "u16", "—", "Write `1` to decommission this channel: the calibration returns to defaults **and every measurement is destroyed** — cumulative volume, session volume, peak and pulse count — with the zeroed lifetime total persisted to NVS. The name undersells it; use `OFF_CMD_RESET_CALIBRATION` if the totals must survive."],
   ["OFF_CFG_Q_MAX", "rw", "u16", "L/min", "Rated maximum flow, from the meter's datasheet."],
   ["OFF_CFG_F_MULT", "rw", "i16", "—", "Formula calibration: the multiplier in `F = mult*Q + adjust`. Used as a DIVISOR when converting pulses to flow, so `0` is refused and the legal range is 1..32767."],
   ["OFF_CFG_ADJUST", "rw", "i16", "—", "Formula calibration: the additive term in `F = mult*Q + adjust`."],
   ["OFF_CFG_CAL_TYPE", "rw", "u16", "enum", "How this channel is calibrated: `0` formula (uses the two fields above), `1` pulses per litre (uses the field below)."],
-  ["OFF_CFG_PULSES_PER_L", "rw", "u16", "pulses/L", "Pulses-per-litre calibration, exact. The formula fields cannot express it: `f_multiplier` is an integer used as a divisor, so a 450 pulses/L meter would need 7.5 and the nearest integers carry a 6 % error on every reading."]
+  ["OFF_CFG_PULSES_PER_L", "rw", "u16", "pulses/L", "Pulses-per-litre calibration, exact. The formula fields cannot express it: `f_multiplier` is an integer used as a divisor, so a 450 pulses/L meter would need 7.5 and the nearest integers carry a 6 % error on every reading."],
+  ["OFF_CMD_RESET_CALIBRATION", "w", "u16", "—", "Write `1` to return this channel's calibration to defaults and **nothing else** — cumulative volume, session volume and peak are all kept and keep accumulating. For the meter swap: a broken sensor replaced by one with different characteristics, where the volume already measured is real. Clears the channel's Nyquist override with it, so the replacement's first figures are sampling-checked rather than inheriting the old meter's exemption. The channel reads `SET?` until new figures are entered, because a defaulted config has `q_max = 0` and so fails `configIsValid`."]
 ];
 
 /* ── The network block (WiFi_MQTT_Connectivity.md §5) ─────────────────────────────────────────── */

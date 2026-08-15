@@ -60,6 +60,7 @@ flowchart TB
         config_s4_multiplier["S4 - Multiplier (F)<br/><i>only when config.sensor.calibrationType = 0</i>"]
         config_s5_adjust["S5 - Adjust<br/><i>only when config.sensor.calibrationType = 0</i>"]
         config_s6_max_flow["S6 - Max Flow (Q)"]
+        config_sensor_settings_reset_cal["S.RESET - Reset calibration"]
         config_sensor_settings_back["S.BACK - Back"]
     end
     subgraph L6["Level: WIFI - WiFi"]
@@ -92,12 +93,17 @@ flowchart TB
         confirm_reset_max_flow["Reset peak flow?"]
         confirm_reset_max_flow_back["Reset peak flow - Back"]
     end
-    subgraph L11["Level: P6 - Factory Reset"]
+    subgraph L11["Level: S.RESET - Reset calibration"]
+        direction TB
+        confirm_reset_calibration["Reset calibration?"]
+        confirm_reset_calibration_back["Reset calibration - Back"]
+    end
+    subgraph L12["Level: P6 - Factory Reset"]
         direction TB
         confirm_factory_reset["Factory reset?"]
         confirm_factory_reset_back["Factory reset - Back"]
     end
-    subgraph L12["Level: W4 - Reset portal login"]
+    subgraph L13["Level: W4 - Reset portal login"]
         direction TB
         confirm_reset_portal_login["Reset portal login?"]
         confirm_reset_portal_login_back["Reset portal login - Back"]
@@ -122,6 +128,7 @@ flowchart TB
     config_sensor_6 -- ENTER --> config_s1_connected
     config_sensor_7 -- ENTER --> config_s1_connected
     config_sensor_8 -- ENTER --> config_s1_connected
+    config_sensor_settings_reset_cal -- ENTER --> confirm_reset_calibration
     net_wifi_root -- ENTER --> net_wifi_info
     net_mqtt_root -- ENTER --> net_mqtt_info
     net_wifi_portal_reset -- ENTER --> confirm_reset_portal_login

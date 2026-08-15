@@ -47,6 +47,7 @@ flowchart TB
         config_s4_multiplier["S4 - Multiplier (F)<br/><i>only when config.sensor.calibrationType = 0</i><br/><i>ENTER opens its editor</i>"]
         config_s5_adjust["S5 - Adjust<br/><i>only when config.sensor.calibrationType = 0</i><br/><i>ENTER opens its editor</i>"]
         config_s6_max_flow["S6 - Max Flow (Q)<br/><i>ENTER opens its editor</i>"]
+        config_sensor_settings_reset_cal["S.RESET - Reset calibration"]
         config_sensor_settings_back["S.BACK - Back"]
     end
     config_modbus -- ENTER --> config_modbus_slave_id
@@ -60,3 +61,4 @@ flowchart TB
     config_sensor_6 -- ENTER --> config_s1_connected
     config_sensor_7 -- ENTER --> config_s1_connected
     config_sensor_8 -- ENTER --> config_s1_connected
+    config_sensor_settings_reset_cal -- ENTER --> confirm_reset_calibration

@@ -1,0 +1,76 @@
+{
+  "id": "config-sensor-settings-reset-cal",
+  "name": "S.RESET — Reset calibration",
+  "description": "Sensor settings action row: opens the reset-calibration confirm for the sensor of the current level. — laid out to the §7 per-sensor template, minus the editor rows it has no value to edit.",
+  "elements": [
+    {
+      "id": "hdr-title",
+      "kind": "text",
+      "x": 2,
+      "y": 2,
+      "emphasis": "strong",
+      "content": "Sensor > Reset cal.",
+      "worst": "Sensor > Reset cal.",
+      "bound": "fixed literal; abbreviated so it clears nav-position at x=168"
+    },
+    {
+      "id": "nav-position",
+      "kind": "text",
+      "x": 168,
+      "y": 2,
+      "emphasis": "muted",
+      "binding": "nav.position",
+      "worst": "L3 8/8",
+      "bound": "depth 0..3 (UiNavigator::kMaxDepth) and position within a ring of at most 8; this row is what takes the sensor-settings ring from 7 declared members to 8, and 8/8 is still six characters"
+    },
+    {
+      "id": "sensor-index",
+      "kind": "value",
+      "x": 210,
+      "y": 2,
+      "binding": "config.selectedSensor",
+      "worst": "8",
+      "bound": "which sensor the reset applies to; 1..8, or - when none is implied. The one fact this screen cannot be allowed to omit, because the action is per channel"
+    },
+    {
+      "id": "field-label",
+      "kind": "text",
+      "x": 2,
+      "y": 24,
+      "emphasis": "muted",
+      "content": "Calibration back to unset",
+      "worst": "Calibration back to unset",
+      "bound": "fixed literal; names the effect in the vocabulary of the rows above, which each edit one of the fields it clears"
+    },
+    {
+      "id": "keeps-note",
+      "kind": "text",
+      "x": 2,
+      "y": 44,
+      "emphasis": "strong",
+      "content": "Totals are kept",
+      "worst": "Totals are kept",
+      "bound": "fixed literal, and emphasised rather than muted on purpose: it is the half of the behaviour an operator would otherwise assume the opposite of"
+    },
+    {
+      "id": "footer-hint",
+      "kind": "text",
+      "x": 2,
+      "y": 124,
+      "emphasis": "muted",
+      "content": "UP/DN pages  ENTER opens",
+      "worst": "UP/DN pages  ENTER opens",
+      "bound": "shared footer vocabulary, see 7.1. ENTER opens a confirm rather than editing, so it does not claim 'edit' like the S1..S6 rows",
+      "bannerReplaces": true
+    },
+    {
+      "id": "level-position",
+      "kind": "scrollbar",
+      "x": 232,
+      "y": 14,
+      "width": 5,
+      "height": 100,
+      "bound": "geometry; 100px so it stops clear of the banner row at y=116"
+    }
+  ]
+}

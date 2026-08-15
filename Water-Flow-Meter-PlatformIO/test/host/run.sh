@@ -52,6 +52,19 @@ g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/modbus_manager_clock_test" \
   src/net/net_settings.cpp \
   src/net/net_register_map.cpp
 
+# What OFF_CMD_RESET_CALIBRATION keeps. The whole claim is about fields a command does NOT touch, so it
+# has to run the real register arm against a channel carrying real readings — interaction_test.cpp
+# defines applyHoldingWrite itself and would assert against its own stand-in. Same link line as the
+# clock test above, and for the same reason.
+g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/modbus_reset_calibration_test" \
+  test/host/modbus_reset_calibration_test.cpp \
+  src/modbus/modbus_manager.cpp \
+  src/time/device_clock.cpp \
+  src/led/led_controller.cpp \
+  src/modbus/link_settings.cpp \
+  src/net/net_settings.cpp \
+  src/net/net_register_map.cpp
+
 g++ "${CXXFLAGS[@]}" -o "$OUT/led_test" \
   test/host/led_test.cpp
 
@@ -179,6 +192,8 @@ echo
 "$OUT/device_clock_test"
 echo
 "$OUT/modbus_manager_clock_test"
+echo
+"$OUT/modbus_reset_calibration_test"
 echo
 "$OUT/led_test"
 echo

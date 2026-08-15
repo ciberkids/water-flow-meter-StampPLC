@@ -50,6 +50,7 @@ bool ModbusManager::isWritableAddress(uint16_t address) const {
     case OFF_CMD_RESET_SESSION:
     case OFF_CMD_RESET_ALL:
     case OFF_CMD_RESET_CONFIG:
+    case OFF_CMD_RESET_CALIBRATION:
     case OFF_CFG_Q_MAX:
     case OFF_CFG_F_MULT:
     case OFF_CFG_ADJUST:
@@ -306,6 +307,36 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
         deps_.sensors[sensorIndex].inUse = wasInUse;
         deps_.configs[sensorIndex] = SensorCharacteristics{};
         saveCumulativeToNvs(sensorIndex);
+      }
+      syncSensorToHolding(sensorIndex);
+      deps_.registers->setUint16(address, 0);
+      evaluateSensorDiagnostics();
+      return true;
+    // The calibration, and ONLY the calibration. Deliberately not a narrowing of the arm above: that
+    // one wipes `SensorData` as well, and this exists for the meter swap, where the volume the old
+    // meter measured is real and must keep accumulating from where it stopped.
+    //
+    // WHAT THIS DOES NOT DO, each on purpose:
+    //  - it does not touch `deps_.sensors[sensorIndex]`, so cumulativeLiters, sessionLiters,
+    //    maxFlowSinceReset, pulseCount and instantFlow all survive;
+    //  - it does not call `saveCumulativeToNvs`, because no measurement changed — writing the same
+    //    total back would only spend a flash erase to record that nothing happened;
+    //  - it does not write the cleared config to NVS either. The 60 s dirty check in firmware.cpp
+    //    (`configs[i] != persistedConfigs[i]` -> `saveSensorConfig(i)`) is how EVERY config change
+    //    already reaches flash, panel edits included, so persisting here would be a second path to
+    //    one fact. The cost is the same as for any edit: a power cut inside that minute loses it.
+    case OFF_CMD_RESET_CALIBRATION:
+      if (value == 1) {
+        deps_.configs[sensorIndex] = SensorCharacteristics{};
+        // The Nyquist override belonged to the OLD meter's figures. Left standing, `overrideActive_`
+        // makes prepareConfigUpdate return true for the very first candidate entered for the NEW
+        // meter, so the replacement would be accepted without ever being sampling-checked — and
+        // `evaluateSensorDiagnostics` below ORs both flags in, so the undersampling bit would also
+        // stay lit for a channel that now has no configuration to undersample. The arm above does not
+        // clear these; that is a separate defect, reported rather than fixed here.
+        overridePending_[sensorIndex] = false;
+        overrideActive_[sensorIndex] = false;
+        pendingOverrides_[sensorIndex] = SensorCharacteristics{};
       }
       syncSensorToHolding(sensorIndex);
       deps_.registers->setUint16(address, 0);
