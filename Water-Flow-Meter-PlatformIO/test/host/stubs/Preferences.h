@@ -6,6 +6,11 @@
 // std::map so a test can assert what WOULD be persisted — which matters, because
 // "the setting was committed but never written to NVS" is a bug class this project has
 // already shipped once.
+// The ESP32 core's Preferences.h pulls in Arduino.h, and modbus_manager.cpp relies on that: it calls
+// millis() while including neither. Mirroring the transitive include here is what lets that file compile
+// on the host at all.
+#include <Arduino.h>
+
 #include <cstdint>
 #include <map>
 #include <string>

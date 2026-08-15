@@ -124,7 +124,8 @@ void UiController::update(uint32_t nowMs,
                           float pollingRateKhz,
                           const LedController& ledController,
                           const UiCountdownState& countdown,
-                          const plc::NetStatusSnapshot& netStatus) {
+                          const plc::NetStatusSnapshot& netStatus,
+                          const plc::DeviceClock& clock) {
   updateIdleState(nowMs);
 
   context_.mode = mode_;
@@ -141,6 +142,12 @@ void UiController::update(uint32_t nowMs,
   context_.countdownLabel = countdown.label;
   context_.countdownScreenId = countdown.screenId;
   context_.net = netStatus;
+  // Read out as three scalars rather than held as a reference, so the renderer never samples a clock
+  // that is advancing on another task. `sessionStartEpoch()` is a stored moment and does not move;
+  // `now()` would, which is why nothing here publishes it.
+  context_.clockSet = clock.isSet();
+  context_.sessionStartEpoch = clock.sessionStartEpoch();
+  context_.sessionStartAwaitingClock = clock.sessionStartAwaitingClock();
   // The two things that change between telemetry ticks, and so the two things that decide
   // the repaint cadence. See UiRenderContext::interactive.
   context_.interactive = editor_.active || countdown.active;

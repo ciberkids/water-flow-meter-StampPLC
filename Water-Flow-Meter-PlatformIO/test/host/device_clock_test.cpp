@@ -13,8 +13,13 @@
 namespace {
 
 int failures = 0;
+/** Counted and REPORTED, like every sibling binary: a suite that prints a bare "ALL PASSED" cannot
+ *  distinguish 90 passing checks from a file whose test functions were never called — which is this
+ *  repo's most-repeated failure and the reason every other host test prints its total. */
+int checks = 0;
 
 void check(bool condition, const char* what) {
+  ++checks;
   std::printf("  %-72s %s\n", what, condition ? "ok" : "FAIL");
   if (!condition) failures++;
 }
@@ -124,6 +129,103 @@ void civilConversionTests() {
   check(plc::epochFromUtcCivil(2026, 8, 14, 0, 60, 0) == 0, "minute 60 is refused");
 }
 
+/** Reads as the panel prints it, so a wrong field is visible rather than inferred from an integer. */
+bool civilIs(uint32_t epoch, int year, int month, int day, int hour, int minute, int second) {
+  const plc::UtcCivil c = plc::civilFromEpoch(epoch);
+  return c.year == year && c.month == month && c.day == day && c.hour == hour && c.minute == minute &&
+         c.second == second;
+}
+
+void civilFromEpochTests() {
+  std::printf("\n[epoch back to a UTC civil date — every anchor below verified with `date -u -d @N`]\n");
+
+  // `date -u -d @1577836800` -> Wed Jan  1 00:00:00 UTC 2020. This one is kEarliestPlausibleEpoch, so
+  // it is also the oldest date the panel can ever be asked to render.
+  check(civilIs(1577836800u, 2020, 1, 1, 0, 0, 0), "1577836800 is 2020-01-01 00:00:00");
+  // `date -u -d @1786545127` -> Wed Aug 12 14:32:07 UTC 2026.
+  check(civilIs(1786545127u, 2026, 8, 12, 14, 32, 7), "1786545127 is 2026-08-12 14:32:07");
+  // `date -u -d @1767225599` / `@1767225600` — the year rollover, either side of midnight.
+  check(civilIs(1767225599u, 2025, 12, 31, 23, 59, 59), "1767225599 is 2025-12-31 23:59:59");
+  check(civilIs(1767225600u, 2026, 1, 1, 0, 0, 0), "1767225600 is 2026-01-01 00:00:00");
+
+  // ── The four leap-year cases, which is where hand-rolled date arithmetic actually breaks ──
+  // `date -u -d @1709164799` -> Wed Feb 28 23:59:59 UTC 2024, `@1709164800` -> Thu Feb 29 00:00:00.
+  check(civilIs(1709164799u, 2024, 2, 28, 23, 59, 59), "1709164799 is 2024-02-28 23:59:59");
+  check(civilIs(1709164800u, 2024, 2, 29, 0, 0, 0), "1709164800 is 2024-02-29 — the leap day itself");
+  check(civilIs(1709251200u, 2024, 3, 1, 0, 0, 0), "1709251200 is 2024-03-01 — the day after it");
+  // A non-leap year: February must END on the 28th, and the 29th must not exist.
+  check(civilIs(1677542400u, 2023, 2, 28, 0, 0, 0), "1677542400 is 2023-02-28");
+  check(civilIs(1677628800u, 2023, 3, 1, 0, 0, 0), "1677628800 is 2023-03-01, with no 29th between");
+  // 2100 is divisible by 4 and NOT a leap year. `date -u -d @4107499200` -> Sun Feb 28 12:00:00 UTC
+  // 2100, `@4107542400` -> Mon Mar  1 00:00:00 UTC 2100. A /4-only implementation reports Feb 29 here.
+  check(civilIs(4107499200u, 2100, 2, 28, 12, 0, 0), "4107499200 is 2100-02-28 12:00:00");
+  check(civilIs(4107542400u, 2100, 3, 1, 0, 0, 0),
+        "4107542400 is 2100-03-01 — 2100 has no leap day, the /4-only bug");
+  // 2096 IS a leap year, so the century rule must not have been applied too widely.
+  // `date -u -d @3981312000` -> Wed Feb 29 00:00:00 UTC 2096.
+  check(civilIs(3981312000u, 2096, 2, 29, 0, 0, 0), "3981312000 is 2096-02-29 — 2096 IS a leap year");
+
+  // The plausibility window's far end. `date -u -d @4102444799` -> Fri Dec 31 23:59:59 UTC 2099.
+  check(civilIs(4102444799u, 2099, 12, 31, 23, 59, 59), "4102444799 is 2099-12-31 23:59:59");
+  check(civilIs(4102444800u, 2100, 1, 1, 0, 0, 0), "4102444800 is 2100-01-01 00:00:00");
+
+  // 0 is never rendered by the panel — it is the sentinel for "no session start" — but the conversion
+  // must still be total rather than undefined, because a resolver that forgot the guard would otherwise
+  // read uninitialised fields instead of an obviously wrong date.
+  check(civilIs(0u, 1970, 1, 1, 0, 0, 0), "0 is 1970-01-01 00:00:00, total rather than undefined");
+
+  /**
+   * And the exhaustive check the fixed anchors above cannot give: every day in the window the device
+   * will ever display, round-tripped through both directions.
+   *
+   * 29,585 days at one second past noon, so an off-by-one in either function's day accounting shows up
+   * as a mismatch rather than as a date nobody happened to pick as an anchor. This is the check that
+   * would have caught the off-by-one-day already recorded against the forward function.
+   */
+  unsigned mismatches = 0;
+  for (uint32_t epoch = plc::DeviceClock::kEarliestPlausibleEpoch + 43'201u;
+       epoch < plc::DeviceClock::kLatestPlausibleEpoch;
+       epoch += 86'400u) {
+    const plc::UtcCivil c = plc::civilFromEpoch(epoch);
+    if (plc::epochFromUtcCivil(c.year, c.month, c.day, c.hour, c.minute, c.second) != epoch) {
+      ++mismatches;
+    }
+  }
+  check(mismatches == 0, "every day from 2020 to 2100 round-trips epoch -> civil -> epoch");
+}
+
+void sessionStartAwaitingClockTests() {
+  std::printf("\n[the two reasons a session start cannot be stated are told apart]\n");
+
+  // Boot with a dead RTC and nothing reset yet: no time, and nothing waiting to be dated either.
+  plc::DeviceClock dead;
+  dead.noteBootTrust(true, kNow, 1000);
+  check(!dead.isSet(), "VLF set: no clock");
+  check(dead.sessionStartEpoch() == 0, "and no session start");
+  check(!dead.sessionStartAwaitingClock(),
+        "and nothing is awaiting a clock — no reset has happened yet");
+
+  // A reset while there is no clock. Now something IS waiting, and setting the clock will fill it in.
+  dead.noteSessionStart(2000);
+  check(dead.sessionStartEpoch() == 0, "a reset with no clock still has no start epoch");
+  check(dead.sessionStartAwaitingClock(), "but it is now awaiting a clock");
+  check(dead.setTime(kNow, plc::ClockSource::Operator, 3000), "the operator sets the time");
+  check(dead.sessionStartEpoch() == kNow, "which dates the waiting reset");
+  check(!dead.sessionStartAwaitingClock(), "and clears the wait");
+
+  // A trusted clock at boot with no reset since: the start is unknown, but nothing is WAITING —
+  // setting the clock again would not produce a start time, only a reset will.
+  plc::DeviceClock trusted;
+  trusted.noteBootTrust(false, kNow, 1000);
+  check(trusted.isSet(), "a trusted clock at boot");
+  check(trusted.sessionStartEpoch() == 0, "has no session start until one is recorded");
+  check(!trusted.sessionStartAwaitingClock(),
+        "and is NOT awaiting a clock — it has one; this is the case a second sync cannot fix");
+  trusted.noteSessionStart(4000);
+  check(trusted.sessionStartEpoch() == kNow + 3, "a reset dates it immediately");
+  check(!trusted.sessionStartAwaitingClock(), "with nothing left waiting");
+}
+
 }  // namespace
 
 int main() {
@@ -133,10 +235,12 @@ int main() {
   advanceTests();
   sessionTests();
   civilConversionTests();
+  civilFromEpochTests();
+  sessionStartAwaitingClockTests();
   if (failures > 0) {
-    std::printf("\nFAILURES (%d)\n", failures);
+    std::printf("\nFAILURES (%d of %d)\n", failures, checks);
     return 1;
   }
-  std::printf("\nALL PASSED\n");
+  std::printf("\nALL PASSED (%d checks)\n", checks);
   return 0;
 }

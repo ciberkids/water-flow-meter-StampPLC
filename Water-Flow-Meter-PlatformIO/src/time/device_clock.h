@@ -105,6 +105,19 @@ class DeviceClock {
   void noteSessionStart(uint32_t nowMs);
 
   /**
+   * A session reset happened while the clock was unset, and the first sync will date it.
+   *
+   * Exposed because "cannot say when the session began" has TWO causes that call for different things
+   * from the operator, and a panel that renders them identically tells them to do the wrong one. With
+   * this set, setting the clock fills the timestamp in (see the `wasUnset && sessionStartUnknown_`
+   * branch in `setTime`). With it clear and the clock already trusted, setting the clock changes
+   * nothing and only a fresh reset will ever produce a start time.
+   *
+   * Only ever true while `source_ == None`: `setTime` and a dated `noteSessionStart` both clear it.
+   */
+  bool sessionStartAwaitingClock() const { return sessionStartUnknown_; }
+
+  /**
    * Seconds the session has been running, or 0 when that cannot be known.
    *
    * Derived from the epochs rather than kept as a counter, so it cannot disagree with the timestamp shown
@@ -135,6 +148,30 @@ class DeviceClock {
  * `year` is the full year (2026), `month` is 1..12, unlike `struct tm`'s offsets.
  */
 uint32_t epochFromUtcCivil(int year, int month, int day, int hour, int minute, int second);
+
+/** A UTC calendar date and time. `year` is the full year and `month` is 1..12, as above. */
+struct UtcCivil {
+  int year = 1970;
+  int month = 1;
+  int day = 1;
+  int hour = 0;
+  int minute = 0;
+  int second = 0;
+};
+
+/**
+ * The inverse of `epochFromUtcCivil`. Needed because a panel shows dates, not epochs.
+ *
+ * Written out for the same reasons the forward direction is: `gmtime` on this toolchain wants a
+ * `time_t` and returns a pointer to a shared static that the renderer would be reading from one task
+ * while something else called it from another, and `localtime` would apply a zone this device has never
+ * been told. Neither problem exists in twelve lines of era arithmetic.
+ *
+ * The era shift is the same trick as the forward function — a year starting in March puts the leap day
+ * last, so no month-length table and no leap-year branch appear anywhere below. Century years are
+ * therefore handled by the `/100` and `/400` terms rather than by a special case somebody has to notice.
+ */
+UtcCivil civilFromEpoch(uint32_t epoch);
 
 /** True for an epoch this device is willing to display. */
 bool clockEpochPlausible(uint32_t epoch);

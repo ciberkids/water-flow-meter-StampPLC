@@ -118,6 +118,18 @@ constexpr SimpleValue kSimpleValues[] = {
      */
     {"telemetry.maxFlowLpm", ValueCategory::System, ValueType::String, nullptr, kNoRegister,
      ValueSource::Telemetry, false, "Highest per-channel peak flow and the channel holding it"},
+    /**
+     * When the session counters were last cleared — the one thing P3's volume figures were missing.
+     *
+     * A String, not a Number, and deliberately not a register. There is a real epoch behind it, but the
+     * value a panel needs is a rendered date OR one of three different reasons there isn't one, and a
+     * numeric register would have to encode "no answer" as a zero that reads as 1970. `pulsesPerLitre`'s
+     * comment above records why a half-true address is worse than none; the same applies to a half-true
+     * timestamp. A Modbus consumer that wants the epoch should get its own register, typed as one.
+     */
+    {"telemetry.sessionStart", ValueCategory::Derived, ValueType::String, nullptr, kNoRegister,
+     ValueSource::Telemetry, false,
+     "When the session counters were last cleared, or why that cannot be said"},
     {"telemetry.total", ValueCategory::System, ValueType::String, nullptr, kNoRegister,
      ValueSource::Telemetry, false, "Aggregate volume and flow summary line"},
     {"telemetry.status", ValueCategory::System, ValueType::String, nullptr, kNoRegister,

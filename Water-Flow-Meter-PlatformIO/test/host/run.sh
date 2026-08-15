@@ -34,6 +34,24 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/device_clock_test" \
   test/host/device_clock_test.cpp \
   src/time/device_clock.cpp
 
+# The clock's one WIRING, as opposed to its logic: does a session reset arriving through
+# ModbusManager actually date it? `ModbusDependencies::clock` is nullable and was null in both host
+# tests that construct the struct, so noteSessionStart() was exercised by nothing — a nullable
+# dependency that is null everywhere is indistinguishable from a no-op.
+#
+# The only host test that touches ModbusManager today DEFINES applyHoldingWrite itself to avoid
+# linking eModbus, so it cannot cover this: it would assert against the harness. This one links the
+# REAL modbus_manager.cpp, which is why -I test/host/stubs appears here and why the ModbusMessage
+# stub had to grow the members the three frame handlers call.
+g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/modbus_manager_clock_test" \
+  test/host/modbus_manager_clock_test.cpp \
+  src/modbus/modbus_manager.cpp \
+  src/time/device_clock.cpp \
+  src/led/led_controller.cpp \
+  src/modbus/link_settings.cpp \
+  src/net/net_settings.cpp \
+  src/net/net_register_map.cpp
+
 g++ "${CXXFLAGS[@]}" -o "$OUT/led_test" \
   test/host/led_test.cpp
 
@@ -143,6 +161,7 @@ g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/interaction_test" \
   src/ui/core/ui_module.cpp \
   src/ui/core/ui_renderer.cpp \
   src/ui/theme/theme_palette.cpp \
+  src/time/device_clock.cpp \
   src/led/led_controller.cpp \
   src/input/button_input.cpp \
   src/input/interaction_handler.cpp \
@@ -158,6 +177,8 @@ g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/interaction_test" \
 echo
 "$OUT/accel_test"
 "$OUT/device_clock_test"
+echo
+"$OUT/modbus_manager_clock_test"
 echo
 "$OUT/led_test"
 echo

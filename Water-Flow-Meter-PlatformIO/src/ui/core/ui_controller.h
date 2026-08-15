@@ -9,6 +9,7 @@
 #include "ui/core/ui_pages.h"
 #include "ui/pack/ui_pack_selector.h"
 #include "net/net_status.h"
+#include "time/device_clock.h"
 #include "ui/core/ui_settings.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
@@ -93,6 +94,27 @@ struct UiRenderContext {
    * reads. Copying ~130 bytes per pass is the cheap side of that trade.
    */
   plc::NetStatusSnapshot net{};
+  /**
+   * The device clock's trust state and the moment the session counters were last cleared.
+   *
+   * Three facts rather than a formatted string, and a COPY rather than a `const DeviceClock*`, for the
+   * same reason `net` is a snapshot: the renderer reads this context without locking while the logic
+   * task owns the clock, and `DeviceClock::now()` advances off `millis()`, so a pointer would let the
+   * panel sample a moving object from the wrong task. Three scalars copied per pass is the cheap side.
+   *
+   * All three are published rather than derived at read time because the resolver has no route to the
+   * clock at all — it holds `settings_` and `controller_`, and the clock is owned by firmware.cpp.
+   *
+   * `sessionStartEpoch == 0` is a REAL answer and stays distinguishable from a timestamp; nothing may
+   * render it as a date. The two remaining fields exist to say WHY it is zero, which is not one
+   * question but two: with no clock at all the operator must set one, and if
+   * `sessionStartAwaitingClock` is set doing so will fill the timestamp in retroactively. With a
+   * trusted clock and a zero start, no sync will ever help and only a fresh reset produces a time.
+   * A panel that rendered those identically would send the operator to the wrong menu.
+   */
+  bool clockSet = false;
+  uint32_t sessionStartEpoch = 0;
+  bool sessionStartAwaitingClock = false;
   bool hasWarnings = false;
   uint8_t warningCount = 0;
   std::string warningSummary;
@@ -159,7 +181,22 @@ class UiController {
               float pollingRateKhz,
               const LedController& ledController,
               const UiCountdownState& countdown,
-              const plc::NetStatusSnapshot& netStatus);
+              const plc::NetStatusSnapshot& netStatus,
+              /**
+               * The clock, by const reference — the route `ledController` already uses.
+               *
+               * Not a `DeviceClock*` member set by a `bindClock()` call, which was the alternative:
+               * a member would let the controller be constructed, updated and rendered with the
+               * clock still null, and "nullable dependency, null everywhere" is the exact defect
+               * this round exists to close on ModbusManager. As a required parameter every call site
+               * — firmware.cpp and the host harness alike — has to supply one, so the wiring cannot
+               * silently go missing.
+               *
+               * Not a `plc::DeviceClock&` snapshot struct either: `update()` reads three scalars out
+               * of it and copies them into the context, exactly as it reads two out of
+               * `LedController`, so the reference never escapes this function.
+               */
+              const plc::DeviceClock& clock);
 
   const UiRenderContext& context() const { return context_; }
   UiMode mode() const { return mode_; }

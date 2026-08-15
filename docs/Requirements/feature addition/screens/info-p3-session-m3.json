@@ -166,6 +166,25 @@
       "bound": "display maximum 8 integer digits + 2 decimals of m3 (0.01 m3 = 10 L resolution)"
     },
     {
+      "id": "session-start-label",
+      "kind": "text",
+      "x": 2,
+      "y": 104,
+      "emphasis": "muted",
+      "content": "Since",
+      "worst": "Since",
+      "bound": "fixed literal. 'Since' rather than 'Session start' because the header already says Session, and five characters leave the value the width it needs for a full timestamp"
+    },
+    {
+      "id": "session-start-value",
+      "kind": "value",
+      "x": 44,
+      "y": 104,
+      "binding": "telemetry.sessionStart",
+      "worst": "2026-08-12 14:32 UTC",
+      "bound": "when the session counters were last cleared. Four renderings, longest 20 chars: the timestamp above, or CLOCK UNSET / AWAITING CLOCK / UNKNOWN, which are the three DIFFERENT reasons there is no timestamp. 20 chars at 7px from x=44 ends at 184, clear of the scrollbar at 232"
+    },
+    {
       "id": "footer-hint",
       "kind": "text",
       "x": 2,

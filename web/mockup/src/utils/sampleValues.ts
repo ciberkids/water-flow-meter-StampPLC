@@ -49,6 +49,19 @@ const kByBinding: Record<string, string> = {
   "nav.position": "L2 3/8",
   // The default unit; the live app resolves this from config.flowUnit.
   "telemetry.flowUnitLabel": "L/m",
+  /**
+   * The DECLARED WORST CASE, 20 characters, and that is the whole reason this key exists.
+   *
+   * The live simulator never reads it — `aggregate()` answers this binding above the sample layer, from
+   * the simulated clock. But tools/audit/screen-geometry.ts calls sampleValueFor directly, so without an
+   * entry here the audit measured the generic string fallback `(not set)` — nine characters — and would
+   * have passed P3's new row while saying nothing about the 20-character timestamp actually rendered
+   * there. Same reasoning as `nav.position` above: the sample is what the geometry audit checks against,
+   * so it has to be the widest thing the device can print, not a typical one.
+   *
+   * The three shorter renderings are CLOCK UNSET, AWAITING CLOCK and UNKNOWN (ui_bindings.cpp).
+   */
+  "telemetry.sessionStart": "2026-08-12 14:32 UTC",
   "page.title": "System Status",
   "legend.led": "G ready  R volume  B card",
   "countdown.value": "3"

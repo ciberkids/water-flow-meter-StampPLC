@@ -39,6 +39,34 @@ uint32_t epochFromUtcCivil(int year, int month, int day, int hour, int minute, i
   return static_cast<uint32_t>(seconds);
 }
 
+UtcCivil civilFromEpoch(uint32_t epoch) {
+  // Howard Hinnant's civil_from_days, the exact inverse of days_from_civil above. Held in signed 64-bit
+  // throughout: `doy` and `mp` are only meaningful relative to the March-based era, so narrowing any of
+  // them to the uint32_t this function was handed would truncate the intermediate, not the result.
+  const long long secondsOfDay = static_cast<long long>(epoch % 86400u);
+  const long long z = static_cast<long long>(epoch / 86400u) + 719468;
+  const long long era = (z >= 0 ? z : z - 146096) / 146097;
+  const unsigned long long doe = static_cast<unsigned long long>(z - era * 146097);
+  const unsigned long long yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+  const long long y = static_cast<long long>(yoe) + era * 400;
+  const unsigned long long doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+  const unsigned long long mp = (5 * doy + 2) / 153;
+  const unsigned long long d = doy - (153 * mp + 2) / 5 + 1;
+  // Signed on purpose: the March-based month index has to move BACK nine for the autumn months, and in
+  // unsigned arithmetic that subtraction is a wrap that happens to come out right — which is a thing a
+  // reader has to prove rather than read.
+  const long long m = static_cast<long long>(mp) + (mp < 10 ? 3 : -9);
+  UtcCivil out;
+  out.day = static_cast<int>(d);
+  out.month = static_cast<int>(m);
+  // The era began in March, so January and February belong to the following civil year.
+  out.year = static_cast<int>(y + (m <= 2 ? 1 : 0));
+  out.hour = static_cast<int>(secondsOfDay / 3600);
+  out.minute = static_cast<int>((secondsOfDay / 60) % 60);
+  out.second = static_cast<int>(secondsOfDay % 60);
+  return out;
+}
+
 bool clockEpochPlausible(uint32_t epoch) {
   return epoch >= DeviceClock::kEarliestPlausibleEpoch && epoch < DeviceClock::kLatestPlausibleEpoch;
 }

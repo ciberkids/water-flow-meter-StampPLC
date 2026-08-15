@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 
+import { SimulatedClockState, kSimulatedClockChoices } from "../utils/deviceClock";
+
 /**
  * The firmware loop's VALUE EDITORS — a view of the simulated device memory, under the Function trace.
  *
@@ -76,6 +78,17 @@ interface FirmwareValuesPanelProps {
    */
   onSensorFlowChange: (sensorNumber: number, flowLpm: number) => void;
   onSelectSensor: (sensorNumber: number) => void;
+  /**
+   * The simulated device clock's state, and how to change it.
+   *
+   * Here rather than as a pin on `telemetry.sessionStart`, because `canEdit` correctly refuses that
+   * row: it is a derived value device memory owns, so the panel renders it as a readout with no input.
+   * The clock is not a value override — it is a device fact with four reachable states, and P3's
+   * session-start row says something different in each. Without a control the three "no" states would
+   * be unreachable in the running mockup.
+   */
+  clockState: SimulatedClockState;
+  onClockStateChange: (state: SimulatedClockState) => void;
 }
 
 const GROUPS_ORDER = ["sensor", "config", "net", "telemetry", "diagnostics", "countdown", "legend"] as const;
@@ -126,7 +139,9 @@ export function FirmwareValuesPanel({
   sensorPreview,
   onSensorFieldChange,
   onSensorFlowChange,
-  onSelectSensor
+  onSelectSensor,
+  clockState,
+  onClockStateChange
 }: FirmwareValuesPanelProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(["sensors"]));
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -339,6 +354,47 @@ export function FirmwareValuesPanel({
                 </div>
               );
             })}
+          </div>
+        ) : null}
+
+        {/* ── The device clock ────────────────────────────────────────────────────────
+             Four states, because DeviceClock has exactly four reachable ones and P3's session-start
+             row says something different in each. A select rather than a text box for the same reason
+             an enum setting gets one: the states are a fixed ring, and a free box for one is a
+             guessing game. Not a pin on telemetry.sessionStart — see the prop's comment. */}
+        <button
+          type="button"
+          className="firmware-values-panel__group"
+          onClick={() => toggleGroup("clock")}
+          aria-expanded={expanded.has("clock")}
+        >
+          <span>Clock</span>
+          <span aria-hidden="true">{expanded.has("clock") ? "▲" : "▼"}</span>
+        </button>
+        {expanded.has("clock") ? (
+          <div style={{ padding: "4px 0" }}>
+            <div className="firmware-values-panel__row">
+              <label htmlFor="simulated-clock-state" title="The simulated RTC's trust state and whether a session reset has been dated">
+                trust
+              </label>
+              <select
+                id="simulated-clock-state"
+                value={clockState}
+                onChange={(event) => onClockStateChange(event.target.value as SimulatedClockState)}
+              >
+                {kSimulatedClockChoices.map((choice) => (
+                  <option key={choice.state} value={choice.state} title={choice.hint}>
+                    {choice.label}
+                  </option>
+                ))}
+              </select>
+              <span className="firmware-values-panel__unit" />
+            </div>
+            <p className="firmware-values-panel__hint" style={{ padding: "4px 8px" }}>
+              {kSimulatedClockChoices.find((choice) => choice.state === clockState)?.hint}. A session or
+              measured reset dates the clock, exactly as the two Modbus reset registers do; a peak reset
+              does not.
+            </p>
           </div>
         ) : null}
 

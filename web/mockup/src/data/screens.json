@@ -622,6 +622,21 @@
           "binding": "sensor.8.sessionM3"
         },
         {
+          "id": "session-start-label",
+          "kind": "text",
+          "x": 2,
+          "y": 104,
+          "emphasis": "muted",
+          "content": "Since"
+        },
+        {
+          "id": "session-start-value",
+          "kind": "value",
+          "x": 44,
+          "y": 104,
+          "binding": "telemetry.sessionStart"
+        },
+        {
           "id": "footer-hint",
           "kind": "text",
           "x": 2,

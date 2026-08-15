@@ -166,6 +166,15 @@ struct Device {
    * harness that could only ever show "disabled" would leave every net.* binding unexercised.
    */
   plc::NetStatusSnapshot netStatus{};
+  /**
+   * The device clock the controller publishes onto the render context.
+   *
+   * A real DeviceClock, not a stub: its whole subject is which states are reachable, so a test that
+   * invented its own trust flags could reach combinations the class forbids and would then assert P3
+   * renders something for a device that cannot exist. Left in its boot state — unset — by default,
+   * which is what a harness that says nothing about time should get.
+   */
+  plc::DeviceClock clock;
   ui::SettingsAccess settings;
   uint16_t connectedBitmap = 0xFF;
   /** What the last tick()'s InteractionHandler::update() returned. */
@@ -275,7 +284,7 @@ struct Device {
     leds.setSuspended(result.ledsSuspended);
     leds.update(now, 0.0, 0.0, true, false);
     controller.update(now, sensors, configs, 0, 0xFF, 0.0, 0.0, 0.0f, leds, result.countdown,
-                      netStatus);
+                      netStatus, clock);
     // firmware.cpp:446 — the renderer runs on every pass of the logic loop and decides for
     // itself whether to paint. That decision is what the cadence tests below measure.
     renderer.update(now, controller.context());
@@ -2030,21 +2039,108 @@ void checkStr(const char* actual, const char* expected, const char* what) {
   if (!ok) std::printf("        got \"%s\" want \"%s\"\n", actual ? actual : "(null)", expected);
 }
 
+/**
+ * Resolves one binding against a device's live render context, the way the renderer does.
+ *
+ * Free rather than a lambda inside each test because the session-start cases need more than one
+ * Device: two of the four states are only reachable from a DIFFERENT boot, since DeviceClock has no
+ * way back from trusted to unset — which is the point of the class.
+ */
+const char* renderBinding(Device& dev, const char* bindingId) {
+  ui_exporter::Element el{};
+  el.id = "probe";
+  el.type = ui_exporter::ElementType::Value;
+  el.bindingId = bindingId;
+  static char out[80];
+  out[0] = '\0';
+  dev.bindings.resolveText(dev.controller.context(), el, out, sizeof(out));
+  return out;
+}
+
+void sessionStartRenderTests() {
+  std::printf("\n[P3 says WHEN the session began, or which of three reasons it cannot — all four]\n");
+
+  /** 2026-08-12T14:32:07Z. `date -u -d @1786545127` -> Wed Aug 12 14:32:07 UTC 2026. */
+  constexpr uint32_t kEpoch = 1786545127u;
+
+  // ── State 1: no clock, and no reset waiting to be dated ───────────────────────
+  //
+  // The boot state of a device whose RX8130CE lost power. DeviceClock is left as the harness
+  // constructs it, which is exactly that.
+  Device dev;
+  dev.boot();
+  dev.tick(10);
+  check(!dev.controller.context().clockSet, "the context reports no clock");
+  check(dev.controller.context().sessionStartEpoch == 0, "and no session start");
+  checkStr(renderBinding(dev, "telemetry.sessionStart"), "CLOCK UNSET",
+           "no clock and nothing waiting renders CLOCK UNSET");
+
+  // ── State 2: a reset happened with no clock to date it ────────────────────────
+  //
+  // Setting the clock WILL fill this in retroactively, which is the whole reason it is not the same
+  // string as state 1 — the operator gets an action that works.
+  dev.clock.noteSessionStart(dev.now);
+  dev.tick(10);
+  check(dev.controller.context().sessionStartAwaitingClock, "the context reports the wait");
+  checkStr(renderBinding(dev, "telemetry.sessionStart"), "AWAITING CLOCK",
+           "a reset with no clock renders AWAITING CLOCK, not the same string as state 1");
+
+  // ── State 3: the operator supplies a time, and the waiting reset gets dated ────
+  check(dev.clock.setTime(kEpoch, plc::ClockSource::Operator, dev.now), "the operator sets the time");
+  dev.tick(10);
+  checkStr(renderBinding(dev, "telemetry.sessionStart"), "2026-08-12 14:32 UTC",
+           "which turns into the timestamp — and never a 1970 or a bare zero");
+  check(!dev.controller.context().sessionStartAwaitingClock, "with nothing left waiting");
+
+  // ── State 4: a trusted clock, but nothing ever recorded a start ────────────────
+  //
+  // A fresh boot, because a clock cannot become untrusted again. This is the case no further sync can
+  // fix — only a reset produces a timestamp here — which is why it says UNKNOWN rather than CLOCK UNSET.
+  Device trusted;
+  trusted.boot();
+  trusted.clock.noteBootTrust(false, kEpoch, trusted.now);
+  trusted.tick(10);
+  check(trusted.controller.context().clockSet, "a trusted RTC at boot");
+  check(trusted.controller.context().sessionStartEpoch == 0, "with no session start recorded");
+  check(!trusted.controller.context().sessionStartAwaitingClock, "and nothing awaiting a clock");
+  checkStr(renderBinding(trusted, "telemetry.sessionStart"), "UNKNOWN",
+           "renders UNKNOWN — distinct from CLOCK UNSET, because a sync would not help");
+
+  // And the same clock, once a reset dates it, on the page that shows it.
+  trusted.clock.noteSessionStart(trusted.now);
+  trusted.tick(10);
+  checkStr(renderBinding(trusted, "telemetry.sessionStart"), "2026-08-12 14:32 UTC",
+           "a reset on a trusted clock dates it immediately");
+
+  /**
+   * And the part no resolver test can prove: that the string reaches the PANEL.
+   *
+   * A binding can resolve perfectly and still be invisible, because P3's geometry comes from its spec
+   * file and nothing fails an export when a value is advertised but bound by no element — that is the
+   * blank-on-device failure this pipeline keeps producing. So this navigates to P3 and reads what was
+   * actually painted.
+   */
+  check(walkToInfoPage(trusted, UiPage::SessionCubicMeters), "paged the info ring to P3");
+  trusted.resetFrames();
+  // Past kRefreshIntervalMs, and the frame count is asserted before the text is: a static page repaints
+  // only once a second, so a 100 ms tick leaves `strings` empty and both text assertions below would
+  // fail for having painted NOTHING rather than for painting the wrong thing. That is how the first
+  // version of this check failed, and reading the count first is what tells the two apart.
+  trusted.tick(1100);
+  check(trusted.frames() > 0, "P3 repainted, so there is a frame to inspect");
+  const std::string& painted = m5stamplc_stub::board().Display.strings;
+  check(painted.find("2026-08-12 14:32 UTC") != std::string::npos,
+        "and P3 actually PAINTS the session start, not merely resolves it");
+  check(painted.find("Since") != std::string::npos, "beside the label that says what it is");
+}
+
 void networkBindingTests() {
   std::printf("\n[the display's network bindings]\n");
   Device dev;
   dev.boot();
 
-  auto render = [&](const char* bindingId) {
-    ui_exporter::Element el{};
-    el.id = "probe";
-    el.type = ui_exporter::ElementType::Value;
-    el.bindingId = bindingId;
-    static char out[80];
-    out[0] = '\0';
-    dev.bindings.resolveText(dev.controller.context(), el, out, sizeof(out));
-    return out;
-  };
+  // Delegates to the free helper above rather than keeping a second copy of the same six lines.
+  auto render = [&](const char* bindingId) { return renderBinding(dev, bindingId); };
 
   // ── Disabled: everything says so, and nothing pretends ────────────────────────
   dev.tick(10);
@@ -2151,6 +2247,7 @@ int main() {
   linkApplyProtocolTests();
   textIsDisplayOnlyTests();
   portalLoginResetMenuTests();
+  sessionStartRenderTests();
   networkBindingTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);

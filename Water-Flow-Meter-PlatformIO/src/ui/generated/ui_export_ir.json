@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-14T06:52:05.515Z",
+  "generatedAt": "2026-08-15T07:17:08.886Z",
   "screenCount": 76,
-  "elementCount": 643,
+  "elementCount": 645,
   "dataset": [
     {
       "id": "info-p0-global-status",
@@ -1169,6 +1169,37 @@
             }
           },
           "binding": "sensor.8.sessionM3"
+        },
+        {
+          "id": "session-start-label",
+          "position": {
+            "x": 2,
+            "y": 104
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Since",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "session-start-value",
+          "position": {
+            "x": 44,
+            "y": 104
+          },
+          "kind": {
+            "type": "value",
+            "payload": {
+              "text": "",
+              "emphasis": "normal",
+              "align": "left"
+            }
+          },
+          "binding": "telemetry.sessionStart"
         },
         {
           "id": "footer-hint",

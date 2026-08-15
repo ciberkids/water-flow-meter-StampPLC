@@ -58,6 +58,12 @@ import { FirmwareLoopPanel } from "./components/FirmwareLoopPanel";
 import { FirmwareValuesPanel } from "./components/FirmwareValuesPanel";
 import { sampleValueFor } from "./utils/sampleValues";
 import {
+  SimulatedClockState,
+  clockAfterSessionReset,
+  sessionStartText,
+  simulatedClock
+} from "./utils/deviceClock";
+import {
   SimulatedSensor,
   advanceSensorTick,
   createSensorTable,
@@ -447,6 +453,29 @@ export function App() {
 
   const [sensors, setSensors] = useState<SimulatedSensor[]>(() => createSensorTable());
   /** Manual pins for the bindings memory does not model (network, UART summary, page titles…). */
+  /**
+   * When this simulated device's session counters were last cleared, as Unix seconds.
+   *
+   * Loading the mockup is the closest thing it has to a boot, so that is the initial session start.
+   * The two reset actions move it, mirroring modbus_manager.cpp, where REG_MASTER_RESET_ALL_SESSION and
+   * REG_MASTER_RESET_ALL_MEASURED both call `noteSessionStart()` and the peak reset deliberately does
+   * not. Held here rather than derived at render time so a reset is VISIBLE as a change: a `Date.now()`
+   * in the resolver would tick forward every frame and the row would never look like it meant anything.
+   *
+   * This is only the DEFAULT. Which of the four states P3 shows is decided by the pin — see
+   * simulatedClockFromPin, and the comment on the resolver arm below.
+   */
+  const [sessionStartEpoch, setSessionStartEpoch] = useState<number>(() => Math.floor(Date.now() / 1000));
+  /**
+   * Which of DeviceClock's four reachable states this simulated device is in.
+   *
+   * Explicit state with a control in the Device memory panel rather than a pin on
+   * `telemetry.sessionStart`: `canEditBinding` below renders a derived, memory-owned value as a readout
+   * with no input, so a pin could never be typed and the three "no" cases would have been unreachable
+   * in the running mockup. See the comment on SimulatedClockState. Defaults to "dated", which is what
+   * loading the mockup models — a device with a good RTC whose session began at boot.
+   */
+  const [clockState, setClockState] = useState<SimulatedClockState>("dated");
   const [pinnedValues, setPinnedValues] = useState<Record<string, string>>({});
   const [loopRunning, setLoopRunning] = useState<boolean>(false);
   /**
@@ -1535,6 +1564,16 @@ export function App() {
           return flowFromLpm(aggregateFlowLpm, flowUnit).toFixed(2).padStart(7);
         case "telemetry.flowUnitLabel":
           return flowUnitLabel(flowUnit);
+        /**
+         * P3's session-start row, from the simulated clock's state and nothing else.
+         *
+         * Both the state and the string come from the same place the device gets them: the three facts
+         * DeviceClock publishes, run through the same four-way decision `resolveTelemetryBinding`
+         * makes. Nothing here can be overridden into a string the device could not produce — which is
+         * the point of a mirror. The Clock control in the Device memory panel picks the state.
+         */
+        case "telemetry.sessionStart":
+          return sessionStartText(simulatedClock(clockState, sessionStartEpoch));
         case "telemetry.totalVolumeLiters":
           return totalSessionLiters.toFixed(2);
         case "telemetry.totalVolumeM3":
@@ -1599,7 +1638,7 @@ export function App() {
         sampleValueFor(binding.id, manifestValueById.get(binding.id), "sample");
     }
     return out;
-  }, [aggregateFlowLpm, editorState, flowUnit, hierarchy, holdCountdown, manifestValueBindings, manifestValueById, navParents, pinnedValues, screens, selectedScreen, selectedSensor, sensors]);
+  }, [aggregateFlowLpm, editorState, flowUnit, hierarchy, holdCountdown, manifestValueBindings, manifestValueById, navParents, pinnedValues, screens, selectedScreen, selectedSensor, sensors, sessionStartEpoch, clockState]);
 
   /**
    * The stored integer a setting currently holds, from whichever home owns it.
@@ -2197,6 +2236,15 @@ export function App() {
                   ? resetMaxFlow(table)
                   : resetMeasured(table)
             );
+            // And it DATES the new session, exactly as modbus_manager.cpp does: the session and
+            // measured resets both call noteSessionStart(), the peak reset deliberately does not —
+            // clearing a peak does not restart the volume the timestamp describes. With no clock the
+            // reset cannot be dated and becomes one awaiting a clock, which is the firmware's own
+            // branch rather than a simulator shortcut to a timestamp it could not have produced.
+            if (action !== "core.action.reset-max-flow") {
+              setSessionStartEpoch(Math.floor(Date.now() / 1000));
+              setClockState(clockAfterSessionReset);
+            }
             const origin = navParentsRef.current[0];
             clearNavParents();
             const resolvedId = selectById(origin ?? kRootScreenId);
@@ -2426,6 +2474,12 @@ export function App() {
               ? resetMaxFlow(table)
               : resetMeasured(table)
         );
+        // Both dispatch sites, or the hold-flow would reset the volume and leave P3 claiming the old
+        // start time while the keyboard path updated it — and nothing would catch the disagreement.
+        if (flow.actionId !== "core.action.reset-max-flow") {
+          setSessionStartEpoch(Math.floor(Date.now() / 1000));
+          setClockState(clockAfterSessionReset);
+        }
       }
       if (flow.actionId === "core.action.factory-reset") {
         setSensors(createSensorTable());
@@ -2941,6 +2995,8 @@ export function App() {
                   values={resolvedValues}
                   onValueChange={handleMemoryWrite}
                   canEdit={canEditBinding}
+                  clockState={clockState}
+                  onClockStateChange={setClockState}
                   sensors={sensors}
                   selectedSensor={selectedSensor}
                   selectionFromNavigation={navSensorIndex !== 0}

@@ -146,6 +146,8 @@ static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S7Labe
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S7Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S8Label_Text = { "8:", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3S8Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3SessionStartLabel_Text = { "Since", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3SessionStartValue_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
 static constexpr ui_exporter::TextPayload kInfoP3SessionM3_InfoP3SessionM3FooterHint_Text = { "UP/DN pages  ENTER reset...", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kInfoP3SessionM3Elements[] = {
@@ -166,6 +168,8 @@ static constexpr ui_exporter::Element kInfoP3SessionM3Elements[] = {
     { "s7-value", ui_exporter::ElementType::Value, 130, 64, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S7Value_Text, nullptr, "sensor.7.sessionM3" },
     { "s8-label", ui_exporter::ElementType::Text, 114, 84, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S8Label_Text, nullptr, nullptr },
     { "s8-value", ui_exporter::ElementType::Value, 130, 84, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3S8Value_Text, nullptr, "sensor.8.sessionM3" },
+    { "session-start-label", ui_exporter::ElementType::Text, 2, 104, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3SessionStartLabel_Text, nullptr, nullptr },
+    { "session-start-value", ui_exporter::ElementType::Value, 44, 104, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3SessionStartValue_Text, nullptr, "telemetry.sessionStart" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kInfoP3SessionM3_InfoP3SessionM3FooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
@@ -2150,7 +2154,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-14T06:52:05.515Z", 76, 643
+    "2026-08-15T07:17:08.886Z", 76, 645
 };
 
 }  // namespace ui_exporter

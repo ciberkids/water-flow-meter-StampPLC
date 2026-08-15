@@ -6,6 +6,9 @@
 #include <string_view>
 
 #include "modbus/register_map.h"
+// Included directly rather than relied on through ui_controller.h: this file names plc::civilFromEpoch
+// and plc::UtcCivil itself, and a transitive include is one refactor away from disappearing.
+#include "time/device_clock.h"
 #include "units.h"
 
 namespace ui {
@@ -274,6 +277,45 @@ bool UiBindingResolver::resolveTelemetryBinding(const UiRenderContext& context,
   if (binding == "telemetry.totalVolumeM3") {
     std::snprintf(buffer, bufferSize, "%.2f", units::litresToCubicMeters(context.totalSessionLiters));
     return true;
+  }
+  /**
+   * When this session's volume started accumulating — or which of three reasons that is not knowable.
+   *
+   * The four renderings are chosen so the operator can tell what to DO, which is the only thing that
+   * makes three negatives worth three strings instead of one "n/a":
+   *
+   *   "2026-08-12 14:32 UTC"  the answer. UTC is stated because this device has no timezone setting at
+   *                           all — `epochFromUtcCivil` and `civilFromEpoch` are zone-free by design —
+   *                           so an unlabelled local-looking time would be a quiet lie in whichever
+   *                           country the panel is installed. Minutes, not seconds: a session boundary
+   *                           is an operator event, and the three characters buy the ` UTC` instead.
+   *   "AWAITING CLOCK"        a reset DID happen, with no clock to date it. Setting the clock fills this
+   *                           row in retroactively (DeviceClock::setTime bounds the waiting start), so
+   *                           the operator has an action that works.
+   *   "CLOCK UNSET"           no clock, and no reset waiting either. Setting the clock is still the
+   *                           right move but will NOT produce a timestamp here — only the next reset
+   *                           will. Reusing clockSourceText's own "UNSET" vocabulary (§4.6's word for
+   *                           the same condition) rather than inventing a second one.
+   *   "UNKNOWN"               the clock is trusted and nothing ever recorded a start. No amount of
+   *                           re-syncing changes this; it is the module's own word for the case
+   *                           (see DeviceClock::sessionStartEpoch's comment).
+   *
+   * Never a zero and never 1970: the epoch is checked before it is ever handed to the formatter, so the
+   * sentinel cannot reach a date field. Longest rendering is 20 characters, which is what P3's spec
+   * declares as its worst case.
+   */
+  if (binding == "telemetry.sessionStart") {
+    if (context.clockSet && context.sessionStartEpoch != 0) {
+      const plc::UtcCivil at = plc::civilFromEpoch(context.sessionStartEpoch);
+      std::snprintf(buffer, bufferSize, "%04d-%02d-%02d %02d:%02d UTC", at.year, at.month, at.day,
+                    at.hour, at.minute);
+      return true;
+    }
+    if (!context.clockSet) {
+      return copyLiteral(context.sessionStartAwaitingClock ? "AWAITING CLOCK" : "CLOCK UNSET", buffer,
+                         bufferSize);
+    }
+    return copyLiteral("UNKNOWN", buffer, bufferSize);
   }
   /**
    * The worst channel and which one it is.

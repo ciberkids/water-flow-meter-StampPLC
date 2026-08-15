@@ -851,7 +851,8 @@ void logicTaskCode(void * pvParameters) {
                          // The display's MQTT indicator stops being hard-wired false here.
                          snapshot.mqttConnected = mqttTransport.connected();
                          return snapshot;
-                       }());
+                       }(),
+                        deviceClock);
 
     // ── MQTT (N5) ────────────────────────────────────────────────────────────────
     //

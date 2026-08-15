@@ -1059,6 +1059,13 @@
       "description": "Highest per-channel peak flow and the channel holding it"
     },
     {
+      "id": "telemetry.sessionStart",
+      "category": "derived",
+      "type": "string",
+      "readOnly": true,
+      "description": "When the session counters were last cleared, or why that cannot be said"
+    },
+    {
       "id": "telemetry.total",
       "category": "system",
       "type": "string",

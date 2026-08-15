@@ -16,6 +16,8 @@
 // with a hard requirement attached (§7: acknowledge a button within 100 ms), and it is
 // checkable by counting fillScreen calls per unit of simulated time. Pixels are not: what
 // they should contain is a layout question the web mockup already owns.
+#include <Arduino.h>
+
 #include <cstdint>
 #include <string>
 
@@ -79,7 +81,27 @@ struct DisplayRecorder {
     cursorX = x;
     cursorY = y;
   }
-  void print(const char*) { ++prints; }
+  /**
+   * Records the TEXT, not just the fact that something was printed.
+   *
+   * It counted only, and that made the panel's actual content unobservable for every ordinary screen:
+   * UiRenderer draws the firmware-owned Select Menu with drawString(), which `strings` captured, but
+   * every element of every GENERATED screen goes through setCursor() + print(), which it did not. So a
+   * test could assert what the selector shows and nothing whatsoever about what P0..P6 or any config
+   * page shows — a binding could resolve perfectly and be attached to no element, and the suite would
+   * agree with the export gates that everything was fine while the panel drew a blank row.
+   *
+   * Appended to the same buffer as drawString for that reason: "what is on the panel" is one question,
+   * and answering it from two buffers depending on which primitive the renderer happened to choose is
+   * how the gap above stayed open.
+   */
+  void print(const char* text) {
+    ++prints;
+    if (text) {
+      strings += text;
+      strings += '|';
+    }
+  }
   void fillRect(int16_t, int16_t, int16_t, int16_t, uint16_t) { ++fillRects; }
   void drawRect(int16_t, int16_t, int16_t, int16_t, uint16_t) { ++drawRects; }
   void fillCircle(int16_t, int16_t, int16_t, uint16_t) { ++fillCircles; }
@@ -142,15 +164,16 @@ inline Board& board() {
  * set needs the symbol. Keeping it settable means the harness can hold it in step with the
  * `now` it feeds the rest of the stack, rather than having one component read a real wall
  * clock while every other one is driven by simulated time.
+ *
+ * The STORAGE moved to Arduino.h, which is where millis() itself now lives — modbus_manager.cpp needs
+ * the symbol and includes nothing that would reach this header. This stays as the name every existing
+ * test writes through, and returns a reference to that one shared value rather than a second clock:
+ * `m5stamplc_stub::clockMs() = now` must still be what ModbusManager reads, or a session reset driven
+ * from the harness would be dated from a clock the harness never set.
  */
-inline uint32_t& clockMs() {
-  static uint32_t value = 0;
-  return value;
-}
+inline uint32_t& clockMs() { return arduino_stub::clockMs(); }
 
 }  // namespace m5stamplc_stub
-
-inline uint32_t millis() { return m5stamplc_stub::clockMs(); }
 
 /** LovyanGFX names a handful of colours as macros; the renderer uses only this one. */
 #ifndef WHITE
