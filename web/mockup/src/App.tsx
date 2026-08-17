@@ -2809,12 +2809,21 @@ export function App() {
        * `RESET TOTALS?` therefore opened the menu AND reset the totals, in the same instant, in a
        * simulator someone is using to decide whether the UI is safe.
        *
-       * `levelsNow()` and NOT the `pressed` state, which would have left the dangerous case open. The
-       * button panel's own "BtnA + BtnB + BtnC — hold 3 s" control calls `onPressStart` for all three
-       * synchronously in one click handler, so React has not re-rendered and `pressed` still reads
-       * all-false when ENTER's turn comes — the guard would have answered "ENTER alone" for precisely
-       * the gesture it exists to protect. `levelsNow()` is the hook's ref, read after `press()` has set
-       * this button's own level, which is what `isPressed()` answers on the device.
+       * `levelsNow()` and NOT the `pressed` state — because `pressed` is STALE HERE, and the way it is
+       * stale is worth stating correctly. The button panel's own "BtnA + BtnB + BtnC — hold 3 s" control
+       * calls `onPressStart` for all three buttons synchronously in one click handler, so React has not
+       * re-rendered when ENTER's turn comes and `pressed` still reads all-false — INCLUDING enter. The
+       * predicate requires `enter`, so it would have answered false and armed NOTHING.
+       *
+       * So a `pressed`-based guard fails CLOSED, not open: the three-button path would have been
+       * accidentally safe, and hold-to-confirm would have died everywhere else — every "hold 3 s"
+       * control and every keyboard hold reaching `ui.action.unmapped` instead of running its flow. That
+       * is a broken simulator rather than a dangerous one, but it is broken on all six confirm screens,
+       * so it is not the lesser bug it sounds like.
+       *
+       * `levelsNow()` is the hook's ref, read after `press()` has set this button's own level, which is
+       * what `isPressed()` answers on the device. Fidelity is the reason it is right; the danger was in
+       * having no guard at all, which is what this call site used to have.
        */
       if (!holdCountdownArms(levelsNow())) return;
       const flow = holdFlowFor(selectedScreen);

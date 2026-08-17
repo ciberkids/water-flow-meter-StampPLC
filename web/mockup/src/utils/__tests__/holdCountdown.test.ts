@@ -54,14 +54,27 @@ describe("arming, which is where the destructive case was", () => {
      * `handleButtonPressStart` originally tested the `pressed` state. The button panel's own
      * "BtnA + BtnB + BtnC — hold 3 s" control calls `onPressStart` for all three buttons synchronously
      * inside one click handler, so React has not re-rendered when ENTER's turn comes and `pressed` still
-     * reads all-false — the guard answered "ENTER alone" for the single most dangerous path, the one an
-     * operator reaches with one click. `levelsNow()` is the hook's ref, which is what `isPressed()` is.
+     * reads all-false — including `enter`.
+     *
+     * WHICH WAY THAT FAILS MATTERS, and an earlier version of this comment had it backwards. The
+     * predicate requires `enter`, so an all-false argument returns false and arms NOTHING: a
+     * `pressed`-based guard fails CLOSED. The three-button path would have been accidentally safe, and
+     * hold-to-confirm would have died on every confirm screen instead — which is why `levelsNow()` is
+     * right for a plain reason rather than a dramatic one. It is the hook's ref, and a ref read after
+     * `press()` is what `isPressed()` answers on the device. The two cases below assert both halves.
      *
      * A source regex because the fact is invisible to every other check and fails SILENTLY: the app
-     * still compiles, the panel still looks right, and the only symptom is a destructive action firing
-     * during a recovery gesture. Same shape and same justification as the firmware pins above, and as
+     * still compiles, the panel still looks right, and the only symptom is either a destructive action
+     * firing during a recovery gesture (no guard) or no confirm screen working at all (a stale guard).
+     * Same shape and same justification as the firmware pins above, and as
      * `httpd_task_policy_test.cpp` reading `firmware.cpp` for the task priorities.
      */
+    // Half one: what a stale all-false argument does. This is the fail-CLOSED half, stated as a check so
+    // the reasoning in the comment above cannot drift from the predicate again.
+    expect(holdCountdownArms({ up: false, down: false, enter: false })).toBe(false);
+    // Half two: the level-derived argument, with ENTER's own level already set by press(), arms.
+    expect(holdCountdownArms({ up: false, down: false, enter: true })).toBe(true);
+
     const app = fs.readFileSync(path.join(__dirname, "..", "..", "App.tsx"), "utf-8");
     expect(
       /holdCountdownArms\(levelsNow\(\)\)/.test(app),
