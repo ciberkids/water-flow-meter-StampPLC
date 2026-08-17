@@ -7,7 +7,7 @@
  *
  * WHY THIS IS GENERATED AND NOT WRITTEN.
  *
- * A register table is the worst possible thing to hand-maintain in a wiki. There are 733 addresses
+ * A register table is the worst possible thing to hand-maintain in a wiki. There are 752 addresses
  * across two headers, an integrator decodes real hardware against them, and a wrong address does not
  * fail loudly — it returns a plausible number from the wrong field. This repository's recurring defect
  * is exactly this shape: a range hint that duplicated a descriptor, a sample table that duplicated a

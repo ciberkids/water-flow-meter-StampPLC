@@ -211,7 +211,7 @@ void blockWriteAcrossTheWholeRegion() {
   const uint16_t revisionAfterLogin = dev.net.revision();
 
   /**
-   * Zeros across 500-732 — but NOT in one frame, because the protocol forbids it.
+   * Zeros across the whole block — but NOT in one frame, because the protocol forbids it.
    *
    * FC16 carries its byte count in a single byte, so the spec caps one frame at 123 registers and the
    * region does not fit in one. A master zero-filling the region necessarily issues a SEQUENCE of frames,
@@ -317,6 +317,51 @@ void thePortalPasswordIsWritableToItsFullCapacity() {
   check(fresh.net.revision() == 0, "and nothing applied");
 }
 
+void theApplyMustCommitAFTERTheRegistersBEYONDIt() {
+  std::printf("\n[a frame starting AT the apply and reaching past it — the ordering case]\n");
+
+  /**
+   * THIS IS THE CASE THE DEFERRAL EXISTS FOR, and it only became reachable when kPortalPassword moved to
+   * 736-751. Before that nothing writable sat above 730, so applying in address order committed exactly
+   * as much as deferring did and the deferral was pure precaution. It is now load-bearing.
+   *
+   * One frame, 22 registers, starting at the apply itself:
+   *
+   *   730        the apply magic
+   *   731, 732   read-only, ignored (§5.1)
+   *   733-735    free, ignored
+   *   736-751    the portal password, 16 registers
+   *
+   * In address order the magic commits an EMPTY stage, and the password then stages behind a revision
+   * that already claimed to have applied it — so the master's write is silently not in force.
+   */
+  Device dev;
+  ModbusManager modbus(dev.deps());
+
+  const std::string password = "committed-after-the-apply-word!!";
+  check(password.size() == 32, "a full-length password, so the frame reaches 751");
+
+  std::vector<uint16_t> frame;
+  frame.push_back(plc::net_reg::kApplyMagic);                       // 730
+  while (frame.size() < plc::net_reg::kPortalPassword - plc::net_reg::kApply) {
+    frame.push_back(0);                                             // 731, 732, then 733-735
+  }
+  for (const uint16_t word : packText(password, 16)) {
+    frame.push_back(word);                                          // 736-751
+  }
+  check(frame.size() == 22, "22 registers: the apply, the two read-only words, the gap, the password");
+  check(plc::net_reg::kApply + frame.size() == plc::net_reg::kEnd,
+        "and the frame ends exactly at the end of the block");
+
+  const ModbusMessage response = writeMultiple(modbus, plc::net_reg::kApply, frame);
+  check(!response.errorSet, "the frame is accepted");
+  check(dev.net.revision() == 1, "one apply happened");
+  check(liveField(dev.net, plc::NetField::PortalPassword) == password,
+        "and the password is LIVE — it staged before the commit, though it is addressed after it");
+  check(stagedField(dev.net, plc::NetField::PortalPassword) == password,
+        "with staged and live agreeing, so nothing is left pending");
+}
+
 void refusalsThatMustStay() {
   std::printf("\n[what FC16 must still refuse]\n");
 
@@ -388,6 +433,7 @@ int main() {
   blockWriteAcrossTheWholeRegion();
   applyIsDeferredToTheEndOfTheBlock();
   thePortalPasswordIsWritableToItsFullCapacity();
+  theApplyMustCommitAFTERTheRegistersBEYONDIt();
   refusalsThatMustStay();
   byteCountIsStillChecked();
   singleWriteStillWorks();

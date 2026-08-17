@@ -48,7 +48,7 @@ struct ModbusDependencies {
   Preferences* preferences = nullptr;
   plc::RegisterBank* registers = nullptr;
   /**
-   * The network block at 500-732 (WiFi_MQTT_Connectivity.md §5). May be null.
+   * The network block at 500-751 (WiFi_MQTT_Connectivity.md §5). May be null.
    *
    * Reached from here rather than intercepted in firmware.cpp's thin worker wrappers, because §5.5
    * requires ONE apply path shared by the display, a master and the portal — and this is where the

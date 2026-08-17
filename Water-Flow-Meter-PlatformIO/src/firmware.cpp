@@ -128,7 +128,7 @@ bool allSensorsReadyCache = true;
  * WiFi, MQTT and portal configuration (WiFi_MQTT_Connectivity.md §6.1).
  *
  * Declared here, above modbusDeps, because the Modbus manager now serves the network register block
- * at 500-732 and holds a pointer to this. Static-initialisation order within a translation unit is
+ * at 500-751 and holds a pointer to this. Static-initialisation order within a translation unit is
  * declaration order, so the pointee must come first — otherwise .net would capture an object that has
  * not been constructed.
  */

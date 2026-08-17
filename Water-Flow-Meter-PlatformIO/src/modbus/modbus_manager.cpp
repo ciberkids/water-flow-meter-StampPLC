@@ -608,12 +608,15 @@ ModbusMessage ModbusManager::handleWriteMultiple(ModbusMessage request) {
    * an exception at 730, which is worse. Out here the return can be ignored, because §5.1 requires the
    * sequence to succeed and NET_LAST_ERROR already carries the reason.
    *
-   * THE ONE THAT IS LATENT: order. Nothing WRITABLE currently sits above 730 — 731 and 732 are
-   * read-only and 733 is the end — so in the layout as it stands, applying in address order would
-   * commit no less than this does. It is deferred anyway because that is a property of the layout and
-   * not of the protocol: the moment any writable register is placed above the apply, a frame spanning
-   * it would commit before that register staged, and the revision would claim a value it had not
-   * applied. Cheap here, invisible later.
+   * THE ONE THAT IS ALSO REAL, since kPortalPassword moved: order. The password occupies 736-751, above
+   * the apply, so a frame from 730 to the end of the block reaches the commit BEFORE the 16 registers
+   * carrying the password have staged. In address order the magic would commit an empty stage
+   * (NothingStaged, which counts as success) and the password would then stage behind a revision that
+   * already claimed to have applied it — the master's write silently not in force.
+   *
+   * This half was latent when the deferral was written: nothing writable sat above 730 then, and the
+   * comment here said so. The layout change made it load-bearing three commits later, which is the
+   * argument for deferring on principle rather than on the current address map.
    *
    * REG_LINK_APPLY needs no such treatment: it is the last writable address of its block (45 is
    * read-only), so any frame reaching it has already staged 40-43 and any frame reaching PAST it is

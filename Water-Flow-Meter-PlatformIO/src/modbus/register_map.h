@@ -48,7 +48,7 @@ inline constexpr uint16_t REG_DISPLAY_FLOW_UNIT = 33;
 /**
  * One past the highest holding register the device serves.
  *
- * Must cover the network block at 500-732 (WiFi_MQTT_Connectivity.md §5), not just the sensor blocks
+ * Must cover the network block at 500-751 (WiFi_MQTT_Connectivity.md §5), not just the sensor blocks
  * that end at 419. RegisterBank sized itself from the sensor blocks alone, so every address in the
  * network block failed isRangeValid() and a master reading NET_WIFI_STATE got ILLEGAL_DATA_ADDRESS —
  * honest, but it made §5's entire remote-setup story unreachable.

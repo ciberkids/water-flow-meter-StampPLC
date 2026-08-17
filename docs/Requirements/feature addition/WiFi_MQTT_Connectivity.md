@@ -1379,7 +1379,7 @@ discoverability and an expressible intention ("restore the known default" is not
 as "set this string"), not a new capability.
 
 What the magic requirement buys is the accident case rather than the attacker case: §5.1 requires a
-block write across the whole region to succeed rather than except, so a master zero-filling 500–732
+block write across the whole region to succeed rather than except, so a master zero-filling 500–751
 must not silently reset the login on its way past. A host check zero-fills all 233 registers and
 asserts the login survives.
 
@@ -1480,7 +1480,7 @@ resolved before the expensive work.
 | **N1c** | Declare the 14 settings in the catalogue | A6, A7 | ✅ manifest regenerated |
 | ~~**N2a**~~ | Text-editor engine — **built then deleted** (§6.3). Its 47 checks went with it. | A8 | ⊘ withdrawn |
 | **N2b** | Text settings are **display-only** at the panel; the wiring was removed with the engine | A8 | ✅ 16 checks |
-| **N3** | Network register block 500–732, staged apply, revision, error reporting | A5, A6, A7 | ✅ 50 checks |
+| **N3** | Network register block 500–751, staged apply, revision, error reporting | A5, A6, A7 | ✅ 50 checks |
 | **N4** | WiFi state machine, backoff, NVS persistence, status bindings | A13 | ▶ next — also unblocks the §7.1 info pages |
 | **N5** | MQTT client (`esp-mqtt`, §4.1.1), topic layout, cadence, LWT, queue policy | A11 | unblocked 2026-08-03 |
 | **N6** | Home Assistant discovery payloads (§4.4.a/b) and republish rules | A2, A3, A4 | unblocked 2026-08-03 |

@@ -380,7 +380,7 @@ is a feature, and deleting them from the table would discard a requirement.
 the table describes only what answers. The `static_assert`s added this round cover overlaps between
 things that EXIST; they cannot catch an address that exists only on paper.
 
-### The simulator's `ready` is stored where the device derives it 🟡
+### The simulator's `ready` is stored where the device derives it — DEFERRED ON SCOPE 🟡
 
 Was two facts; one closed this round. Both were the same shape — a green suite over something only a
 human can reach:
@@ -402,9 +402,16 @@ move `ready` needs — but `ready` is read by `resolveSensorBinding` and by the 
 `configIsValid(configs[n])`, evaluated where it is asked, and the `SensorData::isReady` cache was deleted
 precisely because a stored answer goes stale. The mockup is currently one refactor behind that lesson.
 
-**Decide:** derive `ready` in `normalizeSensor` and update every producer, or add a component-test
-dependency and pin the controls instead. Note the first option makes the mockup agree with the firmware
-and is the one the `isReady` history argues for.
+**This is NOT an open question, and it is filed honestly as such.** It is a correction: it needs no
+hardware, reverses no owner decision, and is a simulator-lies divergence by the description above —
+writing `qMaxLpm = 0` through the Values panel leaves the row saying `OK` where the device says `SET?`.
+The right answer is known: derive `ready` in `normalizeSensor`, which is the same move that closed the
+`undersampling` half this round, and which makes the mockup agree with the firmware.
+
+**It is DEFERRED ON SCOPE, not undecided.** `ready` is read by `resolveSensorBinding` and by the row
+renderer, and every producer in `sensorConfig.ts` sets it, so deriving it is a refactor of the module's
+public shape rather than the one-line change the other three fixes were. It wants its own round, with
+`sensorConfig.test.ts`'s 48 checks re-run against the new meaning of the field.
 
 ---
 

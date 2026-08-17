@@ -11,7 +11,7 @@ namespace plc {
 class RegisterBank {
  public:
   // The whole served space, not just the sensor blocks — see kHoldingRegisterSpace. Sizing this from
-  // the sensor blocks alone is what left registers 500-732 unreachable.
+  // the sensor blocks alone is what left the whole network block unreachable.
   static constexpr uint16_t kTotalRegisters = kHoldingRegisterSpace;
   static_assert(kTotalRegisters >=
                     SENSOR_1_BASE_ADDR + SENSOR_BLOCK_SIZE * static_cast<uint16_t>(kNumSensors),
