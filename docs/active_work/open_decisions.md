@@ -31,6 +31,12 @@ Everything is in place to take it: the achieved rate is published in `REG_POLLIN
 rate is materially below it, the bulk-read work becomes real and the per-channel `q_max` limits need
 re-checking against what the sampler can actually count.
 
+**Note, 2026-08-17.** `meetsNyquistLimit` now refuses a ceiling of zero or less instead of accepting it,
+and `configIsValid` demands a positive multiplier. Neither touches this: both are about configurations
+that have no sensible ceiling at all, not about what the ceiling is compared against. The 3.3 kHz is
+still assumed, and it is now also the simulator's default dial (`kDefaultPollingRateKhz`), so the
+mockup's "inside budget" statements inherit the same assumption.
+
 **Blocks.** Trusting the sensor configuration limits on hardware. Nothing in software.
 
 ---
@@ -56,6 +62,25 @@ at all to a third-party pack on an SD card.
 
 ---
 
+## N-c 🟡 MQTT is a REPORT-ONLY surface, so "every setting is writable from every route" is not true of it
+
+Recorded because the four-surface question keeps being asked as though MQTT were one of the four. It is
+not, today. The only subscription is `<prefix>/status` — Home Assistant's birth message — so nothing a
+broker sends can change a setting. The command topics are specified in
+`../Requirements/feature addition/WiFi_MQTT_Connectivity.md` §4.4.1 and are **not built**, and
+`kMqttLastCmdResult` (register 565) exists to report the result of a command that cannot yet arrive.
+
+**This is a feature, queued by the owner, not a defect** — which is exactly why it belongs here rather
+than in the defect list below. The three routes that DO write (panel, RS485, portal) agree, and RS485
+remains the source of truth.
+
+**One consequence worth stating:** the panel cannot edit text at all (there is no on-device text
+editor), so SSID, broker host and topics are portal-or-Modbus only. That is a decision, not a gap, and
+it means a device with no Modbus master and an expired provisioning window has no route to its own
+network settings. The portal timer is the thing standing between an operator and a reflash.
+
+---
+
 ## I2 — standing rule, not a decision
 
 **The value catalogue is append-only.** Renumbering or repurposing an existing entry breaks every
@@ -67,7 +92,7 @@ a rule filed under "archive" is a rule nobody reads. Same class as the wire-enco
 
 ---
 
-## Defects found — three fixed, six open
+## Defects found — seven fixed, eight open
 
 None is a decision — each is known, each has a diagnosis, and they are here because this is the file
 that gets read before picking up work.
@@ -110,6 +135,64 @@ first write with register 30 at 0, out-of-budget still refused and parked.
 
 **Note for G1:** this changes *which* frequency the budget is computed from, not whether the budget is
 right. The 3.3 kHz polling rate it is compared against is still unmeasured on hardware.
+
+### ~~A pulses-per-litre calibration written over Modbus was lost at every reboot~~ ✅ FIXED 2026-08-17
+
+`saveSensorConfig` wrote three keys — `cfg_q`, `cfg_f`, `cfg_a` — and `SensorCharacteristics` has five
+fields. `calibration` and `pulses_per_litre` were never persisted, so a master that wrote registers 123
+and 124 saw them accepted and read them back correctly until the next power cycle, after which the
+channel returned as `Formula` with no K figure, failed `configIsValid`, and reported `SET?` with 0.0 for
+every measured register.
+
+The litres were never lost — `cml_%u` round-trips. The zero at register 103 is DERIVED, by
+`syncSensorToHolding`'s `inUse && configIsValid(...)` gate, which is correct and was left alone.
+
+**Fixed** by moving the serializer to `modbus/sensor_config_nvs.h`, templated on the store, so it can be
+host-tested at all: it lived in firmware.cpp, which is in no link set. 20 checks, mutation-proven, plus a
+`static_assert` on the struct's size so a sixth field is a build failure.
+
+### ~~FC16 refused every address in the network block~~ ✅ FIXED 2026-08-17
+
+`handleWriteMultiple` pre-validated with `isWritableAddress`, which knows only the sensor and link
+registers — so every address from 500 up was refused and a block write anywhere in the network region
+excepted on its first word, while FC6 at the same address worked. §5.2's whole "no AP, no portal, no site
+visit" story was unreachable for any master that writes text as blocks.
+
+The host check named for that requirement was green throughout: it drives `NetRegisterMap::stageWrite`,
+one layer below the handler, and nothing in `test/` called the handler at all. `deps_.net` is null in the
+one test that constructs the manager, which makes the entire network branch unreachable.
+
+**Fixed**, with NET_APPLY lifted out of the write loop so a zero passed over at 730 cannot except.
+28 checks through the real handler, mutation-proven.
+
+**Found while testing, and now documented in §5:** FC16 caps one frame at 123 registers, because the
+byte count is a single byte. The region cannot be written in one frame, so §5.1's "block write across the
+whole region" is necessarily a sequence.
+
+### ~~12 of the portal password's 32 bytes were unreachable over RS485~~ ✅ FIXED 2026-08-17
+
+`kPortalPassword` was at 720 claiming 16 registers, and `kApply` is at 730. So bytes 0..19 were
+writable, a write aimed at byte 20 **committed the block**, and 731/732 were ignored — while the store,
+`netFieldCapacity` and the web portal all said 32 bytes, and the portal really accepts 32.
+
+**Fixed** by moving the field to 736 (the apply trio keeps the addresses §5 publishes) and leaving
+720-729 reserved so a master built against the old prose is ignored rather than landing inside another
+field. The real fix is three `static_assert`s: a text field that runs past the block, overlaps another
+field, or overlaps a scalar is now a build failure. The audit had to check all ten fields by hand.
+
+### ~~A master could install a negative multiplier, or an offset cancelling the whole span~~ ✅ FIXED 2026-08-17
+
+Both were accepted, both reported `OK` with register 30 clear. A negative multiplier is a negative
+DIVISOR, so the channel read 0.00 at every frequency; an offset cancelling the span reached
+`meetsNyquistLimit`'s `theoreticalFrequency <= 0.0` arm, which returned **true**, and the engine then read
+full scale on a dry pipe.
+
+The multiplier half needed no decision — `ui_settings_types.cpp` bounds the panel editor at 1..32767 and
+the register wiki published that range — but the bound lived only in the editing stepper, so no route
+enforced it. It is now in `configIsValid`, the one choke point all surfaces share.
+
+**Partially fixed, and the remainder is the entry below.** Both refusals PARK rather than reject, so
+§5.5's override still installs these figures on a second identical write.
 
 ### The warning banner is drawn where §2c decided it must not be 🔴
 
@@ -241,24 +324,87 @@ deliberate act with a failing test attached. Any Modbus master already issuing 1
 **Decide:** clear the override state on 19 too (a three-line change, and the test that pins the current
 behaviour then has to be inverted), or record that 19 is frozen and 25 is the command to use.
 
-### The simulator's two newest device facts have no test that could fail 🟡
+### `configIsValid`'s offset bound is ten times the frequency the channel can reach 🟡
 
-Both are recorded by the commits that added them, and both are the same shape — a green suite over
-something only a human can reach:
+**The one thing this round found and deliberately did not change**, because it is a decision about what
+the predicate promises rather than a repair.
 
-- **`SimulatedSensor.undersampling` is a mockup-only control** with no automated coverage. All five
-  states of `statusSummaryText` and `warningSummaryText` are pinned in `sensorConfig.test.ts`, but they
-  construct `{ undersampling: true }` by hand — the checkbox that lets the running app reach that state
-  is asserted by nothing, because there is no component-test harness (no `@testing-library`). Removing
-  the control would make four firmware strings unreachable in the mockup again with the suite still
-  green.
+The bound is `|adjust| <= q_max * multiplier * 10`. The comment directly above it says the offset "may not
+exceed the frequency the channel can actually reach", which is `q_max * multiplier` — **ten times
+smaller**. So the code and its own stated rule disagree by a factor of ten, and the code is the looser of
+the two.
+
+**What the sampling fix already catches.** An offset large enough to cancel the whole span drives the
+ceiling to zero or below, and `meetsNyquistLimit` now refuses that. So `m=200, a=-30000, q=150` — the
+audit's case — is flagged and parked instead of installed silently.
+
+**What it does not catch, and why this is still open.** A SMALL negative offset passes everything:
+
+| | |
+| --- | --- |
+| `m=10, q=150, a=-1400` | ceiling 100 Hz — comfortably samplable, so no flag |
+| what the engine reads at ZERO pulses | `(0 + 1400) / 10` = **140 L/min** on a dry pipe |
+
+`configIsValid` says valid, register 30 stays clear, the row says `OK`. Pinned in
+`web/mockup/src/utils/__tests__/nyquist.test.ts` ("still admits a SMALL negative offset") so it cannot be
+mistaken for solved, and mirrored in `sensorConfig.ts` on purpose — a mockup stricter than the device
+would show a warning hardware will not.
+
+**Decide what the bound means.** Either tighten it to `q_max * multiplier` and accept that some real
+datasheet fits become invalid (nobody has checked which, and that needs meters, not reasoning), or state
+that a negative offset is the operator's business and correct the comment instead. Both are cheap; the
+present state is the only one that is indefensible, because the comment and the code disagree.
+
+**Also still true after this round:** every sampling refusal PARKS. A master that writes the same
+degenerate figures twice installs them through §5.5's override handshake, by design — the handshake exists
+for meters the gate is wrong about. Asserted in `sensor_config_gate_test.cpp` rather than glossed over.
+
+### Three registers §5's table documents do not exist 🟡
+
+Found while relocating `kPortalPassword`. The table in
+`../Requirements/feature addition/WiFi_MQTT_Connectivity.md` §5 does not match `net_register_map.h`, and
+in one place does not match itself:
+
+| Table says | Header says |
+| --- | --- |
+| `674 NET_PORTAL_ENABLED` — the STA-side config page (R7.9) | no such constant |
+| `711 NET_AP_REQUEST` — raise or drop the provisioning AP (R5.4a) | no such constant |
+| `708–711 NET_AP_IP` | `kApIp = 708`, **two** registers (708-709) |
+
+So the table double-books 711 between `NET_AP_IP`'s range and `NET_AP_REQUEST`, and publishes two
+addresses an integrator would read as available. Both missing registers are **unbuilt features** with
+requirement numbers attached (R7.9, R5.4a), which is why this is recorded rather than fixed: adding them
+is a feature, and deleting them from the table would discard a requirement.
+
+**Decide:** build the two registers, or move them out of the layout table into the requirements text so
+the table describes only what answers. The `static_assert`s added this round cover overlaps between
+things that EXIST; they cannot catch an address that exists only on paper.
+
+### The simulator's `ready` is stored where the device derives it 🟡
+
+Was two facts; one closed this round. Both were the same shape — a green suite over something only a
+human can reach:
+
+- ~~**`SimulatedSensor.undersampling` is a mockup-only control**~~ ✅ **closed 2026-08-17.** The flag is
+  now DERIVED from the configuration and a polling-rate dial, exactly as `evaluateSensorDiagnostics`
+  derives it, and `nyquist.test.ts` pins both ceilings and the margin factor against the C++ source. What
+  remains a hand-set input is `samplingOverride`, which is genuinely an input — it models the operator's
+  half of §5.5.
 - **`ready` is a stored boolean that nothing recomputes** when the configuration changes, so writing
   `qMaxLpm = 0` through the Values panel leaves the row saying `OK` while the device would say `SET?`.
   Fixing it means deriving `ready` in `normalizeSensor`, which changes what every producer in
   `sensorConfig.ts` means by the field.
 
-**Decide:** add a component-test dependency and pin the controls, or accept that the mockup's inputs are
-verified by driving the app and record that as the standing rule.
+**Why it survived this round.** The `undersampling` half was closed by DERIVING it, which is the same
+move `ready` needs — but `ready` is read by `resolveSensorBinding` and by the row that renders
+`!connected ? "--" : ready ? "OK" : "SET?"`, so deriving it changes what every producer in
+`sensorConfig.ts` means by the field. The firmware has no such field at all: readiness is
+`configIsValid(configs[n])`, evaluated where it is asked, and the `SensorData::isReady` cache was deleted
+precisely because a stored answer goes stale. The mockup is currently one refactor behind that lesson.
+
+**Decide:** derive `ready` in `normalizeSensor` and update every producer, or add a component-test
+dependency and pin the controls instead. Note the first option makes the mockup agree with the firmware
+and is the one the `isReady` history argues for.
 
 ---
 
