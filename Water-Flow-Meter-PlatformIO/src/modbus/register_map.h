@@ -55,8 +55,12 @@ inline constexpr uint16_t REG_DISPLAY_FLOW_UNIT = 33;
  *
  * net_register_map.h static_asserts its own kEnd against this, so growing the network block without
  * growing the bank is a build failure rather than a range that silently stops answering.
+ *
+ * Grew from 733 to 752 when kPortalPassword was moved above the apply protocol: its 16 registers had
+ * been overlapping kApply/kRevision/kLastError, which left only 20 of its 32 bytes writable over
+ * RS485. The 19 extra registers cost 38 bytes of RAM.
  */
-inline constexpr uint16_t kHoldingRegisterSpace = 733;
+inline constexpr uint16_t kHoldingRegisterSpace = 752;
 
 inline constexpr uint16_t REG_LINK_SLAVE_ID = 40;
 inline constexpr uint16_t REG_LINK_BAUD_INDEX = 41;

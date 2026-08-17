@@ -779,9 +779,26 @@ Strings are packed two characters per register, high byte first, `NUL`-padded, n
 | 676–691 | `NET_AP_SSID` | text, 32 bytes, read-only (§5.2) |
 | 692–707 | `NET_AP_PASSWORD` | text, 32 bytes, read-only (§5.2) |
 | 708–711 | `NET_AP_IP` | packed, read-only — the portal address |
+| 712–719 | `NET_PORTAL_USER` | text, 16 bytes |
+| 720–729 | *reserved* | formerly `NET_PORTAL_PASSWORD`; writes ignored — see the note below |
 | 730 | `NET_APPLY` | write `0x5AA5` to commit the staged block |
 | 731 | `NET_REVISION` | increments on each successful apply |
 | 732 | `NET_LAST_ERROR` | enum, read-only |
+| 736–751 | `NET_PORTAL_PASSWORD` | text, 32 bytes, **write-only** |
+
+> **The portal password is at 736, not 720.** It was placed at 720 with 16 registers for its 32 bytes
+> and did not have them: `NET_APPLY` is at 730, so registers 720–729 staged only bytes 0..19, a write
+> aimed at byte 20 landed on the apply register and **committed the block**, and 731/732 were ignored
+> as read-only. So a 32-byte password could be set from the web form and never over RS485 — against
+> the rule that RS485 is the source of truth for everything. The field moved rather than the apply
+> protocol, because 730–732 are the three addresses this table already published and a master may be
+> written against them. 720–729 is left reserved so a master built against the old prose is ignored
+> rather than writing into the middle of another field, and `net_register_map.h` now `static_assert`s
+> that no text field overlaps a scalar or runs past the end of the block.
+
+> **One frame does not reach the whole region.** FC16 carries its byte count in a single byte, so the
+> protocol caps one write at 123 registers. A master zero-filling or configuring the whole block
+> necessarily issues a SEQUENCE of frames; §5.1's requirement holds per frame.
 
 ### 5.2. Remote setup over RS485 is a first-class path, not a side effect
 
@@ -882,7 +899,7 @@ and that belongs in the operator documentation, not in a mitigation this firmwar
 > user who is deliberately moving the device to a new AP. `NET_LAST_ERROR` reports the
 > failure instead.
 
-Growing the bank from 420 to 733 registers costs about **626 bytes** of RAM
+Growing the bank from 420 to 752 registers costs about **664 bytes** of RAM
 (`register_bank.h` stores one `uint16_t` per register). Against 327 KB — 8.2 % used today — that is
 not a consideration, and it buys full remote configurability.
 
@@ -1356,7 +1373,7 @@ would choose deliberately, so it is not left as a consequence.
 
 **The owner's rationale was "physical access to the device should recover it", and the menu path is
 what delivers that.** The RS485 path is a convenience — and it is worth being precise that it costs
-nothing in exposure: `NET_PORTAL_PASSWORD` at 720 is already **writable**, so anyone who can reach
+nothing in exposure: `NET_PORTAL_PASSWORD` (at 736; see §5) is already **writable**, so anyone who can reach
 register 710 could already set the login to a value of their own choosing. The command adds
 discoverability and an expressible intention ("restore the known default" is not the same operation
 as "set this string"), not a new capability.

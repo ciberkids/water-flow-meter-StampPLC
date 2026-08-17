@@ -110,7 +110,7 @@ first thing on the page for that reason.
 
 Locked out? Write `0x5AA5` to register `710` and the login returns to `admin`/`admin`. That command
 acts immediately rather than staging, because a recovery action that needs a second write is one
-somebody gets half-way through. It grants a Modbus master nothing new: register `720` already lets it
+somebody gets half-way through. It grants a Modbus master nothing new: register `736` already lets it
 set the password outright — the command exists because "reset to a known default" is a different
 intention from "set to this string" and deserves to be expressible.
 

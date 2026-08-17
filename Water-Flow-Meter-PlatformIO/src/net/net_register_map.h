@@ -66,19 +66,41 @@ inline constexpr uint16_t kApIp             = 708;  // 2 registers, read-only
 // action that needs a second write to take effect is a recovery action somebody gets half-way
 // through — and the whole point is that it works when the operator is locked out and improvising.
 //
-// This adds no exposure a master did not already have: kPortalPassword at 720 is WRITABLE, so
-// anyone who can reach this register could already set the login to a value of their choosing. The
-// command exists for discoverability, and because "reset to a known default" is a different
-// intention from "set to this string" and deserves to be expressible.
+// This adds no exposure a master did not already have: kPortalPassword is WRITABLE, so anyone who
+// can reach this register could already set the login to a value of their choosing. The command
+// exists for discoverability, and because "reset to a known default" is a different intention from
+// "set to this string" and deserves to be expressible.
 inline constexpr uint16_t kPortalReset      = 710;
 inline constexpr uint16_t kPortalUser       = 712;  // 8 registers, 16 bytes
-inline constexpr uint16_t kPortalPassword   = 720;  // 16 registers, write-only
+
+/**
+ * 720-729 — RESERVED, and deliberately not reused.
+ *
+ * kPortalPassword lived at 720 and claimed 16 registers for its 32 bytes. It did not have them: kApply
+ * sits at 730, so the field's declared span ran straight through the apply protocol and past the end of
+ * the block. The consequence was a WRITE WINDOW OF 20 BYTES — registers 720-729 staged bytes 0..19, 730
+ * diverted to the apply handler (so a master aiming at password bytes 20/21 could COMMIT the block
+ * instead of writing to it), and 731/732 were silently ignored as read-only. The store, the portal and
+ * `netFieldCapacity` all said 32 bytes, and the portal really does accept 32, so a 32-byte password
+ * could be set from the web form and never over RS485 — against the standing principle that RS485 is
+ * the source of truth for everything.
+ *
+ * The field moved above the apply protocol rather than the apply protocol moving, because 730/731/732
+ * are the three addresses WiFi_MQTT_Connectivity.md §5 tabulates and a master may already be written
+ * against them. This window is left empty instead: a master built against the old prose writes here and
+ * is ignored, which is what §5.1 says a non-writable address in the block does, rather than landing in
+ * the middle of some other field.
+ */
+inline constexpr uint16_t kPortalPasswordReserved = 720;  // 10 registers, formerly kPortalPassword
 
 // ── Apply protocol, mirroring REG_LINK_APPLY ──────────────────────────────────────
 inline constexpr uint16_t kApply      = 730;
 inline constexpr uint16_t kRevision   = 731;  // read-only
 inline constexpr uint16_t kLastError  = 732;  // read-only
-inline constexpr uint16_t kEnd        = 733;  // one past the last register
+
+// 733-735 left free so the apply protocol can gain a word without moving a text field again.
+inline constexpr uint16_t kPortalPassword   = 736;  // 16 registers, 32 bytes, write-only
+inline constexpr uint16_t kEnd        = 752;  // one past the last register
 
 // A master can only read what RegisterBank will answer for. Extending this block past the bank would
 // make the new registers return ILLEGAL_DATA_ADDRESS — the exact silent-unreachability that left the
@@ -110,6 +132,92 @@ constexpr uint16_t textBase(NetField field) {
   }
   return 0;
 }
+
+/**
+ * THE LAYOUT CHECKS. A text field that overlaps something is now a BUILD FAILURE.
+ *
+ * kPortalPassword overlapped kApply, kRevision and kLastError and ran past kEnd, and every one of the
+ * three places that stated its span — this header, `netFieldCapacity`, and the wiki generator — agreed
+ * with each other while disagreeing with the arithmetic. Nothing computed the sum. The audit that found
+ * it had to check all ten fields by hand and reported "the layout has zero slack anywhere", which is
+ * exactly the kind of fact that should be the compiler's job: this block is hand-allocated, it is full,
+ * and the next field added to it will be placed by somebody reading a table.
+ *
+ * A wrong ADDRESS still compiles, of course — this cannot know where a field was meant to go. What it
+ * refuses is the silent part: a field that overlaps another field, overlaps a scalar or fixed range, or
+ * runs off the end of the block.
+ */
+namespace layout_check {
+
+struct Range {
+  uint16_t start;
+  uint16_t count;
+};
+
+/** Where one text field lands, from the same two functions the packing code uses. */
+constexpr Range textRange(NetField field) {
+  return Range{textBase(field), textRegisters(netFieldCapacity(field))};
+}
+
+constexpr bool overlaps(Range a, Range b) {
+  return a.start < b.start + b.count && b.start < a.start + a.count;
+}
+
+/**
+ * Everything in the block that is NOT a NetField text field: the scalars, the read-only AP strings the
+ * device fills in itself, and the reserved window the portal password vacated.
+ */
+constexpr Range kFixed[] = {
+    {kWifiEnabled, 1},   {kWifiState, 1},        {kWifiRssi, 1},    {kWifiIp, 2},
+    {kWifiMac, 3},       {kMqttEnabled, 1},      {kMqttState, 1},   {kMqttPort, 1},
+    {kMqttPeriodS, 1},   {kMqttFlags, 1},        {kMqttLastCmdResult, 1},
+    {kPortalRemainingS, 1}, {kApSsid, 16},       {kApPassword, 16}, {kApIp, 2},
+    {kPortalReset, 1},   {kPortalPasswordReserved, 10},
+    {kApply, 1},         {kRevision, 1},         {kLastError, 1}};
+
+constexpr bool everyTextFieldIsInsideTheBlock() {
+  for (std::size_t i = 0; i < static_cast<std::size_t>(NetField::Count); ++i) {
+    const Range r = textRange(static_cast<NetField>(i));
+    if (r.start < kBase || r.start + r.count > kEnd) {
+      return false;
+    }
+  }
+  return true;
+}
+
+constexpr bool noTextFieldOverlapsAnother() {
+  for (std::size_t i = 0; i < static_cast<std::size_t>(NetField::Count); ++i) {
+    for (std::size_t j = i + 1; j < static_cast<std::size_t>(NetField::Count); ++j) {
+      if (overlaps(textRange(static_cast<NetField>(i)), textRange(static_cast<NetField>(j)))) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+constexpr bool noTextFieldOverlapsAFixedRegister() {
+  for (std::size_t i = 0; i < static_cast<std::size_t>(NetField::Count); ++i) {
+    const Range field = textRange(static_cast<NetField>(i));
+    for (const Range& fixed : kFixed) {
+      if (overlaps(field, fixed)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+static_assert(everyTextFieldIsInsideTheBlock(),
+              "a text field's registers run outside the network block — its capacity in "
+              "netFieldCapacity() needs as many registers as textBase() gives it");
+static_assert(noTextFieldOverlapsAnother(),
+              "two text fields share registers, so writing one would corrupt the other");
+static_assert(noTextFieldOverlapsAFixedRegister(),
+              "a text field overlaps a scalar, an AP string or the reserved window — this is the "
+              "kPortalPassword/kApply collision, which cost 12 bytes of a 32-byte credential");
+
+}  // namespace layout_check
 
 }  // namespace net_reg
 

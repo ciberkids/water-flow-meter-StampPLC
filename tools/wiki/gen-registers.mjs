@@ -147,10 +147,11 @@ const NETWORK = [
   ["kApIp", "r", "ipv4", 2, "The device's address on its own AP."],
   ["kPortalReset", "w", "u16", 1, "Write `0x5AA5` to restore the portal login to `admin`/`admin`. Acts IMMEDIATELY rather than staging — a recovery action that needs a second write is one somebody gets half-way through."],
   ["kPortalUser", "rw", "text", 8, "Staged. 16 bytes."],
-  ["kPortalPassword", "w", "text", 16, "Staged. 32 bytes. **Reads back as zeros.**"],
-  ["kApply", "w", "u16", 1, "Write `0x5AA5` to commit every staged field in this block."],
+  ["kPortalPasswordReserved", "r", "u16", 10, "**Reserved, 720-729.** `kPortalPassword` used to start here and claim 16 registers for its 32 bytes, which it did not have: `kApply` sits at 730, so only bytes 0..19 were writable and a master aiming at byte 20 committed the block instead. The field moved to 736 rather than the apply protocol moving, because 730-732 are the addresses §5 tabulates. Writes here are ignored, as §5.1 says a non-writable address in the block is."],
+  ["kApply", "w", "u16", 1, "Write `0x5AA5` to commit every staged field in this block. A block write spanning this register commits LAST, after the rest of the frame has staged, and a non-magic value passed over by such a write is ignored rather than excepting (§5.1) — unlike a single-register write here, which reports the refusal."],
   ["kRevision", "r", "u16", 1, "Increments on every successful apply."],
-  ["kLastError", "r", "u16", 1, "Why the last apply failed: `0` none, `1` nothing staged, `2` bad magic, `3` invalid value."]
+  ["kLastError", "r", "u16", 1, "Why the last apply failed: `0` none, `1` nothing staged, `2` bad magic, `3` invalid value."],
+  ["kPortalPassword", "w", "text", 16, "Staged. 32 bytes, all of them writable — see `kPortalPasswordReserved` for why this is not at 720. **Reads back as zeros.**"]
 ];
 
 /* ── Reconciliation: the two halves must describe the same set ─────────────────────────────────── */

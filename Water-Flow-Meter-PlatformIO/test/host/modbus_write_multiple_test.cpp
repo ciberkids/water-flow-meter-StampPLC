@@ -2,7 +2,7 @@
  * FC16 (write multiple registers) against the REAL frame handler.
  *
  * §5.1 of WiFi_MQTT_Connectivity.md requires a block write across the whole network region to succeed
- * rather than except — a master zero-filling 500-732 must not except on its way past, and must not
+ * rather than except — a master zero-filling the whole region must not except on its way past, and must not
  * silently reset the login either. `handleWriteMultiple` pre-validated every word with
  * `isWritableAddress`, a predicate that knows only the sensor and link registers, so every address from
  * 500 up answered false and the frame excepted with ILLEGAL_DATA_ADDRESS on its FIRST word. Writing an
@@ -214,11 +214,11 @@ void blockWriteAcrossTheWholeRegion() {
    * Zeros across 500-732 — but NOT in one frame, because the protocol forbids it.
    *
    * FC16 carries its byte count in a single byte, so the spec caps one frame at 123 registers and the
-   * region's 233 do not fit. A master zero-filling the region necessarily issues a SEQUENCE of frames,
+   * region does not fit in one. A master zero-filling the region necessarily issues a SEQUENCE of frames,
    * which is why the apply deferral has to hold per frame rather than per region: the frame carrying
    * 730 also carries 731 and 732 behind it.
    *
-   * net_settings_test.cpp's case for this requirement writes all 233 addresses in one loop through
+   * net_settings_test.cpp's case for this requirement writes every address in one loop through
    * `stageWrite`, which is not a frame and cannot see this — the layer difference that let the defect
    * live.
    */
@@ -236,7 +236,10 @@ void blockWriteAcrossTheWholeRegion() {
     if (!response.addCalled) everyFrameResponded = false;
   }
 
-  check(frames == 2, "233 registers is two frames at the protocol's 123-register cap");
+  const std::size_t expectedFrames = (span + kMaxRegistersPerFrame - 1) / kMaxRegistersPerFrame;
+  check(span > kMaxRegistersPerFrame,
+        "the region is larger than one frame can carry, so a master must split it");
+  check(frames == expectedFrames, "and it was written in exactly that many frames");
   check(everyFrameAccepted, "the whole-region zero-fill is accepted rather than excepting");
   check(everyFrameResponded, "with a normal response to each frame");
   check(liveField(dev.net, plc::NetField::PortalUser) == std::string("operator"),
@@ -270,14 +273,58 @@ void applyIsDeferredToTheEndOfTheBlock() {
         "and what went live is the value staged EARLIER in the same frame");
 }
 
+void thePortalPasswordIsWritableToItsFullCapacity() {
+  std::printf("\n[the portal password: all 32 bytes reachable over RS485, not 20]\n");
+
+  Device dev;
+  ModbusManager modbus(dev.deps());
+
+  // A 32-byte password — the capacity netFieldCapacity() declares and the web portal accepts. The
+  // field's 16 registers used to start at 720 and collide with kApply at 730, so only bytes 0..19 could
+  // be written from the bus: a credential settable from the web form and not over RS485.
+  const std::string password = "0123456789abcdefghijABCDEFGHIJ!?";
+  check(password.size() == 32, "the case really is 32 bytes long");
+  check(plc::netFieldCapacity(plc::NetField::PortalPassword) == 32,
+        "and 32 is what the field's capacity says it holds");
+
+  const ModbusMessage response =
+      writeMultiple(modbus, plc::net_reg::kPortalPassword, packText(password, 16));
+  check(!response.errorSet, "16 registers of password are accepted in one frame");
+  check(stagedField(dev.net, plc::NetField::PortalPassword) == password,
+        "and ALL 32 bytes staged — the last 12 used to be unreachable");
+
+  check(modbus.applyHoldingWrite(plc::net_reg::kApply, plc::net_reg::kApplyMagic),
+        "the block applies");
+  check(liveField(dev.net, plc::NetField::PortalPassword) == password,
+        "so the full-length password is the live one");
+  check(dev.net.revision() == 1, "with one apply, not one caused by a password byte landing on 730");
+
+  // The vacated window must do nothing at all rather than land in another field.
+  Device fresh;
+  ModbusManager m(fresh.deps());
+  const ModbusMessage intoTheHole =
+      writeMultiple(m, plc::net_reg::kPortalPasswordReserved, std::vector<uint16_t>(10, 0x4142));
+  check(!intoTheHole.errorSet,
+        "a master written against the old address is not refused — §5.1 ignores, it does not except");
+  // Compared against the DEFAULT rather than against empty: the portal login ships as admin/admin, so
+  // "nothing happened" here means "still the default", not "blank".
+  check(stagedField(fresh.net, plc::NetField::PortalPassword) ==
+            std::string(plc::NetSettings::kDefaultPortalPassword),
+        "but nothing stages: the reserved window is not quietly part of some other field");
+  check(stagedField(fresh.net, plc::NetField::PortalUser) ==
+            std::string(plc::NetSettings::kDefaultPortalUser),
+        "and the field BELOW it, which really does end at 719, is untouched too");
+  check(fresh.net.revision() == 0, "and nothing applied");
+}
+
 void refusalsThatMustStay() {
   std::printf("\n[what FC16 must still refuse]\n");
 
   Device dev;
   ModbusManager modbus(dev.deps());
 
-  // Past the end of the block. kEnd is 733 and so is the bank, so 732 is the last servable address.
-  check(writeMultiple(modbus, 732, {0, 0}).errorSet,
+  // Past the end of the block. kEnd and the bank are both 752, so 751 is the last servable address.
+  check(writeMultiple(modbus, static_cast<uint16_t>(plc::net_reg::kEnd - 1), {0, 0}).errorSet,
         "a frame running past the end of the register space is refused");
   check(writeMultiple(modbus, plc::net_reg::kWifiSsid, {}).errorSet,
         "a zero-word frame is refused");
@@ -340,6 +387,7 @@ int main() {
   theAsymmetryThatGaveItAway();
   blockWriteAcrossTheWholeRegion();
   applyIsDeferredToTheEndOfTheBlock();
+  thePortalPasswordIsWritableToItsFullCapacity();
   refusalsThatMustStay();
   byteCountIsStillChecked();
   singleWriteStillWorks();
