@@ -81,6 +81,39 @@ network settings. The portal timer is the thing standing between an operator and
 
 ---
 
+## N-d 🟡 The clock can be set from no route at all, which is the largest live gap against RS485
+
+Recorded 2026-08-17, alongside N-c, because it is the same shape: a place where "every setting is
+readable and writable over RS485" is not yet true. It is a queued feature, not a defect — but it was
+never written down, and the four-surface question keeps being answered without it.
+
+`DeviceClock::setTime` has **no production caller**. Grepped 2026-08-17: the only callers are
+`device_clock_test.cpp`, `modbus_manager_clock_test.cpp` and `interaction_test.cpp`. There is no
+date/time block in `register_map.h` or `net_register_map.h`, no portal page offers one, no panel editor
+reaches it (and could not — there is no text editor, per N-c), and NTP exists only in comments
+(`wifi_manager.h` cites R7.13). So in the field the clock reads `UNSET` unless the RTC happens to hold a
+date it is allowed to trust, and **a Modbus master has no way to set it.**
+
+**Where the feature stopped**, in the owner's own ordering: the clock and its trust state are built,
+a session reset is dated through `ModbusManager::Dependencies::clock`, and P3 shows the session start.
+Next is the **Modbus date/time block** — the one that makes every later item settable — then the portal
+page, then NTP on `WifiState::Connected`, with MQTT last because it needs the unbuilt command topics.
+
+**A second, sharper thing on the same subject, which needs the board.** `M5StamPLC.begin()` clears the
+RX8130CE's whole flag register including VLF, and the library exposes no reader, so
+`plc::readRtcVoltageLowFlag()` must run **before** `M5StamPLC.begin()`. It is the first statement of
+`setup()` and that is the only moment in the device's life when "did the clock run across the last power
+cut" can be known. **No test or assert protects the ordering** — nothing under `test/` names
+`rtc_boot_probe` or `readRtcVoltageLowFlag` (checked 2026-08-17). Move that line, or add anything
+touching the RTC above it, and a device with a dead clock reports a healthy one and publishes a
+confident year-2000 timestamp to the panel, Modbus and MQTT. Whether the RTC survives power loss at all
+is **unknown** — the chip has a backup-supply pin, and M5Stack does not say whether a cell or supercap is
+populated. Settle it empirically: set the time, pull power for a minute, boot, read VLF.
+
+**Blocks.** Any timestamp being trustworthy in the field.
+
+---
+
 ## I2 — standing rule, not a decision
 
 **The value catalogue is append-only.** Renumbering or repurposing an existing entry breaks every
@@ -92,7 +125,7 @@ a rule filed under "archive" is a rule nobody reads. Same class as the wire-enco
 
 ---
 
-## Defects found — seven fixed, eight open
+## Defects found — seven fixed, nine open
 
 None is a decision — each is known, each has a diagnosis, and they are here because this is the file
 that gets read before picking up work.
@@ -268,6 +301,27 @@ handler. Firmware compiles; the host suite is unchanged because it cannot reach 
 test can construct, so nothing verifies it. A seam that let a fake server double be driven would have
 caught it — and would catch the next one. That is a real gap, not a nicety: two of the three portal
 defects found this year were in the adapter rather than the form.
+
+### The portal names sensors from 0 and the settings API counts them from 1 🟡
+
+Found while auditing whether the three writing routes agree, and verified by reading both sides
+2026-08-17. `portal_form.cpp` renders per-sensor fields as `<bindingId>@<n>` over
+`0 .. sensorCount-1` (the loop at :726) and its parser refuses `n >= sensorCount_` (:829), so the
+portal's index is **0-based**. `ui::writeSetting`'s `sensorIndex` is **1-based with 0 meaning
+invalid** — `sensorSlot` in `ui_settings.cpp` returns `sensorCount` (the "no such slot" answer) for 0
+and `sensorIndex - 1` otherwise.
+
+**Latent today, and only by an accident of wiring.** No production `PortalSettingStore` is injected —
+`firmware.cpp:244` passes `nullptr`, and its comment says that is the supported "not yet" rather than an
+oversight — so every per-sensor portal row renders disabled and no such write can happen. But
+`portal_form.h`'s `PortalSettingStore` invites the adapter to forward to `ui::writeSetting`, and the
+first adapter written that way will drop sensor 1's write on the floor (index 0 is invalid) and land
+every other calibration **one channel low**.
+
+**Decide before the store is implemented, not after:** either make the portal 1-based so the two
+agree, or state in `PortalSettingStore`'s header that the adapter owns the +1 and say so where the
+implementer will read it. This is cheap now and is a data-corruption bug once a store exists — a
+calibration silently applied to the wrong meter is exactly the class of error no operator can see.
 
 ### The Select Menu is reachable only by a hidden gesture 🟡
 
