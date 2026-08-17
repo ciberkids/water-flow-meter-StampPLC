@@ -689,12 +689,19 @@ ModbusMessage ModbusManager::handleWriteMultiple(ModbusMessage request) {
  * the code that turns a frequency into a flow rather than to this comment about it. Changing either
  * ceiling here fails that test, which is the intended way to find out.
  *
- * TWO ARMS BELOW ADMIT CONFIGURATIONS THAT CANNOT BE MEASURED, and they are reported rather than changed:
- * the formula ceiling clamps at 0 and a ceiling of 0 returns true, so `m` negative (nothing rejects it —
- * `configIsValid` tests only `!= 0`) and `adjust` large and negative both PASS. Verified against this
- * function and the engine: `m=-10, q=150` reads 0 L/min at every frequency, and `m=200, a=-30000, q=150`
- * reads a flat 150 L/min at ZERO pulses. Both report `OK` with register 30 clear. Fixing that is a
- * decision about what `configIsValid` should bound, not a tidy-up of this function.
+ * A CEILING OF ZERO OR LESS IS NOT SAMPLABLE, and this arm used to `return true`.
+ *
+ * Two degenerate configurations reached it and were waved through, both reporting OK with register 30
+ * clear: a negative multiplier (`m=-10, q=150` read 0 L/min at every frequency) and an offset cancelling
+ * the whole span (`m=200, a=-30000, q=150` read a flat 150 L/min at ZERO pulses). The multiplier half is
+ * now refused earlier, by `configIsValid`. This arm still matters for the offset half, which
+ * `configIsValid` deliberately still admits — and it is the same reasoning the `q_max == 0` arm above
+ * already uses: no ceiling frequency means nothing to budget against, so the answer is "cannot be
+ * checked", which is false, not true.
+ *
+ * It PARKS rather than refuses outright, like any other failure here, so §5.5's override handshake is
+ * still available to a master that means it. That is a deliberate limit on this fix: writing the same
+ * degenerate figures twice still installs them.
  */
 bool ModbusManager::meetsNyquistLimit(const SensorCharacteristics& cfg) const {
   if (cfg.q_max == 0) {
@@ -714,13 +721,14 @@ bool ModbusManager::meetsNyquistLimit(const SensorCharacteristics& cfg) const {
     if (cfg.f_multiplier == 0) {
       return false;
     }
-    theoreticalFrequency =
-        std::max(0.0, static_cast<double>(cfg.f_multiplier) * static_cast<double>(cfg.q_max) +
-                             static_cast<double>(cfg.adjust));
+    // No clamp at zero any more: a non-positive ceiling is refused below rather than flattened into one
+    // that then compared as samplable.
+    theoreticalFrequency = static_cast<double>(cfg.f_multiplier) * static_cast<double>(cfg.q_max) +
+                           static_cast<double>(cfg.adjust);
   }
   const double pollingHz = static_cast<double>(*deps_.pollingRateKhz) * 1000.0;
   if (theoreticalFrequency <= 0.0) {
-    return true;
+    return false;
   }
   return pollingHz >= (plc::kSamplingMarginFactor * theoreticalFrequency);
 }

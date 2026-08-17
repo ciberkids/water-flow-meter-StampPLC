@@ -355,41 +355,94 @@ describe("the ceiling is a limit something can actually be driven to", () => {
   });
 });
 
-describe("divergences from SANE that are mirrored on purpose", () => {
+describe("the two degenerate configurations the gate used to wave through", () => {
   /**
-   * Each of these is a firmware defect reported in this round's audit, reproduced here rather than fixed.
-   * A mockup that refused what the device accepts would show a warning hardware will not show, which is
-   * the same class of lie as the missing derivation this round removed. They are pinned so the mirror
-   * cannot be "improved" silently — and so that fixing the C++ makes a test fail here and be revisited.
+   * Both were audit findings, both are now refused, and both are pinned HERE because the mockup is where
+   * a reviewer can see the operator's side of them: a channel reporting OK, register 30 clear, and a
+   * reading that has nothing to do with the water.
+   *
+   * The C++ is read as well as mirrored. These two arms are one-word changes — `return true` to
+   * `return false`, `!= 0` to `< 1` — so a revert would be invisible to a test that only exercised the
+   * TypeScript copy.
    */
-  it("passes a NEGATIVE multiplier, whose channel reads zero forever", () => {
-    // `configIsValid` tests `f_multiplier != 0` only, and the ceiling clamps at 0, so
-    // `if (theoreticalFrequency <= 0.0) return true`. The engine then divides by -10.
+  it("refuses a NEGATIVE multiplier, which read zero forever while reporting OK", () => {
     const sensor = formula(150, -10);
-    expect(configIsValid(sensor)).toBe(true);
-    expect(samplingCeilingHz(sensor)).toBe(0);
-    expect(meetsSamplingLimit(sensor, 3.3)).toBe(true);
+    // `configIsValid` now demands a positive multiplier, so the channel is not merely unsamplable — it is
+    // not configured. That is the state the panel already refused to let an operator reach.
+    expect(configIsValid(sensor)).toBe(false);
+    expect(meetsSamplingLimit(sensor, 3.3)).toBe(false);
+    // NOT an undersampling warning: `evaluateSensorDiagnostics` ORs in `valid && !meets`, and it is not
+    // valid, so the channel reads SET? rather than wearing a sampling fault it cannot have.
     expect(warningSensorNumbers(deriveUndersampling([sensor], 3.3))).toEqual([]);
-    // What the operator gets: OK, no warning, and no reading at any frequency.
+    // The engine is unchanged and still reads nothing — which is now unreachable through any write.
     expect(advanceSensorTick(sensor, { pulses: 5000, elapsedMs: 1000 }).instantFlowLpm).toBe(0);
   });
 
-  it("accepts an offset ten times the reachable frequency, reading full scale at zero flow", () => {
-    // `configIsValid`'s bound is `q_max * |multiplier| * 10` while its comment says the offset "may not
-    // exceed the frequency the channel can actually reach" — which is `q_max * multiplier`.
+  it("refuses a ceiling of zero or less instead of calling it samplable", () => {
+    // `adjust` cancelling the whole span is a configuration, not an absence, so it reaches the ceiling arm
+    // rather than the null one. That arm returned TRUE, on the same grounds the `q_max == 0` arm returns
+    // false — the inconsistency was the defect.
+    const cancelled = formula(150, 100, -15000);
+    expect(samplingCeilingHz(cancelled)).toBe(0);
+    expect(meetsSamplingLimit(cancelled, 3.3)).toBe(false);
+    expect(meetsSamplingLimit(cancelled, 0)).toBe(false);
+    // And a ceiling driven NEGATIVE is no longer flattened to zero on the way in.
+    expect(samplingCeilingHz(formula(150, 10, -15000))).toBe(-13500);
+    expect(meetsSamplingLimit(formula(150, 10, -15000), 3.3)).toBe(false);
+  });
+
+  it("reads both corrected arms out of the firmware, not just out of this module", () => {
+    const gate = firmwareSource("modbus", "modbus_manager.cpp");
+    const body = gate.slice(gate.indexOf("bool ModbusManager::meetsNyquistLimit"));
+    const arm = /if\s*\(theoreticalFrequency\s*<=\s*0\.0\)\s*\{\s*return\s+(true|false);/.exec(body);
+    expect(arm, "meetsNyquistLimit must still have a non-positive-ceiling arm").not.toBeNull();
+    expect(arm![1], "a ceiling of zero or less must be REFUSED, not accepted").toBe("false");
+    // The clamp that used to hide a negative ceiling from that arm must stay gone.
+    expect(/std::max\(0\.0,/.test(body), "no clamp may flatten a negative ceiling to zero").toBe(false);
+
+    const types = firmwareSource("modbus", "sensor_types.h");
+    const predicate = types.slice(types.indexOf("inline bool configIsValid"));
+    expect(
+      /if\s*\(cfg\.f_multiplier\s*<\s*1\)\s*\{\s*return\s+false;/.test(predicate),
+      "configIsValid must demand a POSITIVE multiplier, not merely a non-zero one"
+    ).toBe(true);
+    expect(
+      /cfg\.f_multiplier\s*==\s*0/.test(predicate),
+      "the old `!= 0`-only test must not come back"
+    ).toBe(false);
+  });
+});
+
+describe("divergences from SANE that are STILL mirrored on purpose", () => {
+  /**
+   * A firmware looseness reproduced here rather than fixed, because a mockup that refused what the device
+   * accepts would show a warning hardware will not show. Pinned so the mirror cannot be "improved"
+   * silently — and so that narrowing the C++ bound makes a test fail here and be revisited.
+   */
+  it("accepts an offset ten times the reachable frequency", () => {
+    // `configIsValid`'s bound is `q_max * multiplier * 10` while its comment says the offset "may not
+    // exceed the frequency the channel can actually reach" — which is `q_max * multiplier`. Recorded as an
+    // open decision: narrowing it is a statement about what the predicate promises.
     const sensor = formula(150, 10, -15000);
     expect(configIsValid(sensor)).toBe(true);
-    expect(samplingCeilingHz(sensor)).toBe(0);       // 1500 - 15000, clamped
-    expect(meetsSamplingLimit(sensor, 3.3)).toBe(true);
-    // (0 + 15000) / 10 = 1500 L/min, clamped to q_max: a dry pipe reporting its maximum.
+    // WHAT CHANGED IS THE CONSEQUENCE, not the bound. The sampling gate now catches this one, so the
+    // channel is flagged and a master's write is parked instead of installed silently.
+    expect(meetsSamplingLimit(sensor, 3.3)).toBe(false);
+    expect(warningSensorNumbers(deriveUndersampling([sensor], 3.3))).toEqual([sensor.number]);
+    // The engine still reads full scale on a dry pipe if such a config is ever installed — which §5.5's
+    // override still permits on a second identical write. That is the residue of this fix.
     expect(advanceSensorTick(sensor, { pulses: 0, elapsedMs: 1000 }).instantFlowLpm).toBe(150);
   });
 
-  it("treats a ceiling of exactly zero as samplable rather than as unconfigured", () => {
-    // `adjust` cancelling the whole span is a configuration, not an absence, so it reaches the ceiling
-    // arm rather than the null one — and the firmware's `<= 0.0 return true` waves it through.
-    const sensor = formula(150, 100, -15000);
-    expect(samplingCeilingHz(sensor)).toBe(0);
-    expect(meetsSamplingLimit(sensor, 0)).toBe(true);  // even at rate 0
+  it("still admits a SMALL negative offset, which the ceiling arm cannot catch", () => {
+    // The part the sampling gate does NOT reach, and the reason the bound is still an open question: at
+    // m=10, q=150, a=-1400 the ceiling is a healthy 100 Hz and passes, while zero pulses read
+    // (0 + 1400) / 10 = 140 L/min on a dry pipe.
+    const sensor = formula(150, 10, -1400);
+    expect(configIsValid(sensor)).toBe(true);
+    expect(samplingCeilingHz(sensor)).toBe(100);
+    expect(meetsSamplingLimit(sensor, 3.3)).toBe(true);
+    expect(warningSensorNumbers(deriveUndersampling([sensor], 3.3))).toEqual([]);
+    expect(advanceSensorTick(sensor, { pulses: 0, elapsedMs: 1000 }).instantFlowLpm).toBe(140);
   });
 });

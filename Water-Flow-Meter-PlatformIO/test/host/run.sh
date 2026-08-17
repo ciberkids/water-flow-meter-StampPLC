@@ -66,6 +66,19 @@ g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/modbus_write_multiple_test" \
   src/net/net_settings.cpp \
   src/net/net_register_map.cpp
 
+# What a master may INSTALL: the validity and sampling gates, driven through applyHoldingWrite with the
+# real SensorStateEngine linked so the consequence of each refusal is shown rather than argued. Two
+# degenerate calibrations used to be accepted while reporting OK with register 30 clear.
+g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/sensor_config_gate_test" \
+  test/host/sensor_config_gate_test.cpp \
+  src/modbus/modbus_manager.cpp \
+  src/sensors/sensor_state_engine.cpp \
+  src/time/device_clock.cpp \
+  src/led/led_controller.cpp \
+  src/modbus/link_settings.cpp \
+  src/net/net_settings.cpp \
+  src/net/net_register_map.cpp
+
 # What OFF_CMD_RESET_CALIBRATION keeps. The whole claim is about fields a command does NOT touch, so it
 # has to run the real register arm against a channel carrying real readings — interaction_test.cpp
 # defines applyHoldingWrite itself and would assert against its own stand-in. Same link line as the
@@ -215,6 +228,8 @@ echo
 "$OUT/modbus_manager_clock_test"
 echo
 "$OUT/modbus_write_multiple_test"
+echo
+"$OUT/sensor_config_gate_test"
 echo
 "$OUT/modbus_reset_calibration_test"
 echo

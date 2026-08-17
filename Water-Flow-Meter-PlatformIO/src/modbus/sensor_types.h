@@ -45,9 +45,9 @@ struct SensorCharacteristics {
  * every reboot reporting not-ready — pulses counted and discarded, and the lifetime total published to
  * Modbus as 0.0. Nothing was wrong with the predicate; it was in the wrong place.
  *
- * The rules, unchanged from the original: both q_max and the multiplier must be non-zero, or no frequency
- * maps to a flow at all; and the offset may not exceed the frequency the channel can actually reach, or
- * the correction would dominate the measurement.
+ * The rules: q_max must be non-zero, or no frequency maps to a flow at all; the multiplier must be
+ * POSITIVE, for the reason below; and the offset may not exceed the frequency the channel can actually
+ * reach, or the correction would dominate the measurement.
  */
 inline bool configIsValid(const SensorCharacteristics& cfg) {
   // Common to both forms: without a nominal maximum there is nothing to clamp a reading to, and the
@@ -61,12 +61,34 @@ inline bool configIsValid(const SensorCharacteristics& cfg) {
   if (cfg.calibration == CalibrationType::PulsesPerLitre) {
     return cfg.pulses_per_litre != 0;
   }
-  if (cfg.f_multiplier == 0) {
+  /**
+   * POSITIVE, not merely non-zero. This tested `!= 0`, and a negative multiplier is the one value a
+   * Modbus master could install that the panel's editor cannot reach.
+   *
+   * The multiplier is a DIVISOR: the engine computes `flow = (F - adjust) / f_multiplier`
+   * (sensor_state_engine.cpp:47), so a negative one maps rising frequency to falling flow and the
+   * `flowRateLpm < 0` clamp below it then pins the result at zero — a channel that reads 0.00 no matter
+   * how much water passes it, while reporting itself READY with no warning flag.
+   *
+   * THE DECISION WAS ALREADY RECORDED, in two places, and only this predicate had not been told:
+   * ui_settings_types.cpp bounds the panel's multiplier editor at 1..32767 and its comment names this
+   * exact consequence, and tools/wiki/gen-registers.mjs publishes "the legal range is 1..32767" for
+   * OFF_CFG_F_MULT. Neither the panel's commit path nor the register arm re-checked it — the bound lived
+   * only in the stepper that clamps while editing — so the range the integrator's documentation promises
+   * was enforced nowhere. It is enforced here because this is the one choke point all four surfaces
+   * share.
+   */
+  if (cfg.f_multiplier < 1) {
     return false;
   }
-  const int32_t multiplier = std::max<int32_t>(std::abs(static_cast<int32_t>(cfg.f_multiplier)), 1);
+  const int32_t multiplier = static_cast<int32_t>(cfg.f_multiplier);
   const int32_t limit = static_cast<int32_t>(cfg.q_max) * multiplier * 10;
   const int32_t adjust = static_cast<int32_t>(cfg.adjust);
+  // The 10 is a known looseness, not a considered bound: the comment above says the offset may not
+  // exceed the frequency the channel can reach, which is `q_max * multiplier` — ten times smaller. A
+  // negative offset within this bound still makes zero pulses read as positive flow. Left as it is
+  // deliberately; see docs/active_work/open_decisions.md, "the offset bound is ten times the reachable
+  // frequency", which is a decision about what this predicate should promise rather than a repair.
   return std::abs(adjust) <= limit;
 }
 

@@ -188,19 +188,23 @@ export const kDefaultPollingRateKhz = 3.3;
 /**
  * `configIsValid` — modbus/sensor_types.h:52-71. Can this configuration produce a flow reading at all?
  *
- * The full predicate, mirrored field for field including the parts that are wrong, because a mockup that
- * is MORE correct than the device shows an operator a state the device will not show them. Two of those
- * parts are worth naming, and both are reported as firmware defects rather than fixed here:
+ * The full predicate, mirrored field for field including the part that is still wrong, because a mockup
+ * that is MORE correct than the device shows an operator a state the device will not show them.
  *
- *  - the offset bound is `q_max * |multiplier| * 10`, while the comment above it says "the offset may not
- *    exceed the frequency the channel can actually reach" — which is `q_max * multiplier`, ten times
- *    smaller. So `m=10, q=150, a=-15000` is accepted, and the engine then reads a flat 150 L/min at zero
- *    pulses: `(0 + 15000) / 10 = 1500`, clamped to q_max.
- *  - a NEGATIVE multiplier passes: only `!= 0` is tested. The engine divides by it, so the channel reads
- *    0 L/min for every frequency and reports itself `OK` forever.
+ * THE MULTIPLIER MUST BE POSITIVE, not merely non-zero. This tested `!= 0` on both sides until the
+ * firmware was corrected: the multiplier is a divisor, so a negative one made the channel read 0 L/min at
+ * every frequency while reporting `OK`. The panel editor's 1..32767 bound and the register wiki both
+ * always said 1 was the floor; only the predicate had not been told.
  *
- * `f_multiplier` is not range-checked here either. The device's field is `int16_t`, so the panel and the
- * register both bound it; the simulator's is a JS number and a caller can write anything into it.
+ * STILL MIRRORED BECAUSE IT IS STILL TRUE: the offset bound is `q_max * multiplier * 10`, while the
+ * comment above it says the offset "may not exceed the frequency the channel can actually reach" — which
+ * is `q_max * multiplier`, ten times smaller. So `m=10, q=150, a=-15000` is still VALID here and on the
+ * device. What changed is the consequence: the sampling gate now refuses a ceiling of zero, so such a
+ * channel is flagged and parked instead of silently reading full scale on a dry pipe. Narrowing the bound
+ * itself is a decision about what this predicate promises — see open_decisions.md.
+ *
+ * `f_multiplier`'s UPPER bound is not checked here. The device's field is `int16_t`, so the panel and the
+ * register both cap it at 32767; the simulator's is a JS number and a caller can write anything into it.
  */
 export function configIsValid(sensor: SimulatedSensor): boolean {
   if (sensor.qMaxLpm === 0) {
@@ -209,11 +213,10 @@ export function configIsValid(sensor: SimulatedSensor): boolean {
   if (sensor.calibration === 1) {
     return sensor.pulsesPerLitre !== 0;
   }
-  if (sensor.multiplier === 0) {
+  if (sensor.multiplier < 1) {
     return false;
   }
-  const multiplier = Math.max(Math.abs(sensor.multiplier), 1);
-  return Math.abs(sensor.adjust) <= sensor.qMaxLpm * multiplier * 10;
+  return Math.abs(sensor.adjust) <= sensor.qMaxLpm * sensor.multiplier * 10;
 }
 
 /**
@@ -248,7 +251,9 @@ export function samplingCeilingHz(sensor: SimulatedSensor): number | null {
   if (sensor.multiplier === 0) {
     return null;
   }
-  return Math.max(0, sensor.multiplier * sensor.qMaxLpm + sensor.adjust);
+  // No clamp at zero: the firmware dropped its `std::max(0.0, ...)` when a non-positive ceiling stopped
+  // meaning "samplable". A negative ceiling is returned as it is and refused by meetsSamplingLimit.
+  return sensor.multiplier * sensor.qMaxLpm + sensor.adjust;
 }
 
 /**
@@ -258,11 +263,14 @@ export function samplingCeilingHz(sensor: SimulatedSensor): number | null {
  * `*deps_.pollingRateKhz`. Every arm is the firmware's, in its order:
  *
  *   no ceiling to compute      -> false   (q_max == 0, or the form's divisor is 0)
- *   a ceiling of 0 Hz or less  -> TRUE    (`if (theoreticalFrequency <= 0.0) return true`)
+ *   a ceiling of 0 Hz or less  -> false   (`if (theoreticalFrequency <= 0.0) return false`)
  *   otherwise                  -> pollingHz >= factor * ceiling
  *
- * The middle arm is why `samplingCeilingHz` clamps: the two arms together are what let a degenerate
- * configuration through, and they are mirrored rather than corrected.
+ * THE MIDDLE ARM USED TO RETURN TRUE, on both sides. Together with a ceiling clamped at zero that is
+ * what let a degenerate configuration report OK with register 30 clear — an offset cancelling the whole
+ * span reading full scale on a dry pipe. It now refuses, on the same grounds as the `q_max == 0` arm: no
+ * ceiling frequency means nothing to budget against, which is not a pass. The channel is PARKED rather
+ * than rejected outright, so §5.5's override still installs it on a second identical write.
  *
  * THE `>=` IS NOT AS EXACT AS IT LOOKS ON THE DEVICE, and this is a real divergence in the boundary
  * case: `pollingRate_kHz` is a `float`, so a rate of 3.3 kHz is 3299.999952316... Hz once widened, and a
@@ -276,7 +284,7 @@ export function meetsSamplingLimit(sensor: SimulatedSensor, pollingRateKhz: numb
     return false;
   }
   if (ceiling <= 0) {
-    return true;
+    return false;
   }
   return pollingRateKhz * 1000 >= kSamplingMarginFactor * ceiling;
 }
