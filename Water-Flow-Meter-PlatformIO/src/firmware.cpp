@@ -34,6 +34,7 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "modbus/link_settings_arduino.h"
 #include "modbus/register_bank.h"
 #include "modbus/register_map.h"
+#include "modbus/sensor_config_nvs.h"
 #include "modbus/sensor_types.h"
 #include "net/net_register_map.h"
 #include "core_layout.h"
@@ -375,31 +376,25 @@ constexpr const char* kPrefLinkStop = "lnk_stop";
  * discarded every sensor's Q/F/Adjust and disabled all eight channels — while the
  * cumulative totals survived, leaving totals for sensors that were no longer "in use".
  * Display_UI_Requirements §5.5 requires configuration to persist across reboots.
+ *
+ * The field-by-field serialization moved to `modbus/sensor_config_nvs.h`, because it was WRONG here
+ * and could not be tested here: it wrote three of the struct's five fields, so a pulses-per-litre
+ * calibration arriving over Modbus was lost at the next reboot. firmware.cpp is in no host link set,
+ * which is why nothing caught it. These two remain as the binding of that logic to the one
+ * `Preferences` instance and the one `configs` array.
  */
 void saveSensorConfig(std::size_t index) {
   if (index >= kNumSensors) {
     return;
   }
-  char key[10];
-  std::snprintf(key, sizeof(key), "cfg_q%u", static_cast<unsigned>(index));
-  preferences.putUShort(key, configs[index].q_max);
-  std::snprintf(key, sizeof(key), "cfg_f%u", static_cast<unsigned>(index));
-  preferences.putShort(key, configs[index].f_multiplier);
-  std::snprintf(key, sizeof(key), "cfg_a%u", static_cast<unsigned>(index));
-  preferences.putShort(key, configs[index].adjust);
+  plc::saveSensorConfigTo(preferences, index, configs[index]);
 }
 
 void loadSensorConfig(std::size_t index) {
   if (index >= kNumSensors) {
     return;
   }
-  char key[10];
-  std::snprintf(key, sizeof(key), "cfg_q%u", static_cast<unsigned>(index));
-  configs[index].q_max = preferences.getUShort(key, 0);
-  std::snprintf(key, sizeof(key), "cfg_f%u", static_cast<unsigned>(index));
-  configs[index].f_multiplier = preferences.getShort(key, 0);
-  std::snprintf(key, sizeof(key), "cfg_a%u", static_cast<unsigned>(index));
-  configs[index].adjust = preferences.getShort(key, 0);
+  configs[index] = plc::loadSensorConfigFrom(preferences, index);
 }
 
 constexpr const char* kPrefConnectedBitmap = "conn_map";

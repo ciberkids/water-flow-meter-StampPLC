@@ -120,6 +120,13 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/pack_loader_test" \
 g++ "${CXXFLAGS[@]}" -o "$OUT/pulse_counter_test" \
   test/host/pulse_counter_test.cpp
 
+# A channel's calibration across a power cycle. Same story as the pulse counter above: the serializer
+# lived in firmware.cpp, which is in no link set here, and it wrote three of the struct's five fields —
+# so a pulses-per-litre calibration written over Modbus was lost at the next reboot with nothing to
+# catch it. Header-only, so it needs no companion .cpp.
+g++ "${CXXFLAGS[@]}" -o "$OUT/sensor_config_nvs_test" \
+  test/host/sensor_config_nvs_test.cpp
+
 # N4 — the WiFi state machine: backoff ladder, AP window, and the provisioning hand-off.
 g++ "${CXXFLAGS[@]}" -o "$OUT/wifi_manager_test" \
   test/host/wifi_manager_test.cpp \
@@ -212,6 +219,8 @@ echo
 "$OUT/net_settings_test"
 echo
 "$OUT/pulse_counter_test"
+echo
+"$OUT/sensor_config_nvs_test"
 echo
 "$OUT/wifi_manager_test"
 echo
