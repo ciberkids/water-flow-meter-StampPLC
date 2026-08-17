@@ -575,19 +575,77 @@ ModbusMessage ModbusManager::handleWriteMultiple(ModbusMessage request) {
   std::vector<uint8_t> buffer;
   request.get(7, buffer, byteCount);
 
+  /**
+   * THE NETWORK BLOCK IS PRE-VALIDATED BY A DIFFERENT RULE, and leaving it out of this loop broke §5's
+   * whole documented setup sequence.
+   *
+   * `isWritableAddress` knows only the sensor and link registers — `applyHoldingWrite` handles the
+   * network block ABOVE its call to that predicate, for exactly that reason. This loop called the
+   * predicate directly, so every address from 500 up answered false and a block write anywhere in the
+   * region excepted with ILLEGAL_DATA_ADDRESS on its FIRST word. Writing an SSID over FC16 was
+   * impossible; FC6 at the same address worked, which is the asymmetry that gave it away.
+   *
+   * Inside the block a read-only address is IGNORED rather than refused (§5.1), so the only thing that
+   * can fail here is the block not being served at all — `deps_.net` null, which is the case on a build
+   * with no network module. Refusing that as an address error matches what FC6 does with it.
+   */
   for (uint16_t i = 0; i < words; ++i) {
-    if (!isWritableAddress(address + i)) {
+    const uint16_t at = address + i;
+    const bool writable =
+        plc::NetRegisterMap::contains(at) ? (deps_.net != nullptr) : isWritableAddress(at);
+    if (!writable) {
       response.setError(request.getServerID(), request.getFunctionCode(), Modbus::ILLEGAL_DATA_ADDRESS);
       return response;
     }
   }
 
+  /**
+   * NET_APPLY IS LIFTED OUT OF THE LOOP, for two reasons of quite different weight today.
+   *
+   * THE ONE THAT BITES NOW: a zero-fill across the region passes over 730, and a zero is not the apply
+   * magic. In the loop that refusal became SERVER_DEVICE_FAILURE — so simply teaching the validation
+   * loop about the network block would have traded an exception on register one for a partial write plus
+   * an exception at 730, which is worse. Out here the return can be ignored, because §5.1 requires the
+   * sequence to succeed and NET_LAST_ERROR already carries the reason.
+   *
+   * THE ONE THAT IS LATENT: order. Nothing WRITABLE currently sits above 730 — 731 and 732 are
+   * read-only and 733 is the end — so in the layout as it stands, applying in address order would
+   * commit no less than this does. It is deferred anyway because that is a property of the layout and
+   * not of the protocol: the moment any writable register is placed above the apply, a frame spanning
+   * it would commit before that register staged, and the revision would claim a value it had not
+   * applied. Cheap here, invisible later.
+   *
+   * REG_LINK_APPLY needs no such treatment: it is the last writable address of its block (45 is
+   * read-only), so any frame reaching it has already staged 40-43 and any frame reaching PAST it is
+   * refused above.
+   */
+  bool applyRequested = false;
+  uint16_t applyValue = 0;
+
   for (uint16_t i = 0; i < words; ++i) {
-    uint16_t value = (static_cast<uint16_t>(buffer[2 * i]) << 8) | static_cast<uint16_t>(buffer[2 * i + 1]);
-    if (!applyHoldingWrite(address + i, value)) {
+    const uint16_t at = address + i;
+    const uint16_t value =
+        (static_cast<uint16_t>(buffer[2 * i]) << 8) | static_cast<uint16_t>(buffer[2 * i + 1]);
+    if (at == plc::net_reg::kApply) {
+      applyRequested = true;
+      applyValue = value;
+      continue;
+    }
+    if (!applyHoldingWrite(at, value)) {
       response.setError(request.getServerID(), request.getFunctionCode(), Modbus::SERVER_DEVICE_FAILURE);
       return response;
     }
+  }
+
+  if (applyRequested) {
+    // THE RETURN IS DELIBERATELY IGNORED HERE, and this is where FC6 and FC16 part company at 730.
+    //
+    // §5.1 requires a master zero-filling the whole region to SUCCEED, and a zero is not the apply
+    // magic — so the refusal that a single-register write reports as an exception must not become one
+    // here, or the documented sequence excepts on a register it was only passing over.
+    // `applyHoldingWrite` has already recorded the reason at NET_LAST_ERROR, which is where a master
+    // that meant to commit looks to find out that it did not.
+    applyHoldingWrite(plc::net_reg::kApply, applyValue);
   }
 
   response.add(request.getServerID(), request.getFunctionCode(), address, words);

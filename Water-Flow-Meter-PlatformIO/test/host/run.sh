@@ -52,6 +52,20 @@ g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/modbus_manager_clock_test" \
   src/net/net_settings.cpp \
   src/net/net_register_map.cpp
 
+# FC16 through the REAL frame handler, with deps_.net populated — which is the whole point. The clock
+# test leaves net null, making the entire network branch unreachable, so a test written there would pass
+# against the broken and the fixed code alike. FC16 refused every address in the network block while FC6
+# accepted them, and the host check named for that requirement drove NetRegisterMap::stageWrite one layer
+# below the handler, so it stayed green throughout.
+g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/modbus_write_multiple_test" \
+  test/host/modbus_write_multiple_test.cpp \
+  src/modbus/modbus_manager.cpp \
+  src/time/device_clock.cpp \
+  src/led/led_controller.cpp \
+  src/modbus/link_settings.cpp \
+  src/net/net_settings.cpp \
+  src/net/net_register_map.cpp
+
 # What OFF_CMD_RESET_CALIBRATION keeps. The whole claim is about fields a command does NOT touch, so it
 # has to run the real register arm against a channel carrying real readings — interaction_test.cpp
 # defines applyHoldingWrite itself and would assert against its own stand-in. Same link line as the
@@ -199,6 +213,8 @@ echo
 "$OUT/device_clock_test"
 echo
 "$OUT/modbus_manager_clock_test"
+echo
+"$OUT/modbus_write_multiple_test"
 echo
 "$OUT/modbus_reset_calibration_test"
 echo
