@@ -79,6 +79,16 @@ export interface UseSimulatedButtonsResult {
   press: (button: SingleButton) => void;
   release: (button: SingleButton) => void;
   cancelAll: () => void;
+  /**
+   * The button LEVELS as of right now — `buttonInput.isPressed()`, not `pressed`.
+   *
+   * `pressed` is React state, so it is one render behind inside the handler that just pressed a button.
+   * That is fatal for anything deciding a gesture at press time: the panel's three-button control calls
+   * `onPressStart` for UP, DOWN and ENTER synchronously in one click handler, so ENTER's handler still
+   * sees `pressed` as all-false and any level test against it answers "ENTER alone". The firmware has no
+   * such gap — `isPressed()` reads the pin state — and this getter is that read.
+   */
+  levelsNow: () => ComboButtons;
 }
 
 /**
@@ -388,5 +398,7 @@ export function useSimulatedButtons(
     setPressed({ up: false, down: false, enter: false });
   }, [clearSelectorTimer, clearTimers]);
 
-  return { pressed, armedCombo, press, release, cancelAll };
+  const levelsNow = useCallback(() => levelsRef.current, []);
+
+  return { pressed, armedCombo, press, release, cancelAll, levelsNow };
 }

@@ -81,14 +81,39 @@ export interface SimulatedSensor {
   /** `SensorData::maxFlowSinceReset`, in L/min like the reading it tracks. */
   maxFlowLpm: number;
   /**
-   * Bit n of `REG_UNDERSAMPLING_FLAGS` (modbus/register_map.h:17).
+   * Bit n of `REG_UNDERSAMPLING_FLAGS` (modbus/register_map.h:30) — the PUBLISHED flag, not an input.
    *
    * A DISCONNECTED channel can never carry it: `evaluateSensorDiagnostics` skips
-   * `!inUse` before it looks at the configuration (modbus/modbus_manager.cpp:387-390). Every
+   * `!inUse` before it looks at the configuration (modbus/modbus_manager.cpp:493-496). Every
    * producer in this module clears the bit when `connected` is false, so the combination is
    * unreachable through the API.
+   *
+   * IT USED TO BE A HAND-SET CHECKBOX AND NOTHING ELSE, which made the mockup unable to show the one
+   * thing the flag exists for: a configuration the sampler cannot keep up with. `deriveUndersampling`
+   * now recomputes it from the configuration and the simulated polling rate, exactly as
+   * `evaluateSensorDiagnostics` does every pass — so this field is the register bit, the derivation is
+   * the register's producer, and `samplingOverride` below is the operator's half of §5.5.
+   *
+   * Still a stored field rather than a getter, because the DEVICE stores it too: it lives in
+   * `*deps_.undersamplingFlags` and in register 30, and every consumer here (`warningSensorNumbers`,
+   * `statusSummaryText`, `resolveSensorBinding`) reads the published bit rather than recomputing it.
    */
   undersampling: boolean;
+  /**
+   * `overrideActive_[n] || overridePending_[n]` (modbus/modbus_manager.cpp:107-108) — the §5.5 handshake.
+   *
+   * The one genuine INPUT of the three sampling facts, and the reason the panel still has a checkbox
+   * after the flag became derived. `evaluateSensorDiagnostics` ORs both override arms into the flag
+   * (modbus_manager.cpp:500), so a channel awaiting a confirmation, or one whose operator confirmed
+   * "save anyway", carries the warning even when its figures are inside budget — which is the point:
+   * the operator was told the sampler cannot keep up and chose to proceed.
+   *
+   * Modelled as ONE bit rather than two because the mockup has no write gate to park a candidate in:
+   * `prepareConfigUpdate` is what distinguishes pending from active, and the simulator writes straight
+   * to memory. Both arms mean the same thing to every consumer — the flag is set — so collapsing them
+   * loses nothing this table can express.
+   */
+  samplingOverride: boolean;
 }
 
 /** What one call to the state engine consumes: a pulse count and the interval it spans. */
@@ -129,8 +154,168 @@ const kDefaultSensor: Omit<SimulatedSensor, "number"> = {
   cumulativeLiters: 123.45,
   sessionLiters: 123.45,
   maxFlowLpm: 140.4,
-  undersampling: false
+  undersampling: false,
+  samplingOverride: false
 };
+
+/**
+ * `plc::kSamplingMarginFactor` — modbus/modbus_manager.h.
+ *
+ * How many samples per pulse period the firmware's gate demands. Pinned against the C++ declaration by
+ * `__tests__/nyquist.test.ts`, which reads the header rather than trusting this copy — the factor is one
+ * fact with two homes, and the whole value of deriving the flag here is that both homes agree.
+ *
+ * It is 2 on the device and 2 here. Whether 2 is DEFENSIBLE for a polled edge counter is a separate
+ * question, argued at the declaration: at exactly 2x a square wave can be sampled at constant phase and
+ * yield no counted edges, and the test is frequency-only, so a low duty cycle passes it while being
+ * uncountable. Mirroring the number is this file's job; changing it is not.
+ */
+export const kSamplingMarginFactor = 2;
+
+/**
+ * The polling rate the simulator starts at, in kHz — AN ASSUMPTION, not a measurement.
+ *
+ * 3.3 kHz is the figure the firmware's host tests budget against and the only number this project has
+ * for the sampler; open decision G1 records that the REAL rate has never been measured, because no
+ * hardware exists. On the device the rate is not a constant at all: `pollingRate_kHz` is computed from
+ * an achieved loop count every second (firmware.cpp:656-660), starting from 0.0f.
+ *
+ * So the simulator's polling rate is a CONTROL rather than a constant, and this is only where the dial
+ * starts. Every "channel X is inside budget" statement the mockup makes is conditional on the dial.
+ */
+export const kDefaultPollingRateKhz = 3.3;
+
+/**
+ * `configIsValid` — modbus/sensor_types.h:52-71. Can this configuration produce a flow reading at all?
+ *
+ * The full predicate, mirrored field for field including the parts that are wrong, because a mockup that
+ * is MORE correct than the device shows an operator a state the device will not show them. Two of those
+ * parts are worth naming, and both are reported as firmware defects rather than fixed here:
+ *
+ *  - the offset bound is `q_max * |multiplier| * 10`, while the comment above it says "the offset may not
+ *    exceed the frequency the channel can actually reach" — which is `q_max * multiplier`, ten times
+ *    smaller. So `m=10, q=150, a=-15000` is accepted, and the engine then reads a flat 150 L/min at zero
+ *    pulses: `(0 + 15000) / 10 = 1500`, clamped to q_max.
+ *  - a NEGATIVE multiplier passes: only `!= 0` is tested. The engine divides by it, so the channel reads
+ *    0 L/min for every frequency and reports itself `OK` forever.
+ *
+ * `f_multiplier` is not range-checked here either. The device's field is `int16_t`, so the panel and the
+ * register both bound it; the simulator's is a JS number and a caller can write anything into it.
+ */
+export function configIsValid(sensor: SimulatedSensor): boolean {
+  if (sensor.qMaxLpm === 0) {
+    return false;
+  }
+  if (sensor.calibration === 1) {
+    return sensor.pulsesPerLitre !== 0;
+  }
+  if (sensor.multiplier === 0) {
+    return false;
+  }
+  const multiplier = Math.max(Math.abs(sensor.multiplier), 1);
+  return Math.abs(sensor.adjust) <= sensor.qMaxLpm * multiplier * 10;
+}
+
+/**
+ * The highest frequency this channel can produce, in Hz — the engine's own inversions, run forwards.
+ *
+ * `sensor_state_engine.cpp:44-48` computes `flow = F * 60 / K` for the pulses form and
+ * `flow = (F - adjust) / f_multiplier` for the formula, so at `flow == q_max` the frequencies are
+ * `K * q_max / 60` and `f_multiplier * q_max + adjust`. UNITS: `q_max` is L/MIN and K is pulses per
+ * LITRE, so the 60 is what turns litres per minute into litres per second and the result into pulses per
+ * second. The formula's multiplier is Hz per L/min by construction, so its product is already Hz.
+ *
+ * Returns null where `ModbusManager::meetsNyquistLimit` returns false before computing anything: no
+ * `q_max` to convert, or a missing divisor for the form in use (modbus_manager.cpp:627-643). Null is not
+ * "unlimited" — it is "there is no ceiling to compute", and the caller must decide what that means.
+ *
+ * THE FLOOR IS THE FIRMWARE'S, INCLUDING ITS CONSEQUENCE: the formula arm clamps at 0, so a negative
+ * multiplier or an adjust large enough to cancel the whole span yields a ceiling of 0 Hz and the channel
+ * PASSES the sampling check. Both such channels are broken in the engine — one reads zero forever, one
+ * reads full scale at zero pulses — and both are reported as firmware defects. Removing the clamp here
+ * would have the mockup flag a channel the device calls fine.
+ */
+export function samplingCeilingHz(sensor: SimulatedSensor): number | null {
+  if (sensor.qMaxLpm === 0) {
+    return null;
+  }
+  if (sensor.calibration === 1) {
+    if (sensor.pulsesPerLitre === 0) {
+      return null;
+    }
+    return (sensor.pulsesPerLitre * sensor.qMaxLpm) / 60;
+  }
+  if (sensor.multiplier === 0) {
+    return null;
+  }
+  return Math.max(0, sensor.multiplier * sensor.qMaxLpm + sensor.adjust);
+}
+
+/**
+ * `ModbusManager::meetsNyquistLimit` — can the sampler keep up with this channel at full flow?
+ *
+ * (modbus_manager.cpp:626-653.) `pollingRateKhz` is the achieved rate, the mockup's stand-in for
+ * `*deps_.pollingRateKhz`. Every arm is the firmware's, in its order:
+ *
+ *   no ceiling to compute      -> false   (q_max == 0, or the form's divisor is 0)
+ *   a ceiling of 0 Hz or less  -> TRUE    (`if (theoreticalFrequency <= 0.0) return true`)
+ *   otherwise                  -> pollingHz >= factor * ceiling
+ *
+ * The middle arm is why `samplingCeilingHz` clamps: the two arms together are what let a degenerate
+ * configuration through, and they are mirrored rather than corrected.
+ *
+ * THE `>=` IS NOT AS EXACT AS IT LOOKS ON THE DEVICE, and this is a real divergence in the boundary
+ * case: `pollingRate_kHz` is a `float`, so a rate of 3.3 kHz is 3299.999952316... Hz once widened, and a
+ * channel whose ceiling is exactly 1650 Hz is REFUSED there while a TypeScript double at 3.3 accepts it.
+ * Nothing rests on it — the equality case is a measured rate landing on an exact multiple of a
+ * configured ceiling — but it is the one place this mirror cannot be bit-exact, so it is named.
+ */
+export function meetsSamplingLimit(sensor: SimulatedSensor, pollingRateKhz: number): boolean {
+  const ceiling = samplingCeilingHz(sensor);
+  if (ceiling === null) {
+    return false;
+  }
+  if (ceiling <= 0) {
+    return true;
+  }
+  return pollingRateKhz * 1000 >= kSamplingMarginFactor * ceiling;
+}
+
+/**
+ * `ModbusManager::evaluateSensorDiagnostics` — recompute every channel's `undersampling` bit.
+ *
+ * (modbus_manager.cpp:491-506.) The per-channel rule, verbatim:
+ *
+ *   !inUse                                              -> no bit, config not even looked at
+ *   (valid && !meets) || overrideActive_ || overridePending_ -> bit
+ *
+ * THIS IS WHAT MAKES THE FLAG DERIVED. It used to be a checkbox and nothing else, so the mockup could
+ * show the warning but could not show a CONFIGURATION CAUSING it: dialling S3's K up to 4000 p/L lit
+ * nothing, and the flag stayed lit after S3 was made samplable again. Both are now impossible, because
+ * the bit is recomputed from the configuration and the rate on every pass, exactly as the device does.
+ *
+ * Called by the app once per render rather than folded into `normalizeSensor`, for the reason
+ * `mayUndersample` records: the polling rate is DEVICE-wide state and this table is per-sensor, so
+ * threading a rate through every producer's signature would put a global in eight places. The firmware
+ * has the same split — `pollingRateKhz` is a `ModbusDependencies` member, not a `SensorCharacteristics`
+ * field.
+ *
+ * `!valid` DOES NOT clear the bit on its own: an override survives an invalid configuration in the
+ * firmware's OR, and so it does here.
+ */
+export function deriveUndersampling(
+  table: readonly SimulatedSensor[],
+  pollingRateKhz: number
+): SimulatedSensor[] {
+  return table.map((sensor) =>
+    normalizeSensor({
+      ...sensor,
+      undersampling:
+        (configIsValid(sensor) && !meetsSamplingLimit(sensor, pollingRateKhz)) ||
+        sensor.samplingOverride
+    })
+  );
+}
 
 /**
  * Forces the states the device cannot be in.
@@ -147,11 +332,13 @@ const kDefaultSensor: Omit<SimulatedSensor, "number"> = {
  * is not mirrored.
  */
 function normalizeSensor(sensor: SimulatedSensor): SimulatedSensor {
-  // Which field has to be non-zero depends on the calibration form, exactly as `configIsValid`
-  // branches (modbus/sensor_types.h). Testing the multiplier on a pulses-per-litre channel would
-  // report a correctly configured channel as unable to produce a reading.
-  const calibrated = sensor.calibration === 1 ? sensor.pulsesPerLitre !== 0 : sensor.multiplier !== 0;
-  const flowing = sensor.connected && sensor.ready && calibrated;
+  // ONE definition of "can this configuration produce a reading", shared with the sampling derivation.
+  // This used to be an inline two-branch test on the calibration form alone, which is the same answer as
+  // `configIsValid` for every case the panel could reach EXCEPT `q_max == 0` with a multiplier set: the
+  // engine's gate is `configIsValid(config)`, which refuses that channel and zeroes its flow, while the
+  // inline test called it calibrated and let the flow stand. Sharing the predicate is also what stops the
+  // sampling flag and the flow row disagreeing about whether a channel is configured at all.
+  const flowing = sensor.connected && sensor.ready && configIsValid(sensor);
   return {
     ...sensor,
     instantFlowLpm: flowing ? sensor.instantFlowLpm : 0,
@@ -204,8 +391,9 @@ export function setSensor(
 /** True when this channel could carry an undersampling flag at all — i.e. it is connected. */
 export function mayUndersample(sensor: SimulatedSensor): boolean {
   // `evaluateSensorDiagnostics` tests `if (!deps_.sensors[i].inUse) continue;` BEFORE it reads
-  // the configuration or the Nyquist limit (modbus/modbus_manager.cpp:387-390). The limit
-  // itself needs the polling rate, which is not per-sensor state and so is not modelled here.
+  // the configuration or the Nyquist limit (modbus/modbus_manager.cpp:493-496). The limit itself needs
+  // the polling rate, which is not per-sensor state — `deriveUndersampling` takes it as an argument for
+  // that reason, and this predicate stays the cheap `inUse` half the firmware evaluates first.
   return sensor.connected;
 }
 
@@ -791,22 +979,34 @@ export function resolveSensorBinding(
  *  - a non-positive interval is a no-op (:8-10);
  *  - a DISCONNECTED channel has its instant flow zeroed and nothing else touched (:53-60) —
  *    the totals are retained and do not advance, no matter how many pulses arrive;
- *  - an enabled channel that is not ready, or whose multiplier is 0, reads 0 L/s and
- *    accumulates nothing (:26, :44-46);
+ *  - an enabled channel that is not ready, or whose configuration cannot produce a reading, reads
+ *    0 L/min and accumulates nothing (:30, :68-70);
  *  - otherwise flow comes from the pulse frequency, is clamped to [0, q_max] L/min, and the
- *    interval's litres are added to BOTH totals while the peak is raised if beaten (:27-43).
+ *    interval's litres are added to BOTH totals while the peak is raised if beaten (:31-67).
+ *
+ * BOTH CALIBRATION FORMS, since this round. It gated on `multiplier === 0` and used the formula
+ * unconditionally, so a channel calibrated by pulses per litre — the more common datasheet form, and the
+ * one the default row's K = 450 describes — was ticked as `(F - adjust) / 0` and read 0 L/min forever.
+ * That became visible the moment the sampling flag was derived: a 4000 p/L channel would light the
+ * warning for outrunning the sampler while displaying no flow at all, which is a self-contradiction the
+ * device cannot produce. The engine branches on `config.calibration` at :44-48; so does this now.
  */
 export function advanceSensorTick(sensor: SimulatedSensor, input: SensorTickInput): SimulatedSensor {
   const elapsedSeconds = input.elapsedMs / 1000;
   if (!(elapsedSeconds > 0)) {
     return sensor;
   }
-  if (!sensor.connected || !sensor.ready || sensor.multiplier === 0) {
+  // `configIsValid`, not `multiplier === 0`: the engine's gate is the whole predicate (:30), and on the
+  // pulses form the multiplier is UNUSED and correctly zero — testing it refused every such channel.
+  if (!sensor.connected || !sensor.ready || !configIsValid(sensor)) {
     return normalizeSensor({ ...sensor, instantFlowLpm: 0 });
   }
 
   const frequency = input.pulses / elapsedSeconds;
-  let flowLpm = (frequency - sensor.adjust) / sensor.multiplier;
+  let flowLpm =
+    sensor.calibration === 1
+      ? (frequency * 60) / sensor.pulsesPerLitre
+      : (frequency - sensor.adjust) / sensor.multiplier;
   if (flowLpm < 0) {
     flowLpm = 0;
   }
@@ -919,9 +1119,15 @@ export function resetCalibration(
           ready: false,
           // Mirrors `evaluateSensorDiagnostics`, which recomputes the undersampling bit from the config
           // and drops it for a channel whose config is invalid. A channel with no calibration cannot be
-          // undersampling anything, and the firmware register arm clears the Nyquist override with the
-          // config for the same reason: it described the OLD meter.
-          undersampling: false
+          // undersampling anything.
+          undersampling: false,
+          // And the OVERRIDE goes with it, which is the firmware arm written out: `OFF_CMD_RESET_CALIBRATION`
+          // clears `overridePending_`/`overrideActive_` beside the config (modbus_manager.cpp:337-339),
+          // because the confirmation described the OLD meter. Left standing it would both keep the flag lit
+          // on a channel with nothing to undersample and wave the NEXT meter's first figures through
+          // unchecked. Now that the flag is derived, omitting this would be visible: S3 would come out of
+          // S.RESET still wearing a warning.
+          samplingOverride: false
         })
       : normalizeSensor({ ...sensor })
   );
@@ -930,22 +1136,34 @@ export function resetCalibration(
 /**
  * The pulse count that makes a channel read `targetFlowLpm` over an interval.
  *
- * The inverse of the engine's two lines — `frequency = pulses / elapsedSeconds` and
- * `flowLpm = (frequency - adjust) / f_multiplier` (sensors/sensor_state_engine.cpp:27-28) — so
- * a panel that lets someone drag a flow slider can drive `advanceSensorTick` with it instead
- * of asking the operator for a frequency. Returns 0 for a channel with no multiplier, which is
- * the one case the engine refuses to compute flow for (:26).
+ * The inverse of the engine's own inversions — `frequency = pulses / elapsedSeconds`, then either
+ * `flowLpm = (frequency - adjust) / f_multiplier` or `flowLpm = frequency * 60 / K`
+ * (sensors/sensor_state_engine.cpp:31-48) — so a panel that lets someone drag a flow slider can drive
+ * `advanceSensorTick` with it instead of asking the operator for a frequency.
+ *
+ * PER FORM, since this round: it inverted the formula unconditionally and returned 0 when the multiplier
+ * was 0, so a pulses-per-litre channel got no pulses and read no flow, matching the same omission in
+ * `advanceSensorTick`. Returns 0 for a configuration the engine would refuse to compute flow for at all,
+ * which is `configIsValid` (:30) and not the multiplier alone.
+ *
+ * The frequency it asks for IS the ceiling this round's sampling check budgets against, when the target is
+ * `q_max`: `K*q_max/60` and `f_multiplier*q_max + adjust`, the same two expressions `samplingCeilingHz`
+ * computes. The round trip through both is unit-tested, which is what keeps the ceiling honest — a
+ * ceiling nothing can be driven to would be a number, not a limit.
  */
 export function pulsesForFlow(
   sensor: SimulatedSensor,
   targetFlowLpm: number,
   elapsedMs: number
 ): number {
-  if (sensor.multiplier === 0) {
+  if (!configIsValid(sensor)) {
     return 0;
   }
   // The `* 60` that used to be here converted the caller's L/s into the L/min the formula wants.
   // Callers now speak L/min (§2a), so it is gone rather than being cancelled by a second conversion.
-  const frequency = targetFlowLpm * sensor.multiplier + sensor.adjust;
+  const frequency =
+    sensor.calibration === 1
+      ? (targetFlowLpm * sensor.pulsesPerLitre) / 60
+      : targetFlowLpm * sensor.multiplier + sensor.adjust;
   return Math.max(0, frequency) * (elapsedMs / 1000);
 }

@@ -17,6 +17,31 @@ class Preferences;
 #include "time/device_clock.h"
 #include "modbus/sensor_types.h"
 
+namespace plc {
+
+/**
+ * How many samples per pulse period `meetsNyquistLimit` demands — the factor the theoretical ceiling
+ * frequency is multiplied by before being compared against the achieved polling rate.
+ *
+ * NAMED rather than left as a `2.0` literal inside the comparison because it is now duplicated across a
+ * language boundary: `web/mockup/src/utils/sensorConfig.ts` derives the same flag so an unsamplable
+ * configuration can be seen in the simulator, and its unit test READS THIS DECLARATION rather than
+ * trusting a second copy of the number (the pattern `editorRamp.test.ts` uses on `ui_accel.h`). A literal
+ * buried in an expression cannot be pinned that way, and two silently diverging factors would mean the
+ * mockup flagging configurations the device accepts, or worse, accepting ones it flags.
+ *
+ * WHAT THE FACTOR IS NOT: 2 is the Nyquist–Shannon rate for RECONSTRUCTING a band-limited analogue
+ * signal. This is a polled edge counter (`plc::risingEdges`, firmware.cpp), and 2 samples per period is
+ * not enough for one — at exactly 2x a square wave can be sampled at a constant phase and yield no
+ * counted edges at all, and the test is frequency-only, so it says nothing about DUTY CYCLE: a 1 kHz
+ * input with a 5% duty has a 50 us high phase, which a 303 us sampling period misses entirely while
+ * `3300 >= 2*1000` passes. Raising it is a decision about what meters this product supports, not a
+ * refactor, so the factor is recorded here with its own weakness rather than quietly changed.
+ */
+inline constexpr double kSamplingMarginFactor = 2.0;
+
+}  // namespace plc
+
 struct ModbusDependencies {
   SensorData* sensors = nullptr;
   SensorCharacteristics* configs = nullptr;

@@ -80,9 +80,12 @@ interface DisplayViewportProps {
   /**
    * Whether the firmware loop is advancing.
    *
-   * The chase only animates while it is, because the dots are driven by `millis()` on the device —
-   * a stopped loop is a stopped panel, and animating one would show motion the device could not
-   * produce.
+   * The chase only animates while it is, because a repaint is what advances it — on the device and
+   * here. `drawFlowDots` steps `flowDotPhase_` once per PAINTED FRAME and deliberately does not read
+   * `millis()`: the comment there explains that a millis-derived period aliases past recognition when
+   * an info page repaints at 1 Hz. A stopped simulated loop is a panel with no counted repaints, so
+   * animating one would show motion nothing had drawn. (This said "driven by `millis()` on the device",
+   * which is the one thing that function exists not to do.)
    */
   animating?: boolean;
   /**

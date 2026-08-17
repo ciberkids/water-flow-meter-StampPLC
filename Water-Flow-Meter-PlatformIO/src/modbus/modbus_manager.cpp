@@ -622,6 +622,21 @@ ModbusMessage ModbusManager::handleWriteMultiple(ModbusMessage request) {
  * The per-form divisor is fatal only for the form that uses it — and `configIsValid` already refuses
  * both of those cases, so a caller reaching here with one is asking about a configuration that will not
  * be installed either way.
+ *
+ * BOTH CEILINGS AND THE MARGIN ARE NOW MIRRORED IN TYPESCRIPT, in
+ * `web/mockup/src/utils/sensorConfig.ts`, so the simulator can show an under-sampling condition ARISING
+ * FROM A CONFIGURATION instead of from a checkbox nothing fed. `__tests__/nyquist.test.ts` reads this
+ * function's two expressions and `plc::kSamplingMarginFactor` out of the source rather than trusting the
+ * copies — including the engine's own inversions in `sensor_state_engine.cpp`, so the mirror is pinned to
+ * the code that turns a frequency into a flow rather than to this comment about it. Changing either
+ * ceiling here fails that test, which is the intended way to find out.
+ *
+ * TWO ARMS BELOW ADMIT CONFIGURATIONS THAT CANNOT BE MEASURED, and they are reported rather than changed:
+ * the formula ceiling clamps at 0 and a ceiling of 0 returns true, so `m` negative (nothing rejects it —
+ * `configIsValid` tests only `!= 0`) and `adjust` large and negative both PASS. Verified against this
+ * function and the engine: `m=-10, q=150` reads 0 L/min at every frequency, and `m=200, a=-30000, q=150`
+ * reads a flat 150 L/min at ZERO pulses. Both report `OK` with register 30 clear. Fixing that is a
+ * decision about what `configIsValid` should bound, not a tidy-up of this function.
  */
 bool ModbusManager::meetsNyquistLimit(const SensorCharacteristics& cfg) const {
   if (cfg.q_max == 0) {
@@ -649,7 +664,7 @@ bool ModbusManager::meetsNyquistLimit(const SensorCharacteristics& cfg) const {
   if (theoreticalFrequency <= 0.0) {
     return true;
   }
-  return pollingHz >= (2.0 * theoreticalFrequency);
+  return pollingHz >= (plc::kSamplingMarginFactor * theoreticalFrequency);
 }
 
 bool ModbusManager::prepareConfigUpdate(std::size_t index,

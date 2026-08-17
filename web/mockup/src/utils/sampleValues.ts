@@ -45,7 +45,22 @@ const kByBinding: Record<string, string> = {
    * also why `legend.warning` needs no entry: nothing but the audit ever reads one, and no screen binds it.
    */
   "telemetry.status": "8 channels not calibrated | 8 warnings",
-  "diagnostics.pollingRate": "3.31",
+  /**
+   * `diagnostics.pollingRateKhz` — and the KEY is the fix here.
+   *
+   * It was `diagnostics.pollingRate`, which is not a binding id the manifest carries: the catalogue
+   * declares `diagnostics.pollingRateKhz` (ui/core/ui_value_catalogue.cpp:138) and the resolver answers
+   * that name (ui_bindings.cpp:543). So this entry matched nothing, the row fell through to the generic
+   * `(not set)`, and the geometry audit measured a nine-character placeholder for a four-character
+   * number — the one figure every sampling verdict on the panel is computed from, unreadable in the
+   * mockup because of a missing four letters.
+   *
+   * `3.3`, not `3.31`, because the firmware formats it `%.1f`. The live app resolves it from the Sampler
+   * control rather than from here; this is what the audit measures, so it must be the widest thing the
+   * format can produce at a plausible rate — four characters, as in `12.3`, would be wider still, but
+   * inventing a rate no part of this project uses to pad an audit is how samples stop meaning anything.
+   */
+  "diagnostics.pollingRateKhz": "3.3",
   "diagnostics.undersampling": "",
 
   // ── Config / editor ──────────────────────────────────────────────────────────────

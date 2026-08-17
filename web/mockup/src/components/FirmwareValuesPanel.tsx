@@ -37,10 +37,18 @@ interface SensorRow {
   connected: boolean;
   ready: boolean;
   /**
-   * The diagnostics flag `REG_UNDERSAMPLING_FLAGS` publishes per channel. Needed here because it is an
-   * INPUT in the mockup — the device recomputes it from the polling rate, which is not per-sensor state.
+   * Bit n of `REG_UNDERSAMPLING_FLAGS`, DERIVED — a readout here, no longer an input.
+   *
+   * It was the panel's third checkbox, on the grounds that the device computes it from a polling rate the
+   * simulator did not model. The simulator models the rate now, so the flag is computed the way
+   * `evaluateSensorDiagnostics` computes it and this row reports it. A checkbox for it could raise a
+   * warning the configuration did not justify and could not raise the one it did.
    */
   undersampling: boolean;
+  /** `overrideActive_ || overridePending_` — the §5.5 confirmation, which IS an input. */
+  samplingOverride: boolean;
+  /** The channel's ceiling frequency in Hz, or null when the configuration has none to compute. */
+  ceilingHz: number | null;
   /** L/min. Editable here, unlike every other reading — see `onSensorFlowChange`. */
   instantFlowLpm: number;
 }
@@ -73,7 +81,7 @@ interface FirmwareValuesPanelProps {
   sensorPreview: (sensorNumber: number) => string;
   onSensorFieldChange: (
     sensorNumber: number,
-    field: "connected" | "ready" | "undersampling",
+    field: "connected" | "ready" | "samplingOverride",
     value: boolean
   ) => void;
   /**
@@ -98,6 +106,20 @@ interface FirmwareValuesPanelProps {
    */
   clockState: SimulatedClockState;
   onClockStateChange: (state: SimulatedClockState) => void;
+  /**
+   * The simulated sampler's achieved rate in kHz, and how to change it.
+   *
+   * A control for the same reason the clock is one: `diagnostics.pollingRateKhz` is a value memory owns,
+   * so `canEdit` correctly refuses to make its row typeable, and without a control here the number every
+   * sampling verdict is computed from could be neither seen nor changed. On the device it is MEASURED —
+   * `pollingRate_kHz = loopCounter / interval` every second (firmware.cpp:657) — which is precisely why
+   * it belongs in the simulator as a dial rather than a constant: what a channel's ceiling means depends
+   * entirely on it, and open decision G1 records that no board has ever reported one.
+   */
+  pollingRateKhz: number;
+  onPollingRateChange: (rateKhz: number) => void;
+  /** `plc::kSamplingMarginFactor` — how many samples per pulse period the firmware's gate demands. */
+  samplingMarginFactor: number;
 }
 
 const GROUPS_ORDER = ["sensor", "config", "net", "telemetry", "diagnostics", "countdown", "legend"] as const;
@@ -150,7 +172,10 @@ export function FirmwareValuesPanel({
   onSensorFlowChange,
   onSelectSensor,
   clockState,
-  onClockStateChange
+  onClockStateChange,
+  pollingRateKhz,
+  onPollingRateChange,
+  samplingMarginFactor
 }: FirmwareValuesPanelProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(["sensors"]));
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -340,27 +365,56 @@ export function FirmwareValuesPanel({
                     ready
                   </label>
 
-                  {/* The undersampling flag, which nothing could raise before this — so P0's
-                      sampling-fault line and its combined "both kinds" line were unreachable in the
-                      running mockup, which is precisely where the precedence rule needs to be seen.
+                  {/* THE §5.5 OVERRIDE — an input, where the flag beside it is a readout.
 
-                      DISABLED ON `connected`, NOT ON `ready`: `evaluateSensorDiagnostics` skips a
-                      channel that is not `inUse` and then tests `valid && !meetsNyquistLimit`, so an
-                      in-use channel carries this flag independently of its calibration — and it is that
-                      independence that makes one uncalibrated plus one undersampling channel possible
-                      at all. Gating it on `ready` would have re-hidden the state it exists to expose.
-                      `normalizeSensor` clears it on disconnect, mirroring the same firmware check. */}
-                  <label className="sensor-row__toggle">
+                      This checkbox used to BE the undersampling flag, and that is the round's whole
+                      point: the flag is not an input on the device. `evaluateSensorDiagnostics`
+                      recomputes it every pass as
+                      `(valid && !meetsNyquistLimit) || overrideActive_ || overridePending_`
+                      (modbus_manager.cpp:498-502), so only the two override arms are anybody's choice.
+                      Ticking this is the operator who was shown "Sampling too slow" and pressed DOWN to
+                      save the figures anyway — a channel deliberately outside budget, which is why the
+                      warning survives it.
+
+                      DISABLED ON `connected`, NOT ON `ready`: the firmware skips a channel that is not
+                      `inUse` before it reads anything else, so an in-use channel carries the flag
+                      independently of its calibration — and it is that independence that makes one
+                      uncalibrated plus one undersampling channel possible at all. */}
+                  <label
+                    className="sensor-row__toggle"
+                    title="§5.5: the operator was warned the sampler cannot keep up and chose DOWN = Save anyway. ORed into REG_UNDERSAMPLING_FLAGS by evaluateSensorDiagnostics."
+                  >
                     <input
                       type="checkbox"
-                      checked={sensor.undersampling}
+                      checked={sensor.samplingOverride}
                       disabled={!sensor.connected}
                       onChange={(event) =>
-                        onSensorFieldChange(sensorNumber, "undersampling", event.target.checked)
+                        onSensorFieldChange(sensorNumber, "samplingOverride", event.target.checked)
                       }
                     />
-                    undersampling
+                    override
                   </label>
+
+                  {/* The DERIVED flag, and the frequency it was derived from — a readout, deliberately
+                      not a control. Showing the ceiling beside the verdict is what makes the rule
+                      legible: at 3.3 kHz a 450 p/L meter at 100 L/min is 750 Hz and fine, the same meter
+                      at 1000 L/min is 7500 Hz and is not, and the number says which by how much. `--` is
+                      a configuration with no ceiling to compute — no q_max, or no divisor for its
+                      form — which is `SET?` on the panel rather than a sampling question. */}
+                  <span
+                    className="sensor-row__toggle"
+                    title={
+                      sensor.ceilingHz === null
+                        ? "No ceiling frequency: q_max is 0, or the calibration form's divisor is. The device calls this channel not-calibrated, not undersampling."
+                        : `Highest frequency this channel can produce at q_max: ${sensor.ceilingHz.toFixed(1)} Hz. REG_UNDERSAMPLING_FLAGS bit ${sensorNumber - 1}.`
+                    }
+                    style={{ opacity: sensor.connected ? 1 : 0.45 }}
+                  >
+                    {sensor.connected && sensor.undersampling ? "! WARN" : "OK"}
+                    <span style={{ opacity: 0.7, fontSize: 10 }}>
+                      {sensor.ceilingHz === null ? " --" : ` ${Math.round(sensor.ceilingHz)} Hz`}
+                    </span>
+                  </span>
 
                   {/* The flow is an INPUT here, not a readout — see `onSensorFlowChange`. Disabled when
                       the channel is not flowing, because `normalizeSensor` forces such a channel to 0
@@ -425,6 +479,57 @@ export function FirmwareValuesPanel({
               {kSimulatedClockChoices.find((choice) => choice.state === clockState)?.hint}. A session or
               measured reset dates the clock, exactly as the two Modbus reset registers do; a peak reset
               does not.
+            </p>
+          </div>
+        ) : null}
+
+        {/* ── The sampler ─────────────────────────────────────────────────────────────
+             The rate every undersampling verdict on this panel is computed from. A number box rather
+             than a select, because unlike the clock's four states this is a continuous measurement on
+             the device and the interesting values are the ones either side of a channel's ceiling.
+             0 is deliberately reachable: it is the value `pollingRate_kHz` holds from boot until the
+             first one-second window closes, and at 0 every calibrated channel flags. */}
+        <button
+          type="button"
+          className="firmware-values-panel__group"
+          onClick={() => toggleGroup("sampler")}
+          aria-expanded={expanded.has("sampler")}
+        >
+          <span>Sampler</span>
+          <span aria-hidden="true">{expanded.has("sampler") ? "▲" : "▼"}</span>
+        </button>
+        {expanded.has("sampler") ? (
+          <div style={{ padding: "4px 0" }}>
+            <div className="firmware-values-panel__row">
+              <label
+                htmlFor="simulated-polling-rate"
+                title="REG_POLLING_RATE_KHZ / diagnostics.pollingRateKhz. Measured on the device; a dial here."
+              >
+                polling rate
+              </label>
+              <input
+                id="simulated-polling-rate"
+                type="number"
+                min={0}
+                step={0.1}
+                value={pollingRateKhz}
+                onChange={(event) => onPollingRateChange(Number(event.target.value))}
+                style={{ width: 72, textAlign: "right" }}
+                aria-label="Simulated sampler polling rate, kilohertz"
+              />
+              <span className="firmware-values-panel__unit">kHz</span>
+            </div>
+            <p className="firmware-values-panel__hint" style={{ padding: "4px 8px" }}>
+              A channel flags when {samplingMarginFactor} x its ceiling frequency exceeds this rate —
+              `plc::kSamplingMarginFactor` in modbus_manager.h, read by the unit test rather than copied.
+              The ceiling is <code>K x q_max / 60</code> for a pulses-per-litre meter and{" "}
+              <code>multiplier x q_max + adjust</code> for a formula one, which are the state engine's own
+              inversions evaluated at full flow.
+            </p>
+            <p className="firmware-values-panel__hint" style={{ padding: "0 8px 4px" }}>
+              <strong>Unmeasured (G1).</strong> {pollingRateKhz.toFixed(1)} kHz is an assumption — no
+              board has ever reported a rate. This shows what the firmware's rule does at a rate, not
+              what any hardware achieves.
             </p>
           </div>
         ) : null}

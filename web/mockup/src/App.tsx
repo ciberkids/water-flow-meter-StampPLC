@@ -49,6 +49,7 @@ import { SimulationTraceEntry } from "./types/simulationTrace";
 import { FirmwareActionManifest, FirmwareActionDefinition, FirmwareValueDefinition } from "./types/firmwareActions";
 import { TransitionEffect, TransitionPreviewState } from "./types/transitionPreview";
 import { findMatchingButtonFlows } from "./utils/flowMatching";
+import { holdCountdownArms, holdCountdownText } from "./utils/holdCountdown";
 import { ScreenHierarchyPanel } from "./components/design/ScreenHierarchyPanel";
 import { buildScreenHierarchy } from "./utils/screenHierarchy";
 import { DesignToolbox } from "./components/design/DesignToolbox";
@@ -67,6 +68,10 @@ import {
   SimulatedSensor,
   advanceSensorTick,
   createSensorTable,
+  deriveUndersampling,
+  kDefaultPollingRateKhz,
+  kSamplingMarginFactor,
+  samplingCeilingHz,
   resetCalibration,
   resetMaxFlow,
   resetMeasured,
@@ -453,7 +458,56 @@ export function App() {
     return index;
   }, [firmwareManifest]);
 
-  const [sensors, setSensors] = useState<SimulatedSensor[]>(() => createSensorTable());
+  /**
+   * The eight rows AS STORED. Every writer below goes through `setSensors` and sees this.
+   *
+   * The name matters because there is now a DERIVED table between this and everything that renders:
+   * `sensors` is `storedSensors` with the undersampling bit recomputed. Writers must take the stored
+   * table, or a write would persist a derived bit and the derivation would stop being able to clear it.
+   */
+  const [storedSensors, setSensors] = useState<SimulatedSensor[]>(() => createSensorTable());
+  /**
+   * The simulated sampler's achieved rate, in kHz — a DEVICE-WIDE control, not per-sensor state.
+   *
+   * This exists because the mockup had no polling rate at all. `REG_POLLING_RATE_KHZ` and the
+   * `diagnostics.pollingRateKhz` binding are both in the firmware catalogue, and the sample table keyed
+   * its entry `diagnostics.pollingRate` — a binding id that does not exist — so the row rendered the
+   * `(not set)` placeholder and the number the whole sampling budget is computed from could not be seen
+   * or changed. It is a control rather than a constant for the same reason the clock is: the device
+   * MEASURES it (`pollingRate_kHz = loopCounter / interval`, firmware.cpp:657), so the interesting
+   * question is what happens at other rates, and 3.3 kHz is only where the dial starts.
+   *
+   * OPEN DECISION G1: 3.3 kHz has never been measured on hardware, because no hardware exists. Nothing
+   * this dial shows is evidence about a real board — it shows what the FIRMWARE'S RULE does at a rate.
+   */
+  const [pollingRateKhz, setPollingRateKhz] = useState<number>(kDefaultPollingRateKhz);
+  /**
+   * The rows as the DEVICE would publish them: `evaluateSensorDiagnostics` applied to memory.
+   *
+   * Derived here, once, rather than inside `normalizeSensor`, because the rate is device-wide state and
+   * the firmware splits it the same way — `pollingRateKhz` is a `ModbusDependencies` member, not a
+   * `SensorCharacteristics` field. Everything downstream (`resolveSensorBinding`, both summary lines, the
+   * sensor rows in the values panel) reads THIS, so a configuration that outruns the sampler lights the
+   * flag on the panel the moment it is entered, and a configuration brought back inside budget clears it.
+   * Before this the flag was a checkbox nothing could raise from a configuration, so the mockup could
+   * show the warning but never its CAUSE.
+   */
+  const sensors = useMemo(
+    () => deriveUndersampling(storedSensors, pollingRateKhz),
+    [storedSensors, pollingRateKhz]
+  );
+  /**
+   * The panel's rows: the derived table plus each channel's ceiling frequency.
+   *
+   * The ceiling is carried to the panel rather than recomputed there, so the number the panel PRINTS and
+   * the number the verdict was COMPUTED from cannot come apart — a panel with its own copy of
+   * `samplingCeilingHz` would be a second implementation of the two inversions this round exists to state
+   * once. It is also the only figure that explains a verdict: "WARN" alone says nothing about by how much.
+   */
+  const sensorRowsForPanel = useMemo(
+    () => sensors.map((sensor) => ({ ...sensor, ceilingHz: samplingCeilingHz(sensor) })),
+    [sensors]
+  );
   /** Manual pins for the bindings memory does not model (network, UART summary, page titles…). */
   /**
    * When this simulated device's session counters were last cleared, as Unix seconds.
@@ -1548,12 +1602,24 @@ export function App() {
       switch (id) {
         case "nav.position":
           return navPosition();
-        // `%u s` of whole seconds remaining (ui_bindings.cpp). Rounded UP so a 1.5 s hold opens at
-        // "2 s" and reaches "1 s" rather than starting at "1 s" and looking stuck.
+        /**
+         * `%u s` of `context.countdownSeconds` (ui_bindings.cpp:777-780), and UNCONDITIONALLY.
+         *
+         * Two divergences lived in the `undefined` this used to return, and both made the panel look
+         * better than the device. Falling through to the sample table gave a confirm screen at rest the
+         * string `3`, where the device prints the zero its context holds; and a 1.5 s guard was animated
+         * from "2 s" down, where the device never writes the number at all — `handleHoldCountdown` only
+         * publishes it when the duration is longer than the gesture boundary, so `RESET SESSION?` and
+         * `RESET PEAK FLOW?` show a frozen `0 s` for the whole hold. `holdCountdownText` is that rule.
+         *
+         * That frozen zero is a defect in the dataset or the firmware — a countdown element on a screen
+         * whose guard draws no countdown — and it is not this file's to decide. Showing it is how the
+         * decision gets made; hiding it behind an animation is how it stayed unnoticed.
+         */
         case "countdown.value":
-          return holdCountdown && holdCountdown.screenId === selectedScreen?.id
-            ? `${Math.ceil(holdCountdown.remainingMs / 1000)} s`
-            : undefined;
+          return holdCountdownText(
+            holdCountdown && holdCountdown.screenId === selectedScreen?.id ? holdCountdown : null
+          );
         case "telemetry.total":
           return `Total ${totalSessionLiters.toFixed(2)} L | Flow ${aggregateFlowLpm.toFixed(2)} L/m`;
         // L/s is the DERIVED reading now (§2a moved storage to L/min); it stays for any consumer
@@ -1604,6 +1670,17 @@ export function App() {
           return statusSummaryText(sensors);
         case "legend.warning":
           return warningSummaryText(sensors);
+        /**
+         * The sampler's achieved rate, from the control that now drives the sampling derivation.
+         *
+         * `%.1f` is the firmware's own format (`std::snprintf(buffer, size, "%.1f", ...)`,
+         * ui/core/ui_bindings.cpp:544) — one decimal, so 3.3 kHz reads `3.3`. It had NO arm here and its
+         * sample table entry was keyed `diagnostics.pollingRate`, which is not a binding id the manifest
+         * carries, so the row fell through to `(not set)`: the mockup showed a placeholder for the one
+         * number every sampling verdict on the screen is computed from.
+         */
+        case "diagnostics.pollingRateKhz":
+          return pollingRateKhz.toFixed(1);
         default:
           return undefined;
       }
@@ -1654,7 +1731,7 @@ export function App() {
         sampleValueFor(binding.id, manifestValueById.get(binding.id), "sample");
     }
     return out;
-  }, [aggregateFlowLpm, editorState, flowUnit, hierarchy, holdCountdown, manifestValueBindings, manifestValueById, navParents, pinnedValues, screens, selectedScreen, selectedSensor, sensors, sessionStartEpoch, clockState]);
+  }, [aggregateFlowLpm, editorState, flowUnit, hierarchy, holdCountdown, manifestValueBindings, manifestValueById, navParents, pinnedValues, pollingRateKhz, screens, selectedScreen, selectedSensor, sensors, sessionStartEpoch, clockState]);
 
   /**
    * The stored integer a setting currently holds, from whichever home owns it.
@@ -1844,21 +1921,24 @@ export function App() {
   );
 
   /**
-   * `undersampling` joins the two booleans this already carried, because without it two of
-   * `telemetry.status`'s five states and two of `legend.warning`'s were UNREACHABLE in the running
-   * mockup while their unit tests passed — the sampling-fault line, and the combined line that is the
-   * whole point of keeping the two counts distinct. Nothing else in the app ever set the flag true:
-   * `normalizeSensor` forces it false on a disconnected channel and `resetCalibration` clears it, so
-   * `warningSensorNumbers()` could only ever return an empty list and P0's precedence rule could not be
-   * seen. This is the same reason the clock became an explicit control rather than a value pin.
+   * The three per-channel bits the panel can toggle. `samplingOverride` REPLACED `undersampling` here.
    *
-   * It is a MOCKUP-ONLY control with no device-side field to mirror. On the hardware the flag is
-   * recomputed every pass by `evaluateSensorDiagnostics` from the polling rate and the Nyquist limit,
-   * neither of which is per-sensor state this table models — so the flag is an input here exactly as
-   * "is the clock trusted" is.
+   * The undersampling flag was this control's third field, described as "a MOCKUP-ONLY control with no
+   * device-side field to mirror" — and that was the defect: the flag is not an input on the device at
+   * all. `evaluateSensorDiagnostics` recomputes it every pass, so a checkbox for it could set a warning
+   * the configuration did not justify, and could not raise one the configuration DID. Dialling S3's K up
+   * to 4000 p/L lit nothing; ticking the box on a perfectly samplable channel lit a warning no register
+   * would have carried. The flag is now derived in `deriveUndersampling`.
+   *
+   * What survives as an input is the half that genuinely is one: `overrideActive_ || overridePending_`,
+   * the §5.5 handshake (modbus_manager.cpp:500 ORs both arms into the flag). An operator who was told
+   * "Sampling too slow" and pressed DOWN to save anyway is a real device state, it is per-channel, and
+   * nothing else in the simulator can produce it — there is no write gate here to park a candidate in.
+   * So the checkbox still raises a warning, but now it says WHY, and it can no longer contradict the
+   * configuration on screen beside it.
    */
   const handleSensorFieldChange = useCallback(
-    (sensorNumber: number, field: "connected" | "ready" | "undersampling", value: boolean) => {
+    (sensorNumber: number, field: "connected" | "ready" | "samplingOverride", value: boolean) => {
       setSensors((table) => setSensor(table, sensorNumber, { [field]: value }));
     },
     []
@@ -1992,6 +2072,19 @@ export function App() {
           // The stack clear is the load-bearing half — without it the display would wake with a stale
           // parent stack and BACK would ascend into screens the device has forgotten.
           clearNavParents();
+          /**
+           * `endEdit()`, which this claimed in its own label and did not do.
+           *
+           * ui_controller.cpp:92 discards the pending value first of all four things `enterIdle` does,
+           * and the comment above it records why: the display woke "with any open editor still live, so
+           * the first UP/DOWN hold resumed the acceleration ramp on an invisible setting and the first
+           * ENTER could commit a config write nobody confirmed". `editorState` is keyed by binding id,
+           * not by screen, so leaving it set meant blanking the panel from inside an editor and walking
+           * back to it later still offered the stale pending value for commit — the mockup reproducing
+           * the exact defect the firmware fixed, while its trace entry said "editor discarded".
+           */
+          editorStateRef.current = null;
+          setEditorState(null);
           // enterIdle does NOT close the pack selector — ui_controller.cpp:92-96 ends the edit, escapes
           // the navigator, sets the page and the mode, and never touches the selector. So the device
           // blanks with the Select Menu still active and the next press wakes back into it, not P0.
@@ -2102,6 +2195,41 @@ export function App() {
         appendLog(
           `[${new Date(event.timestamp).toLocaleTimeString()}] ${triggerLabel} → selector`
         );
+        return;
+      }
+
+      /* ── While a hold countdown owns ENTER, no single-button event dispatches ─────────────
+       *
+       * interaction_handler.cpp:105-114 — the drain is gated on `!holdCountdown_.active`, and the else
+       * branch calls `buttonInput.clearEvents()`, so every queued event is dropped on every pass for as
+       * long as the countdown runs. That is what makes §4.3 note 2's "UP/DOWN have no effect during a
+       * countdown" true, and it also eats the ENTER long press the queue raises at 1500 ms.
+       *
+       * Without this the simulator dispatched both: UP on `RESET TOTALS?` paged away to the `-back`
+       * screen mid-countdown while the timer, holding the confirm screen in its closure, went on to
+       * reset the totals behind the operator; and every hold past 1.5 s recorded an ENTER-long the
+       * device never delivers.
+       *
+       * AFTER the selector block and BEFORE the wake, which is the firmware's order: `handlePackSelector`
+       * returns ahead of the drain gate, so the Select Menu keeps its buttons even while a countdown is
+       * armed underneath it. The combo branch above is ahead of this for the same reason — combos are
+       * level tests that never went through the queue, so `clearEvents` cannot reach them, and the
+       * three-button recovery gesture must still work from a confirm screen.
+       *
+       * The release that ABORTS is unaffected: handleButtonPressEnd clears the timer before it calls
+       * release(), so the ENTER short press this returns for is emitted with no countdown running and
+       * reaches the screen's own flow — exactly as the firmware's countdown disarms in
+       * handleHoldCountdown before update() drains the queue on the same pass.
+       */
+      if (holdTimerRef.current !== undefined) {
+        recordTraceEntry({
+          id: "ui.action.swallowed",
+          label: "Swallowed — a countdown owns the buttons",
+          trigger: `${event.button}.${event.kind}`,
+          screenId: selectedScreen?.id ?? "unknown",
+          screenName: selectedScreen?.name,
+          notes: "interaction_handler.cpp:110-114 clears the event queue on every pass while a countdown runs"
+        });
         return;
       }
 
@@ -2663,7 +2791,7 @@ export function App() {
     [manifestValueById, recordTraceEntry]
   );
 
-  const { pressed, armedCombo, press, release, cancelAll } = useSimulatedButtons(
+  const { pressed, armedCombo, press, release, cancelAll, levelsNow } = useSimulatedButtons(
     handleButtonEvent,
     editorRepeatBridge
   );
@@ -2672,6 +2800,23 @@ export function App() {
     (button: "up" | "down" | "enter") => {
       press(button);
       if (button !== "enter") return;
+      /**
+       * ENTER ALONE arms a guard (interaction_handler.cpp:493, `if (enterHeld && !otherHeld)`).
+       *
+       * This used to arm on any ENTER press, and the case that made it dangerous is the one gesture
+       * whose whole purpose is to be safe: UP+DOWN+ENTER held for 3 s opens the Select Menu, and four of
+       * the six confirm screens have a 3000 ms guard. Performing the recovery gesture while standing on
+       * `RESET TOTALS?` therefore opened the menu AND reset the totals, in the same instant, in a
+       * simulator someone is using to decide whether the UI is safe.
+       *
+       * `levelsNow()` and NOT the `pressed` state, which would have left the dangerous case open. The
+       * button panel's own "BtnA + BtnB + BtnC — hold 3 s" control calls `onPressStart` for all three
+       * synchronously in one click handler, so React has not re-rendered and `pressed` still reads
+       * all-false when ENTER's turn comes — the guard would have answered "ENTER alone" for precisely
+       * the gesture it exists to protect. `levelsNow()` is the hook's ref, read after `press()` has set
+       * this button's own level, which is what `isPressed()` answers on the device.
+       */
+      if (!holdCountdownArms(levelsNow())) return;
       const flow = holdFlowFor(selectedScreen);
       if (!flow || !selectedScreen) return;
       const totalMs = (flow.trigger as { durationMs?: number }).durationMs ?? 3000;
@@ -2689,7 +2834,7 @@ export function App() {
         setHoldCountdown({ screenId: selectedScreen.id, remainingMs: remaining, totalMs });
       }, 100);
     },
-    [clearHoldTimer, fireHoldFlow, holdFlowFor, press, selectedScreen]
+    [clearHoldTimer, fireHoldFlow, holdFlowFor, levelsNow, press, selectedScreen]
   );
 
   const handleButtonPressEnd = useCallback(
@@ -2704,6 +2849,24 @@ export function App() {
     [clearHoldTimer, release]
   );
 
+
+  /**
+   * The two input paths, reached through refs so the KEYBOARD runs the same code as the buttons.
+   *
+   * The keyboard listener called `press`/`release` directly and so skipped `handleButtonPressStart`
+   * entirely — which is where a hold countdown is armed. Hold-to-confirm was therefore reachable only
+   * by clicking the on-screen ENTER with a pointer: from the keyboard, holding Enter on `RESET TOTALS?`
+   * counted nothing, completed nothing, and recorded an ENTER-long the device never delivers. The device
+   * has ONE input path, so a divergence between the simulator's two is a divergence with no counterpart.
+   *
+   * Refs rather than deps: the listener effect's cleanup calls `cancelAll()`, so adding a callback that
+   * changes identity on every press — `handleButtonPressStart` depends on `pressed` — would drop the
+   * button levels mid-hold each time React re-rendered, breaking every held gesture from the keyboard.
+   */
+  const pressStartRef = useRef(handleButtonPressStart);
+  pressStartRef.current = handleButtonPressStart;
+  const pressEndRef = useRef(handleButtonPressEnd);
+  pressEndRef.current = handleButtonPressEnd;
 
   const mapKeyToButton = useCallback((key: string): "up" | "down" | "enter" | undefined => {
     switch (key) {
@@ -2755,7 +2918,7 @@ export function App() {
         return;
       }
       event.preventDefault();
-      press(button);
+      pressStartRef.current(button);
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
@@ -2769,7 +2932,7 @@ export function App() {
         return;
       }
       event.preventDefault();
-      release(button);
+      pressEndRef.current(button);
     };
 
     const handleWindowBlur = () => {
@@ -2794,14 +2957,16 @@ export function App() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       cancelAll();
     };
+    // `press`/`release` are deliberately NOT dependencies any more: the listeners reach the pointer
+    // path's handlers through the refs above, and every name this effect closes over is either stable
+    // or listed. Keeping them would only re-subscribe — and re-subscribing runs the cleanup, which
+    // cancels every held button.
   }, [
     activePanel,
     cancelAll,
     handleNudgeSelectedElement,
     mapArrowKeyToDirection,
     mapKeyToButton,
-    press,
-    release,
     selectedElementId
   ]);
 
@@ -2938,9 +3103,12 @@ export function App() {
                           ? { entries: packEntries, cursor: packCursor, truncated: false }
                           : null
                       }
-                      // The dots chase at the rate the aggregate flow implies, and only while the
-                      // loop is advancing — on the device they are driven by millis(), so a stopped
-                      // loop is a stopped panel.
+                      // Flow decides WHETHER the dots move; the repaint rate decides how fast. That is
+                      // `drawFlowDots`'s rule verbatim — one step per painted frame, never a period
+                      // derived from millis() — and `repaintCount` is the only repaint this app counts,
+                      // so a stopped loop is a stopped chase. What the count does NOT model is the
+                      // device's other two cadences: 80 ms while something is live, and an immediate
+                      // frame on a screen change. Both would advance the chase on hardware.
                       aggregateFlowLpm={aggregateFlowLpm}
                       animating={loopRunning && displayOn}
                       repaintCount={repaintCount}
@@ -3070,7 +3238,10 @@ export function App() {
                   canEdit={canEditBinding}
                   clockState={clockState}
                   onClockStateChange={setClockState}
-                  sensors={sensors}
+                  pollingRateKhz={pollingRateKhz}
+                  onPollingRateChange={setPollingRateKhz}
+                  samplingMarginFactor={kSamplingMarginFactor}
+                  sensors={sensorRowsForPanel}
                   selectedSensor={selectedSensor}
                   selectionFromNavigation={navSensorIndex !== 0}
                   sensorPreview={sensorPreview}
