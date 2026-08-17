@@ -39,10 +39,16 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/device_clock_test" \
 # tests that construct the struct, so noteSessionStart() was exercised by nothing — a nullable
 # dependency that is null everywhere is indistinguishable from a no-op.
 #
-# The only host test that touches ModbusManager today DEFINES applyHoldingWrite itself to avoid
-# linking eModbus, so it cannot cover this: it would assert against the harness. This one links the
-# REAL modbus_manager.cpp, which is why -I test/host/stubs appears here and why the ModbusMessage
-# stub had to grow the members the three frame handlers call.
+# interaction_test.cpp DEFINES ModbusManager::applyHoldingWrite itself (at its line 79) to avoid
+# linking eModbus, so it cannot cover this: it would assert against its own stand-in. This binary was
+# the FIRST to link the REAL modbus_manager.cpp, which is why -I test/host/stubs appears here and why
+# the ModbusMessage stub had to grow the members the three frame handlers call.
+#
+# This comment used to open "the only host test that touches ModbusManager", and that stopped being
+# true in the same round that wrote it: three more binaries below now link the real manager (the FC16
+# handler, the config gates, the calibration reset). Left corrected rather than deleted because the
+# stand-in is still there and still the reason a Modbus claim can be green against nothing — which is
+# the shape of half the defects this round found.
 g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/modbus_manager_clock_test" \
   test/host/modbus_manager_clock_test.cpp \
   src/modbus/modbus_manager.cpp \
