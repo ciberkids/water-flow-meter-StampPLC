@@ -24,7 +24,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Twenty open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
+**Nineteen open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
 DF10", "DF19 go ahead" — and this file is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
 they are append-only and never reused, so a gap means an item closed, not an item lost.
 
@@ -46,7 +46,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **DF16** | 🟡 | correction, deferred on scope | The simulator stores `ready` where the device derives it; the fix is known and is a refactor of `sensorConfig.ts`'s public shape |
 | **DF19** | 🟡 | correction, one number | Six shipped scrollbars are 104 px, not 100; blocked only on accepting that `--write` regenerates 72 of 80 screens |
 | **J2** | 🟡 | correction, one round | `animation` was dropped by C1 and still survives in five layers, including bytes emitted into the firmware header |
-| **J4** | 🟡 | correction, chore | `web/mockup/README.md` claims a portrait display, an empty dataset and easing presets — all three wrong |
 | **J6** | 🟡 | gate, unbuilt | Nothing verifies the workspace is accessible — no axe/pa11y/lighthouse in the workspace |
 | **DF20** | 🟡 | gate, unbuilt | No snapshot drives a warning state, so the repaired visual suite still never renders the banner |
 | **DF21** | 🟡 | gate, unbuilt | CI runs no `test:visual` step — the reason DF17 stayed invisible |
@@ -206,7 +205,7 @@ the bottom of this file, verbatim in
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
 | `DF` | defect — opened 2026-08-18 | DF1–DF21 | **eight open**, thirteen fixed |
-| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **six open**, J3 and J5 fixed |
+| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **five open**; J3, J4 and J5 fixed |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
 group — they are in the closed table at the bottom of this file and throughout the archive. The defect
@@ -815,7 +814,7 @@ add the step.
 
 ---
 
-## Residue and hygiene — J1–J8, opened 2026-08-18 (J3, J5 closed the same day)
+## Residue and hygiene — J1–J8, opened 2026-08-18 (J3, J4, J5 closed the same day)
 
 J1–J5 were a **single unnumbered sentence in `MEMORY.md` §6** — "smaller and still open: the export
 gate for ring closure, the I2 append-only catalogue check, `animation` residue across five layers, the
@@ -887,7 +886,7 @@ nineteen days earlier and the directory was still tracked. A decision recorded a
 executed, is indistinguishable from a decision never taken — which is why I3's index rule ties closing an
 item to the edit that closes it.
 
-### J4 — `web/mockup/README.md` describes a display, a dataset and a feature that are all wrong 🟡
+### J4 — ~~`web/mockup/README.md` describes a display, a dataset and a feature that are all wrong~~ ✅ FIXED 2026-08-18
 
 Verified by reading it 2026-08-18. Three false claims, in one paragraph each:
 
@@ -900,6 +899,36 @@ Verified by reading it 2026-08-18. Three false claims, in one paragraph each:
 
 `MEMORY.md` §4 already lists this file as untrustworthy, which is the right label and no substitute for
 fixing it. Small, self-contained, and needs no decision.
+
+**Rewritten 2026-08-18, and there were nine false claims, not three.** Reading the whole file rather than
+the three known lines was the point — a document labelled untrustworthy earns that label everywhere, not
+only where someone last looked:
+
+| Claim | Truth |
+| --- | --- |
+| "the 135×240 display" | 240 × 135 landscape (**D3**). The new text explains that `135` in this codebase is the panel's native portrait dimension, never a bound on the x axis — the confusion that put portrait bounds in the visual suite for months (**DF17**) |
+| "You start on an empty **Blank Canvas** dataset" | It loads `src/data/screens.json`: **80 screens** plus a theme block |
+| "The bundled file is intentionally empty" | Same claim again, in the Screen-layout section. It is also **generated** by `tools/skeleton/generate.mjs`, and CI diffs it byte-for-byte — so hand-editing and committing it is a failing build, which the file never said |
+| "easing presets" in the Design panel | Animation was dropped by **C1**. The token survives and nothing reads it (**J2**) |
+| "Simulation view includes a live JSON snapshot" | `LiveJsonEditorPanel` renders under `activePanel === "design"` (`App.tsx:3436`) |
+| `npm install` | `npm ci` — the root README already says the lockfile is authoritative |
+| "Generated files land in `Water Flow Meter PlatformIO/…`" | `Water-Flow-Meter-PlatformIO/` — hyphens. A path a reader would try and fail with |
+| "Extend the JSON schema to cover animations. ✅" | A tick beside the feature C1 dropped |
+| "(Story SI-20250517-05)", "(story SI-20250517-02)" | Neither exists. `docs/backlog/` holds SI-20251111-03 and -04; the SI-20250517 series is in `docs/archive/` |
+
+**What the rewrite adds, beyond removing falsehoods:** the keyboard section now says the arrow keys are
+taken over by element nudging in the Design tab, the four tabs are listed with what each actually owns, the
+export section names the flags that exist (`--screens`, `--manifest`, `--dry-run`,
+`--allow-missing-toolchain`) and warns that `export:firmware` rewrites **three** `generated/` timestamps —
+counted: `GeneratedUi.cpp`, `ui_export_ir.json`, `ui_export_metadata.json`. The visual-suite section records
+why a bare `npx playwright test` lies and that CI does not run the suite (**DF21**).
+
+**Every claim in the replacement was verified against the source**, including the ones inherited from the
+old text: the `backups/ui/<timestamp>/` path, the export endpoint in `vite.config.ts`, the fixture list, the
+component inventory, and the absence of a port override (so 5173 is Vite's default and correct).
+
+It closes with a pointer to this register rather than a "Next steps" list of its own — the second list is
+how the first goes stale, which is what I3 and the consolidation of 2026-08-18 are about.
 
 ### J5 — ~~`UI_Firmware_Interface.md` lists 4 actions where the catalogue has 19~~ ✅ FIXED 2026-08-18
 
