@@ -820,8 +820,10 @@ J1–J5 were a **single unnumbered sentence in `MEMORY.md` §6** — "smaller an
 gate for ring closure, the I2 append-only catalogue check, `animation` residue across five layers, the
 simulator's missing nav stack, `carea/` (tracked, 18 files), and rewrites of `web/mockup/README.md` and
 `UI_Firmware_Interface.md`" — which is a second open-items register with no ids, no status and no
-diagnosis. Each was verified against the source on 2026-08-18 before it was given an id; the two that did
-not survive verification are recorded at the end of this section rather than promoted.
+diagnosis. Each was verified against the source on 2026-08-18 before it was given an id, and what did not
+survive verification is recorded under "Not promoted" at the end of this section rather than given one.
+**J6 came later the same day, from `docs/backlog/SI-20251111-04`** — the last file still keeping its own
+list — and J7 and J8 were found while fixing DF17.
 
 ### J1 — No export gate proves a level's DOWN ring closes 🟡
 
@@ -974,7 +976,7 @@ entry runs `--write` in the same commit — and the new gate is what says so if 
 
 `docs/backlog/SI-20251111-04-help-docs.md` lists "accessibility verified" among its acceptance criteria
 and marks it not delivered. Verified 2026-08-18: `web/mockup/package.json` contains no `axe`, `jest-axe`,
-`pa11y` or `lighthouse`, so **no automated check exists**, and CI runs no `test:visual` either (see DF17),
+`pa11y` or `lighthouse`, so **no automated check exists**, and CI runs no `test:visual` either (**DF21**),
 so neither the accessible-name tree nor the rendered result is checked by anything.
 
 The hand-written attributes are real — `HelpPanel.tsx` carries `aria-labelledby` on its sections, an

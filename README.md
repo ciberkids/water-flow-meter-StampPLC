@@ -171,11 +171,14 @@ deliberately not repeated here.
 
 Each is an item in the register, so it has an owner and a diagnosis rather than a warning label:
 
-| Document | | What is wrong |
+| Document | | State |
 | --- | --- | --- |
-| `web/mockup/README.md` | **J4** | Claims a portrait 135×240 display, an empty starting dataset and animation easing presets. All three are false |
-| `docs/Requirements/feature addition/UI_Firmware_Interface.md` | **J5** | Lists 4 actions where the firmware catalogue has 19. The most dangerous live document: it teaches a wrong catalogue rather than merely omitting |
 | `docs/Requirements/Implementation_Alignment_Report.md` | — | A **dated snapshot** (against Project_document v1.0, Oct 2025) of a firmware that was one file. Not a live document and not tracked as an item; read it as history or not at all |
+| `web/mockup/README.md` | ~~**J4**~~ | **Fixed 2026-08-18.** It had nine false claims, not the three recorded — including a second "the bundled dataset is empty" and two story ids that do not exist |
+| `docs/Requirements/feature addition/UI_Firmware_Interface.md` | ~~**J5**~~ | **Fixed 2026-08-18.** Its action table is now generated from `kActionCatalogue` by `tools/wiki/gen-actions.mjs` and gated by a CI diff. It had been advertising two actions that no longer exist |
+
+Any document not named here is *unaudited*, not *verified* — the 2026-08-01 sweep covered 17 of them and the
+register has found more since.
 
 `Loadable_UI_Menu_Packs.md` **is built**: the `.uipack` format, its reader, the SD storage adapter, the
 loader, the firmware-drawn selector, the boot-time selection ladder and the SPI arbitration all exist

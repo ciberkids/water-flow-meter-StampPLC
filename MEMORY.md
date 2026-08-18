@@ -195,7 +195,7 @@ evidence at all. Before this branch, `interaction_handler.cpp`, `ui_controller.c
 ## 6. Where to pick up
 
 **The item list is not here any more.** Every open item has a stable ID and lives in the index at
-the top of `docs/active_work/open_decisions.md` — twenty lines with status and shape, governed by
+the top of `docs/active_work/open_decisions.md` — nineteen lines with status and shape, governed by
 rule **I3**. Cite the ID (`DF10`, `J3`, `N-d1`). What belongs in this section is only the ordering
 advice an index cannot carry:
 
@@ -218,10 +218,12 @@ advice an index cannot carry:
    2026-08-18 and moved into the register with IDs: **J1** (no export gate for ring closure), **J2**
    (`animation` residue in five layers), **J3** (`carea/`, 18 tracked files), **J4**
    (`web/mockup/README.md`), **J5** (`UI_Firmware_Interface.md` — 4 actions listed against 19 in the
-   catalogue), and **I2a** (nothing enforces the append-only rule, folded into I2 itself). **J3 and J5
-   were fixed the same day:** `carea/` deleted (archive entry F2 had already decided that on
-   2026-07-30 and nobody did it), and the action table is now generated from `kActionCatalogue` with a
-   CI diff gate — it had been advertising two actions that no longer exist.
+   catalogue), and **I2a** (nothing enforces the append-only rule, folded into I2 itself). **J3, J4 and J5 were
+   fixed the same day:** `carea/` deleted (archive entry F2 had already decided that on 2026-07-30 and
+   nobody did it); the action table is now generated from `kActionCatalogue` with a CI diff gate, having
+   advertised two actions that no longer exist; and `web/mockup/README.md` was rewritten after the whole
+   file turned out to carry nine false claims rather than the three recorded. **J6, J7, J8, DF20 and
+   DF21 were opened** by that work — a repaired gate finds things.
 5. **One of the six got no ID, deliberately:** *the simulator's missing nav stack*. Probed
    2026-08-18 — no `navStack`, `backStack` or `history` in the mockup, but the device has no nav
    stack either (BACK resolves from the tree), so "missing" may describe a divergence that no longer
