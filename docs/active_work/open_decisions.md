@@ -24,7 +24,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Twenty-two open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
+**Twenty open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
 DF10", "DF19 go ahead" — and this file is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
 they are append-only and never reused, so a gap means an item closed, not an item lost.
 
@@ -46,9 +46,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **DF16** | 🟡 | correction, deferred on scope | The simulator stores `ready` where the device derives it; the fix is known and is a refactor of `sensorConfig.ts`'s public shape |
 | **DF19** | 🟡 | correction, one number | Six shipped scrollbars are 104 px, not 100; blocked only on accepting that `--write` regenerates 72 of 80 screens |
 | **J2** | 🟡 | correction, one round | `animation` was dropped by C1 and still survives in five layers, including bytes emitted into the firmware header |
-| **J3** | 🟡 | correction, chore | `carea/` is 18 tracked files of a stray git directory |
 | **J4** | 🟡 | correction, chore | `web/mockup/README.md` claims a portrait display, an empty dataset and easing presets — all three wrong |
-| **J5** | 🟡 | correction, mechanical | `UI_Firmware_Interface.md` lists 4 actions where the catalogue has 19 |
 | **J6** | 🟡 | gate, unbuilt | Nothing verifies the workspace is accessible — no axe/pa11y/lighthouse in the workspace |
 | **DF20** | 🟡 | gate, unbuilt | No snapshot drives a warning state, so the repaired visual suite still never renders the banner |
 | **DF21** | 🟡 | gate, unbuilt | CI runs no `test:visual` step — the reason DF17 stayed invisible |
@@ -208,7 +206,7 @@ the bottom of this file, verbatim in
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
 | `DF` | defect — opened 2026-08-18 | DF1–DF21 | **eight open**, thirteen fixed |
-| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **all eight open** |
+| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **six open**, J3 and J5 fixed |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
 group — they are in the closed table at the bottom of this file and throughout the archive. The defect
@@ -817,7 +815,7 @@ add the step.
 
 ---
 
-## Residue and hygiene — J1–J8, opened 2026-08-18
+## Residue and hygiene — J1–J8, opened 2026-08-18 (J3, J5 closed the same day)
 
 J1–J5 were a **single unnumbered sentence in `MEMORY.md` §6** — "smaller and still open: the export
 gate for ring closure, the I2 append-only catalogue check, `animation` residue across five layers, the
@@ -867,7 +865,7 @@ list and the mockup's own CSS transitions may legitimately use it, so this is no
 `required`-list change, a regenerated dataset, and a `GeneratedUi.h` shape change, which makes it a round
 of its own rather than a tidy-up.
 
-### J3 — `carea/` is 18 tracked files of a stray git directory 🟡
+### J3 — ~~`carea/` is 18 tracked files of a stray git directory~~ ✅ FIXED 2026-08-18
 
 `git ls-files carea/` returns 18 files, 80 KB on disk, and they are **git internals**: `carea/HEAD`,
 `carea/config`, `carea/description`, `carea/hooks/*.sample`. This is the debris of a `git init` or a
@@ -877,6 +875,17 @@ of its own rather than a tidy-up.
 that nothing is known about what pointed at it. Removing it is right, but do it deliberately: confirm no
 tooling path references `carea/`, then remove in a commit that does nothing else, so the deletion is
 reviewable on its own.
+
+**Done that way, 2026-08-18.** `config` said `bare = true` and there were no `objects/` or `refs/`
+directories at all — the skeleton a `git init --bare` leaves behind, with zero content. Grepped every
+`md`/`json`/`mjs`/`ts`/`yml`/`sh` in the tree: the only references were the register entries describing it.
+Deleted in a commit that does nothing else.
+
+**Worth recording, because it is the reason this was open at all:** archive entry **F2** reads *"✅ delete
+`carea/`. Verified empty of project content — a stray bare repo. (2026-07-30)"*. The decision was taken
+nineteen days earlier and the directory was still tracked. A decision recorded as done, but never
+executed, is indistinguishable from a decision never taken — which is why I3's index rule ties closing an
+item to the edit that closes it.
 
 ### J4 — `web/mockup/README.md` describes a display, a dataset and a feature that are all wrong 🟡
 
@@ -892,7 +901,7 @@ Verified by reading it 2026-08-18. Three false claims, in one paragraph each:
 `MEMORY.md` §4 already lists this file as untrustworthy, which is the right label and no substitute for
 fixing it. Small, self-contained, and needs no decision.
 
-### J5 — `UI_Firmware_Interface.md` lists 4 actions where the catalogue has 19 🟡
+### J5 — ~~`UI_Firmware_Interface.md` lists 4 actions where the catalogue has 19~~ ✅ FIXED 2026-08-18
 
 Counted 2026-08-18: the document's action table carries four rows — `ui.action.page.next` /
 `.previous`, `ui.action.mode.configuration` / `.info`, `ui.action.mode.idle`, `core.action.save-config`.
@@ -904,6 +913,33 @@ continued.)
 exist, so it does not merely omit — it teaches a wrong catalogue, and every id it omits looks unavailable.
 The fix is mechanical (regenerate the table from the catalogue header, or delete the table and point at
 it), and the mechanical option that cannot drift again is the right one.
+
+**Fixed 2026-08-18 by generating it, and it was worse than recorded.** Two of the four rows named actions
+that **do not exist**: `ui.action.mode.configuration` and `ui.action.mode.info`, replaced by
+`ui.action.nav.descend` / `.back` / `.escape` without the table being told. Omitting fifteen makes them
+look unavailable; advertising two that no handler implements sends an implementer to wire a flow the
+firmware will refuse. A third row's description was also wrong — `core.action.save-config` was described
+as persisting *"the LED configuration via `LedController::saveToPreferences`"*, where the catalogue says
+the configuration block to NVS and the Modbus registers.
+
+- **`tools/wiki/gen-actions.mjs`** reads `kActionCatalogue` and replaces a marked region in the document.
+  A scanner, not a regex, because two entries defeat one: descriptions split across adjacent C++ string
+  literals, and the `//` comment above `reset-calibration`. Escapes are decoded, so `\u00a75.5` reads as
+  §5.5.
+- **A parse that finds no actions, or a document missing its markers, exits 1** rather than writing an
+  empty table — an empty section is precisely what a silent failure looks like.
+- **CI gates it by diff**, the same shape as the diagram freshness check.
+- **Negative-tested in a clean worktree**, per §5 of `MEMORY.md`: quiet on an unmodified checkout, fires
+  and names the fix when an action is added to the catalogue, and exits 1 with a message when the markers
+  are removed.
+
+The catalogue was already reconciled with the handler table by `static_assert`, so that guarantee now
+reaches the document rather than depending on someone copying nineteen rows and remembering to come back.
+
+**The committed table has EIGHTEEN rows, not nineteen.** `ui.action.pack.select-menu` is part of this
+branch's uncommitted Select Menu work, so generating from the working tree would have documented an action
+`HEAD` does not declare and CI would have failed on the pushed branch. Whoever commits that catalogue
+entry runs `--write` in the same commit — and the new gate is what says so if they forget.
 
 ### J6 — Nothing verifies the workspace is accessible 🟡
 
