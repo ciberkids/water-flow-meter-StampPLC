@@ -97,7 +97,11 @@ export function EventBindingPanel({
               <div className="event-row">
                 <label>
                   <span>Action</span>
+                  {/* The visual suite drives this select by test id. It had one (`flow-action-select`)
+                      until this panel was rewritten, and losing it turned an assertion about action
+                      binding into a 30 s timeout that nothing noticed - see DF17. */}
                   <select
+                    data-testid="event-action-select"
                     value={event.actionId ?? ""}
                     onChange={(e) => onUpdateEvent(screen.id, index, { actionId: e.target.value || undefined })}
                   >

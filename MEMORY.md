@@ -195,8 +195,8 @@ evidence at all. Before this branch, `interaction_handler.cpp`, `ui_controller.c
 ## 6. Where to pick up
 
 **The item list is not here any more.** Every open item has a stable ID and lives in the index at
-the top of `docs/active_work/open_decisions.md` — eighteen lines with status and shape, governed by
-rule **I3**. Cite the ID (`DF17`, `J3`, `N-d1`). What belongs in this section is only the ordering
+the top of `docs/active_work/open_decisions.md` — twenty-two lines with status and shape, governed by
+rule **I3**. Cite the ID (`DF10`, `J3`, `N-d1`). What belongs in this section is only the ordering
 advice an index cannot carry:
 
 1. ~~**Wire the loader into `firmware.cpp`**~~ — **shipped, and this entry outlived it by several
@@ -204,9 +204,13 @@ advice an index cannot carry:
    `firmware.cpp:158–174`, §3.6's attempt-counter ladder is at :1058–1096, and §3.4.1's recovery
    route reaches `UiController::openPackSelector` (`ui_controller.cpp:273`). A stale instruction at
    the top of a pick-up list is exactly the failure §5 is about.
-2. **`DF17` first** — the register's only 🔴. `npm run test:visual` has been failing 32 of its 46
-   tests and nothing noticed, and it is the only gate that renders the display, so every
-   pixel-level claim made while it is broken is unverified.
+2. ~~**`DF17` first** — the register's only 🔴.~~ **Fixed 2026-08-18: 44 passed, 0 failed, exit 0,
+   twice.** All eleven non-snapshot failures were the SPEC being stale — portrait bounds, removed
+   features, renamed selectors, a legacy fixture the gates now rightly reject — and none was an app
+   regression, which is what earned the baseline refresh. **The register has no 🔴 now.** Two
+   consequences it did NOT close are filed rather than glossed: the banner still has no pixel-level
+   verification because no snapshot drives a warning state (**DF20**), and CI still runs no
+   `test:visual` step (**DF21**), which is why it could rot unseen for months.
 3. **Then WiFi slice N0** — the polling-rate spike, still the recommended next slice. Its
    acceptance criterion budgets 5 % against a radio-off baseline that does not exist yet; that
    baseline is **G1** and needs the board.

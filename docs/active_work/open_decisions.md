@@ -24,15 +24,14 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Nineteen open lines.** Ask for work by ID — "fix DF17", "decide DF10", "J3 go ahead" — and this file
-is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
+**Twenty-two open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
+DF10", "DF19 go ahead" — and this file is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
 they are append-only and never reused, so a gap means an item closed, not an item lost.
 
 The **Shape** column is the one that answers *can I just say go ahead?*
 
 | ID | | Shape | What it is |
 | --- | --- | --- | --- |
-| **DF17** | 🔴 | correction | `npm run test:visual` fails 32 of 46, pre-existing, and it is the only gate that would verify the banner at y=116 |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | correction + measurement | Nothing protects the VLF probe's position above `M5StamPLC.begin()`, and whether the RTC survives power loss is unknown |
 | **DF10** | 🟡 | **decision** | The portal indexes sensors from 0, `ui::writeSetting` from 1 — decide before a `PortalSettingStore` exists, not after |
@@ -50,7 +49,11 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **J3** | 🟡 | correction, chore | `carea/` is 18 tracked files of a stray git directory |
 | **J4** | 🟡 | correction, chore | `web/mockup/README.md` claims a portrait display, an empty dataset and easing presets — all three wrong |
 | **J5** | 🟡 | correction, mechanical | `UI_Firmware_Interface.md` lists 4 actions where the catalogue has 19 |
-| **J6** | 🟡 | gate, unbuilt | Nothing verifies the workspace is accessible — no axe/pa11y/lighthouse, and CI runs no `test:visual` either |
+| **J6** | 🟡 | gate, unbuilt | Nothing verifies the workspace is accessible — no axe/pa11y/lighthouse in the workspace |
+| **DF20** | 🟡 | gate, unbuilt | No snapshot drives a warning state, so the repaired visual suite still never renders the banner |
+| **DF21** | 🟡 | gate, unbuilt | CI runs no `test:visual` step — the reason DF17 stayed invisible |
+| **J7** | 🟡 | correction, one round | The transition preview is off by decision; its five layers remain, same shape as J2 |
+| **J8** | 🟡 | **decision** | Two clamps disagree — the Design panel pins the coordinate, the importer pins the far edge |
 
 **DF1–DF9, DF11–DF13** are fixed and keep their IDs, struck through in place below. **I2** and **I3** are
 standing rules that never close.
@@ -204,8 +207,8 @@ the bottom of this file, verbatim in
 | `H` | menu behaviour | H1–H6 | closed |
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
-| `DF` | defect — opened 2026-08-18 | DF1–DF19 | **seven open**, twelve fixed |
-| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J6 | **all six open** |
+| `DF` | defect — opened 2026-08-18 | DF1–DF21 | **eight open**, thirteen fixed |
+| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **all eight open** |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
 group — they are in the closed table at the bottom of this file and throughout the archive. The defect
@@ -216,7 +219,7 @@ a future batch takes `J` or a new two-letter prefix, never a letter that once me
 
 - **Never renumber, never reuse.** `DF1`–`DF19` are in the order the defects were found; the twelve that
   are fixed keep theirs, struck through in place. A gap in the open list means an item closed.
-- **New items take the next free identifier** — `DF20` onward for defects, `J7` onward for residue, `N-e` onward for entries in
+- **New items take the next free identifier** — `DF22` onward for defects, `J9` onward for residue, `N-e` onward for entries in
   the upper section. Never fill a gap.
 - **A split keeps the parent and adds a suffix** (`N-d` → `N-d1`, `N-d2`), so an ID cited from outside
   this file still resolves. `G1`, `N-b`, `N-c` and `I2` are cited from `README.md`, four requirement
@@ -230,7 +233,7 @@ a future batch takes `J` or a new two-letter prefix, never a letter that once me
 
 ---
 
-## Defects found — DF1–DF19, twelve fixed and seven open
+## Defects found — DF1–DF21, thirteen fixed and eight open
 
 None is a decision — each is known, each has a diagnosis, and they are here because this is the file
 that gets read before picking up work.
@@ -676,7 +679,7 @@ renderer, and every producer in `sensorConfig.ts` sets it, so deriving it is a r
 public shape rather than the one-line change the other three fixes were. It wants its own round, with
 `sensorConfig.test.ts`'s 48 checks re-run against the new meaning of the field.
 
-### DF17 — `npm run test:visual` has been failing 32 of its 46 tests, and nothing noticed 🔴
+### DF17 — ~~`npm run test:visual` has been failing 32 of its 46 tests, and nothing noticed~~ ✅ FIXED 2026-08-18
 
 **Measured both ways on 2026-08-17, on this branch.** With the banner round applied: 32 failed, 14
 passed. With the round stashed and the tree at HEAD: **32 failed, 14 passed, and the failing test names
@@ -712,6 +715,40 @@ suite is the only gate that would, and it cannot be trusted until it is repaired
 and the spec disagree about the workspace, and that disagreement is either a real regression from an
 earlier round or a spec that was never updated. Only once those pass does a snapshot refresh mean
 anything.
+
+### How it was fixed, 2026-08-18 — **44 passed, 0 failed, exit 0, twice**
+
+**Correcting this entry's own evidence first.** The 21/11 split was right; the per-type counts were not —
+they counted assertion mentions, not failing tests. Measured: **21 snapshot, 3 `toBeVisible`, 2
+`toHaveValue`, 1 `toHaveCount`, 5 timeouts/CLI**.
+
+**All eleven were the SPEC being stale. Not one was an app regression** — which is what earned the baseline
+refresh the paragraph above rightly withheld until it was known.
+
+| Failure | What it asserted | Why it was wrong |
+| --- | --- | --- |
+| blank canvas by default | 1 screen named *Blank Canvas* | The workspace ships and loads 80 screens. Now compares against the shipped dataset's own length, so growth cannot re-break it |
+| edge coordinates | filled a Content box, and portrait axes | The toolbox renders a *Bound value* select instead of Content for any bindable kind; `maxX` used the **portrait** bound on the landscape axis. Rewritten — and it found J8 |
+| transition preview | `.transition-overlay` renders on DOWN | **Deleted.** `App.tsx` passes `pendingTransition={undefined}` with six lines saying why: the firmware draws no transition, so previewing one made the simulator less faithful. Residue is **J7** |
+| per-element clamp / clamp all | 200 px overflows, clamps to **135** | 135 is the portrait width. Landscape is 240 (D3), so 200 fits and the app was right not to offer a clamp. Now overflows with 300 and expects 240 |
+| landscape orientation | clicked a button named *Landscape* | The toggle is a disabled indicator reading *Landscape 240x135* — the same rename that once broke every test through `beforeEach` |
+| event binding action | a `flow-action-select` test id, on a screen with no events | The panel rewrite dropped the id, and the fixture declares flows, not events. Id restored as `event-action-select`; the test adds an event first |
+| animation inspector | an `animation-upload` control | **Deleted.** C1 dropped animation and the inspector went with it. Residue is **J2** |
+| value placeholder traces | `.value-editor-panel`, a *Save value* button, *Value edited* / *Value saved* traces | None of the four exists. `handleMemoryWrite` applies an edit straight into memory with no trace and no save step, deliberately. Now asserts the write lands |
+| out-of-bounds import alert | the alert on the **Design** tab, *"were clamped"* | Layout diagnostics moved to **Simulation**, and one element is *"was clamped"*. Verified by driving the app: `x: 220 -> 160, y: 260 -> 115` — the landscape bound working |
+| exported IR | built the exporter and ran the CLI over `legacy-screens.json` | The CLI **rightly refuses** that fixture (9 required screens missing, 8 actions and 10 values absent from the manifest), and it wrote into `src/ui/generated/`, so a test run dirtied the firmware tree. Now compares the **committed** IR with the **committed** dataset and writes nothing |
+
+**Two app changes, both restoring a test contract the app had dropped:** `data-element-id` on rendered
+viewport elements (the suite used to locate an element by the text it renders, which coupled geometry to
+content), and `data-testid="event-action-select"`.
+
+**Then the 21 baselines were regenerated,** once the assertions passed. The diffs are changes already
+decided elsewhere — the orientation toggle gone, the values panel rewritten, the unit change — and the old
+baselines still showed a PORTRAIT button and *SAVE VALUE* buttons. Green twice at exit 0; `tsc`, 213 unit,
+44 exporter and the host suite all still pass.
+
+**Two things this did NOT fix, stated plainly because the entry above claims them:** the banner still has no
+pixel-level verification (**DF20**), and CI still does not run the suite (**DF21**).
 
 ### DF18 — `nyquist-warning` puts an option row inside the banner band 🟡
 
@@ -756,9 +793,31 @@ screens from scratch and no one had accepted a wholesale dataset regeneration as
 exempts `kind === "scrollbar"` — a 5 px fixture losing 2 of 104 px hides no glyph, and the collision loop
 already treats one as decorative. Without that exemption the audit would report 7 rather than 1.
 
+### DF20 — No snapshot drives a warning state, so the visual suite never renders the banner 🟡
+
+Found while fixing DF17, and the reason that repair does not close §2c's verification gap. Every snapshot
+captures a workspace with no warning live, so `warningBanner` is empty in all 21 baselines and the band at
+y=116 is never painted in any of them.
+
+**What it needs:** one case that drives the simulator into a warning — the values panel's per-sensor
+controls are the lever — and snapshots the panel with the banner up. That is the only gate that would catch
+the banner drifting back over the footer, which is what DF7 fixed. Until it exists, the banner's position is
+asserted by host tests and the geometry audit but seen by nothing.
+
+### DF21 — CI runs no `test:visual` step 🟡
+
+Verified 2026-08-18: neither `test:visual` nor `playwright` appears anywhere in `.github/workflows/`. The
+pipeline runs typecheck, unit, exporter, build, the export gates, the skeleton-reproduces-dataset check, the
+committed-assets check, host tests and the generated-docs gate — none of which renders a pixel.
+
+**This is why DF17 was invisible for months**, and it is deliberately NOT bundled into DF17's fix: the suite
+takes ~1.6 minutes locally plus a browser download, snapshots are sensitive to the container's font
+rendering (these baselines are `chromium-linux`), and a flake policy has to be chosen. Decide those, then
+add the step.
+
 ---
 
-## Residue and hygiene — J1–J6, opened 2026-08-18
+## Residue and hygiene — J1–J8, opened 2026-08-18
 
 J1–J5 were a **single unnumbered sentence in `MEMORY.md` §6** — "smaller and still open: the export
 gate for ring closure, the I2 append-only catalogue check, `animation` residue across five layers, the
@@ -860,6 +919,34 @@ verification gap rather than an absence. Nothing tells you when one of them stop
 **Kept deliberately small.** This is an internal design tool for an embedded device, not a shipped web
 product, and the scope here is exactly what the story claimed and did not do: one axe pass over the
 workspace's tabs, wired into the unit suite. Anything broader is a new decision, not this item.
+
+### J7 — The transition preview is off by decision, and all five of its layers remain 🟡
+
+`App.tsx` passes `pendingTransition={undefined}` behind a six-line comment explaining that the firmware
+draws no transition, so previewing one made the simulator less faithful. The feature is off. Still present:
+the `transitionPreview` state and its 1500 ms expiry effect, the `previewTransition` callback fired on every
+answered press, the `TransitionPreviewState` type, `.transition-overlay*` in `App.css`, and the render branch
+in `DisplayViewport`.
+
+**Identical shape to J2** — a dropped feature whose layers survive — and worth deciding in the same round:
+delete the five layers, or restore the prop behind a toggle. What it must not stay is a callback firing on
+every keypress into a value nothing reads.
+
+### J8 — Two clamps disagree: the Design panel pins the coordinate, the importer pins the far edge 🟡
+
+Found by DF17's corner test, measured both ways on 2026-08-18:
+
+| Route | A box pushed to the right edge | Result |
+| --- | --- | --- |
+| Design panel x/y inputs | 40x20 box, requested x = 9999 | **x = 240** — the panel's own width, so the box sits entirely outside the visible area and renders with `clientWidth` 0 |
+| dataset import (`datasetClamp`) | 80x20 box at x = 220 | **x = 160** = 240 − 80, the far edge exactly on the boundary, and the clamp notice says so |
+
+The same geometry is legal through one route and corrected through the other, and the panel's answer is the
+one that hides an element. `datasetClamp`'s rule is the defensible one — an element you cannot see is not a
+placement.
+
+**Decide which rule the panel follows**, then make the inputs agree. The corner test pins today's behaviour
+(`expect(geometry.x).toBe(layoutBounds.width)`), so this cannot change silently.
 
 ### Not promoted, and why
 
