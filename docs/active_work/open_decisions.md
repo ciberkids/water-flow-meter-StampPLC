@@ -2,6 +2,11 @@
 
 What is genuinely undecided or unbuilt, and nothing else.
 
+**This file is the single source of truth for open work.** `README.md` § Source of truth says so, and
+`MEMORY.md` §6 points here rather than keeping a list of its own — it kept one until 2026-08-18, and the
+two drifted, which is the whole argument. If you find an open item recorded anywhere else, move it here,
+give it an ID under rule I3, and leave a pointer behind.
+
 The previous register carried 42 entries. **Every one of them had a recorded `Decision:` line**, and
 41 of the 42 are implemented — but the status emoji in each heading still said 🔴 *blocks
 implementation now* or 🟡 *blocks a later slice*, because the emoji was a second home for a fact that
@@ -14,6 +19,40 @@ That history is worth keeping — several entries record a decision being *rever
 history, not a work list.
 
 Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiting on something external
+
+---
+
+## The index — cite the ID, not the heading
+
+**Eighteen open lines.** Ask for work by ID — "fix DF17", "decide DF10", "J3 go ahead" — and this file
+is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
+they are append-only and never reused, so a gap means an item closed, not an item lost.
+
+The **Shape** column is the one that answers *can I just say go ahead?*
+
+| ID | | Shape | What it is |
+| --- | --- | --- | --- |
+| **DF17** | 🔴 | correction | `npm run test:visual` fails 32 of 46, pre-existing, and it is the only gate that would verify the banner at y=116 |
+| **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
+| **N-d2** | ⏸️ | correction + measurement | Nothing protects the VLF probe's position above `M5StamPLC.begin()`, and whether the RTC survives power loss is unknown |
+| **DF10** | 🟡 | **decision** | The portal indexes sensors from 0, `ui::writeSetting` from 1 — decide before a `PortalSettingStore` exists, not after |
+| **DF14** | 🟡 | **decision** | `configIsValid`'s offset bound is ten times what its own comment promises — tighten the bound or correct the comment |
+| **DF15** | 🟡 | **decision** | Three registers §5's table documents do not exist, and 711 is double-booked — build them or move them out of the table |
+| **DF18** | 🟡 | **decision** (design) | `nyquist-warning`'s `option-down` sits inside the banner band; fixing it means authoring the screen's first spec file |
+| **N-d1** | 🟡 | feature, queued | The clock can be set from no route at all; next step is the Modbus date/time block |
+| **N-c** | 🟡 | feature, queued | MQTT is report-only — §4.4.1's command topics are unbuilt, and register 565 reports results that cannot arrive |
+| **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
+| **J1** | 🟡 | gate, unbuilt | No export gate proves a level's DOWN ring closes — and paging wraps in the dataset, not in code. Same family as N-b |
+| **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
+| **DF16** | 🟡 | correction, deferred on scope | The simulator stores `ready` where the device derives it; the fix is known and is a refactor of `sensorConfig.ts`'s public shape |
+| **DF19** | 🟡 | correction, one number | Six shipped scrollbars are 104 px, not 100; blocked only on accepting that `--write` regenerates 72 of 80 screens |
+| **J2** | 🟡 | correction, one round | `animation` was dropped by C1 and still survives in five layers, including bytes emitted into the firmware header |
+| **J3** | 🟡 | correction, chore | `carea/` is 18 tracked files of a stray git directory |
+| **J4** | 🟡 | correction, chore | `web/mockup/README.md` claims a portrait display, an empty dataset and easing presets — all three wrong |
+| **J5** | 🟡 | correction, mechanical | `UI_Firmware_Interface.md` lists 4 actions where the catalogue has 19 |
+
+**DF1–DF9, DF11–DF13** are fixed and keep their IDs, struck through in place below. **I2** and **I3** are
+standing rules that never close.
 
 ---
 
@@ -81,11 +120,13 @@ network settings. The portal timer is the thing standing between an operator and
 
 ---
 
-## N-d 🟡 The clock can be set from no route at all, which is the largest live gap against RS485
+## N-d 🟡 The clock — settable from no route at all, and its one trust signal unprotected
 
 Recorded 2026-08-17, alongside N-c, because it is the same shape: a place where "every setting is
 readable and writable over RS485" is not yet true. It is a queued feature, not a defect — but it was
 never written down, and the four-surface question keeps being answered without it.
+
+**N-d1 🟡 The clock can be set from no route at all** — the largest live gap against RS485.
 
 `DeviceClock::setTime` has **no production caller**. Grepped 2026-08-17: the only callers are
 `device_clock_test.cpp`, `modbus_manager_clock_test.cpp` and `interaction_test.cpp`. There is no
@@ -99,8 +140,10 @@ a session reset is dated through `ModbusManager::Dependencies::clock`, and P3 sh
 Next is the **Modbus date/time block** — the one that makes every later item settable — then the portal
 page, then NTP on `WifiState::Connected`, with MQTT last because it needs the unbuilt command topics.
 
-**A second, sharper thing on the same subject, which needs the board.** `M5StamPLC.begin()` clears the
-RX8130CE's whole flag register including VLF, and the library exposes no reader, so
+**N-d2 ⏸️ Nothing protects the VLF probe's position, and whether the RTC survives power loss is
+unknown.** A second, sharper thing on the same subject, and the half that needs the board.
+`M5StamPLC.begin()` clears the RX8130CE's whole flag register including VLF, and the library exposes
+no reader, so
 `plc::readRtcVoltageLowFlag()` must run **before** `M5StamPLC.begin()`. It is the first statement of
 `setup()` and that is the only moment in the device's life when "did the clock run across the last power
 cut" can be known. **No test or assert protects the ordering** — nothing under `test/` names
@@ -110,7 +153,8 @@ confident year-2000 timestamp to the panel, Modbus and MQTT. Whether the RTC sur
 is **unknown** — the chip has a backup-supply pin, and M5Stack does not say whether a cell or supercap is
 populated. Settle it empirically: set the time, pull power for a minute, boot, read VLF.
 
-**Blocks.** Any timestamp being trustworthy in the field.
+**Blocks.** Any timestamp being trustworthy in the field. N-d1 is a queued feature and needs nobody's
+decision; N-d2 is a correction (the assert) plus a measurement (the power-cut test).
 
 ---
 
@@ -123,14 +167,74 @@ This is not open and never closes; it is recorded here because it constrains eve
 a rule filed under "archive" is a rule nobody reads. Same class as the wire-encoding rules on
 `WifiState` and `kMqttFlags` bit 2.
 
+**I2a 🟡 Nothing enforces it.** Verified 2026-08-18: no file in the repository contains
+`append-only` or `appendOnly` as a check — grepped across `*.ts`, `*.mjs`, `*.cpp`, `*.h` and `*.json`.
+The rule lives entirely in prose, in a file the person renumbering a catalogue entry has no reason to
+open. What would catch it is a checked-in snapshot of `id → meaning` that CI diffs, the same shape as the
+byte-for-byte `screens.json` diff already in CI: a changed line under an existing id fails, a new line
+appended passes. Filed here rather than as a defect because the rule and its missing enforcement belong
+in one place — but it is real work, and until it exists I2 is honour-system.
+
 ---
 
-## Defects found — seven fixed, nine open
+## I3 — standing rule, not a decision
+
+**Every item in this register carries a stable ID, and the IDs are append-only.** Cite the ID, never
+the heading: headings get rewritten as a diagnosis sharpens, and a register described in prose cannot
+be pointed at — which is how "go ahead and fix it" stops meaning anything. No count belongs in this
+rule; the index carries it.
+
+Same shape as I2, and for the same reason: an identifier that silently moves is worse than none.
+
+**What the prefixes mean.** They are the *thematic groups* of the original 42-entry register, lettered in
+the order the groups were opened — not category codes. Every item's own text is in the closed table at
+the bottom of this file, verbatim in
+[`../archive/open_decisions-closed-2026-08-12.md`](../archive/open_decisions-closed-2026-08-12.md).
+
+| Prefix | Group | Range | Live? |
+| --- | --- | --- | --- |
+| `A` | requirements rewrites | A1–A6 | closed |
+| `B` | bindings | B1–B2 | closed |
+| `C` | UI mechanics | C1–C3 | closed |
+| `D` | display and dataset | D0–D5 | closed — **and this is why defects are `DF`** |
+| `E` | the manifest | E1 | closed |
+| `F` | repository hygiene | F1–F7 | closed |
+| `G` | hardware risk | G1–G3 | **G1 open**; G2, G3 closed |
+| `H` | menu behaviour | H1–H6 | closed |
+| `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
+| `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
+| `DF` | defect — opened 2026-08-18 | DF1–DF19 | **seven open**, twelve fixed |
+| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 | J1–J5 | **all five open** |
+
+**`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
+group — they are in the closed table at the bottom of this file and throughout the archive. The defect
+list was first stamped `D1`–`D19`, which made `D1`–`D5` resolve to two different things in one document.
+That is precisely I2's complaint (the id still resolves, to something else), so the prefix was corrected
+the same day, before anyone cited one. **A retired letter stays retired**: `A`–`I` and `N-` are spent, so
+a future batch takes `J` or a new two-letter prefix, never a letter that once meant something else.
+
+- **Never renumber, never reuse.** `DF1`–`DF19` are in the order the defects were found; the twelve that
+  are fixed keep theirs, struck through in place. A gap in the open list means an item closed.
+- **New items take the next free identifier** — `DF20` onward for defects, `J6` onward for residue, `N-e` onward for entries in
+  the upper section. Never fill a gap.
+- **A split keeps the parent and adds a suffix** (`N-d` → `N-d1`, `N-d2`), so an ID cited from outside
+  this file still resolves. `G1`, `N-b`, `N-c` and `I2` are cited from `README.md`, four requirement
+  documents and three source files — renaming one breaks a cross-reference that still looks valid.
+- **Sub-IDs are bold lead-ins, not headings.** `###` carries item headings only (`DF`, `J`); a sub-line
+  like `I2a` or `N-d2` is a bold lead-in inside its parent, so `grep '^### '` stays a census of items
+  and never double-counts one.
+- **The index at the top is maintained by hand and must match the headings.** Closing an item is two
+  edits in one commit: strike the heading, delete the index row. An index that lists a fixed item is
+  the same failure as the status emoji this register was rewritten to fix — one fact with two homes.
+
+---
+
+## Defects found — DF1–DF19, twelve fixed and seven open
 
 None is a decision — each is known, each has a diagnosis, and they are here because this is the file
 that gets read before picking up work.
 
-### ~~A channel with no calibration could never be given one~~ ✅ FIXED 2026-08-15
+### DF1 — ~~A channel with no calibration could never be given one~~ ✅ FIXED 2026-08-15
 
 `prepareConfigUpdate` refused every candidate failing `configIsValid`, and every register arm builds its
 candidate from the config already in force and changes one field — so from an all-zero configuration both
@@ -148,7 +252,7 @@ validly calibrated channel still cannot be demolished field by field, so "not se
 only as a command — the property `register_map.h`'s offset-25 note rests on. 54 new host checks;
 mutation-tested.
 
-### ~~The pulses-per-litre form was flagged for a check it could not pass~~ ✅ FIXED 2026-08-15
+### DF2 — ~~The pulses-per-litre form was flagged for a check it could not pass~~ ✅ FIXED 2026-08-15
 
 `meetsNyquistLimit` computed the formula ceiling only and returned false on `f_multiplier == 0` — the
 correct, normal state of a channel calibrated by pulses per litre. So every valid pulses-per-litre
@@ -169,7 +273,7 @@ first write with register 30 at 0, out-of-budget still refused and parked.
 **Note for G1:** this changes *which* frequency the budget is computed from, not whether the budget is
 right. The 3.3 kHz polling rate it is compared against is still unmeasured on hardware.
 
-### ~~A pulses-per-litre calibration written over Modbus was lost at every reboot~~ ✅ FIXED 2026-08-17
+### DF3 — ~~A pulses-per-litre calibration written over Modbus was lost at every reboot~~ ✅ FIXED 2026-08-17
 
 `saveSensorConfig` wrote three keys — `cfg_q`, `cfg_f`, `cfg_a` — and `SensorCharacteristics` has five
 fields. `calibration` and `pulses_per_litre` were never persisted, so a master that wrote registers 123
@@ -184,7 +288,7 @@ The litres were never lost — `cml_%u` round-trips. The zero at register 103 is
 host-tested at all: it lived in firmware.cpp, which is in no link set. 20 checks, mutation-proven, plus a
 `static_assert` on the struct's size so a sixth field is a build failure.
 
-### ~~FC16 refused every address in the network block~~ ✅ FIXED 2026-08-17
+### DF4 — ~~FC16 refused every address in the network block~~ ✅ FIXED 2026-08-17
 
 `handleWriteMultiple` pre-validated with `isWritableAddress`, which knows only the sensor and link
 registers — so every address from 500 up was refused and a block write anywhere in the network region
@@ -202,7 +306,7 @@ one test that constructs the manager, which makes the entire network branch unre
 byte count is a single byte. The region cannot be written in one frame, so §5.1's "block write across the
 whole region" is necessarily a sequence.
 
-### ~~12 of the portal password's 32 bytes were unreachable over RS485~~ ✅ FIXED 2026-08-17
+### DF5 — ~~12 of the portal password's 32 bytes were unreachable over RS485~~ ✅ FIXED 2026-08-17
 
 `kPortalPassword` was at 720 claiming 16 registers, and `kApply` is at 730. So bytes 0..19 were
 writable, a write aimed at byte 20 **committed the block**, and 731/732 were ignored — while the store,
@@ -213,7 +317,7 @@ writable, a write aimed at byte 20 **committed the block**, and 731/732 were ign
 field. The real fix is three `static_assert`s: a text field that runs past the block, overlaps another
 field, or overlaps a scalar is now a build failure. The audit had to check all ten fields by hand.
 
-### ~~A master could install a negative multiplier, or an offset cancelling the whole span~~ ✅ FIXED 2026-08-17
+### DF6 — ~~A master could install a negative multiplier, or an offset cancelling the whole span~~ ✅ FIXED 2026-08-17
 
 Both were accepted, both reported `OK` with register 30 clear. A negative multiplier is a negative
 DIVISOR, so the channel read 0.00 at every frequency; an offset cancelling the span reached
@@ -227,60 +331,98 @@ enforced it. It is now in `configIsValid`, the one choke point all surfaces shar
 **Partially fixed, and the remainder is the entry below.** Both refusals PARK rather than reject, so
 §5.5's override still installs these figures on a second identical write.
 
-### The warning banner is drawn where §2c decided it must not be 🔴
+### DF7 — ~~The warning banner is drawn where §2c decided it must not be~~ ✅ FIXED 2026-08-17
 
-**§2c is decided and its firmware half was never done.** `Display_Per_Screen_Spec.md` §2c rules
-`bannerY = 116` so the banner covers the footer row, and §8 still lists it as an outstanding one-line
-change. `ui_renderer.cpp:497` says `bannerY = 34`.
+**§2c was decided and its firmware half had never been done.** `Display_Per_Screen_Spec.md` §2c rules
+`bannerY = 116` so the banner covers the footer row; `ui_renderer.cpp` said `bannerY = 34`. Everything
+downstream already assumed 116 — `tools/audit/screen-spec.ts` validates the 61 spec files under
+`screens/` against `kBannerTop = 116` / `kBannerBottom = 134`, each declaring its footer hint as the one
+element the banner may replace. So the gate protecting the band was checking a band the firmware did not
+use, while the real band at y 34…52 was unchecked on all 80 screens.
 
-Everything downstream already assumes 116. `tools/audit/screen-spec.ts` validates every screen against
-`kBannerTop = 116` / `kBannerBottom = 134`; the 61 spec files under `screens/` are clean against that
-band; each declares its footer hint as the one element the banner may replace (`bannerReplaces`); and
-every `level-position` scrollbar was shortened to 100 px so it stops clear of y=116. **So the collision
-gate protecting the banner's band is checking a band the firmware does not use** — and the real band at
-y 34…52 is unchecked on every one of the dataset's 80 screens. §2c's own argument names the worst case:
-on P1 the banner's second row sits at y=44, hiding sensors 2 and 6 *while naming a sensor*.
+**§2c called it one line. It was two, and the second is the interesting one.** `drawWarningBanner` ran
+BEFORE `drawScreen`, and text elements paint with an opaque background, so the screen's own footer hint
+punched a background-coloured hole straight through the banner. "The banner replaces the footer" was
+false as a matter of draw order, not of coordinates.
 
-**§2c calls this one line. It is two.** `drawWarningBanner` is called BEFORE `drawScreen`
-(`ui_renderer.cpp:181`), and text elements paint with an opaque background (`bg = backgroundColor_` in
-`drawTextElement`), so the screen's own rows stamp background-coloured cells into the banner. At y=34
-that already disfigures the band; at y=116 the footer hint at y=124 would punch its text straight through
-it, and "the banner replaces the footer" would be false. Moving the banner therefore needs the draw order
-moved too, or the footer suppressed while a warning is live.
+**Fixed** by moving the coordinate AND the order: `drawScreen` → `drawWarningBanner` → countdown
+overlay. `kPanelHeight = 135` is now named beside `kPanelWidth` and
+`static_assert(bannerY + bannerH <= kPanelHeight)` makes "does the band still end on the panel" a build
+failure. The countdown overlay stays LAST on purpose, so a modal's own `hold ENTER confirms` — the abort
+gesture — outranks the banner while a destructive hold is running.
 
-**Not fixed here, deliberately.** It changes what every screen does while a warning is live, and the
-countdown-overlay interaction has not been checked for elements at y≥116. It wants its own round with the
-audit re-run.
+**The swap is NOT a no-op, and must not be recorded as one.** Eleven screens change: the five `toast-*`
+screens and the six `confirm-*` screens *viewed before their hold begins* carry a full-screen
+`overlay-bg` and are drawn through the ordinary path, so their box used to erase the banner and no longer
+does. The toasts have no footer hint and lose nothing; a pre-hold confirm screen loses its hint, which is
+the footer row §2c chose to spend. Whether the banner belongs on a 2-second acknowledgement toast at all
+is a presentation question nobody has answered — it is now visible there for the first time.
 
-### The commissioning gap reaches no summary line on the panel 🟡
+**The simulator had no banner at all** until this round, while §2c documented its pixels. It has one now
+(`web/mockup/src/utils/warningBanner.ts` plus a layer in `DisplayViewport`), painting above the screen's
+elements exactly as the firmware now does. The mockup still has no countdown-overlay pass, so during a
+hold the device covers the band and the mockup does not — left alone deliberately, because inventing the
+missing half is the defect class this register exists to catch.
 
-The uncalibrated-channel work is complete in the firmware and reaches the operator almost nowhere.
-`warningSummary` is composed with uncalibrated outranking under-sampling, and both its consumers are
-weaker than they look:
+**And the gate that was missing now exists.** `tools/audit/screen-geometry.ts` — the only audit run over
+the shipped `src/data/screens.json` — had no banner-band check at all, so `bannerY` could move with every
+gate green. It has one now. See the two new entries at the end of this section for what it immediately
+found.
 
-- **`drawWarningBanner` returns early on `!context.hasWarnings`**, which means sampling faults only. So
-  the two uncalibrated-only strings ("3 channels not calibrated") are composed every pass and never
-  painted. Deliberate — `UiRenderContext`'s comment argues that widening `hasWarnings` would make a
-  factory-fresh device wear the banner permanently over the very screens that clear it. Sound, and it
-  leaves the string with no route out.
-- **`telemetry.status` and `legend.warning` are bound by NO dataset element.** Confirmed against
-  `screens.json` and `GeneratedUi.cpp`: neither id appears. `telemetry.status`'s five states are
-  resolvable and unpainted, and the `legend.warning` colour rule at `ui_renderer.cpp:459` is dead code.
-  The exporter says so on every run — the `diagnostics-banner` gate's standing WARNING is exactly this.
+### DF8 — ~~The commissioning gap reaches no summary line on the panel~~ ✅ RESOLVED 2026-08-17
 
-**Net effect today:** only the combined case (`uncalibrated > 0 && warnings > 0`) changes anything an
-operator sees, because the banner is already up for the sampling half. The gap does reach them by other
-routes — the green LED refuses to light (`SensorStateEngine`) and each channel row says `SET?` — but no
-summary line says how many or why.
+The uncalibrated-channel work was complete in the firmware and reached the operator almost nowhere: the
+two uncalibrated-only strings were composed every pass and never painted, because `drawWarningBanner`
+returned early on `!hasWarnings`, which means sampling faults only.
 
-**Decide where the commissioning line lives.** Either bind a row (P0 carried `telemetry.status` before
-the §3 redesign dropped it for the walking dots; the owner's ruling then was "the banner is enough for
-now", made about *undersampling* and before an uncalibrated count existed), or widen the banner's gate
-and accept losing the footer hint until the device is commissioned, or state that the LED and `SET?` are
-the intended route and delete the unreachable strings. All three are cheap; leaving it is what ships a
-tested string nothing draws.
+**Decided 2026-08-17: widen the banner to cover it** — not bind a P0 status row, which was the other
+option offered. The gate is now `UiRenderContext::bannerActive()`:
 
-### ~~The provisioning portal drops its own form submission~~ ✅ FIXED 2026-08-14
+```
+hasWarnings || (uncalibratedCount > 0 && !editorActive)
+```
+
+`hasWarnings` was NOT widened; it still means `REG_UNDERSAMPLING_FLAGS != 0`, which is what
+`ui_bindings.cpp` reads it as. One shared predicate rather than two spellings of the condition, because
+the banner and the `legend.warning` row colour print the same string and must agree about whether there
+is anything to say.
+
+**The `editorActive` term is a second owner decision, and it is the original objection resurfacing.**
+`UiRenderContext`'s old comment argued that a factory-fresh device must not wear the banner over the very
+screens that clear it. That was correct at y=34. Moving the banner to the footer row defused it for the
+telemetry pages but NOT for the editors: **thirteen** `config-*-edit` screens carry
+`UP/DN adjust  ENTER save  hold=cancel` at y=124, the only place the abort gesture is documented
+anywhere, and with `uncalibratedCount` at 8 on a fresh device the banner would have hidden it
+permanently, while the operator was calibrating — the one activity that clears the condition. So the
+uncalibrated half suppresses itself while an editor is open. (The decision note said eighteen editor
+screens. It is thirteen, counted 1:1 against the dataset.)
+
+**Sampling faults are exempt from that suppression, on purpose.** `hasWarnings` says a reading is WRONG —
+the number on the panel is not the flow — which outranks a gesture reminder on every screen. The
+uncalibrated half says a setup is UNFINISHED, which can wait for the operator to look up from the setting
+they are finishing.
+
+**The widest summary was 50 characters against the 37 the band affords, and nothing had ever caught it.**
+The sampling-only branch read `Sampling warning on sensors 1, 2, …, 8`; the 28-character prefix plus a
+3k−2 list passed 37 at FOUR flagged channels. It overflowed silently, because `drawWarningBanner` prints
+straight to the panel and gets none of `drawTextElement`'s `~` clipping — and the existing
+`legendLen <= 37` guard passed for the wrong reason, its 0xFF/0xFF state routing to the *combined* branch.
+Decided 2026-08-17: **trade the channel list for a count.** Every branch is now bounded — combined 33
+(the widest), sampling-only 29, uncalibrated-only 25 — with the k=8 case pinned in both languages.
+Channel identity is carried where it already was: the flagged rows are drawn in the warning colour and an
+uncalibrated row says `SET?` itself.
+
+**Standing, and not an oversight:** `telemetry.status` and `legend.warning` are still bound by NO dataset
+element, so the exporter's `diagnostics-banner` check still emits its WARNING on every run. Rule I2 makes
+the catalogue append-only, so deleting the two ids was never available, and the check was not rewritten to
+pass on something it does not verify. One consequence worth stating: the banner's gate is true only when a
+count is non-zero, so `All sensors nominal` and `No channels in use` are unreachable through the banner by
+construction and reach only those two unbound ids.
+
+**Carried forward:** `drawWarningBanner` still has no clipping. There are four columns of slack and a host
+assertion on the composition, but nothing on the renderer side would catch a future over-long phrasing.
+
+### DF9 — ~~The provisioning portal drops its own form submission~~ ✅ FIXED 2026-08-14
 
 `PortalForm` renders `action="/save"`, and its header states the contract: *"the adapter must route
 this exact path"*. `portal_server_arduino.h` registers `POST` on `/` only. ESP32's `Uri::canHandle` is
@@ -302,7 +444,7 @@ test can construct, so nothing verifies it. A seam that let a fake server double
 caught it — and would catch the next one. That is a real gap, not a nicety: two of the three portal
 defects found this year were in the adapter rather than the form.
 
-### The portal names sensors from 0 and the settings API counts them from 1 🟡
+### DF10 — The portal names sensors from 0 and the settings API counts them from 1 🟡
 
 Found while auditing whether the three writing routes agree, and verified by reading both sides
 2026-08-17. `portal_form.cpp` renders per-sensor fields as `<bindingId>@<n>` over
@@ -323,7 +465,7 @@ agree, or state in `PortalSettingStore`'s header that the adapter owns the +1 an
 implementer will read it. This is cheap now and is a data-corruption bug once a store exists — a
 calibration silently applied to the wrong meter is exactly the class of error no operator can see.
 
-### The Select Menu is reachable only by a hidden gesture 🟡
+### DF11 — ~~The Select Menu is reachable only by a hidden gesture~~ ✅ FIXED 2026-08-17
 
 `Loadable_UI_Menu_Packs.md` §3.4 requires the firmware to append a Select Menu page to the end of the
 root level, "always reachable by paging with UP/DOWN". §3.4.1 then argues the case explicitly: a hidden
@@ -331,25 +473,48 @@ gesture is *"precisely the anti-pattern we retired with the blind UP+DOWN factor
 on screen says it exists, nothing confirms you are partway through it, and it cannot be documented on
 the device itself."*
 
-**What shipped is the hidden gesture and not the page.** The root ring has nine entries — P0..P6, WiFi,
-MQTT — and none is the selector; nothing in `UiNavigator` or `UiScreenRouter` appends one. The
-UP+DOWN+ENTER 3 s recovery gesture works and is tested, so the selector is reachable; it is simply
+**What shipped was the hidden gesture and not the page.** The root ring had nine entries — P0..P6, WiFi,
+MQTT — and none was the selector; nothing in `UiNavigator` or `UiScreenRouter` appended one. The
+UP+DOWN+ENTER 3 s recovery gesture worked and was tested, so the selector was reachable; it was simply
 undiscoverable, which is the specific outcome §3.4.1 was written to prevent.
 
 Found 2026-08-12 by someone reviewing the documentation and being unable to locate the UI-selection
 menu — which is the failure mode in miniature: if a reader with the source open cannot find it, an
 operator with only the panel certainly cannot.
 
-**Decide.** Either append the root-level entry (a dataset row plus the navigator honouring a
-firmware-owned entry the packs cannot remove — note it must survive a pack that defines its own root
-level, which is the whole reason §3.4 puts it in the firmware), or amend §3.4 and §3.4.1 to record that
-the gesture is the only route and accept the discoverability cost. The gesture is now documented in
-`../Requirements/Gesture_Reference.md` §3.6 and drawn in `../diagrams/ui_navigation_tree.mermaid`, so
-at least it is findable on paper.
+**Decided 2026-08-17: build the root-level entry, and have the NAVIGATOR synthesise it** so packs cannot
+remove or shadow it — the second half was asked and answered separately, because a dataset row is exactly
+what a pack could drop.
 
-**Blocks.** Nothing technically. It blocks an operator finding the feature.
+`UiNavigator::rawNextWithTail` splices `ui::kSelectMenuScreen` (`src/ui/core/ui_root_tail.h`, id
+`ui-select-menu`) between the last dataset member of the root level and the root, **at depth 0 only**. So
+DOWN off `net-mqtt-root` lands on it, DOWN again wraps to P0, and UP from P0 arrives on it directly. The
+root level is now TEN members; the dataset's own ring is still nine. ENTER-short on it raises the same
+`InteractionResult::openPackSelector` flag the §3.4.1 gesture raises, through a one-shot on
+`UiController`, so both routes converge on the single existing consumer in `firmware.cpp` rather than a
+second code path.
 
-### §3.1's held UP/DOWN navigation step is emitted and answered by nothing 🟡
+**Two negative facts that matter more than the positive one**, because each is a trap the next reader will
+otherwise walk into:
+
+- It is deliberately **not** in `kRequiredScreens`. `web/mockup/tools/exporter/validation.ts` fails an
+  export whose dataset omits any required screen, so listing it would FORCE it into every pack — the
+  precise outcome this decision rules out. There is a comment above the array saying so.
+- It is deliberately **not** in `src/ui/generated/`. The export gate regenerates that directory from the
+  dataset and CI fails on any hand edit, so an entry added there would be both erased and pack-shadowable.
+
+The root-level `ringPosition` anchor changed with it: it now anchors on the root rather than the
+lowest-addressed member, because one member of the ring lives in a different translation unit and link
+order could otherwise decide which is index 0 — which would make a host assertion about the index no
+evidence about the device.
+
+Covered by `rootEntryTests` (24 checks) in `test/host/interaction_test.cpp` and the extended `[info ring]`
+block in `nav_test.cpp`. **A permanent consequence to know about:** the mockup, the 80-screen geometry
+audit and the spec audit all keep showing a NINE-member root ring, because `screens.json` is untouched by
+design. That discrepancy is correct, and the host test is the only gate this screen's geometry will ever
+have.
+
+### DF12 — ~~§3.1's held UP/DOWN navigation step is emitted and answered by nothing~~ ✅ RESOLVED 2026-08-17
 
 `button_input.cpp` emits repeat events from 1.5 s, every 250 ms, exactly as specified. `mapGesture`
 maps them to `FlowGesture::Hold`, `matchFlow` demands an exact gesture match, and the dataset
@@ -359,26 +524,69 @@ This produced three bug reports before anyone found the cause, because the web s
 the missing half in two different ways and the button legend documented the invention as fact. The
 simulator now matches the firmware, and `heldRepeatScopeTests` pins the real behaviour.
 
-**Decide one way or the other:** declare `hold` flows on the info ring so §3.1 is implemented, or
-amend §3.1 to drop the repeat. Leaving it half-present is what cost the three reports.
+**Decided 2026-08-17: amend §3.1 and withdraw the repeat.** The owner was offered the info-ring-only
+implementation, the everywhere implementation, and the amendment, and chose the amendment — so this is a
+**withdrawal of the requirement, not a deferral**. Nothing in the firmware or the simulator changed:
+`heldRepeatScopeTests` already pinned the real behaviour and still passes with every assertion unmodified.
 
-### `OFF_CMD_RESET_CONFIG` leaves the Nyquist override latched 🟡
+`Display_UI_Requirements` §3.1.1 now records three things, because stating only the first is what let this
+be re-filed as a defect three times: that a held UP/DOWN does not navigate — one press, one step; **why
+repeat events still exist in the firmware** (§5.4's editor ramp is the only thing a hold does, and it
+reads pressed LEVELS rather than queued events, so deleting the emission would break it); and that the
+dataset schema keeps `hold` as a legal trigger even though no screen declares one.
+`Gesture_Reference.md` v1.3 corrects two rows that stated the unimplemented behaviour as fact.
 
-Offset 19 wipes `SensorData` and the configuration but does not clear `overridePending_`,
-`overrideActive_` or `pendingOverrides_`. A latched override makes `prepareConfigUpdate` accept the FIRST
-candidate offered without a sampling check, so the exemption granted to a decommissioned meter is
-inherited by whatever replaces it — and `evaluateSensorDiagnostics` ORs both flags in, so the
-undersampling bit stays lit on a channel with no configuration to undersample.
+**One thing the amendment now asserts that no test pins.** §3.1.1 records that the Select Menu's cursor
+moves on a repeat, because `handlePackSelector` drains the queue and switches on `event.button` alone.
+`heldRepeatScopeTests` covers the info ring, a config setting page and the editor ramp — **not the
+selector** — and `recoveryGestureTests` pins the 3 s opening gesture rather than the cursor's tolerance of
+an event kind. Add an `isRepeat` guard to `handlePackSelector` later and nothing fails while §3.1.1
+silently becomes wrong. Closing it means extending one of those two functions with a held UP inside an
+open selector.
 
-Offset 25 (`OFF_CMD_RESET_CALIBRATION`) clears all three, which is what makes this visible as an
-inconsistency rather than a design. **Pinned rather than fixed**, deliberately: offset 19's behaviour is
-asserted as-is in `modbus_reset_calibration_test.cpp` so narrowing a shipped command later is a
-deliberate act with a failing test attached. Any Modbus master already issuing 19 expects what it does.
+### DF13 — ~~`OFF_CMD_RESET_CONFIG` leaves the Nyquist override latched~~ ✅ FIXED 2026-08-17
 
-**Decide:** clear the override state on 19 too (a three-line change, and the test that pins the current
-behaviour then has to be inverted), or record that 19 is frozen and 25 is the command to use.
+Offset 19 wiped `SensorData` and the configuration but left `overridePending_`, `overrideActive_` and
+`pendingOverrides_` set. Offset 25 cleared all three, which is what made it visible as an inconsistency
+rather than a design.
 
-### `configIsValid`'s offset bound is ten times the frequency the channel can reach 🟡
+**The report was wrong about its own harm, and that is the part worth keeping.** This entry claimed a
+latched override made `prepareConfigUpdate` accept the first candidate without a sampling check, so a
+replacement meter inherited the exemption. That is **unreachable** — and was unreachable through offset 25
+as well. `prepareConfigUpdate`'s invalid-candidate branch clears all three flags for ANY candidate failing
+`configIsValid`, and from an all-zero configuration the first single-register write is necessarily such a
+candidate, because no single write can supply the two fields `configIsValid` demands. The claim had been
+copied into four other places, all corrected in the same round.
+
+**The reachable harm was the other one, and it was real.** `evaluateSensorDiagnostics` ORs both flags in
+for every `inUse` channel, and offset 19 deliberately preserves `inUse` — so a decommissioned channel
+nobody would ever reconfigure kept its `REG_UNDERSAMPLING_FLAGS` bit lit for the life of the device, on
+RS485 and on the MQTT diagnostics topic, with nothing that could ever clear it.
+
+**Fixed** 2026-08-17 by owner decision rather than kept pinned: offset 19 clears the same three, so both
+per-channel reset arms agree. Offset 19 was in fact the **last** site that invalidated a configuration
+without clearing the override describing it — the connected-bitmap enable/disable arms and
+`REG_MASTER_RESET_ALL_SENSORS` already did — so the rule is now uniform, which is a better statement than
+"the two arms agree". Offset 19's measurement wipe is unchanged and still pinned as-is; 25 still exists for
+the meter swap, whose reason is the measurement wipe and not the override.
+
+The pinning test was **inverted rather than deleted**, which is the deliberate act it was written to
+require, and a second case was added for the parked-but-unconfirmed flag — the confirmed-override scenario
+structurally cannot observe it, so without that case deleting one of the three lines would still pass.
+Stated plainly because it would otherwise rot: `pendingOverrides_` is **unobservable at every one of its
+five clearing sites**, since its only reader is guarded by `overridePending_ &&`. Deleting that line kills
+no assertion, in this arm or in offset 25's.
+
+**Found while sweeping citations, and left alone: nothing in this repo gates citation freshness.** Ten
+`modbus_manager.cpp` line references in the mockup were correct before this change and would have been
+broken by it, so they were re-grepped rather than arithmetically shifted — and three of them turned out to
+have been **already** wrong, pointing into unrelated functions. Separately,
+`../Requirements/feature addition/Display_Per_Screen_Spec.md` carries **nine** such references that were
+all stale before this round began. Deliberately not swept: a docs-wide citation sweep is its own round.
+The durable lesson is the one this round keeps proving — a line number in prose is a second home for a
+fact, and prefer naming the symbol, or a `static_assert`, over citing a coordinate.
+
+### DF14 — `configIsValid`'s offset bound is ten times the frequency the channel can reach 🟡
 
 **The one thing this round found and deliberately did not change**, because it is a decision about what
 the predicate promises rather than a repair.
@@ -413,7 +621,7 @@ present state is the only one that is indefensible, because the comment and the 
 degenerate figures twice installs them through §5.5's override handshake, by design — the handshake exists
 for meters the gate is wrong about. Asserted in `sensor_config_gate_test.cpp` rather than glossed over.
 
-### Three registers §5's table documents do not exist 🟡
+### DF15 — Three registers §5's table documents do not exist 🟡
 
 Found while relocating `kPortalPassword`. The table in
 `../Requirements/feature addition/WiFi_MQTT_Connectivity.md` §5 does not match `net_register_map.h`, and
@@ -434,7 +642,7 @@ is a feature, and deleting them from the table would discard a requirement.
 the table describes only what answers. The `static_assert`s added this round cover overlaps between
 things that EXIST; they cannot catch an address that exists only on paper.
 
-### The simulator's `ready` is stored where the device derives it — DEFERRED ON SCOPE 🟡
+### DF16 — The simulator's `ready` is stored where the device derives it — DEFERRED ON SCOPE 🟡
 
 Was two facts; one closed this round. Both were the same shape — a green suite over something only a
 human can reach:
@@ -466,6 +674,176 @@ The right answer is known: derive `ready` in `normalizeSensor`, which is the sam
 renderer, and every producer in `sensorConfig.ts` sets it, so deriving it is a refactor of the module's
 public shape rather than the one-line change the other three fixes were. It wants its own round, with
 `sensorConfig.test.ts`'s 48 checks re-run against the new meaning of the field.
+
+### DF17 — `npm run test:visual` has been failing 32 of its 46 tests, and nothing noticed 🔴
+
+**Measured both ways on 2026-08-17, on this branch.** With the banner round applied: 32 failed, 14
+passed. With the round stashed and the tree at HEAD: **32 failed, 14 passed, and the failing test names
+are identical** — compared as sets, not as counts. So this is pre-existing and the round neither caused
+nor cured it. It is recorded because it was discovered by accident and would otherwise stay invisible.
+
+**It is not only stale snapshots.** 21 of the failures are `toHaveScreenshot`, but the rest are not:
+nine `toBeVisible`, five `toHaveValue`, three `toHaveCount`, and one exporter CLI failing
+`Post-export validation failed` on `tests/fixtures/legacy-screens.json`. Assertions about the workspace's
+own controls are failing, which is a broken suite rather than a moved baseline — so
+`--update-snapshots` is NOT the fix and would bake in whatever the app now does.
+
+**Two reasons it stayed hidden, both worth knowing.** `Display_Per_Screen_Spec.md` and this register both
+cite the suite as a live gate, and `web/mockup/tests/` carries a comment warning that a bare
+`npx playwright test` serves a stale `dist/` — so the recorded hazard is about *how* to run it, which
+reads as though running it correctly works. And the exit status is easy to lose: any invocation that
+pipes the run (`| tail`) or appends a command (`; echo`) reports the last process's status, so the suite
+looks green at exit 0 while printing 32 failures. Both mistakes were made in the course of finding this.
+
+**Consequence for §2c, stated plainly: the banner's relocation to y=116 has NO pixel-level
+verification.** The band is checked by the new `screen-geometry.ts` rule, by a host assertion on the fill
+rect and both cursor positions, and by `warningBanner.test.ts` — but nothing renders it and looks. This
+suite is the only gate that would, and it cannot be trusted until it is repaired.
+
+**Do not repair it by regenerating baselines.** Triage the non-snapshot failures first: they say the app
+and the spec disagree about the workspace, and that disagreement is either a real regression from an
+earlier round or a spec that was never updated. Only once those pass does a snapshot refresh mean
+anything.
+
+### DF18 — `nyquist-warning` puts an option row inside the banner band 🟡
+
+**Found by the new gate, on its first run.** Teaching `tools/audit/screen-geometry.ts` the banner band
+took it from "0 findings" to "1 finding" — and the finding is correct. `option-down`
+("DOWN = Save anyway") sits at y 112…120, four pixels inside the band, so the banner paints edge to edge
+over it while a warning is live.
+
+**A gate that finally checks the real band should report the real overlap. Do not make the audit read 0
+again by deleting the check** — the reason is written into the tool's own summary comment as well as here.
+The tool never calls `process.exit` and CI does not run it, so nothing is broken by the 1.
+
+**Why it is not fixed here.** The screen has no spec file under `screens/`, so the generator's
+deterministic footer re-stack reproduces y=112 on every `--write`. The only fix is authoring
+`../Requirements/feature addition/screens/nyquist-warning.json`, which is a fresh design decision about
+where two option rows go on a screen that must stay legible with a warning live.
+
+**Deferred on the grounds that the screen is unreachable on the device** — verified this round: zero flows
+target it, zero submenus reference it, and it appears in no `ui_pages.h` table, so the live prompt is the
+in-place `config.sensor.nyquistWarning` row on each edit screen and this overlap is a mockup-only artefact
+today. But note the irony before deciding: it is the ONE screen where the banner and the content are
+guaranteed on-screen together, so it may deserve to be the screen that RESERVES the band rather than
+sacrificing it.
+
+### DF19 — Six shipped scrollbars are 104 px where §2c requires 100 🟡
+
+**§2c's claim that "every `level-position` scrollbar was shortened to 100 px so it stops clear of y=116"
+is not true of the shipped dataset.** Six screens carry y=14 height=104, bottom y=118 — two pixels inside
+the band: `confirm-reset-totals-back`, `confirm-reset-session-back`, `confirm-reset-max-flow-back`,
+`confirm-reset-calibration-back`, `confirm-factory-reset-back`, `confirm-reset-portal-login-back`.
+
+Every `*-back` screen WITH a spec file gets 100 from the spec-override loop. These six have none, so the
+**root cause is `web/mockup/tools/skeleton/generate.mjs`'s own layout table** (`L.scrollbar.height: 104`) —
+one fact with two homes, in the one place that was still live, which is the hazard that file's own comment
+complains about.
+
+**The fix is that single number plus `node tools/skeleton/generate.mjs --write`**, which is the only legal
+route because CI diffs `screens.json` byte-for-byte. Not done this round: `--write` rewrites 72 of the 80
+screens from scratch and no one had accepted a wholesale dataset regeneration as part of a banner change.
+
+**It does not appear as an audit finding, which is exactly why it is recorded here.** The new band check
+exempts `kind === "scrollbar"` — a 5 px fixture losing 2 of 104 px hides no glyph, and the collision loop
+already treats one as decorative. Without that exemption the audit would report 7 rather than 1.
+
+---
+
+## Residue and hygiene — J1–J5, opened 2026-08-18
+
+These five were a **single unnumbered sentence in `MEMORY.md` §6** — "smaller and still open: the export
+gate for ring closure, the I2 append-only catalogue check, `animation` residue across five layers, the
+simulator's missing nav stack, `carea/` (tracked, 18 files), and rewrites of `web/mockup/README.md` and
+`UI_Firmware_Interface.md`" — which is a second open-items register with no ids, no status and no
+diagnosis. Each was verified against the source on 2026-08-18 before it was given an id; the two that did
+not survive verification are recorded at the end of this section rather than promoted.
+
+### J1 — No export gate proves a level's DOWN ring closes 🟡
+
+`runExportValidations` in `web/mockup/tools/exporter/validation.ts` runs four coverage checks
+(`checkManifestActionCoverage`, `…ValueCoverage`, `…ScreenCoverage`) plus `checkRenderableElementKinds`.
+Grepped for `ring` and `closure` on 2026-08-18: neither appears in the file.
+
+**Why it matters more than it looks.** Paging wraps in the **dataset**, not in code — `UiNavigator`
+follows each screen's own DOWN flow and resolves the target by linear search, so a ring is closed only if
+the authored data closes it. A pack whose last member points nowhere, or points back into the middle,
+strands the operator on the device with no way out and no gate that would have said so. The built-in pack
+is closed because the generator emits it that way; a third-party pack has no such guarantee.
+
+**Same family as N-b:** both are export-time gates that `Loadable_UI_Menu_Packs.md` assumes and that do
+not exist. Worth building in one round.
+
+### J2 — `animation` was dropped by C1 and still survives in five layers 🟡
+
+C1 chose the scrollbar and **dropped animation**. What is still there, verified 2026-08-18:
+
+| Layer | Evidence |
+| --- | --- |
+| dataset type | `web/mockup/src/types.ts:168` — `animations?: ScreenAnimation[]` |
+| shared schema | `shared/schemaDefinitions.ts:153,170,248` — `animationKeyframeSchema`, `animationSchema`, the `animations` array, and `animation` in the theme's `required` list |
+| exporter IR | `tools/exporter/types.ts:76` and `ir.ts:121,133` — carried through the intermediate representation |
+| C++ emitter | `tools/exporter/cppEmitter.ts:138,537–540` — **emits an `Animation*` array into the generated firmware header** |
+| firmware | `theme_palette.cpp:41`, `theme_palette.h:21`, `GeneratedUi.h:165` — `animationEasing()` exists and returns a token |
+| user-facing docs | `HelpPanel.tsx:156` documents `animations` to the operator as a dataset feature |
+
+**Nothing renders one.** No consumer in `UiRenderer` reads the emitted array, and `animationEasing()` has
+no caller outside its own definition. So a dropped feature costs schema surface, IR surface, generated
+firmware bytes and a documented promise the device does not keep.
+
+**Decide the shape before cutting:** the theme's `animation` easing token is in the schema's `required`
+list and the mockup's own CSS transitions may legitimately use it, so this is not one delete — it is a
+`required`-list change, a regenerated dataset, and a `GeneratedUi.h` shape change, which makes it a round
+of its own rather than a tidy-up.
+
+### J3 — `carea/` is 18 tracked files of a stray git directory 🟡
+
+`git ls-files carea/` returns 18 files, 80 KB on disk, and they are **git internals**: `carea/HEAD`,
+`carea/config`, `carea/description`, `carea/hooks/*.sample`. This is the debris of a `git init` or a
+`--separate-git-dir` that landed in the working tree and was committed.
+
+**Why it is not a one-line `git rm`.** It is harmless to the build and it has been tracked long enough
+that nothing is known about what pointed at it. Removing it is right, but do it deliberately: confirm no
+tooling path references `carea/`, then remove in a commit that does nothing else, so the deletion is
+reviewable on its own.
+
+### J4 — `web/mockup/README.md` describes a display, a dataset and a feature that are all wrong 🟡
+
+Verified by reading it 2026-08-18. Three false claims, in one paragraph each:
+
+- **"the 135×240 display"** — portrait. D3 settled landscape **240 × 135** and the whole dataset is built
+  that way. This is the claim most likely to be believed, because it carries numbers.
+- **"You start on an empty Blank Canvas dataset"** — the workspace ships `src/data/screens.json` with 80
+  screens.
+- **"easing presets"** in the design panel — the animation feature C1 dropped, which is J2's residue
+  surfacing as a user-facing promise.
+
+`MEMORY.md` §4 already lists this file as untrustworthy, which is the right label and no substitute for
+fixing it. Small, self-contained, and needs no decision.
+
+### J5 — `UI_Firmware_Interface.md` lists 4 actions where the catalogue has 19 🟡
+
+Counted 2026-08-18: the document's action table carries four rows — `ui.action.page.next` /
+`.previous`, `ui.action.mode.configuration` / `.info`, `ui.action.mode.idle`, `core.action.save-config`.
+`grep -oE '"[a-z]+\.action\.[a-z.-]+"' src/ui/core/ui_action_catalogue.h | sort -u` returns **19**
+distinct ids. (`MEMORY.md` says "4 where there are 15" — it was 15 when that was written; the drift
+continued.)
+
+**Why this one is the dangerous one.** It is the document an implementer reads to learn what actions
+exist, so it does not merely omit — it teaches a wrong catalogue, and every id it omits looks unavailable.
+The fix is mechanical (regenerate the table from the catalogue header, or delete the table and point at
+it), and the mechanical option that cannot drift again is the right one.
+
+### Not promoted, and why
+
+- **"The simulator's missing nav stack" — not verified, so no id.** Probed 2026-08-18: no `navStack`,
+  `backStack` or `history` in `App.tsx` or `src/utils/`, and the parent lookups that do exist
+  (`findParentScreenId`, `App.tsx:670`) serve the **design** tree, not a runtime BACK. But the device has
+  no nav stack either — `UiNavigator::current_` is a bare pointer and BACK is resolved from the tree — so
+  "missing" may describe a divergence that no longer exists. It needs someone to state what the simulator
+  is supposed to do on BACK before it can be called a defect. Left in `MEMORY.md` §6 marked unverified.
+- **"The I2 append-only catalogue check" — folded into I2 as I2a**, not given a J id. The rule and the
+  fact that nothing enforces it belong in one place.
 
 ---
 

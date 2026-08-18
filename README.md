@@ -29,14 +29,23 @@ cd ../../Water-Flow-Meter-PlatformIO && podman build -t stampplc-fw .
 podman run --rm -v "$PWD":/workspace:Z -w /workspace stampplc-fw pio run -e m5stack-stamplc
 ```
 
-Expected, as of 2026-08-02: **199 host checks** across six suites, 21 unit, 33 exporter, export
-`ok` with **9/9 gates and no warnings**, firmware SUCCESS at RAM 7.8 % / Flash 18.1 %.
+Expected, **measured 2026-08-18 on this branch**: host suite exit 0 with **1,870 checks across 23
+suites, 0 failures** and "manifest is up to date"; **213 unit tests in 13 files**; **44 exporter
+tests**; export `ok` with **10/10 gates and no warnings**. Firmware SUCCESS at **RAM 24.6 % /
+Flash 38.0 %** — that one is from the 2026-08-17 `export:firmware` run and was not re-measured
+today, because the podman build also rewrites three `generated/` timestamps.
+
+**A fifth suite exists and is broken.** `npm run test:visual` (Playwright) fails **32 of its 46
+tests**, pre-existing and unrelated to any recent round — it is **`DF17`** in the register, the only
+🔴 item. It is deliberately not in the list above: it would fail, and `--update-snapshots` is not the
+fix. Until it is repaired, no pixel-level claim about the display is verified by anything that
+renders.
 
 The `:Z` on the volume mount is required on SELinux hosts (Fedora, RHEL). Without it the
 container sees an empty workspace.
 
 **Start with command 1.** It runs the device harness — the real navigator, controller,
-interaction handler and action registry against the real 48-screen table, with only three
+interaction handler and action registry against the real **80-screen** table, with only three
 Arduino headers stubbed. It is the fastest way to find out whether the tree is sound, and it
 needs no toolchain at all.
 
@@ -57,7 +66,7 @@ Three vocabularies have to agree across a browser, a Node exporter and a firmwar
 been a disagreement between them — a screen the router looked for and the dataset didn't have, an
 action the designer could wire to nothing, a binding that rendered blank.
 
-That is what the gates exist for. `npm run export:firmware` runs nine of them and refuses to
+That is what the gates exist for. `npm run export:firmware` runs ten of them and refuses to
 write assets that would not work:
 
 | Gate | Stops |
@@ -83,7 +92,7 @@ their handler table by `static_assert`, so advertising an action with no handler
 | --- | --- |
 | `Water-Flow-Meter-PlatformIO/` | Firmware. `src/{input,led,modbus,sensors,ui}`, `tools/manifest_gen/`, `test/host/` |
 | `web/mockup/` | Design tool, exporter (`tools/exporter/`), skeleton generator (`tools/skeleton/`) |
-| `docs/` | Requirements, decisions, hardware references — see the trust table below |
+| `docs/` | Requirements, decisions, hardware references — see **Source of truth** below |
 | `graphics/` | SVG assets and captured previews |
 | `.github/workflows/ci.yml` | Three jobs on every push: web + exporter, host tests, firmware compile |
 
@@ -131,35 +140,57 @@ Node **22** (CI pins it; `engines` allows ≥20). PlatformIO or Podman/Docker fo
 
 ---
 
-## Which documents to trust
+## Source of truth
 
-Documentation in this repository has been wrong in both directions — requirements describing
-machinery that does not exist, and status files reporting finished work as pending. An audit on
-2026-08-01 found 50 false claims across 17 documents. Current state:
+Documentation here has been wrong in both directions — requirements describing machinery that does not
+exist, and status files reporting finished work as pending. An audit on 2026-08-01 found 50 false claims
+across 17 documents. The defence is that **each question has exactly one file that answers it**, and no
+other file restates the answer:
 
-| Trust | Treat with care |
+| Question | The file that answers it |
 | --- | --- |
-| `docs/Requirements/Gesture_Reference.md` — every ✅ names the test that earns it | `web/mockup/README.md` — describes a portrait display and an empty dataset |
-| `docs/active_work/open_decisions.md` — the de-facto decision record | `docs/Requirements/feature addition/UI_Firmware_Interface.md` — lists 4 actions where there are 15 |
-| `docs/Requirements/Project_document.md` §4.1–§4.2 — the register map, verified against the headers | `docs/Requirements/Implementation_Alignment_Report.md` — audits a file layout that no longer exists |
-| `MEMORY.md` — session handoff, rewritten 2026-08-01 | Any undated status claim |
+| **What is open, and what is its status** | **`docs/active_work/open_decisions.md` — the single source of truth for open work.** Nothing else in this repository keeps an item list |
+| What the panel does, screen by screen | `docs/Requirements/feature addition/Display_Per_Screen_Spec.md` |
+| What every gesture does, as built | `docs/Requirements/Gesture_Reference.md` — every ✅ names the test that earns it |
+| The Modbus register map | `docs/Requirements/Project_document.md` §4.1–§4.2, verified against the headers; `tools/wiki/gen-registers.mjs` generates the reference |
+| WiFi, MQTT, Home Assistant, the network registers | `docs/Requirements/feature addition/WiFi_MQTT_Connectivity.md` |
+| How the four JSON artefacts relate, and the ten gates | `docs/Requirements/feature addition/UI_Dataset_Contract.md` |
+| What happened last session, and what to know before touching this | `MEMORY.md` — handoff narrative and ordering advice **only**; its item list was consolidated into the register on 2026-08-18 |
+| Whether a number in any document is current | Nothing. Re-measure it — the four commands above are the whole verification surface |
 
-`open_decisions.md` was rewritten on 2026-08-12 and now lists only what is genuinely open — two
-defects and two unbuilt things. The caveat that used to sit here (✅ meaning *agreed* rather than
-*landed*, with the heading emoji disagreeing with the `Decision:` line) is gone with the old file,
-which is preserved at `docs/archive/open_decisions-closed-2026-08-12.md`.
+### Citing open work
 
-`Loadable_UI_Menu_Packs.md` **is built**, contrary to what this paragraph used to say: the `.uipack`
-format, its reader, the SD storage adapter, the loader, the firmware-drawn selector, the boot-time
-selection ladder and the SPI arbitration all exist under `src/ui/pack/` and `src/bus/`. What is *not*
-built is the versioning that keeps a third-party pack valid as the catalogue grows — see **N-b** in
-`docs/active_work/open_decisions.md`.
+Every item in the register carries a **stable ID**, governed by rule **I3** there: `DF`-numbers for
+defects, `J` for residue and hygiene, `G1`/`N-b`/`N-c`/`N-d1`/`N-d2` for the unbuilt and unmeasured,
+`I2`/`I3` for standing rules. They are append-only — never renumbered, never reused, so a gap means an
+item closed. **Cite the ID**, in conversation and in commit messages, and read the index at the top of
+that file for the current set with each item's status and shape. Counts live in the index and are
+deliberately not repeated here.
+
+### Documents known to be wrong
+
+Each is an item in the register, so it has an owner and a diagnosis rather than a warning label:
+
+| Document | | What is wrong |
+| --- | --- | --- |
+| `web/mockup/README.md` | **J4** | Claims a portrait 135×240 display, an empty starting dataset and animation easing presets. All three are false |
+| `docs/Requirements/feature addition/UI_Firmware_Interface.md` | **J5** | Lists 4 actions where the firmware catalogue has 19. The most dangerous live document: it teaches a wrong catalogue rather than merely omitting |
+| `docs/Requirements/Implementation_Alignment_Report.md` | — | A **dated snapshot** (against Project_document v1.0, Oct 2025) of a firmware that was one file. Not a live document and not tracked as an item; read it as history or not at all |
+
+`Loadable_UI_Menu_Packs.md` **is built**: the `.uipack` format, its reader, the SD storage adapter, the
+loader, the firmware-drawn selector, the boot-time selection ladder and the SPI arbitration all exist
+under `Water-Flow-Meter-PlatformIO/src/ui/pack/` and `src/bus/`. What is *not* built is the versioning
+that keeps a third-party pack valid as the catalogue grows — **N-b**.
+
+The register's own history is preserved verbatim in `docs/archive/open_decisions-closed-2026-08-12.md`,
+including the caveat that used to sit here (✅ meaning *agreed* rather than *landed*). That is history,
+not a work list.
 
 ---
 
 ## Nothing has run on hardware
 
-Not once. The firmware compiles on two independent toolchains and passes 199 host checks, but the
+Not once. The firmware compiles on two independent toolchains and passes 1,870 host checks, but the
 RS485 pin assignment, the LED behaviour and every gesture and timing are verified only against
 the datasheet, the specifications and those tests.
 

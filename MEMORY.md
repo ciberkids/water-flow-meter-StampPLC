@@ -143,7 +143,8 @@ valid but HA infers **0 decimals** for that device class, so a payload without
 ### Nothing has run on hardware
 
 Not once. The RS485 pin correction, the LED patterns, the SD adapter and every gesture and timing
-are verified only against the datasheet, the specifications and 356 host checks. **G1** — measuring
+are verified only against the datasheet, the specifications and 1,870 host checks (measured
+2026-08-18). **G1** — measuring
 `pollingRate_kHz` — is the only item that strictly needs the device, and it is now also a
 prerequisite for the WiFi work, whose acceptance criterion is a 5 % budget against a radio-off
 baseline that does not exist yet.
@@ -152,16 +153,21 @@ baseline that does not exist yet.
 
 ## 4. Documents you can and cannot trust
 
-| Trust | Do not trust |
-| --- | --- |
-| `docs/Requirements/Gesture_Reference.md` — every ✅ names its test | `README.md` — five referenced paths do not exist; its firmware test command cannot work |
-| `docs/active_work/open_decisions.md` — rewritten 2026-08-12 to what is actually open; the 41 closed entries are in `docs/archive/open_decisions-closed-2026-08-12.md` | `web/mockup/README.md` — describes a portrait display and an empty dataset |
-| `Project_document.md` §4.1/§4.2 — the register map, verified line-for-line | `UI_Firmware_Interface.md` — **the most dangerous live document**: lists 4 actions where there are 15 |
-| `Loadable_UI_Menu_Packs.md` — as a *specification* | `Implementation_Alignment_Report.md` — audits a file layout that no longer exists |
+**This section no longer keeps its own table.** It duplicated `README.md`'s and the two disagreed —
+including about whether `README.md` itself could be trusted. The map of which file answers which
+question now lives in **`README.md` § Source of truth**, and the documents known to be wrong are
+register items with IDs (**J4** `web/mockup/README.md`, **J5** `UI_Firmware_Interface.md`).
 
-`open_decisions.md` was rewritten 2026-08-12: it lists only what is genuinely open. The old
-caveat — ✅ meaning *agreed* rather than *landed*, with 40 headings still marked as blocking after
-their decisions had shipped — applies to the archived copy, not to the current file.
+Two corrections this section was carrying, both verified 2026-08-18:
+
+- Its claim that `README.md` **"references five paths that do not exist"** is **stale**. Every path the
+  README names resolves — checked by extracting each one and testing it. Its firmware test command is
+  also correct: there is no `pio test` target, and `test/host/run.sh` is the suite.
+- Its **"356 host checks"** and the README's "199" were both wrong. Measured: **1,870 checks across 23
+  suites, 0 failures**, plus a fresh manifest. Both files now carry the measured figure and its date.
+
+The one judgement worth keeping here: **any undated status claim in this repository is untrustworthy,
+including in this file.** Re-measure rather than quote.
 
 ---
 
@@ -188,16 +194,32 @@ evidence at all. Before this branch, `interaction_handler.cpp`, `ui_controller.c
 
 ## 6. Where to pick up
 
-1. **Wire the loader into `firmware.cpp`** — call it at boot before the display comes up (§4.5
-   keeps that window contention-free), append the selector to the root ring, and implement the
-   UP+DOWN+ENTER recovery gesture of §3.4.1. That gesture has to reach the selector from any
-   state *without consulting the active pack*, which is what makes it a recovery route. This is
-   also where the feature stops being host-provable.
-2. **Or WiFi slice N0** — the polling-rate spike. Its acceptance criterion budgets 5 % against a
-   radio-off baseline that does not exist yet; that baseline is **G1** and needs the board.
-3. Smaller and still open: the export gate for ring closure, the I2 append-only catalogue check,
-   `animation` residue across five layers, the simulator's missing nav stack, `carea/` (tracked,
-   18 files), and rewrites of `web/mockup/README.md` and `UI_Firmware_Interface.md`.
+**The item list is not here any more.** Every open item has a stable ID and lives in the index at
+the top of `docs/active_work/open_decisions.md` — eighteen lines with status and shape, governed by
+rule **I3**. Cite the ID (`DF17`, `J3`, `N-d1`). What belongs in this section is only the ordering
+advice an index cannot carry:
+
+1. ~~**Wire the loader into `firmware.cpp`**~~ — **shipped, and this entry outlived it by several
+   rounds.** Verified 2026-08-18: `packStorage`, `packLoader` and `packOutcome` are declared at
+   `firmware.cpp:158–174`, §3.6's attempt-counter ladder is at :1058–1096, and §3.4.1's recovery
+   route reaches `UiController::openPackSelector` (`ui_controller.cpp:273`). A stale instruction at
+   the top of a pick-up list is exactly the failure §5 is about.
+2. **`DF17` first** — the register's only 🔴. `npm run test:visual` has been failing 32 of its 46
+   tests and nothing noticed, and it is the only gate that renders the display, so every
+   pixel-level claim made while it is broken is unverified.
+3. **Then WiFi slice N0** — the polling-rate spike, still the recommended next slice. Its
+   acceptance criterion budgets 5 % against a radio-off baseline that does not exist yet; that
+   baseline is **G1** and needs the board.
+4. **The six "smaller and still open" items that used to be item 3 of this list** were verified on
+   2026-08-18 and moved into the register with IDs: **J1** (no export gate for ring closure), **J2**
+   (`animation` residue in five layers), **J3** (`carea/`, 18 tracked files), **J4**
+   (`web/mockup/README.md`), **J5** (`UI_Firmware_Interface.md` — 4 actions listed against 19 in the
+   catalogue), and **I2a** (nothing enforces the append-only rule, folded into I2 itself).
+5. **One of the six got no ID, deliberately:** *the simulator's missing nav stack*. Probed
+   2026-08-18 — no `navStack`, `backStack` or `history` in the mockup, but the device has no nav
+   stack either (BACK resolves from the tree), so "missing" may describe a divergence that no longer
+   exists. It needs someone to say what the simulator should do on BACK before it can be called a
+   defect. Recorded under "Not promoted" at the end of the register's J section.
 
 ---
 
