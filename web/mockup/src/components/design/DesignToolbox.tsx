@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import type { ElementKind, ScreenDefinition, ScreenElement } from "../../types";
+import { coordinateLimit, type DisplayBounds } from "../../utils/datasetClamp";
 import { EventBindingPanel } from "./EventBindingPanel";
 
 const ELEMENT_LABELS: Array<{ kind: ElementKind; label: string }> = [
@@ -20,8 +21,15 @@ interface DesignToolboxProps {
   onSelectElement: (elementId: string) => void;
   onClampElement: (elementId: string) => void;
   overflowElementIds: Set<string>;
-  maxCoordinateX: number;
-  maxCoordinateY: number;
+  /**
+   * The display bounds, not a pair of coordinate maxima.
+   *
+   * This used to be `maxCoordinateX`/`maxCoordinateY`, capped at the panel's own dimensions — so typing
+   * 9999 into X produced 240 on a 240-wide display and the element left the visible area entirely, while
+   * an IMPORT of the same geometry was corrected to `bound - size`. The limit depends on the element, so
+   * the component needs the bounds and `coordinateLimit`, not a precomputed number (J8).
+   */
+  displayBounds: DisplayBounds;
   maxWidth: number;
   maxHeight: number;
   maxInputLength: number;
@@ -58,8 +66,7 @@ export function DesignToolbox({
   onSelectElement,
   onClampElement,
   overflowElementIds,
-  maxCoordinateX,
-  maxCoordinateY,
+  displayBounds,
   maxWidth,
   maxHeight,
   maxInputLength,
@@ -201,7 +208,11 @@ export function DesignToolbox({
                         value={element.x}
                         onChange={(event) =>
                           onUpdateElement(element.id, {
-                            x: sanitizeNumericInput(event.target.value, maxInputLength, maxCoordinateX)
+                            x: sanitizeNumericInput(
+                              event.target.value,
+                              maxInputLength,
+                              coordinateLimit("x", element.width ?? 0, displayBounds)
+                            )
                           })
                         }
                       />
@@ -217,7 +228,11 @@ export function DesignToolbox({
                         value={element.y}
                         onChange={(event) =>
                           onUpdateElement(element.id, {
-                            y: sanitizeNumericInput(event.target.value, maxInputLength, maxCoordinateY)
+                            y: sanitizeNumericInput(
+                              event.target.value,
+                              maxInputLength,
+                              coordinateLimit("y", element.height ?? 0, displayBounds)
+                            )
                           })
                         }
                       />

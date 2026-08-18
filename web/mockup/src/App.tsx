@@ -212,17 +212,22 @@ const normalizeElementUpdate = (
   bounds: DisplayBounds
 ): ScreenElement => {
   const next: Partial<ScreenElement> = { ...updates };
-  if (updates.x !== undefined) {
-    next.x = clampCoordinate(updates.x, "x", bounds);
-  }
-  if (updates.y !== undefined) {
-    next.y = clampCoordinate(updates.y, "y", bounds);
-  }
+  // SIZE FIRST, then the coordinates, because a coordinate's limit is `bound - size` (J8) and a single
+  // update can carry both. Clamping x against the OLD width would accept a position the new width makes
+  // invisible — the same class of disagreement J8 was: two paths, two answers, nothing failing.
   if (updates.width !== undefined) {
     next.width = clampWidth(updates.width, bounds);
   }
   if (updates.height !== undefined) {
     next.height = clampHeight(updates.height, bounds);
+  }
+  const effectiveWidth = next.width ?? element.width ?? 0;
+  const effectiveHeight = next.height ?? element.height ?? 0;
+  if (updates.x !== undefined) {
+    next.x = clampCoordinate(updates.x, "x", bounds, effectiveWidth);
+  }
+  if (updates.y !== undefined) {
+    next.y = clampCoordinate(updates.y, "y", bounds, effectiveHeight);
   }
   return { ...element, ...next };
 };
@@ -3389,8 +3394,7 @@ export function App() {
                         onSelectElement={setSelectedElementId}
                         onClampElement={handleClampElement}
                         overflowElementIds={overflowElementIds}
-                        maxCoordinateX={layoutReport?.bounds.width ?? DISPLAY_WIDTH}
-                        maxCoordinateY={layoutReport?.bounds.height ?? DISPLAY_HEIGHT}
+                        displayBounds={layoutReport?.bounds ?? LANDSCAPE_BOUNDS}
                         maxWidth={layoutReport?.bounds.width ?? DISPLAY_WIDTH}
                         maxHeight={layoutReport?.bounds.height ?? DISPLAY_HEIGHT}
                         maxInputLength={MAX_INPUT_LENGTH}

@@ -163,15 +163,15 @@ test.describe("StampPLC mockup visual regression", () => {
   });
 
   /**
-   * WAS "display preview places edge coordinates at the pixel bounds", which assumed a coordinate at the
-   * far edge puts the element's far EDGE on the boundary. It does not, and finding out why is J8: the
-   * Design panel clamps x to 240 and y to 135 - the panel's own dimensions - so an element placed there
-   * sits entirely outside the visible area and renders with zero width. The importer clamps the same
-   * geometry to `bound - size` (verified: x 220 -> 160 for an 80-wide box). Two clamps, two answers.
+   * Checks what the preview is FOR: a coordinate in the dataset lands on the corresponding display pixel,
+   * exactly, at every corner — and a coordinate pushed past the edge clamps so the element's far EDGE
+   * sits on the boundary rather than outside it.
    *
-   * So this checks what the preview is FOR: that a coordinate in the dataset lands on the corresponding
-   * display pixel, exactly, at every corner. The far-corner rows additionally pin today's clamp bound, so
-   * J8 cannot be resolved without this test noticing.
+   * That last part is J8, and this test is how it was found. It briefly asserted the opposite: the Design
+   * panel clamped x to 240 and y to 135 — the panel's own dimensions — so an element placed there sat
+   * entirely outside the visible area and rendered with `clientWidth` 0, while the IMPORT path corrected
+   * the same geometry to `bound - size`. Two clamps, two answers, and this test pinned the wrong one for
+   * exactly as long as it took to file J8 and decide. Both paths now share `coordinateLimit`.
    */
   test("display preview maps element coordinates to display pixels", async ({ page }) => {
     await normaliseWorkspace(page, 1440, 900, { importFixture: false });
@@ -300,18 +300,16 @@ test.describe("StampPLC mockup visual regression", () => {
       expect(Math.abs(normLeft - geometry.x)).toBeLessThanOrEqual(tolerance);
       expect(Math.abs(normTop - geometry.y)).toBeLessThanOrEqual(tolerance);
 
+      // The size maps across at every corner now, because no corner leaves the element off the panel.
+      expect(Math.abs(normRight - (geometry.x + geometry.width))).toBeLessThanOrEqual(tolerance);
+      expect(Math.abs(normBottom - (geometry.y + geometry.height))).toBeLessThanOrEqual(tolerance);
+
       if (corner.x === FAR) {
-        // Today's clamp: the COORDINATE is pinned to the panel width, which puts a 40-wide box off the
-        // panel entirely. If J8 tightens this to `bound - size`, this line fails and says so.
-        expect(geometry.x).toBe(layoutBounds.width);
-      } else {
-        // A fully on-panel element maps its size across too.
-        expect(Math.abs(normRight - (geometry.x + geometry.width))).toBeLessThanOrEqual(tolerance);
+        // J8's rule: the far EDGE is on the boundary, so the element is fully visible.
+        expect(geometry.x + geometry.width).toBe(layoutBounds.width);
       }
       if (corner.y === FAR) {
-        expect(geometry.y).toBe(layoutBounds.height);
-      } else {
-        expect(Math.abs(normBottom - (geometry.y + geometry.height))).toBeLessThanOrEqual(tolerance);
+        expect(geometry.y + geometry.height).toBe(layoutBounds.height);
       }
     }
   });
