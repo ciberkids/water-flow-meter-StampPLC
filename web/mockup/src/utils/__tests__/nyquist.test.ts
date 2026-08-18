@@ -419,30 +419,43 @@ describe("divergences from SANE that are STILL mirrored on purpose", () => {
    * accepts would show a warning hardware will not show. Pinned so the mirror cannot be "improved"
    * silently — and so that narrowing the C++ bound makes a test fail here and be revisited.
    */
-  it("accepts an offset ten times the reachable frequency", () => {
-    // `configIsValid`'s bound is `q_max * multiplier * 10` while its comment says the offset "may not
-    // exceed the frequency the channel can actually reach" — which is `q_max * multiplier`. Recorded as an
-    // open decision: narrowing it is a statement about what the predicate promises.
+  it("REFUSES an offset ten times the reachable frequency, which it used to accept (DF14)", () => {
+    // The bound was `q_max * multiplier * 10` while the comment beside it said the offset "may not exceed
+    // the frequency the channel can actually reach" — `q_max * multiplier`, ten times smaller. The code and
+    // its own stated rule disagreed, and the code was the looser of the two. DF14 kept the comment's
+    // promise, so this magnitude is now invalid whichever sign it carries.
+    expect(configIsValid(formula(150, 10, 15000))).toBe(false);
     const sensor = formula(150, 10, -15000);
-    expect(configIsValid(sensor)).toBe(true);
-    // WHAT CHANGED IS THE CONSEQUENCE, not the bound. The sampling gate now catches this one, so the
-    // channel is flagged and a master's write is parked instead of installed silently.
+    expect(configIsValid(sensor)).toBe(false);
+    // The sampling arms are unchanged and still say what they said: this ceiling is unreachable. Nothing
+    // about the SAMPLER was wrong in either of these cases, which is why the rule belongs in the
+    // configuration predicate.
     expect(meetsSamplingLimit(sensor, 3.3)).toBe(false);
-    expect(warningSensorNumbers(deriveUndersampling([sensor], 3.3))).toEqual([sensor.number]);
-    // The engine still reads full scale on a dry pipe if such a config is ever installed — which §5.5's
-    // override still permits on a second identical write. That is the residue of this fix.
-    expect(advanceSensorTick(sensor, { pulses: 0, elapsedMs: 1000 }).instantFlowLpm).toBe(150);
+    // And the engine now measures nothing, where it used to read full scale on a dry pipe.
+    expect(advanceSensorTick(sensor, { pulses: 0, elapsedMs: 1000 }).instantFlowLpm).toBe(0);
   });
 
-  it("still admits a SMALL negative offset, which the ceiling arm cannot catch", () => {
-    // The part the sampling gate does NOT reach, and the reason the bound is still an open question: at
-    // m=10, q=150, a=-1400 the ceiling is a healthy 100 Hz and passes, while zero pulses read
-    // (0 + 1400) / 10 = 140 L/min on a dry pipe.
+  it("REFUSES a small negative offset, which the ceiling arm could never catch (DF14)", () => {
+    // INVERTED, not deleted — the pinning test for the case that decided DF14. At m=10, q=150, a=-1400 the
+    // ceiling is a healthy 100 Hz, so every sampling arm passes it: `samplingCeilingHz` is fine,
+    // `meetsSamplingLimit` is fine, and no undersampling warning is raised. Nothing about the SAMPLER was
+    // ever wrong here. What was wrong is the calibration, and only `configIsValid` can say so — which is
+    // why the rule went there and not into the gate.
     const sensor = formula(150, 10, -1400);
-    expect(configIsValid(sensor)).toBe(true);
+    expect(configIsValid(sensor)).toBe(false);
     expect(samplingCeilingHz(sensor)).toBe(100);
     expect(meetsSamplingLimit(sensor, 3.3)).toBe(true);
     expect(warningSensorNumbers(deriveUndersampling([sensor], 3.3))).toEqual([]);
-    expect(advanceSensorTick(sensor, { pulses: 0, elapsedMs: 1000 }).instantFlowLpm).toBe(140);
+    // 140 L/min on a dry pipe was the harm. An invalid calibration measures nothing instead.
+    expect(advanceSensorTick(sensor, { pulses: 0, elapsedMs: 1000 }).instantFlowLpm).toBe(0);
+  });
+
+  it("still accepts the offsets a datasheet actually prints", () => {
+    // The tightening has a cost and this is its shape: a POSITIVE offset up to the reachable frequency is
+    // fine, one beyond it is not, and the ten-times headroom that used to hide the difference is gone.
+    expect(configIsValid(formula(150, 10, 0))).toBe(true);
+    expect(configIsValid(formula(150, 10, 1500))).toBe(true);   // exactly q_max * multiplier
+    expect(configIsValid(formula(150, 10, 1501))).toBe(false);  // one past it — accepted before DF14
+    expect(configIsValid(formula(150, 10, -1))).toBe(false);    // and no negative offset at all
   });
 });

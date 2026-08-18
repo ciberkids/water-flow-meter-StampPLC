@@ -197,7 +197,7 @@
       "id": "config.sensor.adjust",
       "category": "setting",
       "type": "number",
-      "min": -32768,
+      "min": 0,
       "max": 32767,
       "step": 1,
       "perSensor": true,

@@ -773,18 +773,33 @@ Strings are packed two characters per register, high byte first, `NUL`-padded, n
 | 618–633 | `NET_MQTT_PASSWORD` | text, 32 bytes, **write-only** |
 | 634–657 | `NET_MQTT_BASE_TOPIC` | text, 48 bytes |
 | 658–673 | `NET_MQTT_DISCOVERY_PREFIX` | text, 32 bytes |
-| 674 | `NET_PORTAL_ENABLED` | bool — the STA-side config page ONLY (R7.9). Never touches the radio. |
-| 711 | `NET_AP_REQUEST` | bool — raise or drop the provisioning AP (R5.4a) |
+| 674 | `NET_PORTAL_ENABLED` | **SPECIFIED, NOT BUILT** — reserved. bool, the STA-side config page ONLY (R7.9). Never touches the radio. No constant declares it in `net_register_map.h`; a read returns whatever the unclaimed address returns |
 | 675 | `NET_PORTAL_REMAINING_S` | uint16, read-only — seconds left on the AP/portal timer |
 | 676–691 | `NET_AP_SSID` | text, 32 bytes, read-only (§5.2) |
 | 692–707 | `NET_AP_PASSWORD` | text, 32 bytes, read-only (§5.2) |
-| 708–711 | `NET_AP_IP` | packed, read-only — the portal address |
+| 708–709 | `NET_AP_IP` | packed, read-only — the portal address. **TWO** registers: `kApIp = 708` |
+| 711 | `NET_AP_REQUEST` | **SPECIFIED, NOT BUILT** — reserved. bool, raise or drop the provisioning AP (R5.4a). 711 is genuinely free, verified against the header rather than assumed |
 | 712–719 | `NET_PORTAL_USER` | text, 16 bytes |
 | 720–729 | *reserved* | formerly `NET_PORTAL_PASSWORD`; writes ignored — see the note below |
 | 730 | `NET_APPLY` | write `0x5AA5` to commit the staged block |
 | 731 | `NET_REVISION` | increments on each successful apply |
 | 732 | `NET_LAST_ERROR` | enum, read-only |
 | 736–751 | `NET_PORTAL_PASSWORD` | text, 32 bytes, **write-only** |
+
+> **TWO ROWS ABOVE DESCRIBE REGISTERS THAT DO NOT EXIST, and are labelled so** (DF15). `674`
+> (`NET_PORTAL_ENABLED`, R7.9) and `711` (`NET_AP_REQUEST`, R5.4a) are decided features with addresses
+> chosen and nothing implemented: neither appears in `net_register_map.h`. They stay in this table, marked,
+> rather than being deleted — deleting them would discard a requirement and let a future block reuse an
+> address that is already spoken for. An integrator reads this table to decode real hardware, so a row that
+> silently describes nothing is the worst outcome of the three.
+>
+> **`NET_AP_IP` is 708–709, not 708–711.** The header declares `kApIp = 708` over two registers, packed;
+> `kPortalReset` is at 710 and `kPortalUser` at 712. The old four-register range double-booked 711 against
+> `NET_AP_REQUEST` **inside this same table**, while R5.4a's own decision note said 711 was chosen
+> *because* it is free. The header was right and the table was wrong in two places at once.
+>
+> The `static_assert`s in `net_register_map.h` cover overlaps between things that EXIST; they cannot catch
+> an address that exists only on paper, which is why this note is the gate for these two rows.
 
 > **The portal password is at 736, not 720.** It was placed at 720 with 16 registers for its 32 bytes
 > and did not have them: `NET_APPLY` is at 730, so registers 720–729 staged only bytes 0..19, a write

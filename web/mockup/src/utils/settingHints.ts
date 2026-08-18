@@ -124,7 +124,10 @@ const kSampleRaw: Record<string, number> = {
   "config.sensor.connected": 1, // On
   "config.sensor.calibrationType": 0, // Formula
   "config.sensor.multiplier": 6,
-  "config.sensor.adjust": -8,
+  // 8, not -8. The sample has to sit inside the setting's own domain — `sampleRawFor`'s contract, and a
+  // test asserts it — and DF14 made that domain 0..32767: a negative offset reads positive flow at zero
+  // pulses, so `configIsValid` refuses it outright.
+  "config.sensor.adjust": 8,
   "config.sensor.pulsesPerLiter": 450,
   "config.sensor.maxFlow": 150,
   "config.mqtt.port": 1883,

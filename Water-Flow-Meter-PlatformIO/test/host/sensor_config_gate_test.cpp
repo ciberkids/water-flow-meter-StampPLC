@@ -145,39 +145,67 @@ void negativeMultiplierIsRefused() {
         "and the engine confirms why it mattered: 1000 pulses/s still reads 0.00 L/min");
 }
 
-void anOffsetThatCancelsTheSpanIsParked() {
-  std::printf("\n[an offset cancelling the whole span: flagged and parked, not installed silently]\n");
+void aNegativeOffsetIsRefusedOutright() {
+  std::printf("\n[a negative offset: refused on every attempt, with no override — DF14]\n");
 
   Device dev;
   arm(dev);
   dev.configs[0].f_multiplier = 200;
   ModbusManager modbus(dev.deps());
 
-  // 0x8AD0 is -30000. The ceiling becomes 200*150 - 30000 = 0.
+  // 0x8AD0 is -30000. It used to be PARKED: the ceiling collapsed to 200*150 - 30000 = 0, the sampling
+  // gate flagged it, and §5.5's handshake let a second identical write install it. DF14 moved the rule
+  // into `configIsValid`, so a negative offset is now invalid rather than unsamplable — and an invalid
+  // candidate never reaches the handshake at all (`prepareConfigUpdate` clears the override state and
+  // returns early for one).
   check(!modbus.applyHoldingWrite(addr(plc::OFF_CFG_ADJUST), 0x8AD0),
-        "the write is refused on its first attempt — the sampling gate no longer waves a zero ceiling through");
+        "the write is refused on its first attempt");
   check(dev.configs[0].adjust == 0, "so nothing was installed");
 
+  check(!modbus.applyHoldingWrite(addr(plc::OFF_CFG_ADJUST), 0x8AD0),
+        "and a SECOND identical write is refused too — there is no §5.5 override for an invalid config");
+  check(dev.configs[0].adjust == 0, "so no determined master can install it either");
+
+  // The harm the refusal exists to prevent, asserted from the other side: force the figures straight into
+  // the struct, bypassing every write path, and the ENGINE still produces nothing — because readiness is
+  // `configIsValid`, evaluated where it is asked. Before DF14 this same channel read 150 L/min at zero
+  // pulses: full scale on a dry pipe, accumulating volume into the session and lifetime totals.
+  Device forced;
+  arm(forced);
+  forced.configs[0].f_multiplier = 200;
+  forced.configs[0].adjust = -30000;
+  ModbusManager forcedModbus(forced.deps());
+  check(!configIsValid(forced.configs[0]), "a negative offset is not a valid configuration");
+  check(flowAt(forced, forcedModbus, 0) == 0.0f,
+        "and a dry pipe reads 0.0, where it used to read 150.0");
+  check(flowAt(forced, forcedModbus, 1000) == 0.0f,
+        "as does a channel with water in it — an invalid calibration measures nothing, by design");
+}
+
+void anUnsamplableButVALIDConfigIsStillParked() {
+  std::printf("\n[§5.5's handshake, on the case it is actually for: valid but faster than the sampler]\n");
+
+  Device dev;
+  arm(dev);
+  ModbusManager modbus(dev.deps());
+
+  // q_max 150 with a multiplier of 200 reaches 30 kHz, an order of magnitude past what a 3.3 kHz sampler
+  // can resolve — and it is a perfectly INTERPRETABLE configuration, which is the distinction DF14 drew.
+  // This case previously rode on a negative offset; it now uses a legal one, so the handshake stays
+  // covered by something the new rule cannot reclassify.
+  check(!modbus.applyHoldingWrite(addr(plc::OFF_CFG_F_MULT), 200),
+        "the first write is parked, not installed — the channel would outrun the sampler");
+  check(dev.configs[0].f_multiplier == 10, "so the old multiplier still stands");
+
   modbus.evaluateSensorDiagnostics();
-  check((dev.undersamplingFlags & 0x01) != 0,
-        "and REG_UNDERSAMPLING_FLAGS names the channel, which it used to leave clear");
+  check((dev.undersamplingFlags & 0x01) != 0, "REG_UNDERSAMPLING_FLAGS names the channel");
   check(dev.registers.at(plc::REG_UNDERSAMPLING_FLAGS) == dev.undersamplingFlags,
         "with the register published, not just the cache updated");
 
-  // THE RESIDUE, asserted rather than glossed: parking means §5.5's override is still available, so a
-  // master that writes the same figures twice still installs them. That is deliberate — the handshake
-  // exists for meters the gate is wrong about — and it is what this fix does NOT prevent.
-  check(modbus.applyHoldingWrite(addr(plc::OFF_CFG_ADJUST), 0x8AD0),
-        "a SECOND identical write is accepted, because that is the §5.5 override handshake");
-  check(dev.configs[0].adjust == -30000, "so a determined master can still install it");
-
-  Device installed;
-  arm(installed);
-  installed.configs[0].f_multiplier = 200;
-  installed.configs[0].adjust = -30000;
-  ModbusManager installedModbus(installed.deps());
-  check(flowAt(installed, installedModbus, 0) == 150.0f,
-        "and this is why it is worth flagging: zero pulses read 150 L/min, full scale on a dry pipe");
+  check(modbus.applyHoldingWrite(addr(plc::OFF_CFG_F_MULT), 200),
+        "a SECOND identical write is accepted — that is the §5.5 override handshake");
+  check(dev.configs[0].f_multiplier == 200,
+        "so a determined master can still install a meter the gate is wrong about");
 }
 
 void theConfigurationsThatMustStillInstall() {
@@ -218,7 +246,8 @@ void theConfigurationsThatMustStillInstall() {
 int main() {
   std::printf("The sensor configuration gate: what a master may install\n");
   negativeMultiplierIsRefused();
-  anOffsetThatCancelsTheSpanIsParked();
+  aNegativeOffsetIsRefusedOutright();
+  anUnsamplableButVALIDConfigIsStillParked();
   theConfigurationsThatMustStillInstall();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);

@@ -216,7 +216,16 @@ export function configIsValid(sensor: SimulatedSensor): boolean {
   if (sensor.multiplier < 1) {
     return false;
   }
-  return Math.abs(sensor.adjust) <= sensor.qMaxLpm * sensor.multiplier * 10;
+  /**
+   * NON-NEGATIVE, and no larger than the reachable frequency — `modbus/sensor_types.h`'s rule verbatim
+   * (DF14). It was `Math.abs(adjust) <= qMax * multiplier * 10`, mirroring a bound that disagreed with its
+   * own comment by a factor of ten and admitted the offset that makes zero pulses read as positive flow.
+   *
+   * Mirrored rather than relaxed on purpose: a mockup LOOSER than the device shows a configuration the
+   * hardware will refuse, and one STRICTER shows a warning the hardware will not raise. Both lie, and the
+   * device's predicate is the one that decides.
+   */
+  return sensor.adjust >= 0 && sensor.adjust <= sensor.qMaxLpm * sensor.multiplier;
 }
 
 /**

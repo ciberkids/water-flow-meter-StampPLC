@@ -156,7 +156,30 @@ void upgradeTests() {
   check(loaded.calibration == CalibrationType::Formula,
         "a missing cfg_c defaults to Formula — exactly what the old firmware reconstructed");
   check(loaded.pulses_per_litre == 0, "and a missing cfg_p defaults to no K figure");
-  check(configIsValid(loaded), "so a channel that worked before the upgrade still works after it");
+
+  /**
+   * THE LOADER IS UNCHANGED; THE PREDICATE IS NOT (DF14).
+   *
+   * This asserted `configIsValid(loaded)` — "a channel that worked before the upgrade still works after
+   * it" — and the legacy figures it seeds are `q_max = 150, multiplier = 6, adjust = -120`. That negative
+   * offset is exactly the case DF14 refused: the engine computes `(F - adjust) / multiplier`, so at zero
+   * pulses this channel reported `120 / 6 = 20 L/min` on a dry pipe and accumulated volume from it.
+   *
+   * So the honest assertion is the one below. The three legacy keys still LOAD — no data is lost, and a
+   * re-calibration is all it takes — but the channel is no longer READY, and it renders `SET?` until
+   * someone enters a non-negative offset or switches it to pulses-per-litre.
+   *
+   * This is a migration consequence, stated rather than papered over by editing the seed: a device whose
+   * flash holds a negative offset stops measuring across this update. It is affordable because the fleet
+   * is empty — nothing has run on hardware yet — which makes this the cheapest moment the rule will ever
+   * have to tighten.
+   */
+  check(!configIsValid(loaded),
+        "and a legacy NEGATIVE offset is no longer valid, so the channel reads SET? until re-calibrated");
+  SensorCharacteristics repaired = loaded;
+  repaired.adjust = 0;
+  check(configIsValid(repaired),
+        "one field is all it takes: the loaded q_max and multiplier are intact and still valid");
 }
 
 void corruptionTests() {
