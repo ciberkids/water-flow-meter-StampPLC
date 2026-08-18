@@ -24,7 +24,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Fifteen open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
+**Thirteen open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
 DF10", "DF19 go ahead" — and this file is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
 they are append-only and never reused, so a gap means an item closed, not an item lost.
 
@@ -40,8 +40,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
 | **J1** | 🟡 | gate, unbuilt | No export gate proves a level's DOWN ring closes — and paging wraps in the dataset, not in code. Same family as N-b |
 | **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
-| **DF16** | 🟡 | correction, deferred on scope | The simulator stores `ready` where the device derives it; the fix is known and is a refactor of `sensorConfig.ts`'s public shape |
-| **DF19** | 🟡 | correction, one number | Six shipped scrollbars are 104 px, not 100; blocked only on accepting that `--write` regenerates 72 of 80 screens |
 | **J2** | 🟡 | correction, one round | `animation` was dropped by C1 and still survives in five layers, including bytes emitted into the firmware header |
 | **J6** | 🟡 | gate, unbuilt | Nothing verifies the workspace is accessible — no axe/pa11y/lighthouse in the workspace |
 | **DF20** | 🟡 | gate, unbuilt | No snapshot drives a warning state, so the repaired visual suite still never renders the banner |
@@ -200,7 +198,7 @@ the bottom of this file, verbatim in
 | `H` | menu behaviour | H1–H6 | closed |
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
-| `DF` | defect — opened 2026-08-18 | DF1–DF21 | **five open**, sixteen fixed |
+| `DF` | defect — opened 2026-08-18 | DF1–DF21 | **three open**, eighteen fixed |
 | `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **four open**; J3, J4, J5 and J8 fixed |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
@@ -226,7 +224,7 @@ a future batch takes `J` or a new two-letter prefix, never a letter that once me
 
 ---
 
-## Defects found — DF1–DF21, sixteen fixed and five open
+## Defects found — DF1–DF21, eighteen fixed and three open
 
 None is a decision — each is known, each has a diagnosis, and they are here because this is the file
 that gets read before picking up work.
@@ -708,7 +706,7 @@ WiFi-slice feature work that this table's honesty should not have to wait for.
 row describing a register that does not. That note is the only gate these two rows have, which is weaker than
 a check and is the honest state — building them is what would make the rows checkable.
 
-### DF16 — The simulator's `ready` is stored where the device derives it — DEFERRED ON SCOPE 🟡
+### DF16 — ~~The simulator's `ready` is stored where the device derives it~~ ✅ FIXED 2026-08-18
 
 Was two facts; one closed this round. Both were the same shape — a green suite over something only a
 human can reach:
@@ -740,6 +738,27 @@ The right answer is known: derive `ready` in `normalizeSensor`, which is the sam
 renderer, and every producer in `sensorConfig.ts` sets it, so deriving it is a refactor of the module's
 public shape rather than the one-line change the other three fixes were. It wants its own round, with
 `sensorConfig.test.ts`'s 48 checks re-run against the new meaning of the field.
+
+**Done 2026-08-18.** `normalizeSensor` derives it: `ready = configIsValid(sensor)`, which is what
+`ui_controller.cpp:189` assigns every frame. The device's own history is the argument — `SensorData::isReady`
+was **deleted** because a cached answer goes stale in exactly this way, and the mockup was one refactor
+behind that lesson.
+
+**No third state was lost, and the comment claiming there was one is now corrected.** The type's own
+documentation said the firmware distinguishes an "enabled-but-not-ready" channel rendering as `WAIT`. It does
+not: §4.4 settled on `--` / `SET?` / `OK`, and `ui_bindings.cpp:430-440` records why there is no `WAIT` —
+nothing is warming up, the channel needs an operator. Two comments and a field citation described machinery
+that no longer exists, including a reference to `SensorData::isReady` itself.
+
+**`ready` is no longer writable.** It left the field union in `App.tsx` and `FirmwareValuesPanel`, and the
+panel's checkbox became a dimmed read-only indicator labelled *(derived)*. A tickable bit could otherwise
+hold the table in a state the hardware cannot reach — a row reading `OK` over a `q_max` of zero, which is the
+divergence this entry was about.
+
+**Every fixture that reached not-ready by clearing the BIT now clears the CALIBRATION**, which is how the
+device reaches it. Nine failures resolved by fixing fixtures, not assertions — the assertions were right.
+Negative-tested: storing `ready` again fails 10 checks across two files. Twelve baselines regenerated for the
+panel's new label; unit 220, visual 44/44 exit 0 verified twice.
 
 ### DF17 — ~~`npm run test:visual` has been failing 32 of its 46 tests, and nothing noticed~~ ✅ FIXED 2026-08-18
 
@@ -835,7 +854,7 @@ today. But note the irony before deciding: it is the ONE screen where the banner
 guaranteed on-screen together, so it may deserve to be the screen that RESERVES the band rather than
 sacrificing it.
 
-### DF19 — Six shipped scrollbars are 104 px where §2c requires 100 🟡
+### DF19 — ~~Six shipped scrollbars are 104 px where §2c requires 100~~ ✅ FIXED 2026-08-18
 
 **§2c's claim that "every `level-position` scrollbar was shortened to 100 px so it stops clear of y=116"
 is not true of the shipped dataset.** Six screens carry y=14 height=104, bottom y=118 — two pixels inside
@@ -854,6 +873,27 @@ screens from scratch and no one had accepted a wholesale dataset regeneration as
 **It does not appear as an audit finding, which is exactly why it is recorded here.** The new band check
 exempts `kind === "scrollbar"` — a 5 px fixture losing 2 of 104 px hides no glyph, and the collision loop
 already treats one as decorative. Without that exemption the audit would report 7 rather than 1.
+
+**Fixed 2026-08-18 — and the reason it was deferred turned out not to hold.** The deferral said `--write`
+"rewrites 72 of the 80 screens from scratch". Run: the dataset diff is **six lines**, `104` → `100`. The
+generator is deterministic and reproduces everything else byte-for-byte — which is what CI's byte-for-byte
+comparison has depended on all along. A deferral resting on an untested cost is worth re-testing before
+inheriting it.
+
+**What the change actually touched:** one number in the generator, six lines of `screens.json`, and the
+firmware assets that take the dataset as input (`GeneratedUi.cpp`, `ui_export_ir.json`, the metadata
+timestamp). `export:firmware` compiled the real firmware in the container while regenerating them —
+**SUCCESS, RAM 24.6% / Flash 38.0%**. Verified end to end: all **61** scrollbars read 100 in the dataset and
+in the generated firmware table.
+
+**§2c's own claim is corrected too.** It read "true of every file in `screens/` and still NOT true of the
+dataset", naming the six. It is true of both now, and the paragraph records why it was not.
+
+**A gate was added, and deliberately not committed.** `screen-geometry.ts` now reports any scrollbar that
+reaches the band — 6 before the fix, 0 after, negative-tested both ways — as a rule separate from the glyph
+exemption, because §2c legislates the scrollbar's bottom even though no glyph is hidden. It builds on the
+band check from this branch's **uncommitted** §2c work, so it is not mine to commit and stays in the working
+tree with the round it belongs to.
 
 ### DF20 — No snapshot drives a warning state, so the visual suite never renders the banner 🟡
 
