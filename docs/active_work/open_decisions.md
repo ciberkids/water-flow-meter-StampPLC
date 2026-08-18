@@ -787,8 +787,12 @@ C1 chose the scrollbar and **dropped animation**. What is still there, verified 
 | firmware | `theme_palette.cpp:41`, `theme_palette.h:21`, `GeneratedUi.h:165` — `animationEasing()` exists and returns a token |
 | user-facing docs | `HelpPanel.tsx:156` documents `animations` to the operator as a dataset feature |
 
-**Nothing renders one.** No consumer in `UiRenderer` reads the emitted array, and `animationEasing()` has
-no caller outside its own definition. So a dropped feature costs schema surface, IR surface, generated
+**Nothing renders one — grepped, not assumed** (2026-08-18, because a diagnosis quoted without checking
+its mechanism is how offset 19 got its harm wrong). `GeneratedUi.h:136–137` gives every screen struct
+`const Animation* animations` and `std::size_t animationCount`; searching `src/` for `->animations`,
+`.animations` and `animationCount` returns **no reader outside `generated/`**, and `ui_renderer.{cpp,h}`
+does not contain the string `animation` at all, case-insensitive. `animationEasing()` likewise has no
+caller beyond its own definition and declaration. So a dropped feature costs schema surface, IR surface, generated
 firmware bytes and a documented promise the device does not keep.
 
 **Decide the shape before cutting:** the theme's `animation` easing token is in the schema's `required`
