@@ -24,7 +24,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Eighteen open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
+**Seventeen open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
 DF10", "DF19 go ahead" — and this file is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
 they are append-only and never reused, so a gap means an item closed, not an item lost.
 
@@ -49,7 +49,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **DF20** | 🟡 | gate, unbuilt | No snapshot drives a warning state, so the repaired visual suite still never renders the banner |
 | **DF21** | 🟡 | gate, unbuilt | CI runs no `test:visual` step — the reason DF17 stayed invisible |
 | **J7** | 🟡 | correction, one round | The transition preview is off by decision; its five layers remain, same shape as J2 |
-| **J8** | 🟡 | **decision** | Two clamps disagree — the Design panel pins the coordinate, the importer pins the far edge |
 
 **DF1–DF9, DF11–DF13** are fixed and keep their IDs, struck through in place below. **I2** and **I3** are
 standing rules that never close.
@@ -204,7 +203,7 @@ the bottom of this file, verbatim in
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
 | `DF` | defect — opened 2026-08-18 | DF1–DF21 | **seven open**, fourteen fixed |
-| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **five open**; J3, J4 and J5 fixed |
+| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **four open**; J3, J4, J5 and J8 fixed |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
 group — they are in the closed table at the bottom of this file and throughout the archive. The defect
@@ -834,7 +833,7 @@ add the step.
 
 ---
 
-## Residue and hygiene — J1–J8, opened 2026-08-18 (J3, J4, J5 closed the same day)
+## Residue and hygiene — J1–J8, opened 2026-08-18 (J3, J4, J5, J8 closed the same day)
 
 J1–J5 were a **single unnumbered sentence in `MEMORY.md` §6** — "smaller and still open: the export
 gate for ring closure, the I2 append-only catalogue check, `animation` residue across five layers, the
@@ -1019,7 +1018,7 @@ in `DisplayViewport`.
 delete the five layers, or restore the prop behind a toggle. What it must not stay is a callback firing on
 every keypress into a value nothing reads.
 
-### J8 — Two clamps disagree: the Design panel pins the coordinate, the importer pins the far edge 🟡
+### J8 — ~~Two clamps disagree: the Design panel pins the coordinate, the importer pins the far edge~~ ✅ FIXED 2026-08-18
 
 Found by DF17's corner test, measured both ways on 2026-08-18:
 
@@ -1034,6 +1033,38 @@ placement.
 
 **Decide which rule the panel follows**, then make the inputs agree. The corner test pins today's behaviour
 (`expect(geometry.x).toBe(layoutBounds.width)`), so this cannot change silently.
+
+**Fixed 2026-08-18: the size-aware rule wins**, and both paths now share one helper —
+`coordinateLimit(axis, extent, bounds)`. An element you cannot see is not a placement.
+
+**The rule had THREE homes, not the two above.** This is the part worth carrying:
+
+| Home | What it did |
+| --- | --- |
+| `clampCoordinate`, used by App's `normalizeElementUpdate` | size-blind: `[0, bound]` |
+| `clampElementGeometry`, used by every import path | spelled out `bounds.width - width` **itself**, which is how the two came to disagree with nothing failing |
+| `DesignToolbox`'s own `sanitizeNumericInput`, capped at `maxCoordinateX`/`maxCoordinateY` | **the one that actually decided what a typed edit produced** |
+
+Fixing the first two changed **nothing observable** — the probe still read `x = 240` — because the third
+capped the value before either ran. The props are now the display *bounds* rather than a pair of precomputed
+maxima, and the component asks the shared helper per element.
+
+**Ordering matters and is now explicit:** size is clamped BEFORE the coordinates, because one update can
+carry both and clamping x against the OLD width accepts a position the new width hides.
+
+**Overflow is still reachable, deliberately.** Width and height clamp to the display, not to `bound - x`,
+so widening an element still overflows and still raises the per-element and global clamp buttons — which is
+what those buttons are for. The fix removes the invisible-element case, not the overflow workflow.
+
+**Tests.** Six new assertions pin both axes, the larger-than-display case, the untouched size-blind default,
+and the point of the item: the panel path and the import path now return the same numbers for the geometry
+recorded above (x 220 → 160, y 260 → 115). DF17's corner test goes back to asserting what it originally
+wanted — the far edge ON the boundary. Negative-tested: size-blind again fails 6 unit checks and the corner
+test; restoring returns 219 green. Visual 44/44 exit 0, unit 219, exporter 44, host clean.
+
+**One process note, since it cost time.** Two probe rounds "showed no effect" because
+`npx playwright test` serves whatever is in `dist/` — the exact hazard written into `web/mockup/README.md`
+earlier the same day. Rebuild, or use `npm run test:visual`.
 
 ### Not promoted, and why
 
