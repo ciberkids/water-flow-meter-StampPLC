@@ -24,7 +24,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Nineteen open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
+**Eighteen open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
 DF10", "DF19 go ahead" — and this file is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
 they are append-only and never reused, so a gap means an item closed, not an item lost.
 
@@ -34,7 +34,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | correction + measurement | Nothing protects the VLF probe's position above `M5StamPLC.begin()`, and whether the RTC survives power loss is unknown |
-| **DF10** | 🟡 | **decision** | The portal indexes sensors from 0, `ui::writeSetting` from 1 — decide before a `PortalSettingStore` exists, not after |
 | **DF14** | 🟡 | **decision** | `configIsValid`'s offset bound is ten times what its own comment promises — tighten the bound or correct the comment |
 | **DF15** | 🟡 | **decision** | Three registers §5's table documents do not exist, and 711 is double-booked — build them or move them out of the table |
 | **DF18** | 🟡 | **decision** (design) | `nyquist-warning`'s `option-down` sits inside the banner band; fixing it means authoring the screen's first spec file |
@@ -204,7 +203,7 @@ the bottom of this file, verbatim in
 | `H` | menu behaviour | H1–H6 | closed |
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
-| `DF` | defect — opened 2026-08-18 | DF1–DF21 | **eight open**, thirteen fixed |
+| `DF` | defect — opened 2026-08-18 | DF1–DF21 | **seven open**, fourteen fixed |
 | `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **five open**; J3, J4 and J5 fixed |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
@@ -230,7 +229,7 @@ a future batch takes `J` or a new two-letter prefix, never a letter that once me
 
 ---
 
-## Defects found — DF1–DF21, thirteen fixed and eight open
+## Defects found — DF1–DF21, fourteen fixed and seven open
 
 None is a decision — each is known, each has a diagnosis, and they are here because this is the file
 that gets read before picking up work.
@@ -445,7 +444,7 @@ test can construct, so nothing verifies it. A seam that let a fake server double
 caught it — and would catch the next one. That is a real gap, not a nicety: two of the three portal
 defects found this year were in the adapter rather than the form.
 
-### DF10 — The portal names sensors from 0 and the settings API counts them from 1 🟡
+### DF10 — ~~The portal names sensors from 0 and the settings API counts them from 1~~ ✅ FIXED 2026-08-18
 
 Found while auditing whether the three writing routes agree, and verified by reading both sides
 2026-08-17. `portal_form.cpp` renders per-sensor fields as `<bindingId>@<n>` over
@@ -465,6 +464,27 @@ every other calibration **one channel low**.
 agree, or state in `PortalSettingStore`'s header that the adapter owns the +1 and say so where the
 implementer will read it. This is cheap now and is a data-corruption bug once a store exists — a
 calibration silently applied to the wrong meter is exactly the class of error no operator can see.
+
+**Decided by the owner 2026-08-18: align the portal.** One convention across panel, RS485 and portal,
+and it is the one the operator already reads as `S1`..`S8`. The alternative — a header comment telling
+the adapter to add one — would have left two conventions in one firmware with prose as the only guard.
+
+- The render loop is `1..sensorCount` inclusive; the parser accepts `1..sensorCount` and **refuses
+  `@0`**, replacing a bound (`>= sensorCount_`) that existed only because the loop above it counted
+  from zero.
+- `PortalSettingStore`'s header now states the convention where an implementer reads it: forward
+  `sensorIndex` **untouched**.
+- `Display_Per_Screen_Spec.md`'s "two conventions" note cited this entry as a hazard the tree spreads.
+  It no longer does, so that paragraph records the alignment and its date instead.
+
+**A second defect fell out of the same bound, and it was not in the diagnosis above.** `>= sensorCount_`
+made **`@sensorCount` refused**, so the LAST sensor was unaddressable by anything that named it directly.
+Self-consistent with the 0-based renderer and therefore invisible — until a master, a script or a hand-made
+POST named `@8`. Both halves are now pinned by tests.
+
+**Negative-tested, per §5 of `MEMORY.md`.** Reverting the parser bound fails four checks naming exactly
+`@0` and the last sensor; reverting the render loop fails with `MISSING @8` for all six per-sensor
+settings. Host suite after the change: 22 suites, **1,880 checks, 0 failures**.
 
 ### DF11 — ~~The Select Menu is reachable only by a hidden gesture~~ ✅ FIXED 2026-08-17
 
