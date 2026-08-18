@@ -38,18 +38,25 @@ export const kSensorCount = 8;
  *
  * Field-for-field this is `SensorCharacteristics` + `SensorData` (modbus/sensor_types.h:5-27),
  * minus `pulseCount` — pulses arrive as a tick argument here rather than being latched by an
- * ISR. `connected` and `ready` are BOTH modelled because the device renders three different
- * things from them: a disconnected channel, an enabled-but-not-ready channel, and a working
- * one (ui/core/ui_bindings.cpp:266-279). Boot reaches the middle state for every channel:
- * `isReady` is forced false while `inUse` is restored from the saved bitmap
- * (firmware.cpp:687-688).
+ * ISR. `connected` is authored; `ready` is DERIVED from the calibration (DF16), which is what the
+ * device does — `ui_controller.cpp:189` assigns `dst.ready = configIsValid(configs[i])` every frame.
+ * The three states the panel renders (`--` not in service, `SET?` in service with no valid
+ * calibration, `OK` working) therefore come from two facts rather than two stored bits.
+ *
+ * This paragraph used to cite `SensorData::isReady` and a boot that forces it false. Neither exists
+ * any more: that cache was DELETED because it went stale in exactly that way — boot cleared it,
+ * nothing refilled it, and a calibrated channel came back reporting not-ready with its pulses
+ * counted and discarded.
  */
 export interface SimulatedSensor {
   /** 1-based, the number the device prints (`sensorIndex + 1`, ui/core/ui_bindings.cpp:263). */
   number: number;
   /** `SensorData::inUse` (modbus/sensor_types.h:20) — bit n of the connected-sensors bitmap. */
   connected: boolean;
-  /** `SensorData::isReady` (modbus/sensor_types.h:21). */
+   * DERIVED, not authored (DF16). `normalizeSensor` recomputes it as `configIsValid(sensor)` on every
+   * producer, mirroring `ui_controller.cpp:189`. Setting it on an input object has no effect — write the
+   * calibration fields instead, which is also the only way to change it on the device.
+   */
   ready: boolean;
   /** `SensorCharacteristics::q_max` (modbus/sensor_types.h:6), L/min. Integer on the device. */
   qMaxLpm: number;
@@ -355,9 +362,26 @@ function normalizeSensor(sensor: SimulatedSensor): SimulatedSensor {
   // engine's gate is `configIsValid(config)`, which refuses that channel and zeroes its flow, while the
   // inline test called it calibrated and let the flow stand. Sharing the predicate is also what stops the
   // sampling flag and the flow row disagreeing about whether a channel is configured at all.
-  const flowing = sensor.connected && sensor.ready && configIsValid(sensor);
+   * `ready` IS DERIVED HERE (DF16), because on the device it is not stored at all.
+   *
+   * `ui_controller.cpp:189` assigns `dst.ready = configIsValid(configs[i])` on every frame, and
+   * `SensorData::isReady` was deleted precisely because a cached answer goes stale — boot cleared it and
+   * nothing refilled it, so a calibrated channel came back reporting not-ready. This table kept the shape
+   * the firmware threw away: a stored boolean nothing recomputed, so writing `qMaxLpm = 0` through the
+   * Values panel left the row saying `OK` while the device would say `SET?`.
+   *
+   * There is no third state to lose. §4.4 settled that the panel renders `--` (not in service), `OK` and
+   * `SET?`, and `ui_bindings.cpp:430-440` records why there is no `WAIT`: nothing is warming up, the channel
+   * needs an operator. So `ready` has exactly one meaning — the calibration can produce a reading — and
+   * `configIsValid` is that meaning.
+   */
+  const ready = configIsValid(sensor);
+  // `&& ready` was `&& sensor.ready && configIsValid(sensor)`; the two terms were always the same question
+  // asked twice, once off a stale cache.
+  const flowing = sensor.connected && ready;
   return {
     ...sensor,
+    ready,
     instantFlowLpm: flowing ? sensor.instantFlowLpm : 0,
     undersampling: sensor.connected ? sensor.undersampling : false
   };
@@ -427,19 +451,13 @@ export function warningSensorNumbers(table: readonly SimulatedSensor[]): number[
  * the definition and not a filter on top: a disconnected channel is ABSENT, not uncalibrated, and
  * counting all eight would report eight problems on a device with one sensor wired.
  *
- * `ready` IS THE PREDICATE, deliberately — not a `configIsValid` recomputed here. The row beside the
- * summary renders `!connected ? "--" : ready ? "OK" : "SET?"` from that same boolean, so deriving the
- * count from the configuration instead would let a row read `OK` while the summary said "1 channel not
- * calibrated" on the same screen. The device cannot disagree with itself there because it derives both
- * from one projection; this table's `ready` is a stored boolean, so agreeing with the row is the closest
- * available equivalent.
- *
- * THE DIVERGENCE THAT COMES WITH THAT, inherited from `resetCalibration` which records it too: nothing
- * recomputes `ready` when the configuration changes, so writing `qMaxLpm` to 0 through the Values panel
- * leaves the row saying `OK` and this count saying the channel is calibrated. The device would say
- * `SET?` for both. Fixing it means deriving `ready` in `normalizeSensor`, which is a change to what
- * every producer in this file means by the field, and is left for its own round rather than smuggled in
- * behind a summary line.
+ * `ready` IS THE PREDICATE, and since DF16 it is `configIsValid` — derived in `normalizeSensor` rather than
+ * stored. The row beside the summary renders `!connected ? "--" : ready ? "OK" : "SET?"` from the same
+ * field, so the row and this count cannot disagree, and neither can now disagree with the CONFIGURATION.
+ * That last part is what the divergence recorded here used to be: nothing recomputed the stored bit, so
+ * writing `qMaxLpm = 0` through the Values panel left the row reading `OK` and this count calling the
+ * channel calibrated, while the device said `SET?` for both. The device derives both from one projection;
+ * so does this table now.
  */
 export function uncalibratedSensorNumbers(table: readonly SimulatedSensor[]): number[] {
   return table.filter((sensor) => sensor.connected && !sensor.ready).map((s) => s.number);

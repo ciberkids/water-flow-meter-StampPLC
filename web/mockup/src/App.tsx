@@ -1943,7 +1943,10 @@ export function App() {
    * configuration on screen beside it.
    */
   const handleSensorFieldChange = useCallback(
-    (sensorNumber: number, field: "connected" | "ready" | "samplingOverride", value: boolean) => {
+    // `ready` is NOT in this union any more (DF16): it is derived from the calibration in
+    // `normalizeSensor`, so a write to it was silently discarded the moment the derivation landed. The
+    // way to make a channel `SET?` is to clear its calibration, here as on the device.
+    (sensorNumber: number, field: "connected" | "samplingOverride", value: boolean) => {
       setSensors((table) => setSensor(table, sensorNumber, { [field]: value }));
     },
     []

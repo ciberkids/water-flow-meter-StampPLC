@@ -626,6 +626,20 @@ body {
   white-space: nowrap;
 }
 
+/* A derived toggle is SHOWN, not set (DF16): `ready` is `configIsValid`, so the box reports the
+   calibration rather than offering a state the device cannot hold. Dimmed to say so at a glance, with the
+   reason spelled out in the label beside it. */
+.sensor-row__toggle--derived {
+  opacity: 0.75;
+  cursor: default;
+}
+
+.sensor-row__hint {
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  color: #9caec6;
+}
+
 .sensor-row__render {
   font-family: "StampPLC-Pixel", "Press Start 2P", monospace;
   font-size: 10px;

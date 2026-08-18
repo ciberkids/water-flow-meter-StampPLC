@@ -81,7 +81,7 @@ interface FirmwareValuesPanelProps {
   sensorPreview: (sensorNumber: number) => string;
   onSensorFieldChange: (
     sensorNumber: number,
-    field: "connected" | "ready" | "samplingOverride",
+    field: "connected" | "samplingOverride",
     value: boolean
   ) => void;
   /**
@@ -353,16 +353,23 @@ export function FirmwareValuesPanel({
                     connected
                   </label>
 
-                  {/* Ready is a separate bit because the firmware distinguishes it: every sensor is
-                      enabled-but-not-ready at boot, and that renders as WAIT, not as a value. */}
-                  <label className="sensor-row__toggle">
-                    <input
-                      type="checkbox"
-                      checked={sensor.ready}
-                      disabled={!sensor.connected}
-                      onChange={(event) => onSensorFieldChange(sensorNumber, "ready", event.target.checked)}
-                    />
+                  {/* READY IS DERIVED, so this shows it rather than setting it (DF16).
+
+                      It was a checkbox, and the comment here claimed the firmware distinguishes an
+                      "enabled-but-not-ready" channel that renders as WAIT. It does not: §4.4 settled on
+                      `--` / `SET?` / `OK`, `ui_bindings.cpp:430-440` records that there is nothing to wait
+                      for, and `ui_controller.cpp:189` assigns `ready = configIsValid(config)` every frame.
+                      A tickable bit could therefore hold this table in a state the device cannot reach —
+                      a row reading OK over a q_max of zero.
+
+                      To make a channel SET?, clear its calibration in the settings beside this row. That
+                      is the only route on the device too. */}
+                  <label className="sensor-row__toggle sensor-row__toggle--derived">
+                    <input type="checkbox" checked={sensor.ready} disabled readOnly />
                     ready
+                    <span className="sensor-row__hint" title="Derived from the calibration, as on the device">
+                      (derived)
+                    </span>
                   </label>
 
                   {/* THE §5.5 OVERRIDE — an input, where the flag beside it is a readout.
