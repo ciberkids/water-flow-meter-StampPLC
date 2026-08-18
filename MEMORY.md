@@ -194,43 +194,70 @@ evidence at all. Before this branch, `interaction_handler.cpp`, `ui_controller.c
 
 ## 6. Where to pick up
 
-**The item list is not here any more.** Every open item has a stable ID and lives in the index at
-the top of `docs/active_work/open_decisions.md` — nineteen lines with status and shape, governed by
-rule **I3**. Cite the ID (`DF10`, `J3`, `N-d1`). What belongs in this section is only the ordering
-advice an index cannot carry:
+**The item list is not here.** Every open item has a stable ID and lives in the index at the top of
+`docs/active_work/open_decisions.md` — **thirteen lines**, no 🔴, governed by rule **I3**. Cite the ID
+(`DF18`, `J2`, `N-d1`). This section carries only what an index cannot: the ordering, and the state of
+the working tree.
 
-1. ~~**Wire the loader into `firmware.cpp`**~~ — **shipped, and this entry outlived it by several
-   rounds.** Verified 2026-08-18: `packStorage`, `packLoader` and `packOutcome` are declared at
-   `firmware.cpp:158–174`, §3.6's attempt-counter ladder is at :1058–1096, and §3.4.1's recovery
-   route reaches `UiController::openPackSelector` (`ui_controller.cpp:273`). A stale instruction at
-   the top of a pick-up list is exactly the failure §5 is about.
-2. ~~**`DF17` first** — the register's only 🔴.~~ **Fixed 2026-08-18: 44 passed, 0 failed, exit 0,
-   twice.** All eleven non-snapshot failures were the SPEC being stale — portrait bounds, removed
-   features, renamed selectors, a legacy fixture the gates now rightly reject — and none was an app
-   regression, which is what earned the baseline refresh. **The register has no 🔴 now.** Two
-   consequences it did NOT close are filed rather than glossed: the banner still has no pixel-level
-   verification because no snapshot drives a warning state (**DF20**), and CI still runs no
-   `test:visual` step (**DF21**), which is why it could rot unseen for months.
-3. **Then WiFi slice N0** — the polling-rate spike, still the recommended next slice. Its
-   acceptance criterion budgets 5 % against a radio-off baseline that does not exist yet; that
-   baseline is **G1** and needs the board.
-4. **The six "smaller and still open" items that used to be item 3 of this list** were verified on
-   2026-08-18 and moved into the register with IDs: **J1** (no export gate for ring closure), **J2**
-   (`animation` residue in five layers), **J3** (`carea/`, 18 tracked files), **J4**
-   (`web/mockup/README.md`), **J5** (`UI_Firmware_Interface.md` — 4 actions listed against 19 in the
-   catalogue), and **I2a** (nothing enforces the append-only rule, folded into I2 itself). **J3, J4 and J5 were
-   fixed the same day:** `carea/` deleted (archive entry F2 had already decided that on 2026-07-30 and
-   nobody did it); the action table is now generated from `kActionCatalogue` with a CI diff gate, having
-   advertised two actions that no longer exist; and `web/mockup/README.md` was rewritten after the whole
-   file turned out to carry nine false claims rather than the three recorded. **J6, J7, J8, DF20 and
-   DF21 were opened** by that work — a repaired gate finds things.
-5. **One of the six got no ID, deliberately:** *the simulator's missing nav stack*. Probed
-   2026-08-18 — no `navStack`, `backStack` or `history` in the mockup, but the device has no nav
-   stack either (BACK resolves from the tree), so "missing" may describe a divergence that no longer
-   exists. It needs someone to say what the simulator should do on BACK before it can be called a
-   defect. Recorded under "Not promoted" at the end of the register's J section.
+### Session of 2026-08-18 — ten items closed, four opened
 
----
+Closed, each with its reasoning in the register entry rather than only in the diff: **DF17** (visual
+suite, 32 of 46 failing — every non-snapshot failure was the SPEC being stale, not one app regression),
+**DF10** (portal now one-based), **DF14** (a negative offset made a dry pipe read flow), **DF15**
+(register table marked and corrected), **DF16** (`ready` derived), **DF19** (six 104 px scrollbars),
+**J3** (`carea/`), **J4** (nine false claims, not three), **J5** (action table generated + CI gate),
+**J8** (one clamp rule).
+
+Opened by that work, because a repaired gate finds things: **DF20** (no snapshot drives a warning
+state, so the banner still has no pixel verification), **DF21** (CI runs no `test:visual`), **J6**
+(nothing verifies accessibility), **J7** (the transition preview's five layers survive its removal).
+
+### THE WORKING TREE IS NOT CLEAN, and that is deliberate
+
+40 modified files and 3 untracked ones are the **§2c banner round, unfinished and not mine**:
+`DisplayViewport.tsx`, `warningBanner.ts` + its test (untracked), `ui_root_tail.h` (untracked),
+`Display_Per_Screen_Spec.md`, `screen-geometry.ts`'s band check, and the rest. Nothing from
+2026-08-18's ten closures is uncommitted; everything is pushed.
+
+**Two of my changes could NOT be committed and sit in that tree deliberately:**
+
+1. The **scrollbar band rule** in `tools/audit/screen-geometry.ts` — reports any scrollbar reaching the
+   band, 6 before DF19's fix and 0 after. It builds on the band check from the uncommitted §2c work, so
+   it belongs to that round.
+2. Two comment tweaks whose anchors exist only in the working tree (`warningBanner.test.ts`, and one
+   line in `sensorConfig.test.ts`).
+
+**Staging discipline this tree forces, learned the hard way** — see §7. A commit that names one of those
+40 files sweeps someone else's work in. `git add <path>` is not enough; check `git status` for the
+SPECIFIC file first, and if it is dirty, stage HEAD-plus-your-hunks:
+
+```bash
+git show HEAD:path > /tmp/base && python3 - <<'EOF'   # apply only your replacement to /tmp/base
+EOF
+blob=$(git hash-object -w /tmp/base) && git update-index --cacheinfo 100644,$blob,path
+```
+
+### Two local gates fire for a reason that is not a fault
+
+The catalogue's uncommitted 19th action (`ui.action.pack.select-menu`) means
+`node tools/wiki/gen-actions.mjs --write` shows a one-row diff locally, and the committed action table
+carries **18** rows. Whoever commits that catalogue entry runs `--write` in the same commit; the CI gate
+says so if they forget. Do not "fix" the table by committing the 19-row version — CI would fail on a
+clean checkout, where the catalogue has 18.
+
+### Next, in the order I would take them
+
+1. **`J2` and `J7` together** — both are dropped features whose layers survive (`animation`, the
+   transition preview). Same shape, same decision, and J2 reaches into the emitter and the generated
+   header, so doing them apart means touching that surface twice.
+2. **`DF18`** — needs a design decision, not a repair: authoring `screens/nyquist-warning.json` to move
+   an option row out of the banner band. It is the geometry audit's one remaining finding, by design.
+3. **`DF20` then `DF21`** — build the banner-state snapshot first, because wiring `test:visual` into CI
+   before it covers the banner locks in a gate that still misses §2c.
+4. **`J1`** and **`J6`** — export gates that `Loadable_UI_Menu_Packs.md` and SI-04 assume and that do
+   not exist.
+5. **WiFi slice N0** — still the recommended next feature slice, and still blocked on **G1**, which
+   needs the board.
 
 ## 7. Mistakes to know about
 
