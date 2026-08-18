@@ -24,7 +24,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Eighteen open lines.** Ask for work by ID — "fix DF17", "decide DF10", "J3 go ahead" — and this file
+**Nineteen open lines.** Ask for work by ID — "fix DF17", "decide DF10", "J3 go ahead" — and this file
 is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
 they are append-only and never reused, so a gap means an item closed, not an item lost.
 
@@ -50,6 +50,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **J3** | 🟡 | correction, chore | `carea/` is 18 tracked files of a stray git directory |
 | **J4** | 🟡 | correction, chore | `web/mockup/README.md` claims a portrait display, an empty dataset and easing presets — all three wrong |
 | **J5** | 🟡 | correction, mechanical | `UI_Firmware_Interface.md` lists 4 actions where the catalogue has 19 |
+| **J6** | 🟡 | gate, unbuilt | Nothing verifies the workspace is accessible — no axe/pa11y/lighthouse, and CI runs no `test:visual` either |
 
 **DF1–DF9, DF11–DF13** are fixed and keep their IDs, struck through in place below. **I2** and **I3** are
 standing rules that never close.
@@ -204,7 +205,7 @@ the bottom of this file, verbatim in
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
 | `DF` | defect — opened 2026-08-18 | DF1–DF19 | **seven open**, twelve fixed |
-| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 | J1–J5 | **all five open** |
+| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J6 | **all six open** |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
 group — they are in the closed table at the bottom of this file and throughout the archive. The defect
@@ -215,7 +216,7 @@ a future batch takes `J` or a new two-letter prefix, never a letter that once me
 
 - **Never renumber, never reuse.** `DF1`–`DF19` are in the order the defects were found; the twelve that
   are fixed keep theirs, struck through in place. A gap in the open list means an item closed.
-- **New items take the next free identifier** — `DF20` onward for defects, `J6` onward for residue, `N-e` onward for entries in
+- **New items take the next free identifier** — `DF20` onward for defects, `J7` onward for residue, `N-e` onward for entries in
   the upper section. Never fill a gap.
 - **A split keeps the parent and adds a suffix** (`N-d` → `N-d1`, `N-d2`), so an ID cited from outside
   this file still resolves. `G1`, `N-b`, `N-c` and `I2` are cited from `README.md`, four requirement
@@ -688,7 +689,14 @@ nine `toBeVisible`, five `toHaveValue`, three `toHaveCount`, and one exporter CL
 own controls are failing, which is a broken suite rather than a moved baseline — so
 `--update-snapshots` is NOT the fix and would bake in whatever the app now does.
 
-**Two reasons it stayed hidden, both worth knowing.** `Display_Per_Screen_Spec.md` and this register both
+**A third reason, verified 2026-08-18: CI never runs it.** Neither `test:visual` nor `playwright`
+appears anywhere in `.github/workflows/` — the pipeline runs typecheck, unit, exporter, build, the export
+gates, the skeleton-reproduces-dataset check, the committed-assets check, host tests and the generated-docs
+gate. A suite that no automation runs and whose exit status is easy to lose locally is a suite that can
+fail for months. Note also that `docs/backlog/SI-20251111-04-help-docs.md` describes this as *stale
+baselines*; that framing is superseded here — 11 of the 32 failures are not snapshot assertions at all.
+
+**Two further reasons it stayed hidden, both worth knowing.** `Display_Per_Screen_Spec.md` and this register both
 cite the suite as a live gate, and `web/mockup/tests/` carries a comment warning that a bare
 `npx playwright test` serves a stale `dist/` — so the recorded hazard is about *how* to run it, which
 reads as though running it correctly works. And the exit status is easy to lose: any invocation that
@@ -750,9 +758,9 @@ already treats one as decorative. Without that exemption the audit would report 
 
 ---
 
-## Residue and hygiene — J1–J5, opened 2026-08-18
+## Residue and hygiene — J1–J6, opened 2026-08-18
 
-These five were a **single unnumbered sentence in `MEMORY.md` §6** — "smaller and still open: the export
+J1–J5 were a **single unnumbered sentence in `MEMORY.md` §6** — "smaller and still open: the export
 gate for ring closure, the I2 append-only catalogue check, `animation` residue across five layers, the
 simulator's missing nav stack, `carea/` (tracked, 18 files), and rewrites of `web/mockup/README.md` and
 `UI_Firmware_Interface.md`" — which is a second open-items register with no ids, no status and no
@@ -838,6 +846,21 @@ exist, so it does not merely omit — it teaches a wrong catalogue, and every id
 The fix is mechanical (regenerate the table from the catalogue header, or delete the table and point at
 it), and the mechanical option that cannot drift again is the right one.
 
+### J6 — Nothing verifies the workspace is accessible 🟡
+
+`docs/backlog/SI-20251111-04-help-docs.md` lists "accessibility verified" among its acceptance criteria
+and marks it not delivered. Verified 2026-08-18: `web/mockup/package.json` contains no `axe`, `jest-axe`,
+`pa11y` or `lighthouse`, so **no automated check exists**, and CI runs no `test:visual` either (see DF17),
+so neither the accessible-name tree nor the rendered result is checked by anything.
+
+The hand-written attributes are real — `HelpPanel.tsx` carries `aria-labelledby` on its sections, an
+`aria-label` on the element-kind table and on each tab-jump button — which is the reason this is a
+verification gap rather than an absence. Nothing tells you when one of them stops being true.
+
+**Kept deliberately small.** This is an internal design tool for an embedded device, not a shipped web
+product, and the scope here is exactly what the story claimed and did not do: one axe pass over the
+workspace's tabs, wired into the unit suite. Anything broader is a new decision, not this item.
+
 ### Not promoted, and why
 
 - **"The simulator's missing nav stack" — not verified, so no id.** Probed 2026-08-18: no `navStack`,
@@ -848,6 +871,10 @@ it), and the mechanical option that cannot drift again is the right one.
   is supposed to do on BACK before it can be called a defect. Left in `MEMORY.md` §6 marked unverified.
 - **"The I2 append-only catalogue check" — folded into I2 as I2a**, not given a J id. The rule and the
   fact that nothing enforces it belong in one place.
+- **SI-04's "no contextual links from Help into the Simulation and Design panels" — stale, so no id.**
+  They are built and wired: `HelpPanel.tsx` renders `→ Open Simulation trace panel` and `→ Open Simulation
+  tab` behind an `onNavigateToTab` prop, and `App.tsx:3555` passes `setActivePanel` into it, so the buttons
+  render. The story's residue section has been corrected in place.
 
 ---
 
