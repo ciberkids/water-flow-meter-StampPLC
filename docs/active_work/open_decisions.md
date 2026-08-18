@@ -24,7 +24,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Seventeen open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
+**Fifteen open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
 DF10", "DF19 go ahead" — and this file is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
 they are append-only and never reused, so a gap means an item closed, not an item lost.
 
@@ -34,8 +34,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | correction + measurement | Nothing protects the VLF probe's position above `M5StamPLC.begin()`, and whether the RTC survives power loss is unknown |
-| **DF14** | 🟡 | **decision** | `configIsValid`'s offset bound is ten times what its own comment promises — tighten the bound or correct the comment |
-| **DF15** | 🟡 | **decision** | Three registers §5's table documents do not exist, and 711 is double-booked — build them or move them out of the table |
 | **DF18** | 🟡 | **decision** (design) | `nyquist-warning`'s `option-down` sits inside the banner band; fixing it means authoring the screen's first spec file |
 | **N-d1** | 🟡 | feature, queued | The clock can be set from no route at all; next step is the Modbus date/time block |
 | **N-c** | 🟡 | feature, queued | MQTT is report-only — §4.4.1's command topics are unbuilt, and register 565 reports results that cannot arrive |
@@ -202,7 +200,7 @@ the bottom of this file, verbatim in
 | `H` | menu behaviour | H1–H6 | closed |
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
-| `DF` | defect — opened 2026-08-18 | DF1–DF21 | **seven open**, fourteen fixed |
+| `DF` | defect — opened 2026-08-18 | DF1–DF21 | **five open**, sixteen fixed |
 | `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **four open**; J3, J4, J5 and J8 fixed |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
@@ -228,7 +226,7 @@ a future batch takes `J` or a new two-letter prefix, never a letter that once me
 
 ---
 
-## Defects found — DF1–DF21, fourteen fixed and seven open
+## Defects found — DF1–DF21, sixteen fixed and five open
 
 None is a decision — each is known, each has a diagnosis, and they are here because this is the file
 that gets read before picking up work.
@@ -606,7 +604,7 @@ all stale before this round began. Deliberately not swept: a docs-wide citation 
 The durable lesson is the one this round keeps proving — a line number in prose is a second home for a
 fact, and prefer naming the symbol, or a `static_assert`, over citing a coordinate.
 
-### DF14 — `configIsValid`'s offset bound is ten times the frequency the channel can reach 🟡
+### DF14 — ~~`configIsValid`'s offset bound is ten times the frequency the channel can reach~~ ✅ FIXED 2026-08-18
 
 **The one thing this round found and deliberately did not change**, because it is a decision about what
 the predicate promises rather than a repair.
@@ -641,7 +639,39 @@ present state is the only one that is indefensible, because the comment and the 
 degenerate figures twice installs them through §5.5's override handshake, by design — the handshake exists
 for meters the gate is wrong about. Asserted in `sensor_config_gate_test.cpp` rather than glossed over.
 
-### DF15 — Three registers §5's table documents do not exist 🟡
+**Decided by the owner 2026-08-18: refuse a negative offset, hard, and keep the bound the comment always
+promised** — `adjust >= 0 && adjust <= q_max * multiplier`.
+
+**A correction I had to make mid-decision, which changed what was being chosen.** I offered the refusal with
+"still installable via §5.5's write-twice override" attached. That was wrong: `prepareConfigUpdate`
+(`modbus_manager.cpp:802–806`) clears the override state and returns early for an **invalid** candidate, so
+the handshake only ever covered candidates that are valid but outrun the sampler. The owner chose the hard
+refusal knowing there is no escape hatch on any route.
+
+**Why the negative half is the one that repairs something.** The engine clamps only a NEGATIVE result to
+zero, and a negative offset produces a POSITIVE reading at zero frequency — so it sails past that clamp.
+Tightening the bound alone would NOT have fixed the audit's own case: `m=10, q=150, a=-1400` sits inside the
+tightened bound of 1500. That is the fact this entry half-stated, and the decision turned on it.
+
+**Where the rule lives now, in one place each:** `configIsValid`; the panel's editor re-bounded to 0..32767
+following the multiplier's precedent; the manifest regenerated, because it publishes that bound to the design
+tool; the mockup's mirror updated verbatim; and `gen-registers.mjs` publishing the real range and the reason
+to integrators.
+
+**The migration consequence, stated rather than papered over.** `sensor_config_nvs_test.cpp` seeded a legacy
+channel with `adjust = -120` and asserted it stays valid across the upgrade. It no longer does — and those
+seeded figures were themselves the defect (`120 / 6` = **20 L/min on a dry pipe**). The three legacy keys
+still load, so nothing is lost and one field fixes it, but such a channel reads `SET?` until re-calibrated.
+Affordable because the fleet is empty — nothing has run on hardware yet — which makes this the cheapest
+moment the rule will ever have to tighten.
+
+**Tests.** The gate test's negative-offset scenario becomes "refused on every attempt, no override", and
+§5.5's handshake gains its own case built on a VALID but unsamplable config (multiplier 200 at q_max 150 =
+30 kHz), so the handshake stays covered by something this rule cannot reclassify. Both mockup pins were
+**inverted, not deleted**, and a new one records the tightening's cost: 1500 passes, 1501 does not.
+Negative-tested: allowing negatives fails 5 host checks, restoring the 10× fails 2 unit checks.
+
+### DF15 — ~~Three registers §5's table documents do not exist~~ ✅ FIXED 2026-08-18
 
 Found while relocating `kPortalPassword`. The table in
 `../Requirements/feature addition/WiFi_MQTT_Connectivity.md` §5 does not match `net_register_map.h`, and
@@ -661,6 +691,22 @@ is a feature, and deleting them from the table would discard a requirement.
 **Decide:** build the two registers, or move them out of the layout table into the requirements text so
 the table describes only what answers. The `static_assert`s added this round cover overlaps between
 things that EXIST; they cannot catch an address that exists only on paper.
+
+**Decided by the owner 2026-08-18: mark them reserved and unbuilt, and fix the range.** Deleting the rows
+would discard a requirement and let a future block reuse an address already spoken for; building them is
+WiFi-slice feature work that this table's honesty should not have to wait for.
+
+- **674** (`NET_PORTAL_ENABLED`, R7.9) and **711** (`NET_AP_REQUEST`, R5.4a) now read **SPECIFIED, NOT
+  BUILT — reserved**, each naming its requirement and stating that no constant declares it.
+- **`NET_AP_IP` is 708–709**, not 708–711: the header declares `kApIp = 708` over two packed registers,
+  with `kPortalReset` at 710 and `kPortalUser` at 712.
+- A note under the table carries the reconciliation, including the part worth recording: the four-register
+  range **double-booked 711 against `NET_AP_REQUEST` inside the same table**, while R5.4a's own decision
+  note said 711 was chosen *because* it is free. The header was right; the table was wrong twice over.
+
+**What is still not gated.** The `static_assert`s cover addresses that exist; nothing can fail a build over a
+row describing a register that does not. That note is the only gate these two rows have, which is weaker than
+a check and is the honest state — building them is what would make the rows checkable.
 
 ### DF16 — The simulator's `ready` is stored where the device derives it — DEFERRED ON SCOPE 🟡
 
