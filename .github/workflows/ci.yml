@@ -136,6 +136,20 @@ jobs:
             exit 1
           fi
 
+      # Same shape as the freshness check above, for a sharper reason. The hand-written table this
+      # replaced listed 4 of 19 actions, and two of the four - ui.action.mode.configuration and
+      # ui.action.mode.info - had been replaced by the nav.* actions and no longer existed. Omitting
+      # fifteen makes them look unavailable; advertising two that no handler implements sends an
+      # implementer to wire a flow the firmware will refuse.
+      - name: The action table matches the firmware catalogue
+        run: |
+          node tools/wiki/gen-actions.mjs --write
+          if ! git diff --quiet -- "docs/Requirements/feature addition/UI_Firmware_Interface.md"; then
+            echo "::error::The action table is stale. Run 'node tools/wiki/gen-actions.mjs --write' and commit."
+            git --no-pager diff -- "docs/Requirements/feature addition/UI_Firmware_Interface.md"
+            exit 1
+          fi
+
       # Diagram VALIDITY, which is a different property from the freshness check above and needs its
       # own gate. Four diagrams shipped in the commit that added the freshness check and not one of
       # them rendered: each carried a bare `%%` separator, which mermaid does not treat as a comment,
