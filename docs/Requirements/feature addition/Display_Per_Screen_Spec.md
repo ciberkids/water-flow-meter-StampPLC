@@ -208,7 +208,13 @@ What comes with the decision:
 - **Exactly one element per screen may sit in y 116…134** — the footer hint, marked `bannerReplaces` in the
   screen's JSON. Anything else there is reported as a collision, so this is not a blanket exemption.
 - `level-position` shortens from 104 px to **100 px** (y 14…114) on every screen that carries it: at 104 it
-  grazed the band by 2 px.
+  grazed the band by 2 px. **True of the shipped dataset since 2026-08-18** — all 61 are 100, in
+  `screens.json` and in the generated firmware table. It was not when this line was written: the 55 screens
+  with a spec file were overridden to 100 while six `confirm-*-back` screens had none and kept the
+  generator's own default of 104, so the claim held for most of the dataset and not for the six it named
+  (DF19). One number in `tools/skeleton/generate.mjs` plus `--write` fixed it, and
+  `tools/audit/screen-geometry.ts` now reports any scrollbar that reaches the band so this cannot drift
+  again unnoticed.
 
 ## 3. P0 — System Status  *(agreed)*
 

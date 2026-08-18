@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T08:14:02.020Z",
+  "generatedAt": "2026-08-18T13:04:06.545Z",
   "screenCount": 80,
   "elementCount": 666,
   "dataset": [
@@ -12399,12 +12399,12 @@
             "type": "scrollbar",
             "payload": {
               "width": 5,
-              "height": 104
+              "height": 100
             }
           },
           "size": {
             "width": 5,
-            "height": 104
+            "height": 100
           }
         }
       ],
@@ -12647,12 +12647,12 @@
             "type": "scrollbar",
             "payload": {
               "width": 5,
-              "height": 104
+              "height": 100
             }
           },
           "size": {
             "width": 5,
-            "height": 104
+            "height": 100
           }
         }
       ],
@@ -12895,12 +12895,12 @@
             "type": "scrollbar",
             "payload": {
               "width": 5,
-              "height": 104
+              "height": 100
             }
           },
           "size": {
             "width": 5,
-            "height": 104
+            "height": 100
           }
         }
       ],
@@ -13159,12 +13159,12 @@
             "type": "scrollbar",
             "payload": {
               "width": 5,
-              "height": 104
+              "height": 100
             }
           },
           "size": {
             "width": 5,
-            "height": 104
+            "height": 100
           }
         }
       ],
@@ -13406,12 +13406,12 @@
             "type": "scrollbar",
             "payload": {
               "width": 5,
-              "height": 104
+              "height": 100
             }
           },
           "size": {
             "width": 5,
-            "height": 104
+            "height": 100
           }
         }
       ],
@@ -13654,12 +13654,12 @@
             "type": "scrollbar",
             "payload": {
               "width": 5,
-              "height": 104
+              "height": 100
             }
           },
           "size": {
             "width": 5,
-            "height": 104
+            "height": 100
           }
         }
       ],

@@ -1852,7 +1852,7 @@ static constexpr ui_exporter::Element kConfirmResetTotalsBackElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfirmResetTotalsBack_ConfirmResetTotalsBackHdrTitle_Text, nullptr, nullptr },
     { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfirmResetTotalsBack_ConfirmResetTotalsBackBackLabel_Text, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmResetTotalsBack_ConfirmResetTotalsBackFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -1892,7 +1892,7 @@ static constexpr ui_exporter::Element kConfirmResetSessionBackElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfirmResetSessionBack_ConfirmResetSessionBackHdrTitle_Text, nullptr, nullptr },
     { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfirmResetSessionBack_ConfirmResetSessionBackBackLabel_Text, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmResetSessionBack_ConfirmResetSessionBackFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -1932,7 +1932,7 @@ static constexpr ui_exporter::Element kConfirmResetMaxFlowBackElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfirmResetMaxFlowBack_ConfirmResetMaxFlowBackHdrTitle_Text, nullptr, nullptr },
     { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfirmResetMaxFlowBack_ConfirmResetMaxFlowBackBackLabel_Text, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmResetMaxFlowBack_ConfirmResetMaxFlowBackFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -1974,7 +1974,7 @@ static constexpr ui_exporter::Element kConfirmResetCalibrationBackElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfirmResetCalibrationBack_ConfirmResetCalibrationBackHdrTitle_Text, nullptr, nullptr },
     { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfirmResetCalibrationBack_ConfirmResetCalibrationBackBackLabel_Text, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmResetCalibrationBack_ConfirmResetCalibrationBackFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -2014,7 +2014,7 @@ static constexpr ui_exporter::Element kConfirmFactoryResetBackElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfirmFactoryResetBack_ConfirmFactoryResetBackHdrTitle_Text, nullptr, nullptr },
     { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfirmFactoryResetBack_ConfirmFactoryResetBackBackLabel_Text, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmFactoryResetBack_ConfirmFactoryResetBackFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -2054,7 +2054,7 @@ static constexpr ui_exporter::Element kConfirmResetPortalLoginBackElements[] = {
     { "hdr-title", ui_exporter::ElementType::Text, 8, 2, 0, 0, &kConfirmResetPortalLoginBack_ConfirmResetPortalLoginBackHdrTitle_Text, nullptr, nullptr },
     { "back-label", ui_exporter::ElementType::Text, 8, 50, 0, 0, &kConfirmResetPortalLoginBack_ConfirmResetPortalLoginBackBackLabel_Text, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 8, 124, 0, 0, &kConfirmResetPortalLoginBack_ConfirmResetPortalLoginBackFooterHint_Text, nullptr, nullptr },
-    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 104, nullptr, nullptr, nullptr }
+    { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
 
 
@@ -2238,7 +2238,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-17T08:14:02.020Z", 80, 666
+    "2026-08-18T13:04:06.545Z", 80, 666
 };
 
 }  // namespace ui_exporter

@@ -36,7 +36,11 @@ const L = {
   savedValueY: 92,
   footerY: 124,
   padX: 8,
-  scrollbar: { x: 232, y: 14, width: 5, height: 104 }
+  // 100, not 104 (DF19). §2c requires every `level-position` scrollbar to stop clear of the warning
+  // band at y=116: 14 + 104 = 118, two pixels inside it. The six screens that had no spec file to
+  // override this default shipped at 104 while the other 55 came out at 100 from their spec files —
+  // one fact with two homes, and the wrong home was the live one.
+  scrollbar: { x: 232, y: 14, width: 5, height: 100 }
 };
 
 /**
