@@ -165,9 +165,11 @@ Global addresses 46-99 are free and existing groups are spaced by ten, so the bl
 Two conventions that belong in `register_map.h` beside the addresses, not in a reader's head:
 
 - **The sensor number is 1-based and 0 means none.** It matches the panel's `S1`..`S8` and `UiNavigator`'s
-  own `sensorIndex_ = 0` sentinel. It also avoids spreading a hazard the tree already carries: the web
-  portal names per-sensor fields `@0`..`@7` while `ui::readSetting` takes a 1-based index where 0 is
-  invalid (`portal_form.h:165`), so one careless adapter drops sensor 1 and misroutes the rest.
+  own `sensorIndex_ = 0` sentinel. **The web portal now agrees** — it names per-sensor fields `@1`..`@8`
+  and refuses `@0`, so the same number means the same sensor on every route and an adapter forwards the
+  index untouched. It did not until 2026-08-18: the form was `@0`..`@7` against a settings API where 0 is
+  invalid, and the first adapter written against it would have dropped sensor 1 and landed every other
+  calibration one channel low (**DF10**, decided in favour of aligning the portal).
 - **Ties resolve to the lowest sensor number.** A master cannot reproduce a rule it was never told, and
   not having to reproduce the rule is the entire point of register 56.
 

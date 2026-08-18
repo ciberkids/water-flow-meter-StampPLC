@@ -167,7 +167,9 @@ void coverageTests() {
     if (!setting) continue;
     if (setting->perSensor) {
       ++perSensorSeen;
-      for (std::size_t sensor = 0; sensor < plc::kNumSensors; ++sensor) {
+      // ONE-BASED: 1..kNumSensors, because that is what `ui::writeSetting` takes and what the panel
+      // shows (DF10). This loop asserted `@0`..`@7` while the settings API rejects 0 outright.
+      for (std::size_t sensor = 1; sensor <= plc::kNumSensors; ++sensor) {
         const std::string name = std::string("name=\"") + setting->bindingId + "@" +
                                  std::to_string(sensor) + "\"";
         if (!contains(html, name)) {
@@ -198,11 +200,18 @@ void coverageTests() {
         "with a catalogue big enough that the coverage claim means something");
   check(perSensorSeen > 0, "including per-sensor ones, so the @index path is actually exercised");
 
-  // The LAST index is where an off-by-one lives, and the one past it is where an over-run does.
-  check(contains(html, "name=\"config.sensor.multiplier@7\""),
+  // The LAST index is where an off-by-one lives, and the one past it is where an over-run does. Both
+  // moved by one when the portal became one-based (DF10): with kNumSensors = 8 the last row is now
+  // `@8` and the over-run is `@9`. The literals are spelled out rather than computed, because a test
+  // that derives its expectation from the same constant the code uses cannot catch a shifted range.
+  check(contains(html, "name=\"config.sensor.multiplier@8\""),
         "the last sensor's calibration is present (sensorCount = kNumSensors)");
-  check(!contains(html, "name=\"config.sensor.multiplier@8\""),
-        "and one past the end is not");
+  check(contains(html, "name=\"config.sensor.multiplier@1\""),
+        "and so is the first, as @1 — the index ui::writeSetting accepts");
+  check(!contains(html, "name=\"config.sensor.multiplier@0\""),
+        "while @0 is absent: it is the settings API's \"no such slot\" value");
+  check(!contains(html, "name=\"config.sensor.multiplier@9\""),
+        "and one past the end (@9) is not");
 
   // Both portal credential fields exist even though neither is in the catalogue (R7.9a/b).
   check(contains(html, "name=\"config.portal.user\""), "the portal user has a field");
@@ -214,9 +223,13 @@ void coverageTests() {
   StringSink smallSink;
   small.renderSettingsForm(smallSink);
   check(contains(smallSink.text(), "name=\"config.sensor.multiplier@1\""),
-        "with sensorCount = 2 the second sensor is rendered");
-  check(!contains(smallSink.text(), "name=\"config.sensor.multiplier@2\""),
+        "with sensorCount = 2 the FIRST sensor is @1, not @0");
+  check(contains(smallSink.text(), "name=\"config.sensor.multiplier@2\""),
+        "and the second is @2 — the last sensor is sensorCount, not sensorCount - 1");
+  check(!contains(smallSink.text(), "name=\"config.sensor.multiplier@3\""),
         "and the third is not — the loop bound is the parameter, not a constant");
+  check(!contains(smallSink.text(), "name=\"config.sensor.multiplier@0\""),
+        "and @0 is never rendered: 0 is ui::writeSetting's \"no such slot\" marker");
 
   // Every kind has to have produced a control, or a whole class of setting is silently unreachable.
   check(contains(html, "type=\"number\""), "numerics render as number inputs");
@@ -686,6 +699,26 @@ void storeTests() {
   }
   check(sawSlaveId, "the global setting arrived with its value");
   check(sawSensor, "and the per-sensor one with the index from its @suffix, not sensor 0");
+
+  // THE BOUNDARIES OF THE ONE-BASED RANGE (DF10). Each of these three was wrong before the portal was
+  // aligned with `ui::writeSetting`: `@0` was accepted and would have been forwarded as the settings
+  // API's "invalid" marker, and `@kNumSensors` was refused because the bound was `>= sensorCount_`,
+  // which made the LAST sensor unaddressable the moment anything named it directly.
+  store.writes.clear();
+  check(!form.submit("config.sensor.maxFlow@0=120").ok(),
+        "@0 is refused — 0 is not a sensor");
+  check(store.writes.empty(), "and nothing reached the store");
+  const std::string lastSensor =
+      std::string("config.sensor.maxFlow@") + std::to_string(plc::kNumSensors) + "=120";
+  check(form.submit(lastSensor.c_str()).ok(),
+        "the LAST sensor is addressable: @kNumSensors is inside the range");
+  check(!store.writes.empty() && store.writes.back().sensorIndex == plc::kNumSensors,
+        "and arrives with that index unchanged, so an adapter adds nothing");
+  store.writes.clear();
+  const std::string pastLast =
+      std::string("config.sensor.maxFlow@") + std::to_string(plc::kNumSensors + 1) + "=120";
+  check(!form.submit(pastLast.c_str()).ok(), "one past the last is refused");
+  check(store.writes.empty(), "and nothing reached the store for it either");
 
   // What the page SAYS about a store-only submission. NetSettings never committed, so a result that
   // only knew about `committed` reported "nothing changed" over a value it had just written — and

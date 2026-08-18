@@ -317,7 +317,12 @@ void writeNumber(PortalSink& out, long value) {
   out.writeText(text);
 }
 
-/** `config.sensor.multiplier` + sensor 3 -> `config.sensor.multiplier@3`. */
+/**
+ * `config.sensor.multiplier` + sensor 3 -> `config.sensor.multiplier@3`.
+ *
+ * The suffix is the ONE-BASED sensor number, the same number the panel shows as S3 and the same one
+ * `ui::writeSetting` takes. 0 is not a sensor.
+ */
 void fieldName(const ui::SettingDescriptor& setting,
                uint8_t sensorIndex,
                bool perSensor,
@@ -723,10 +728,17 @@ void PortalForm::renderSettingsForm(PortalSink& out) const {
     }
 
     if (setting->perSensor) {
-      for (std::size_t sensor = 0; sensor < sensorCount_; ++sensor) {
+      // ONE-BASED, from 1 to sensorCount_ inclusive, because `ui::writeSetting` is one-based with 0
+      // meaning "no such slot" (DF10). This loop used to run 0..sensorCount_-1, so the form named its
+      // first sensor `@0` — the value the settings API rejects — and an adapter forwarding the parsed
+      // index would have dropped sensor 1's write and landed every other calibration one channel low.
+      // Silently: the panel would show the wrong meter's figures with nothing to indicate it.
+      for (std::size_t sensor = 1; sensor <= sensorCount_; ++sensor) {
         renderRow(out, *setting, static_cast<uint8_t>(sensor), true);
       }
     } else {
+      // 0 is the correct index for a global setting, and now means the same thing here as it does in
+      // `ui::writeSetting`: not a sensor slot.
       renderRow(out, *setting, 0, false);
     }
   }
@@ -826,7 +838,10 @@ bool PortalForm::resolve(const char* name, FieldRef& ref) const {
     std::memcpy(base, name, length);
     int64_t parsed = 0;
     if (!parseInt64(at + 1, parsed)) return false;
-    if (parsed < 0 || static_cast<std::size_t>(parsed) >= sensorCount_) return false;
+    // 1..sensorCount_ INCLUSIVE. `@0` is refused because 0 is `ui::writeSetting`'s "no such slot"
+    // marker, and `@sensorCount_` is the last valid sensor rather than one past the end — the bound
+    // this replaced (`>= sensorCount_`) came from the 0-based loop above it.
+    if (parsed < 1 || static_cast<std::size_t>(parsed) > sensorCount_) return false;
     sensorIndex = static_cast<uint8_t>(parsed);
   } else {
     std::snprintf(base, sizeof(base), "%s", name);

@@ -172,13 +172,21 @@ class PortalSettingStore {
  public:
   virtual ~PortalSettingStore() = default;
 
-  /** Current value, for pre-filling the form. False when unavailable. */
+  /**
+   * Current value, for pre-filling the form. False when unavailable.
+   *
+   * `sensorIndex` is ONE-BASED for a per-sensor setting — 1 is the sensor the panel calls S1 — and 0
+   * for a global one, which is exactly `ui::writeSetting`'s convention. So an adapter forwards the
+   * index UNTOUCHED; adding or subtracting one is the bug this alignment removed (DF10).
+   */
   virtual bool readValue(const ui::SettingDescriptor& setting,
                          uint8_t sensorIndex,
                          int32_t& out) const = 0;
 
   /**
    * Commits a value already validated against its descriptor.
+   *
+   * `sensorIndex` is one-based, as in `readValue` above: forward it to `ui::writeSetting` unchanged.
    *
    * False means refused — reported as PortalFieldError::Refused rather than retried.
    */
