@@ -29,9 +29,9 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Six open lines, and not one of them is a defect.** As of 2026-08-18 every `DF` (1–21) and every `J` (1–8)
-is closed; what remains is three queued FEATURES, two things that need the board, and one missing gate. Ask
-for work by ID — "build N-d1", "decide N-b" — and this file is the one place that says what an ID means.
+**Five open lines, and not one of them is a defect.** As of 2026-08-18 every `DF` (1–21) and every `J` (1–8)
+is closed; what remains is two queued FEATURES, two things that need the board, and one missing gate. Ask
+for work by ID — "build N-c", "decide N-b" — and this file is the one place that says what an ID means.
 Rule **I3** below governs them: append-only, never reused, so a gap means an item closed, not an item lost.
 
 The **Shape** column is the one that answers *can I just say go ahead?*
@@ -40,7 +40,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | correction + measurement | Nothing protects the VLF probe's position above `M5StamPLC.begin()`, and whether the RTC survives power loss is unknown |
-| **N-d1** | 🟡 | feature, queued | The clock can be set from no route at all; next step is the Modbus date/time block |
 | **N-c** | 🟡 | feature, queued | MQTT is report-only — §4.4.1's command topics are unbuilt, and register 565 reports results that cannot arrive |
 | **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
 | **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
@@ -52,7 +51,7 @@ that never close.
 
 **What this list is NOT.** Nothing here is blocking a build, a test or an export: every gate in the
 repository is green (host 1,887 checks, 220 unit, 51 exporter, 51 visual, 0 audit findings, and a firmware
-that compiles at RAM 24.6% / Flash 38.0%). Three of the six are features nobody has started, two need
+that compiles at RAM 24.6% / Flash 38.0%). Two of the five are features nobody has started, two need
 hardware that has never existed for this project, and `I2a` is a rule enforced by prose. That is a different
 condition from "twelve things are broken", which is what this register looked like a day ago.
 
@@ -122,13 +121,34 @@ network settings. The portal timer is the thing standing between an operator and
 
 ---
 
-## N-d 🟡 The clock — settable from no route at all, and its one trust signal unprotected
+## N-d ⏸️ The clock — ~~settable from no route at all~~ (N-d1 ✅), and its one trust signal unprotected (N-d2)
 
 Recorded 2026-08-17, alongside N-c, because it is the same shape: a place where "every setting is
 readable and writable over RS485" is not yet true. It is a queued feature, not a defect — but it was
 never written down, and the four-surface question keeps being answered without it.
 
-**N-d1 🟡 The clock can be set from no route at all** — the largest live gap against RS485.
+**N-d1 ✅ FIXED 2026-08-18 — the clock is settable over RS485.** A block at **50-55**: staged epoch halves at
+50-51, `0x5AA5` to 52 to apply with source `operator`, the current time read-only at 53-54, the source at 55.
+Epoch rather than broken-down fields (the clock's API and its floor are `uint32` seconds, and date arithmetic
+in firmware is somewhere to be wrong about February); staged rather than applied on the low word (two
+registers are not atomic under FC6, and a half-composed epoch is a timestamp nobody chose); and a refusal is a
+**Modbus exception** rather than a status register, because `setTime` already refuses 2020…2100 outliers and
+changes nothing, so there is no half-applied state to describe. 53-55 are read-only: a master able to write the
+published time could make the device disagree with its own clock.
+
+Documented in **§4.1.2** of `Project_document.md` and in `gen-registers.mjs`, whose reconciliation refused the
+six registers until they were described — the gate working. Five host cases, negative-tested by applying on
+the low word. Firmware compiles at RAM 24.6% / Flash 38.0%.
+
+**One correction the clock made to me.** I expected the first write to BACKDATE an undated session by the
+millis gap; `device_clock.cpp:107-116` records the sync epoch instead, because the session demonstrably began
+before that moment and that is the tightest available bound. Backdating would look more precise and be a
+fabrication, since nothing recorded a trustworthy anchor at the reset. The test asserts the bound and says so.
+
+**What it unblocks, in the owner's ordering:** the portal page, then NTP on `WifiState::Connected`, then MQTT
+last because it needs N-c's unbuilt command topics. Those are additions now, not prerequisites.
+
+**The gap it closed, for the record:**
 
 `DeviceClock::setTime` has **no production caller**. Grepped 2026-08-17: the only callers are
 `device_clock_test.cpp`, `modbus_manager_clock_test.cpp` and `interaction_test.cpp`. There is no
@@ -155,8 +175,9 @@ confident year-2000 timestamp to the panel, Modbus and MQTT. Whether the RTC sur
 is **unknown** — the chip has a backup-supply pin, and M5Stack does not say whether a cell or supercap is
 populated. Settle it empirically: set the time, pull power for a minute, boot, read VLF.
 
-**Blocks.** Any timestamp being trustworthy in the field. N-d1 is a queued feature and needs nobody's
-decision; N-d2 is a correction (the assert) plus a measurement (the power-cut test).
+**Blocks.** Any timestamp being trustworthy in the field — **and N-d1 no longer does**: RS485 can set the
+clock as of 2026-08-18. What is left is N-d2, a correction (the assert protecting the VLF probe's position)
+plus a measurement (the power-cut test), and it needs the board.
 
 ---
 
@@ -204,7 +225,7 @@ the bottom of this file, verbatim in
 | `G` | hardware risk | G1–G3 | **G1 open**; G2, G3 closed |
 | `H` | menu behaviour | H1–H6 | closed |
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
-| `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
+| `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d2 open**; N-a and N-d1 closed |
 | `DF` | defect — opened 2026-08-18 | DF1–DF21 | **none open**; all twenty-one fixed |
 | `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **all eight closed** the same day |
 

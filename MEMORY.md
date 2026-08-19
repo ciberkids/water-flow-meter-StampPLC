@@ -195,7 +195,7 @@ evidence at all. Before this branch, `interaction_handler.cpp`, `ui_controller.c
 ## 6. Where to pick up
 
 **The item list is not here.** Every open item has a stable ID and lives in the index at the top of
-`docs/active_work/open_decisions.md` — **six lines**, none of them a defect, governed by rule **I3**. Cite the ID
+`docs/active_work/open_decisions.md` — **five lines**, none of them a defect, governed by rule **I3**. Cite the ID
 (`DF18`, `J1`, `N-d1`). This section carries only what an index cannot: the ordering, and the state of
 the working tree.
 
@@ -209,7 +209,7 @@ which had been sitting uncommitted in the tree. I did not author it; I verified 
 table its catalogue entry required, and committed it as one round because splitting it would have produced
 commits that do not build.
 
-**What remains is six lines and not one is a defect:** `N-b`, `N-c`, `N-d1` are queued FEATURES, `G1` and
+**What remains is five lines and not one is a defect:** `N-b` and `N-c` are queued FEATURES, `G1` and
 `N-d2` need the board, `I2a` is a rule nothing enforces. Every gate in the repository is green.
 
 ### The working tree is CLEAN as of 2026-08-18
@@ -249,8 +249,11 @@ The gate exists because the table had been advertising two actions that no longe
 
 Nothing is blocking. The register's six remaining lines are, in the order that unblocks the most:
 
-1. **`N-d1`** — the Modbus date/time block. It is the write that makes every later clock item settable, and
-   the owner's own ordering puts it first: block, then portal page, then NTP, then MQTT.
+1. ~~**`N-d1`**~~ — **built 2026-08-18**: registers 50-55, staged epoch plus `0x5AA5`, refusal as a Modbus
+   exception, documented in §4.1.2 and in the generated reference. **The portal page is next** in the owner's
+   ordering, then NTP on `WifiState::Connected`, then MQTT (which needs N-c). The clock corrected me once
+   while I built it: setting the time BOUNDS an undated session to the sync moment rather than backdating it,
+   because nothing recorded a trustworthy anchor at the reset.
 2. **`N-b`** — the catalogue version in the manifest, so growing the settings catalogue stops silently
    invalidating authored packs. `J1`'s ring gate and this are the two the pack format assumes.
 3. **`I2a`** — a checked-in `id → meaning` snapshot that CI diffs, which is the only thing that would make
