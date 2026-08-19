@@ -195,8 +195,8 @@ evidence at all. Before this branch, `interaction_handler.cpp`, `ui_controller.c
 ## 6. Where to pick up
 
 **The item list is not here.** Every open item has a stable ID and lives in the index at the top of
-`docs/active_work/open_decisions.md` — **thirteen lines**, no 🔴, governed by rule **I3**. Cite the ID
-(`DF18`, `J2`, `N-d1`). This section carries only what an index cannot: the ordering, and the state of
+`docs/active_work/open_decisions.md` — **eleven lines**, no 🔴, governed by rule **I3**. Cite the ID
+(`DF18`, `J1`, `N-d1`). This section carries only what an index cannot: the ordering, and the state of
 the working tree.
 
 ### Session of 2026-08-18 — ten items closed, four opened
@@ -221,6 +221,8 @@ state, so the banner still has no pixel verification), **DF21** (CI runs no `tes
 
 **Two of my changes could NOT be committed and sit in that tree deliberately:**
 
+0. **`ui_root_tail.h`'s `Screen` initializer**, one pair shorter since J2 narrowed the generated struct.
+   Without it the firmware does not compile — so whoever commits that file must keep this edit.
 1. The **scrollbar band rule** in `tools/audit/screen-geometry.ts` — reports any scrollbar reaching the
    band, 6 before DF19's fix and 0 after. It builds on the band check from the uncommitted §2c work, so
    it belongs to that round.
@@ -237,6 +239,17 @@ EOF
 blob=$(git hash-object -w /tmp/base) && git update-index --cacheinfo 100644,$blob,path
 ```
 
+**And then VERIFY THE INDEX, not the working tree.** A reconstruction is a different artefact from the
+file you tested, and commit `97132ea` proved it: three `/**` openers were dropped by a helper that started
+at a marker phrase on a comment's second line, so HEAD did not typecheck while the working tree passed 220
+tests. Repaired in `54f191d`. The check that catches it:
+
+```bash
+tree=$(git write-tree) && mkdir /tmp/chk && git archive $tree | tar -x -C /tmp/chk
+cd /tmp/chk/web/mockup && ln -s <repo>/web/mockup/node_modules node_modules
+npx tsc --noEmit && npm run test:unit && npm run test:exporter
+```
+
 ### Two local gates fire for a reason that is not a fault
 
 The catalogue's uncommitted 19th action (`ui.action.pack.select-menu`) means
@@ -247,9 +260,10 @@ clean checkout, where the catalogue has 18.
 
 ### Next, in the order I would take them
 
-1. **`J2` and `J7` together** — both are dropped features whose layers survive (`animation`, the
-   transition preview). Same shape, same decision, and J2 reaches into the emitter and the generated
-   header, so doing them apart means touching that surface twice.
+1. ~~**`J2` and `J7` together**~~ — **done 2026-08-18**, and doing them together paid: J2's emitter change
+   broke on a positional `ui_exporter::Screen` initializer in the untracked `ui_root_tail.h`, which J7 alone
+   would not have surfaced. Flash fell 656 bytes. J7 turned out to be a NARROWING, not a deletion: its
+   entry claimed nothing read the state, and `ScreenSelector`'s `.preview-target` ring does.
 2. **`DF18`** — needs a design decision, not a repair: authoring `screens/nyquist-warning.json` to move
    an option row out of the banner band. It is the geometry audit's one remaining finding, by design.
 3. **`DF20` then `DF21`** — build the banner-state snapshot first, because wiring `test:visual` into CI

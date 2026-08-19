@@ -24,7 +24,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Thirteen open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
+**Eleven open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
 DF10", "DF19 go ahead" — and this file is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
 they are append-only and never reused, so a gap means an item closed, not an item lost.
 
@@ -40,11 +40,9 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
 | **J1** | 🟡 | gate, unbuilt | No export gate proves a level's DOWN ring closes — and paging wraps in the dataset, not in code. Same family as N-b |
 | **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
-| **J2** | 🟡 | correction, one round | `animation` was dropped by C1 and still survives in five layers, including bytes emitted into the firmware header |
 | **J6** | 🟡 | gate, unbuilt | Nothing verifies the workspace is accessible — no axe/pa11y/lighthouse in the workspace |
 | **DF20** | 🟡 | gate, unbuilt | No snapshot drives a warning state, so the repaired visual suite still never renders the banner |
 | **DF21** | 🟡 | gate, unbuilt | CI runs no `test:visual` step — the reason DF17 stayed invisible |
-| **J7** | 🟡 | correction, one round | The transition preview is off by decision; its five layers remain, same shape as J2 |
 
 **DF1–DF9, DF11–DF13** are fixed and keep their IDs, struck through in place below. **I2** and **I3** are
 standing rules that never close.
@@ -199,7 +197,7 @@ the bottom of this file, verbatim in
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
 | `DF` | defect — opened 2026-08-18 | DF1–DF21 | **three open**, eighteen fixed |
-| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **four open**; J3, J4, J5 and J8 fixed |
+| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **two open** (J1, J6); J2, J3, J4, J5, J7 and J8 fixed |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
 group — they are in the closed table at the bottom of this file and throughout the archive. The defect
@@ -919,7 +917,7 @@ add the step.
 
 ---
 
-## Residue and hygiene — J1–J8, opened 2026-08-18 (J3, J4, J5, J8 closed the same day)
+## Residue and hygiene — J1–J8, opened 2026-08-18 (all but J1 and J6 closed the same day)
 
 J1–J5 were a **single unnumbered sentence in `MEMORY.md` §6** — "smaller and still open: the export
 gate for ring closure, the I2 append-only catalogue check, `animation` residue across five layers, the
@@ -945,7 +943,7 @@ is closed because the generator emits it that way; a third-party pack has no suc
 **Same family as N-b:** both are export-time gates that `Loadable_UI_Menu_Packs.md` assumes and that do
 not exist. Worth building in one round.
 
-### J2 — `animation` was dropped by C1 and still survives in five layers 🟡
+### J2 — ~~`animation` was dropped by C1 and still survives in five layers~~ ✅ FIXED 2026-08-18
 
 C1 chose the scrollbar and **dropped animation**. What is still there, verified 2026-08-18:
 
@@ -970,6 +968,30 @@ firmware bytes and a documented promise the device does not keep.
 list and the mockup's own CSS transitions may legitimately use it, so this is not one delete — it is a
 `required`-list change, a regenerated dataset, and a `GeneratedUi.h` shape change, which makes it a round
 of its own rather than a tidy-up.
+
+**Cut 2026-08-18, and the warning above was right: the shape is not uniform.** The theme token is **live** —
+`ThemeProvider.tsx:106` feeds it into `--theme-animation-easing`, which `App.css` uses for the workspace's
+own transitions. So the dataset keeps it, schema and `required` untouched, and everything DOWNSTREAM of it
+went: the IR theme field and the generated `Theme::animationEasing`, which fed a device that never read them.
+
+Removed: `ScreenAnimation` + `animations?` (dataset type), `animationSchema` and `animationKeyframeSchema`
+and the `animations` property (shared schema), `IRAnimation` + the IR pass-through, and from the emitter the
+`AnimationKind` enum, the `AnimationKeyframe` and `Animation` structs, the two `Screen` fields,
+`animationKindLiteral` and a 49-line emission block. Plus `ThemePalette::animationEasing` and HelpPanel's
+promise of a field that no longer exists.
+
+**Measured, because a dead-code claim should cost something visible:** Flash **1,269,785 → 1,269,129 bytes**
+— 656 bytes of the device's image was animation machinery it never used. RAM unchanged at 24.6%.
+
+**Two findings from doing it:**
+
+1. **The exporter rolls back.** It writes assets, compiles, and restores the previous export if the compile
+   fails — which is what happened on the first attempt, leaving `generated/` untouched. The failure cost
+   nothing, which is worth knowing before fearing an export.
+2. **A positional initializer over a generated struct breaks on any field change.** This branch's untracked
+   `ui_root_tail.h` builds a `ui_exporter::Screen` positionally and failed with `too many initializers` the
+   moment `Screen` lost two fields. Fixed in the working tree with a comment, uncommitted because the file
+   is. Designated initializers would not have this problem, and the next `Screen` change will hit it again.
 
 ### J3 — ~~`carea/` is 18 tracked files of a stray git directory~~ ✅ FIXED 2026-08-18
 
@@ -1092,7 +1114,7 @@ verification gap rather than an absence. Nothing tells you when one of them stop
 product, and the scope here is exactly what the story claimed and did not do: one axe pass over the
 workspace's tabs, wired into the unit suite. Anything broader is a new decision, not this item.
 
-### J7 — The transition preview is off by decision, and all five of its layers remain 🟡
+### J7 — ~~The transition preview is off by decision, and all five of its layers remain~~ ✅ FIXED 2026-08-18
 
 `App.tsx` passes `pendingTransition={undefined}` behind a six-line comment explaining that the firmware
 draws no transition, so previewing one made the simulator less faithful. The feature is off. Still present:
@@ -1103,6 +1125,25 @@ in `DisplayViewport`.
 **Identical shape to J2** — a dropped feature whose layers survive — and worth deciding in the same round:
 delete the five layers, or restore the prop behind a toggle. What it must not stay is a callback firing on
 every keypress into a value nothing reads.
+
+**Cut 2026-08-18, in the same round as J2 — and THIS ENTRY WAS WRONG about the last sentence.** Something
+does read it: `previewId` reaches `ScreenSelector`, which puts `.preview-target` — a styled cyan ring — on
+the target row for 1500 ms. That is a workspace affordance rather than a device simulation, and it survives.
+Checking before cutting is the only reason it still exists.
+
+So the fix is a **narrowing**, not a deletion:
+
+- **Gone:** the `DisplayViewport` prop and its 45-line render branch, **17 CSS blocks / 166 lines** including
+  four keyframe animations, `TransitionEffect`, `deriveTransitionEffect`, and the effect / labels /
+  `previewLayout` fields — which also stops a whole `computeLayout` running on every answered press to feed a
+  branch guarded by `undefined`.
+- **Kept, renamed for what it is:** `transitionPreview` → `previewTarget`, `previewTransition` →
+  `markPreviewTarget`, `types/transitionPreview.ts` → `types/previewTarget.ts` with two fields instead of
+  eight. A name describing a feature that no longer exists is how the next reader inherits the confusion.
+
+**The surviving behaviour was verified, not assumed:** drove the app, pressed ArrowDown, the ring appears on
+the DOWN target and is gone after 1.7 s. And **no visual baseline moved**, which is the clearest evidence the
+overlay had not been rendering.
 
 ### J8 — ~~Two clamps disagree: the Design panel pins the coordinate, the importer pins the far edge~~ ✅ FIXED 2026-08-18
 
