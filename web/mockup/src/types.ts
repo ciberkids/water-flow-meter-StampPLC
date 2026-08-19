@@ -112,14 +112,6 @@ export interface AnimationKeyframe {
   assetFrameIndex?: number;
 }
 
-export interface ScreenAnimation {
-  id: string;
-  targetElementId: string;
-  kind: "frame-sequence" | "property";
-  frames: AnimationKeyframe[];
-  loop?: boolean;
-  easing?: "linear" | "step" | "ease-in" | "ease-out" | "ease-in-out";
-}
 
 export interface ScreenSubmenu {
   id: string;
@@ -165,7 +157,6 @@ export interface ScreenDefinition {
   events?: ScreenEvent[];
   flows?: ScreenFlow[];
   assets?: ScreenGraphicAsset[];
-  animations?: ScreenAnimation[];
   submenus?: ScreenSubmenu[];
 }
 

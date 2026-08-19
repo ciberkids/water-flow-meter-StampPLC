@@ -6,7 +6,7 @@ import type {
   ScreenEvent,
   ScreenFlow,
   ScreenGraphicAsset,
-  ScreenAnimation,
+ 
   ScreenSubmenu,
   ButtonFlowTrigger,
   TimeoutFlowTrigger,
@@ -150,44 +150,7 @@ export const graphicAssetSchema: JSONSchemaType<ScreenGraphicAsset> = {
   }
 };
 
-export const animationKeyframeSchema: JSONSchemaType<ScreenAnimation["frames"][number]> = {
-  type: "object",
-  additionalProperties: false,
-  required: ["at", "state"],
-  properties: {
-    at: { type: "number", minimum: 0 },
-    state: {
-      type: "object",
-      required: [],
-      additionalProperties: {
-        oneOf: [{ type: "number" }, { type: "string" }, { type: "boolean" }]
-      }
-    },
-    assetFrameIndex: { type: "integer", nullable: true, minimum: 0 }
-  }
-};
 
-export const animationSchema: JSONSchemaType<ScreenAnimation> = {
-  type: "object",
-  additionalProperties: false,
-  required: ["id", "targetElementId", "kind", "frames"],
-  properties: {
-    id: { type: "string", minLength: 1 },
-    targetElementId: { type: "string", minLength: 1 },
-    kind: { type: "string", enum: ["frame-sequence", "property"] },
-    frames: {
-      type: "array",
-      minItems: 1,
-      items: animationKeyframeSchema
-    },
-    loop: { type: "boolean", nullable: true },
-    easing: {
-      type: "string",
-      nullable: true,
-      enum: ["linear", "step", "ease-in", "ease-out", "ease-in-out"]
-    }
-  }
-};
 
 export const submenuSchema: JSONSchemaType<ScreenSubmenu> = {
   type: "object",
@@ -244,11 +207,6 @@ export const screenSchema: JSONSchemaType<ScreenDefinition> = {
       type: "array",
       nullable: true,
       items: graphicAssetSchema
-    },
-    animations: {
-      type: "array",
-      nullable: true,
-      items: animationSchema
     },
     submenus: {
       type: "array",

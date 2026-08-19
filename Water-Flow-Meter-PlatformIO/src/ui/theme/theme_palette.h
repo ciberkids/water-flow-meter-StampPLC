@@ -18,7 +18,6 @@ class ThemePalette {
   std::uint16_t typographyBase(std::uint16_t fallback = 8) const;
   std::uint16_t typographyValue(std::uint16_t fallback = 10) const;
   std::uint16_t typographyBadge(std::uint16_t fallback = 8) const;
-  const char* animationEasing(const char* fallback = "ease-in-out") const;
 
  private:
   const ui_exporter::Theme* theme_ = nullptr;

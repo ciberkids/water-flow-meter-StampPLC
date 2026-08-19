@@ -38,8 +38,4 @@ std::uint16_t ThemePalette::typographyBadge(std::uint16_t fallback) const {
   return theme_ ? theme_->typographyBadge : fallback;
 }
 
-const char* ThemePalette::animationEasing(const char* fallback) const {
-  return (theme_ && theme_->animationEasing) ? theme_->animationEasing : fallback;
-}
-
 }  // namespace ui

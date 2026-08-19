@@ -45,11 +45,6 @@ enum class FlowGesture : std::uint8_t {
   Hold = 2
 };
 
-enum class AnimationKind : std::uint8_t {
-  FrameSequence = 0,
-  Property = 1
-};
-
 struct KeyValue {
   const char* key;
   const char* value;
@@ -89,23 +84,6 @@ struct Flow {
   std::size_t actionParamCount;
 };
 
-struct AnimationKeyframe {
-  float at;
-  const KeyValue* state;
-  std::size_t stateCount;
-  std::int32_t assetFrameIndex;
-};
-
-struct Animation {
-  const char* id;
-  const char* targetElementId;
-  AnimationKind kind;
-  bool loop;
-  const char* easing;
-  const AnimationKeyframe* frames;
-  std::size_t frameCount;
-};
-
 struct GraphicAsset {
   const char* id;
   const char* type;
@@ -133,8 +111,6 @@ struct Screen {
   std::size_t flowCount;
   const GraphicAsset* assets;
   std::size_t assetCount;
-  const Animation* animations;
-  std::size_t animationCount;
   const Submenu* submenus;
   std::size_t submenuCount;
   /**
@@ -162,7 +138,6 @@ struct Theme {
   std::uint16_t typographyBase;
   std::uint16_t typographyValue;
   std::uint16_t typographyBadge;
-  const char* animationEasing;
 };
 
 struct Metadata {
