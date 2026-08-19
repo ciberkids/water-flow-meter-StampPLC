@@ -195,47 +195,32 @@ evidence at all. Before this branch, `interaction_handler.cpp`, `ui_controller.c
 ## 6. Where to pick up
 
 **The item list is not here.** Every open item has a stable ID and lives in the index at the top of
-`docs/active_work/open_decisions.md` — **eight lines**, no 🔴, governed by rule **I3**. Cite the ID
+`docs/active_work/open_decisions.md` — **six lines**, none of them a defect, governed by rule **I3**. Cite the ID
 (`DF18`, `J1`, `N-d1`). This section carries only what an index cannot: the ordering, and the state of
 the working tree.
 
-### Session of 2026-08-18 — ten items closed, four opened
+### Session of 2026-08-18 — every defect closed, and the banner round landed
 
-Closed, each with its reasoning in the register entry rather than only in the diff: **DF17** (visual
-suite, 32 of 46 failing — every non-snapshot failure was the SPEC being stale, not one app regression),
-**DF10** (portal now one-based), **DF14** (a negative offset made a dry pipe read flow), **DF15**
-(register table marked and corrected), **DF16** (`ready` derived), **DF19** (six 104 px scrollbars),
-**J3** (`carea/`), **J4** (nine false claims, not three), **J5** (action table generated + CI gate),
-**J8** (one clamp rule).
+**Closed:** DF10, DF14, DF15, DF16, DF17, DF18, DF19, DF20, DF21 and J1–J8. That is **every `DF` and every
+`J`**. Opened and closed the same day: DF20, DF21, J6, J7 — a repaired gate finds things.
 
-Opened by that work, because a repaired gate finds things: **DF20** (no snapshot drives a warning
-state, so the banner still has no pixel verification), **DF21** (CI runs no `test:visual`), **J6**
-(nothing verifies accessibility), **J7** (the transition preview's five layers survive its removal).
+**Also landed, at the owner's instruction:** the §2c warning-banner round and the firmware-drawn Select Menu,
+which had been sitting uncommitted in the tree. I did not author it; I verified it, regenerated the action
+table its catalogue entry required, and committed it as one round because splitting it would have produced
+commits that do not build.
 
-### THE WORKING TREE IS NOT CLEAN, and that is deliberate
+**What remains is six lines and not one is a defect:** `N-b`, `N-c`, `N-d1` are queued FEATURES, `G1` and
+`N-d2` need the board, `I2a` is a rule nothing enforces. Every gate in the repository is green.
 
-40 modified files and 3 untracked ones are the **§2c banner round, unfinished and not mine**:
-`DisplayViewport.tsx`, `warningBanner.ts` + its test (untracked), `ui_root_tail.h` (untracked),
-`Display_Per_Screen_Spec.md`, `screen-geometry.ts`'s band check, and the rest. Nothing from
-2026-08-18's ten closures is uncommitted; everything is pushed.
+### The working tree is CLEAN as of 2026-08-18
 
-**Two of my changes could NOT be committed and sit in that tree deliberately:**
+It held 40 modified and 3 untracked files all day — the unfinished §2c round — and they are all committed
+now. Nothing is parked, and the four pieces of mine that were waiting on that round (DF20's visual test, the
+scrollbar band rule, `ui_root_tail.h`'s shortened `Screen` initializer, two comment tweaks) went in with it.
 
-0. **`tests/visual/warning-banner.spec.ts`** and its `.display-surface` baseline (untracked), plus three
-   `data-testid`s on the banner in `DisplayViewport` — DF20's whole deliverable, waiting on the §2c round.
-0. The **audit's own comment** in `screen-geometry.ts`, which said non-zero was the correct state of the
-   banner-band line. It is zero now, by repair — the comment says so, and says a future non-zero is real.
-0. **`ui_root_tail.h`'s `Screen` initializer**, one pair shorter since J2 narrowed the generated struct.
-   Without it the firmware does not compile — so whoever commits that file must keep this edit.
-1. The **scrollbar band rule** in `tools/audit/screen-geometry.ts` — reports any scrollbar reaching the
-   band, 6 before DF19's fix and 0 after. It builds on the band check from the uncommitted §2c work, so
-   it belongs to that round.
-2. Two comment tweaks whose anchors exist only in the working tree (`warningBanner.test.ts`, and one
-   line in `sensorConfig.test.ts`).
-
-**Staging discipline this tree forces, learned the hard way** — see §7. A commit that names one of those
-40 files sweeps someone else's work in. `git add <path>` is not enough; check `git status` for the
-SPECIFIC file first, and if it is dirty, stage HEAD-plus-your-hunks:
+**The staging discipline that tree forced is still worth keeping**, because the next round of someone else's
+work will look the same: check `git status` for the SPECIFIC file before `git add`, and if it is dirty, stage
+HEAD-plus-your-hunks:
 
 ```bash
 git show HEAD:path > /tmp/base && python3 - <<'EOF'   # apply only your replacement to /tmp/base
@@ -243,10 +228,10 @@ EOF
 blob=$(git hash-object -w /tmp/base) && git update-index --cacheinfo 100644,$blob,path
 ```
 
-**And then VERIFY THE INDEX, not the working tree.** A reconstruction is a different artefact from the
-file you tested, and commit `97132ea` proved it: three `/**` openers were dropped by a helper that started
-at a marker phrase on a comment's second line, so HEAD did not typecheck while the working tree passed 220
-tests. Repaired in `54f191d`. The check that catches it:
+**And then VERIFY THE INDEX, not the working tree.** A reconstruction is a different artefact from the file
+you tested, and commit `97132ea` proved it: three `/**` openers were dropped by a helper that started at a
+marker phrase on a comment's second line, so HEAD did not typecheck while the working tree passed 220 tests.
+Repaired in `54f191d`. The check that catches it:
 
 ```bash
 tree=$(git write-tree) && mkdir /tmp/chk && git archive $tree | tar -x -C /tmp/chk
@@ -254,41 +239,29 @@ cd /tmp/chk/web/mockup && ln -s <repo>/web/mockup/node_modules node_modules
 npx tsc --noEmit && npm run test:unit && npm run test:exporter
 ```
 
-### Two local gates fire for a reason that is not a fault
+### The action table gate, which now has nothing to forgive
 
-The catalogue's uncommitted 19th action (`ui.action.pack.select-menu`) means
-`node tools/wiki/gen-actions.mjs --write` shows a one-row diff locally, and the committed action table
-carries **18** rows. Whoever commits that catalogue entry runs `--write` in the same commit; the CI gate
-says so if they forget. Do not "fix" the table by committing the 19-row version — CI would fail on a
-clean checkout, where the catalogue has 18.
+`gen-actions.mjs --write` and the committed table agreed again the moment the catalogue's nineteenth action
+(`ui.action.pack.select-menu`) landed with the §2c round — running it was the last step before that commit.
+The gate exists because the table had been advertising two actions that no longer existed.
 
 ### Next, in the order I would take them
 
-1. ~~**`J2` and `J7` together**~~ — **done 2026-08-18**, and doing them together paid: J2's emitter change
-   broke on a positional `ui_exporter::Screen` initializer in the untracked `ui_root_tail.h`, which J7 alone
-   would not have surfaced. Flash fell 656 bytes. J7 turned out to be a NARROWING, not a deletion: its
-   entry claimed nothing read the state, and `ScreenSelector`'s `.preview-target` ring does.
-2. ~~**`DF18`**~~ — **done 2026-08-18.** The spec file exists, the audit reads 0 findings because the
-   overlap is gone, and it surfaced a gate that was not checking: the host round-trip compared element
-   positions but not SIZES, so DF19's six scrollbar heights had left `default.uipack` stale and passing.
-   Fixed and negative-tested. Look for that shape elsewhere — a gate reading a committed snapshot has to
-   compare every field it can.
-3. **`DF20` is WRITTEN and cannot be committed; `DF21` is next in line.** `tests/visual/warning-banner.spec.ts`
-   exists, passes, and is negative-tested — but `warningBanner` is not in HEAD at all (zero references in
-   `App.tsx` and `DisplayViewport.tsx`; `utils/warningBanner.ts` is untracked), so it lands with the §2c
-   round. Wire `test:visual` into CI only after that, or CI locks in a gate that still misses the band.
-4. ~~**`J1`** and **`J6`**~~ — **both built 2026-08-18.** `checkRingClosure` fails an export whose paging
-   rings do not close (four failure modes, seven tests; the exporter's own fixture corrected the first
-   version — a paging edge is a BUTTON press, not merely the action id). `accessibility.spec.ts` checks
-   accessible names, duplicate ids, orphan labels and image alt over all four tabs, and found fifteen
-   unnamed controls. It takes NO new dependency, which narrows the scope deliberately: contrast and focus
-   order still need an `axe` decision, and there is no `<h1>` on any tab.
+Nothing is blocking. The register's six remaining lines are, in the order that unblocks the most:
 
-   **Every J is closed. What remains is DF20 and DF21, and both wait on the §2c round** — DF20 because its
-   test asserts a banner that is not in HEAD, DF21 because wiring `test:visual` into CI before DF20 lands
-   locks in a gate that still misses the band.
-5. **WiFi slice N0** — still the recommended next feature slice, and still blocked on **G1**, which
-   needs the board.
+1. **`N-d1`** — the Modbus date/time block. It is the write that makes every later clock item settable, and
+   the owner's own ordering puts it first: block, then portal page, then NTP, then MQTT.
+2. **`N-b`** — the catalogue version in the manifest, so growing the settings catalogue stops silently
+   invalidating authored packs. `J1`'s ring gate and this are the two the pack format assumes.
+3. **`I2a`** — a checked-in `id → meaning` snapshot that CI diffs, which is the only thing that would make
+   I2's append-only rule more than prose.
+4. **`N-c`** — MQTT's command topics (§4.4.1), which register 565 already reports the results of.
+5. **`G1`** and **`N-d2`** — both need the board, and both have their procedure written down.
+
+Two gates that exist but are narrower than they look, worth widening when someone is in the area: CI runs the
+visual suite with `--ignore-snapshots` (pixels are a local gate until baselines are generated in the CI
+image), and the accessibility spec checks names and ids but not contrast or focus order, which needs an `axe`
+dependency decision.
 
 ## 7. Mistakes to know about
 

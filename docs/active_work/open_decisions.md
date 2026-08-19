@@ -24,9 +24,10 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Eight open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
-DF10", "DF19 go ahead" — and this file is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
-they are append-only and never reused, so a gap means an item closed, not an item lost.
+**Six open lines, and not one of them is a defect.** As of 2026-08-18 every `DF` (1–21) and every `J` (1–8)
+is closed; what remains is three queued FEATURES, two things that need the board, and one missing gate. Ask
+for work by ID — "build N-d1", "decide N-b" — and this file is the one place that says what an ID means.
+Rule **I3** below governs them: append-only, never reused, so a gap means an item closed, not an item lost.
 
 The **Shape** column is the one that answers *can I just say go ahead?*
 
@@ -38,11 +39,15 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **N-c** | 🟡 | feature, queued | MQTT is report-only — §4.4.1's command topics are unbuilt, and register 565 reports results that cannot arrive |
 | **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
 | **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
-| **DF20** | ⏸️ | gate, **written** | The banner snapshot exists and passes; `warningBanner` is not in HEAD, so it lands with the §2c round |
-| **DF21** | 🟡 | gate, unbuilt | CI runs no `test:visual` step — the reason DF17 stayed invisible |
 
-**DF1–DF9, DF11–DF13** are fixed and keep their IDs, struck through in place below. **I2** and **I3** are
-standing rules that never close.
+**DF1–DF21 and J1–J8** are fixed and keep their IDs, struck through in place below with what closed each.
+**I2** and **I3** are standing rules that never close.
+
+**What this list is NOT.** Nothing here is blocking a build, a test or an export: every gate in the
+repository is green (host 1,887 checks, 220 unit, 51 exporter, 51 visual, 0 audit findings, and a firmware
+that compiles at RAM 24.6% / Flash 38.0%). Three of the six are features nobody has started, two need
+hardware that has never existed for this project, and `I2a` is a rule enforced by prose. That is a different
+condition from "twelve things are broken", which is what this register looked like a day ago.
 
 ---
 
@@ -193,7 +198,7 @@ the bottom of this file, verbatim in
 | `H` | menu behaviour | H1–H6 | closed |
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
-| `DF` | defect — opened 2026-08-18 | DF1–DF21 | **two open** — DF20 written but waiting on §2c, DF21 undecided — nineteen fixed |
+| `DF` | defect — opened 2026-08-18 | DF1–DF21 | **none open**; all twenty-one fixed |
 | `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **all eight closed** the same day |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
@@ -219,7 +224,7 @@ a future batch takes `J` or a new two-letter prefix, never a letter that once me
 
 ---
 
-## Defects found — DF1–DF21, nineteen fixed and two open
+## Defects found — DF1–DF21, all twenty-one fixed
 
 None is a decision — each is known, each has a diagnosis, and they are here because this is the file
 that gets read before picking up work.
@@ -917,7 +922,7 @@ exemption, because §2c legislates the scrollbar's bottom even though no glyph i
 band check from this branch's **uncommitted** §2c work, so it is not mine to commit and stays in the working
 tree with the round it belongs to.
 
-### DF20 — No snapshot drives a warning state, so the visual suite never renders the banner ⏸️ WRITTEN, WAITING ON §2c
+### DF20 — ~~No snapshot drives a warning state, so the visual suite never renders the banner~~ ✅ FIXED 2026-08-18
 
 Found while fixing DF17, and the reason that repair does not close §2c's verification gap. Every snapshot
 captures a workspace with no warning live, so `warningBanner` is empty in all 21 baselines and the band at
@@ -928,7 +933,11 @@ controls are the lever — and snapshots the panel with the banner up. That is t
 the banner drifting back over the footer, which is what DF7 fixed. Until it exists, the banner's position is
 asserted by host tests and the geometry audit but seen by nothing.
 
-**Written 2026-08-18, passing — and it cannot be committed. That is the finding.** `warningBanner` does not
+**Closed the same day, once the §2c round landed.** The blocker below was real while it lasted: the test
+asserts a banner that did not exist at `HEAD`, so it could not be committed until the round it belongs to was
+committed. Both are in now, and the suite runs 51 tests — 44 workspace, 3 banner, 4 accessibility.
+
+**Written 2026-08-18, passing — and for several hours it could not be committed. That was the finding.** `warningBanner` does not
 exist at `HEAD`: zero references in `App.tsx`, zero in `DisplayViewport.tsx`, and `utils/warningBanner.ts` is
 untracked. The banner belongs to this branch's **unfinished §2c round**, so a test asserting it would fail on
 a clean checkout. DF20 waits on that round landing, not on the test being written.
@@ -951,7 +960,7 @@ They are literals now — 116, 18, 4, 16, read off `UiRenderer::drawWarningBanne
 whole job is to catch the module drifting from them. Re-run: two tests fail with `Expected: 116, Received:
 34`. It is the same trap DF10's test carries a comment about, so it is evidently easy to walk into twice.
 
-### DF21 — CI runs no `test:visual` step 🟡
+### DF21 — ~~CI runs no `test:visual` step~~ ✅ FIXED 2026-08-18
 
 Verified 2026-08-18: neither `test:visual` nor `playwright` appears anywhere in `.github/workflows/`. The
 pipeline runs typecheck, unit, exporter, build, the export gates, the skeleton-reproduces-dataset check, the
@@ -961,6 +970,20 @@ committed-assets check, host tests and the generated-docs gate — none of which
 takes ~1.6 minutes locally plus a browser download, snapshots are sensitive to the container's font
 rendering (these baselines are `chromium-linux`), and a flake policy has to be chosen. Decide those, then
 add the step.
+
+**Decided and added 2026-08-18: CI runs the suite with `--ignore-snapshots`.**
+
+The split is the point. **Eleven of DF17's 32 failures were assertions**, not baselines — a clamp expecting
+portrait bounds, a button that had become an indicator, a panel moved to another tab. That is the half worth
+gating and it is now gated: 44 workspace assertions, the three banner cases including the band's geometry at
+y=116, and the four accessibility passes. Measured at **57 seconds** plus the browser install.
+
+**Pixel comparison stays a local gate, and that is a limitation rather than a preference.** The committed
+baselines are `chromium-linux` generated on the maintainer's Fedora host, and text rendering is not identical
+across distributions — comparing pixels in CI would fail on fonts rather than on regressions, and the first
+fix anyone reached for would be deleting the comparison. Generating baselines inside the CI image is the way
+to close that, and it is its own decision: `npm run test:visual` remains the pixel gate until someone takes
+it.
 
 ---
 
