@@ -24,7 +24,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Nine open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
+**Eight open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
 DF10", "DF19 go ahead" — and this file is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
 they are append-only and never reused, so a gap means an item closed, not an item lost.
 
@@ -38,7 +38,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **N-c** | 🟡 | feature, queued | MQTT is report-only — §4.4.1's command topics are unbuilt, and register 565 reports results that cannot arrive |
 | **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
 | **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
-| **J6** | 🟡 | gate, unbuilt | Nothing verifies the workspace is accessible — no axe/pa11y/lighthouse in the workspace |
 | **DF20** | ⏸️ | gate, **written** | The banner snapshot exists and passes; `warningBanner` is not in HEAD, so it lands with the §2c round |
 | **DF21** | 🟡 | gate, unbuilt | CI runs no `test:visual` step — the reason DF17 stayed invisible |
 
@@ -195,7 +194,7 @@ the bottom of this file, verbatim in
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
 | `DF` | defect — opened 2026-08-18 | DF1–DF21 | **two open** — DF20 written but waiting on §2c, DF21 undecided — nineteen fixed |
-| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **one open** (J6); the other seven fixed |
+| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **all eight closed** the same day |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
 group — they are in the closed table at the bottom of this file and throughout the archive. The defect
@@ -965,7 +964,7 @@ add the step.
 
 ---
 
-## Residue and hygiene — J1–J8, opened 2026-08-18 (all but J1 and J6 closed the same day)
+## Residue and hygiene — J1–J8, opened and closed 2026-08-18
 
 J1–J5 were a **single unnumbered sentence in `MEMORY.md` §6** — "smaller and still open: the export
 gate for ring closure, the I2 append-only catalogue check, `animation` residue across five layers, the
@@ -1170,7 +1169,7 @@ branch's uncommitted Select Menu work, so generating from the working tree would
 `HEAD` does not declare and CI would have failed on the pushed branch. Whoever commits that catalogue
 entry runs `--write` in the same commit — and the new gate is what says so if they forget.
 
-### J6 — Nothing verifies the workspace is accessible 🟡
+### J6 — ~~Nothing verifies the workspace is accessible~~ ✅ FIXED 2026-08-18 (partial, and scoped)
 
 `docs/backlog/SI-20251111-04-help-docs.md` lists "accessibility verified" among its acceptance criteria
 and marks it not delivered. Verified 2026-08-18: `web/mockup/package.json` contains no `axe`, `jest-axe`,
@@ -1184,6 +1183,33 @@ verification gap rather than an absence. Nothing tells you when one of them stop
 **Kept deliberately small.** This is an internal design tool for an embedded device, not a shipped web
 product, and the scope here is exactly what the story claimed and did not do: one axe pass over the
 workspace's tabs, wired into the unit suite. Anything broader is a new decision, not this item.
+
+**Built 2026-08-18 as `tests/visual/accessibility.spec.ts`, WITHOUT a new dependency** — and that is a
+deliberate narrowing of the scope above, not an oversight. It checks four things that can be decided
+mechanically over all four tabs: every interactive control has an accessible name; no `id` is duplicated (a
+duplicate silently breaks `label[for]` and `aria-labelledby`); no `label[for]` names a missing element; every
+`<img>` carries `alt`.
+
+**It found fifteen unnamed controls, all now named** — which is what turns it from a report into a gate:
+
+| | |
+| --- | --- |
+| the trace filter | had only a `placeholder`, which is **not** an accessible name: announced inconsistently, and gone the moment anything is typed |
+| ten element-selection radios | had a `data-testid`, which names a control for TESTS and never for a reader. Their visible name is the element id printed beside them, which a screen reader never associates with the input |
+| three file inputs | two hidden behind buttons, with nothing at all |
+
+Negative-tested: removing one `aria-label` fails with `unnamed controls on Simulation`.
+
+**What is NOT covered, so the coverage is not overclaimed:**
+
+- **Contrast, focus order, and the ARIA rules that need a real engine.** That is an `axe` pass; it needs a
+  dependency this project has not taken, and choosing one is the owner's call rather than a side effect of a
+  test file. The four checks above are the subset that needs nothing new.
+- **Landmarks and heading structure — there is no `<h1>` on any tab.** A genuine finding, left alone because
+  fixing it changes document structure and would move all 21 workspace baselines. Recorded here rather than
+  silently checked or silently ignored.
+- **It is not a CI gate yet.** Nothing in `.github/workflows/` runs `test:visual`, so this file is as fresh
+  as the last local run. That is **DF21**, unchanged by this.
 
 ### J7 — ~~The transition preview is off by decision, and all five of its layers remain~~ ✅ FIXED 2026-08-18
 
