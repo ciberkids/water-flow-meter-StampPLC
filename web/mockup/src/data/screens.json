@@ -966,7 +966,7 @@
     {
       "id": "nyquist-warning",
       "name": "Nyquist Validation Warning",
-      "description": "Shown when f_theoretical exceeds Nyquist limit. UP=Edit, DOWN=Save anyway.",
+      "description": "§5.5's full-screen refusal: the pending calibration reaches a frequency the sampler cannot resolve. UP returns to the editor, DOWN forces the write and raises bit n of register 30. — laid out so the warning banner's band (y 116…134) carries no content, which is the point of this screen: it is the ONE screen where a live warning and its own prompt are guaranteed on the panel together, so it reserves the band rather than competing with it (DF18).",
       "elements": [
         {
           "id": "overlay-bg",
@@ -981,55 +981,55 @@
           "kind": "text",
           "x": 5,
           "y": 40,
-          "content": "! Sampling too slow",
-          "emphasis": "strong"
+          "emphasis": "strong",
+          "content": "! Sampling too slow"
         },
         {
           "id": "detail-1",
           "kind": "text",
           "x": 5,
-          "y": 60,
+          "y": 56,
           "content": "f_theoretical exceeds"
         },
         {
           "id": "detail-2",
           "kind": "text",
           "x": 5,
-          "y": 72,
-          "content": "Nyquist limit",
-          "emphasis": "muted"
+          "y": 68,
+          "emphasis": "muted",
+          "content": "Nyquist limit"
         },
         {
           "id": "nyquist-value",
           "kind": "value",
           "x": 5,
-          "y": 88,
-          "content": "-",
-          "binding": "config.sensor.nyquistWarning"
+          "y": 80,
+          "binding": "config.sensor.nyquistWarning",
+          "content": "-"
         },
         {
           "id": "option-up",
           "kind": "text",
           "x": 5,
-          "y": 100,
-          "content": "UP = Edit values",
-          "emphasis": "strong"
+          "y": 92,
+          "emphasis": "strong",
+          "content": "UP = Edit values"
         },
         {
           "id": "option-down",
           "kind": "text",
           "x": 5,
-          "y": 112,
-          "content": "DOWN = Save anyway",
-          "emphasis": "muted"
+          "y": 104,
+          "emphasis": "muted",
+          "content": "DOWN = Save anyway"
         },
         {
           "id": "footer-hint",
           "kind": "text",
           "x": 5,
           "y": 124,
-          "content": "Choose UP or DOWN",
-          "emphasis": "muted"
+          "emphasis": "muted",
+          "content": "Choose UP or DOWN"
         }
       ],
       "flows": [

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T09:05:48.124Z",
+  "generatedAt": "2026-08-19T09:38:22.934Z",
   "screenCount": 80,
   "elementCount": 666,
   "dataset": [
@@ -1754,7 +1754,7 @@
     {
       "id": "nyquist-warning",
       "name": "Nyquist Validation Warning",
-      "description": "Shown when f_theoretical exceeds Nyquist limit. UP=Edit, DOWN=Save anyway.",
+      "description": "§5.5's full-screen refusal: the pending calibration reaches a frequency the sampler cannot resolve. UP returns to the editor, DOWN forces the write and raises bit n of register 30. — laid out so the warning banner's band (y 116…134) carries no content, which is the point of this screen: it is the ONE screen where a live warning and its own prompt are guaranteed on the panel together, so it reserves the band rather than competing with it (DF18).",
       "elements": [
         {
           "id": "overlay-bg",
@@ -1793,7 +1793,7 @@
           "id": "detail-1",
           "position": {
             "x": 5,
-            "y": 60
+            "y": 56
           },
           "kind": {
             "type": "text",
@@ -1808,7 +1808,7 @@
           "id": "detail-2",
           "position": {
             "x": 5,
-            "y": 72
+            "y": 68
           },
           "kind": {
             "type": "text",
@@ -1823,7 +1823,7 @@
           "id": "nyquist-value",
           "position": {
             "x": 5,
-            "y": 88
+            "y": 80
           },
           "kind": {
             "type": "value",
@@ -1839,7 +1839,7 @@
           "id": "option-up",
           "position": {
             "x": 5,
-            "y": 100
+            "y": 92
           },
           "kind": {
             "type": "text",
@@ -1854,7 +1854,7 @@
           "id": "option-down",
           "position": {
             "x": 5,
-            "y": 112
+            "y": 104
           },
           "kind": {
             "type": "text",

@@ -262,11 +262,11 @@ static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningFooterHi
 static constexpr ui_exporter::Element kNyquistWarningElements[] = {
     { "overlay-bg", ui_exporter::ElementType::Box, 0, 0, 240, 135, nullptr, nullptr, nullptr },
     { "title", ui_exporter::ElementType::Text, 5, 40, 0, 0, &kNyquistWarning_NyquistWarningTitle_Text, nullptr, nullptr },
-    { "detail-1", ui_exporter::ElementType::Text, 5, 60, 0, 0, &kNyquistWarning_NyquistWarningDetail1_Text, nullptr, nullptr },
-    { "detail-2", ui_exporter::ElementType::Text, 5, 72, 0, 0, &kNyquistWarning_NyquistWarningDetail2_Text, nullptr, nullptr },
-    { "nyquist-value", ui_exporter::ElementType::Value, 5, 88, 0, 0, &kNyquistWarning_NyquistWarningNyquistValue_Text, nullptr, "config.sensor.nyquistWarning" },
-    { "option-up", ui_exporter::ElementType::Text, 5, 100, 0, 0, &kNyquistWarning_NyquistWarningOptionUp_Text, nullptr, nullptr },
-    { "option-down", ui_exporter::ElementType::Text, 5, 112, 0, 0, &kNyquistWarning_NyquistWarningOptionDown_Text, nullptr, nullptr },
+    { "detail-1", ui_exporter::ElementType::Text, 5, 56, 0, 0, &kNyquistWarning_NyquistWarningDetail1_Text, nullptr, nullptr },
+    { "detail-2", ui_exporter::ElementType::Text, 5, 68, 0, 0, &kNyquistWarning_NyquistWarningDetail2_Text, nullptr, nullptr },
+    { "nyquist-value", ui_exporter::ElementType::Value, 5, 80, 0, 0, &kNyquistWarning_NyquistWarningNyquistValue_Text, nullptr, "config.sensor.nyquistWarning" },
+    { "option-up", ui_exporter::ElementType::Text, 5, 92, 0, 0, &kNyquistWarning_NyquistWarningOptionUp_Text, nullptr, nullptr },
+    { "option-down", ui_exporter::ElementType::Text, 5, 104, 0, 0, &kNyquistWarning_NyquistWarningOptionDown_Text, nullptr, nullptr },
     { "footer-hint", ui_exporter::ElementType::Text, 5, 124, 0, 0, &kNyquistWarning_NyquistWarningFooterHint_Text, nullptr, nullptr }
 };
 
@@ -2238,7 +2238,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-19T09:05:48.124Z", 80, 666
+    "2026-08-19T09:38:22.934Z", 80, 666
 };
 
 }  // namespace ui_exporter
