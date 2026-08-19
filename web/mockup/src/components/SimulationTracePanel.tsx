@@ -36,6 +36,9 @@ export function SimulationTracePanel({ entries, filter, onFilterChange, onReplay
           <input
             type="search"
             placeholder="Filter actions"
+            // A placeholder is NOT an accessible name: it is announced inconsistently and disappears the
+            // moment anything is typed (J6).
+            aria-label="Filter actions"
             value={filter}
             onChange={(event) => onFilterChange(event.target.value)}
           />

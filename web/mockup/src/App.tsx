@@ -3427,6 +3427,7 @@ export function App() {
                     type="file"
                     accept="application/json"
                     onChange={handleDatasetImport}
+                    aria-label="Import a screen dataset JSON file"
                     data-testid="dataset-import"
                     style={{ display: "none" }}
                   />
@@ -3445,6 +3446,7 @@ export function App() {
                     ref={manifestInputRef}
                     type="file"
                     accept="application/json"
+                    aria-label="Import a firmware action manifest JSON file"
                     onChange={handleManifestImport}
                     style={{ display: "none" }}
                   />

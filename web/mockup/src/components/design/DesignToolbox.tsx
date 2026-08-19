@@ -116,6 +116,7 @@ export function DesignToolbox({
             ref={fileInputRef}
             type="file"
             accept="application/json"
+            aria-label="Load a firmware action manifest JSON file"
             style={{ display: "none" }}
             onChange={handleFileChange}
           />
@@ -156,6 +157,10 @@ export function DesignToolbox({
                       <input
                         type="radio"
                         name="element-selection"
+                        /* The visible name is the `<strong>{element.id}</strong>` beside this radio, which
+                           a pointer user reads and a screen reader never associates with the control. The
+                           id IS the name here, so it is the label (J6). */
+                        aria-label={`Select element ${element.id}`}
                         data-testid={`element-select-${element.id}`}
                         checked={selectedElementId === element.id}
                         onChange={() => onSelectElement(element.id)}
