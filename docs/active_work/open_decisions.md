@@ -152,8 +152,16 @@ a timezone guess in the firmware — the two things the Modbus block was designe
 validation, one floor. It is not a catalogue setting: those are `int32_t` and an epoch outgrows that in 2038,
 which would have put a Y2038 bug in the subsystem whose subject is being right about time.
 
-**What is left of the chain, in the owner's ordering:** NTP on `WifiState::Connected`, then MQTT last because
-it needs N-c's unbuilt command topics. Both are additions now, not prerequisites.
+**NTP followed too** (R7.13, built the same day): `NtpPolicy` — host-tested, Arduino-free — decides when to
+ask, and `firmware.cpp` makes the only two calls it cannot: `configTime` to start SNTP and `time()` to read
+what arrived. Ask on every association and every six hours (the RX8130CE drifts ±3 ppm, so that bounds the
+error under a second); retry two minutes after a failure; fifteen seconds of silence counts as one. The device
+knows SNTP answered because the SYSTEM clock becomes plausible — `time()` starts at 1970 and only SNTP moves
+it, while `DeviceClock` keeps its own base, so it cannot be an echo of what the operator or RTC supplied.
+
+**What is left of the chain:** MQTT, and only because it needs N-c's unbuilt command topics. Three of the four
+routes are built, and the two that work without a network — Modbus and the portal — were the first two
+deliberately.
 
 **The gap it closed, for the record:**
 

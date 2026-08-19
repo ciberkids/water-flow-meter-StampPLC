@@ -34,6 +34,12 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/device_clock_test" \
   test/host/device_clock_test.cpp \
   src/time/device_clock.cpp
 
+# WHEN the device asks the network for the time (R7.13). Header-only policy, so no source beside it:
+# the four decisions inside "sync on connect" are the part worth testing, and none of them is
+# observable on a bench without waiting six hours.
+g++ "${CXXFLAGS[@]}" -o "$OUT/ntp_policy_test" \
+  test/host/ntp_policy_test.cpp
+
 # The clock's one WIRING, as opposed to its logic: does a session reset arriving through
 # ModbusManager actually date it? `ModbusDependencies::clock` is nullable and was null in both host
 # tests that construct the struct, so noteSessionStart() was exercised by nothing — a nullable
@@ -230,6 +236,7 @@ g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/interaction_test" \
 echo
 "$OUT/accel_test"
 "$OUT/device_clock_test"
+"$OUT/ntp_policy_test"
 echo
 "$OUT/modbus_manager_clock_test"
 echo

@@ -58,6 +58,7 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "ui/core/ui_value_catalogue.h"
 #include "ui/pack/ui_pack_storage_sd.h"
 #include "time/device_clock.h"
+#include "time/ntp_policy.h"
 #include "time/rtc_boot_probe.h"
 #include "units.h"
 
@@ -260,6 +261,20 @@ class FirmwarePortalClock final : public plc::PortalClockWriter {
   }
 };
 FirmwarePortalClock portalClock;
+
+/**
+ * The clock's THIRD route (R7.13): the network, once there is one.
+ *
+ * `NtpPolicy` owns every timing decision and is host-tested; this file owns only the two Arduino calls it
+ * cannot make — `configTime` to start SNTP and `time()` to read what it delivered. That split is why the
+ * six-hour resync and the fifteen-second silence rule are testable at all.
+ *
+ * `pool.ntp.org` is a constant rather than a setting on purpose. Adding it to the catalogue would invalidate
+ * every authored menu pack (N-b, still open), and a device that needs a private time server has a Modbus
+ * master and a portal page that can both set the clock directly.
+ */
+plc::NtpPolicy ntpPolicy;
+constexpr const char* kNtpServer = "pool.ntp.org";
 
 plc::PortalForm portalForm(netSettings, nullptr, kNumSensors, &portalClock);
 plc::ArduinoPortalServer portalServer(portalForm);
@@ -1057,6 +1072,48 @@ void logicTaskCode(void * pvParameters) {
     // the reason the sampler waits, and everything it does is either a cheap state comparison or a
     // driver call that blocks this task rather than the other core.
     wifiManager.update(now);
+
+    /**
+     * NTP, driven by the policy beside the state machine that feeds it (R7.13).
+     *
+     * Ordered exactly like the MQTT block below: consume the association edge FIRST, then act. The radio
+     * check is not redundant with the edge — a link can drop between one pass and the next, and SNTP against
+     * a powered-down radio is the mistake `mqtt_reconnect.h` documents for the same loop.
+     */
+    if (wifiManager.consumeJustConnected()) {
+      ntpPolicy.noteAssociated(now);
+    }
+    if (wifiManager.state() != plc::WifiState::Connected) {
+      ntpPolicy.noteDisassociated();
+    } else {
+      if (ntpPolicy.consumeDueRequest(now)) {
+        // Zero offsets: the device keeps UTC and says so on every surface. A timezone would make every
+        // timestamp ambiguous and there is nowhere to configure one.
+        configTime(0, 0, kNtpServer);
+      }
+      if (ntpPolicy.requestInFlight()) {
+        /**
+         * SNTP has answered when the SYSTEM clock becomes plausible.
+         *
+         * `time()` reads the system clock, which starts at 1970 and is moved only by SNTP — `DeviceClock`
+         * keeps its own base — so a plausible value here cannot be an echo of a time the operator or the
+         * RTC supplied. That is what makes this a real test of the network rather than of ourselves.
+         */
+        const std::time_t systemTime = std::time(nullptr);
+        if (systemTime > 0 &&
+            static_cast<uint32_t>(systemTime) >= plc::DeviceClock::kEarliestPlausibleEpoch) {
+          if (deviceClock.setTime(static_cast<uint32_t>(systemTime), plc::ClockSource::Ntp, now)) {
+            ntpPolicy.noteSucceeded(now);
+          } else {
+            // The clock refused it: outside 2020…2100. Treated as a failure so the retry cadence applies
+            // rather than this spinning on every pass.
+            ntpPolicy.noteFailed(now);
+          }
+        } else {
+          ntpPolicy.consumeTimeout(now);
+        }
+      }
+    }
 
     // Persist ONLY when a change was actually committed. NetSettings bumps its revision once per
     // successful apply, so this is once per operator decision — not once per pass. That matters more

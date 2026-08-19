@@ -1263,6 +1263,32 @@ The **MQTT info** and **AP info** pages already show the IP, which is exactly wh
 > `firmware.cpp`. A null writer renders the section saying the build supplied no clock rather than hiding it,
 > because a section that vanishes is indistinguishable from a firmware that has no clock.
 
+> **R7.13 — NTP, the clock's third route** (built 2026-08-18).
+>
+> On every WiFi association the device asks `pool.ntp.org` for the time, and re-asks every six hours. The
+> answer goes through the same `DeviceClock::setTime` the other two routes use, so the same plausibility floor
+> applies and the source is recorded as `ntp` — visible on register 55 and on the portal page.
+>
+> **Four decisions live in `NtpPolicy`, host-tested, not in `firmware.cpp`:** only ask while associated (SNTP
+> against a powered-down radio spends the ladder on a dead interface, which is the mistake `mqtt_reconnect.h`
+> documents for MQTT in the same loop); ask once per association rather than once per pass; retry a failure
+> after **two minutes**, because DNS that did not answer will not answer faster; and treat **fifteen seconds**
+> of silence as a failure, since SNTP is asynchronous and something has to decide when silence means no.
+>
+> **Six hours** comes from the RX8130CE's ±3 ppm drift — about 0.8 s/day — which keeps the accumulated error
+> well under a second while asking a public pool four times a day rather than continuously.
+>
+> **How the device knows SNTP answered:** the SYSTEM clock becomes plausible. `time()` starts at 1970 and is
+> moved only by SNTP, while `DeviceClock` keeps its own base, so a plausible value there cannot be an echo of
+> a time the operator or the RTC supplied. It is a test of the network rather than of ourselves.
+>
+> **The server is a constant, not a setting.** Adding it to the catalogue would invalidate every authored menu
+> pack (N-b), and a device needing a private time server has two routes that set the clock directly.
+>
+> **NTP does not outrank the operator by policy — it simply wins by being later.** A network time is strictly
+> better than a typed one, the clock records which it holds, and every surface reports the source, so nothing
+> has to guess.
+
 > **R7.10** — The page is served over **HTTP**. So the login password, the MQTT broker password and
 > the WiFi passphrase all cross the LAN in clear text whenever the form is submitted.
 >
