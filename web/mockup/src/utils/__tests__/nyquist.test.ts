@@ -130,7 +130,7 @@ describe("the ceiling is the state engine's own inversion, evaluated at q_max", 
   });
 
   it("has NO ceiling where the firmware returns false before computing one", () => {
-    // modbus_manager.cpp:627-643 — q_max is fatal to both forms, each divisor only to its own.
+    // modbus_manager.cpp:734-762 — q_max is fatal to both forms, each divisor only to its own.
     expect(samplingCeilingHz(formula(0, 10))).toBeNull();
     expect(samplingCeilingHz(pulses(0, 450))).toBeNull();
     expect(samplingCeilingHz(formula(150, 0))).toBeNull();
@@ -262,13 +262,15 @@ describe("the §5.5 override is the arm that stays an input", () => {
     const table = deriveUndersampling(stored, 3.3);
     expect(meetsSamplingLimit(sensorAt(table, 6)!, 3.3)).toBe(true);
     expect(sensorAt(table, 6)?.undersampling).toBe(true);
-    expect(warningSummaryText(table)).toBe("Sampling warning on sensors 6");
+    expect(warningSummaryText(table)).toBe("Sampling warning on 1 sensor");
   });
 
   it("is cleared by S.RESET, because the confirmation described the OLD meter", () => {
-    // modbus_manager.cpp:337-339 clears both override arms beside the config. Left standing, the flag
-    // would survive on a channel with nothing to undersample AND wave the next meter's first figures
-    // through unchecked. Now the flag is derived, omitting it would be VISIBLE.
+    // modbus_manager.cpp:362-364 clears both override arms beside the config (and offset 19 clears the
+    // same three since 2026-08-17). Left standing, the flag would survive on a channel with nothing to
+    // undersample — it would NOT wave the next meter's first figures through unchecked, because
+    // `prepareConfigUpdate` clears the flags for any candidate failing `configIsValid` and the first write
+    // onto an all-zero config is necessarily one. Now the flag is derived, omitting it would be VISIBLE.
     const stored = setSensor(createSensorTable(), 6, { samplingOverride: true });
     const after = resetCalibration(stored, 6);
     expect(sensorAt(after, 6)?.samplingOverride).toBe(false);
@@ -277,13 +279,15 @@ describe("the §5.5 override is the arm that stays an input", () => {
 });
 
 describe("the warning the panel paints from the flag", () => {
-  it("names the channels when sampling is the only fault", () => {
+  it("counts the channels when sampling is the only fault", () => {
     const table = deriveUndersampling(setSensor(createSensorTable(), 3, { multiplier: 40 }), 3.3);
-    expect(warningSummaryText(table)).toBe("Sampling warning on sensors 3");
+    // A COUNT, not a list, and singular at one — the wording the firmware composes in
+    // `UiController::update`. Naming them cost 28 characters of prefix and overflowed the banner at four.
+    expect(warningSummaryText(table)).toBe("Sampling warning on 1 sensor");
     expect(statusSummaryText(table)).toBe("1 warning");
   });
 
-  it("trades the list for counts when a commissioning gap shares the screen", () => {
+  it("drops the noun \"channels\" when a commissioning gap shares the screen", () => {
     let stored = setSensor(createSensorTable(), 3, { multiplier: 40 });
     stored = setSensor(stored, 7, { qMaxLpm: 0, ready: false });
     const table = deriveUndersampling(stored, 3.3);
@@ -300,8 +304,13 @@ describe("the warning the panel paints from the flag", () => {
    * write, and the simulator has no write gate to refuse one. So an out-of-budget configuration lights the
    * flag here; it does not push that screen.
    *
-   * And on hardware the flag's banner is drawn at y=34 instead of §2c's y=116 and is overpainted by the
-   * screen's own rows (open_decisions.md). Nothing here should be read as "the operator sees this".
+   * What used to be the second caveat here is fixed: on hardware the banner is now drawn at §2c's y=116,
+   * over the footer row, and it paints AFTER the screen rather than being overpainted by the screen's own
+   * rows. What survives is the caveat about this SCREEN: `nyquist-warning` is in no flow's
+   * targetScreenId and is named in no `ui_pages.h` table, so UiScreenRouter can never resolve it and the
+   * device cannot show it. The live surface is the in-place `config.sensor.nyquistWarning` text element on
+   * each edit screen. So "nothing here should be read as 'the operator sees this'" still holds — for the
+   * reachability reason, not the painting one.
    */
   it("resolves the per-channel row from the derived bit", () => {
     const table = deriveUndersampling(setSensor(createSensorTable(), 3, { multiplier: 40 }), 3.3);

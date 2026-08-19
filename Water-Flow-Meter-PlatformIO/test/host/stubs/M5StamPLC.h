@@ -20,6 +20,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace m5stamplc_stub {
 
@@ -54,6 +55,31 @@ struct DisplayRecorder {
    * appeared. A count would only prove that something was painted.
    */
   std::string strings;
+  /**
+   * WHERE each string landed, and WHERE each rectangle was filled.
+   *
+   * `strings` answers "what is on the panel" and cannot answer "where". That was tolerable while every
+   * geometry question belonged to the web mockup, and stopped being tolerable when one of them acquired a
+   * spec decision of its own: §2c places the warning banner at y=116..133, the footer row, and the
+   * argument for the move is entirely about which band it covers. A recorder that keeps only the LAST
+   * cursor pair (`cursorX`/`cursorY` below) and throws every fillRect argument away cannot check that —
+   * the same shape of gap the print() comment below describes for text, one level down.
+   *
+   * ADDITIVE: `strings` keeps its exact format, because existing assertions match on it.
+   */
+  struct Placed {
+    int16_t x;
+    int16_t y;
+    std::string text;
+  };
+  std::vector<Placed> placed;
+  struct Rect {
+    int16_t x;
+    int16_t y;
+    int16_t w;
+    int16_t h;
+  };
+  std::vector<Rect> rects;
   int rotation = 0;
   int16_t cursorX = 0;
   int16_t cursorY = 0;
@@ -61,18 +87,32 @@ struct DisplayRecorder {
   void setRotation(int value) { rotation = value; }
   void fillScreen(uint16_t) {
     ++fillScreens;
-    // A full clear starts a new frame, so what was drawn before it is no longer on the panel.
+    // A full clear starts a new frame, so what was drawn before it is no longer on the panel. All three
+    // records are cleared by the same event because they answer one question between them — "what is on
+    // the panel, and where" — and a `strings` that resets while `placed` accumulates would let an
+    // absence assertion match a position from a frame that is no longer showing.
+    //
+    // MEASURED, not assumed: removing these two lines fails nothing today, because every test that reads
+    // the records calls resetFrames() (which reconstructs the whole recorder) and then ticks exactly one
+    // frame. They are here for the invariant, and they become load-bearing the moment a test reads the
+    // records after a window that painted more than once.
     strings.clear();
+    placed.clear();
+    rects.clear();
   }
   void setTextColor(uint16_t, uint16_t) {}
   void setTextColor(uint16_t) {}
   void setTextSize(int) {}
   void setFont(const void*) {}
-  void drawString(const char* text, int32_t, int32_t) {
+  void drawString(const char* text, int32_t x, int32_t y) {
     ++drawStrings;
     if (text) {
       strings += text;
       strings += '|';
+      // Recorded into the same vector as print() for the same reason both append to `strings`: "where is
+      // it on the panel" is one question, and answering it from two records depending on which primitive
+      // the renderer happened to choose is how the gap above stayed open.
+      placed.push_back(Placed{static_cast<int16_t>(x), static_cast<int16_t>(y), text});
     }
   }
   void startWrite() { ++startWrites; }
@@ -100,9 +140,13 @@ struct DisplayRecorder {
     if (text) {
       strings += text;
       strings += '|';
+      placed.push_back(Placed{cursorX, cursorY, text});
     }
   }
-  void fillRect(int16_t, int16_t, int16_t, int16_t, uint16_t) { ++fillRects; }
+  void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t) {
+    ++fillRects;
+    rects.push_back(Rect{x, y, w, h});
+  }
   void drawRect(int16_t, int16_t, int16_t, int16_t, uint16_t) { ++drawRects; }
   void fillCircle(int16_t, int16_t, int16_t, uint16_t) { ++fillCircles; }
   void drawCircle(int16_t, int16_t, int16_t, uint16_t) { ++drawCircles; }

@@ -1,7 +1,7 @@
 # Requirement: On-Device UI for Display and Buttons
 
 **Version:** 0.2
-**Date:** 2026-07-30
+**Date:** 2026-07-30 · amended 2026-08-17
 
 > **0.2 — hierarchical navigation model.** §3, §4.1, §4.3, §5 and §6 are revised per
 > [`NF-20260730-01-menu-navigation-model.md`](../../archive/NF-20260730-01-menu-navigation-model.md) (implemented, so archived).
@@ -19,6 +19,10 @@
 >   tool can preview every state.
 > - Display orientation is **landscape 240 × 135** (decision D3); Modbus slave ID range
 >   corrected to **1–247** (decision A2); baud rate is stored as a **list index** (A4).
+> - **Amended 2026-08-17 — §3.1's held UP/DOWN repeat is withdrawn.** 0.2 specified a 250 ms
+>   repeating navigation step. Nothing ever answered it, and per
+>   [`../../active_work/open_decisions.md`](../../active_work/open_decisions.md) the gap cost three
+>   bug reports; the ruling was to drop the requirement rather than implement it. See §3.1.1.
 
 ---
 
@@ -49,7 +53,7 @@ than that (3 s, 30 s) are always **countdowns** shown on screen, never gesture t
 | Gesture | Meaning |
 | :--- | :--- |
 | UP / DOWN short | Previous / next sibling at the current level (wraps), or −1 / +1 in a value editor |
-| UP / DOWN held | Repeat every 250 ms when navigating; accelerating adjust in a numeric editor (§5.4) |
+| UP / DOWN held | **Nothing on a navigation screen** — see §3.1.1. Accelerating adjust in a numeric editor (§5.4) |
 | ENTER short | Descend into the current entry, or commit, or exit — depends on screen type, see §3.2 |
 | ENTER long (≥1.5 s) | Escape to the main screen, or discard, or confirm — see §3.2 |
 | UP + DOWN short | **Display off, and reset navigation to P0.** Works from any screen at any depth. |
@@ -61,6 +65,35 @@ wherever the operator happened to be. This makes waking deterministic and matche
 
 For the same reason the **120 s inactivity timeout also resets to P0** — otherwise waking
 would be predictable after a manual off but arbitrary after an automatic one.
+
+### 3.1.1. A held UP/DOWN does not navigate — amended 2026-08-17
+
+**One press, one step.** Holding UP or DOWN on a navigation screen — info page, config list,
+sensor list, `BACK` entry, at any depth — moves nothing. Paging a ring is a **tap**, and each
+tap is exactly one sibling. 0.2 specified a 250 ms repeating navigation step; this amendment
+drops it.
+
+**Why repeat events still exist in the firmware.** `button_input.cpp` still emits a long press
+at 1.5 s and a repeat every 250 ms thereafter, and that is deliberate rather than residue:
+§5.4's numeric-editor ramp depends on a held button. The ramp does not read those queued
+events at all — `InteractionHandler::handleEditorRepeat` reads the button's pressed **levels**
+through `ui_accel.h`'s tiers, on every loop pass, before the queue is drained. Two things, and
+only two, respond to a held UP/DOWN: §5.4's editor ramp, and the Select Menu's cursor, which
+moves on **any** event kind because the firmware-drawn selector drains the queue and switches
+on `event.button` alone (`InteractionHandler::handlePackSelector`; see `Gesture_Reference.md`
+§3.6). Everywhere else a repeat is popped, mapped to `FlowGesture::Hold`, matched against a
+table that declares no hold flow, and dropped.
+
+**This is a withdrawal, dated 2026-08-17, not an omission and not a deferral.** The
+alternative was live and was rejected: declaring `hold` flows on the info ring would have
+implemented the repeat. The requirement was withdrawn instead because the firmware never
+answered it, because three bug reports were spent discovering that (recorded in
+[`../../active_work/open_decisions.md`](../../active_work/open_decisions.md)), and because the
+rings are short enough that one-press-one-step is sufficient. The dataset schema still lists
+`hold` as a legal gesture value (`web/mockup/shared/schemaDefinitions.ts`) and no screen in the
+shipped dataset declares one — do not delete the enum value on the strength of this amendment,
+which drops a requirement and not a schema. Anyone about to file "holding UP does nothing" as a
+defect: it is this decision.
 
 ### 3.2. ENTER depends on screen type — deliberately
 
@@ -138,10 +171,16 @@ stateDiagram-v2
     ConfigRoot --> Info: ENTER long (escape) or BACK
 ```
 
-**The ring is nine entries, not nine info pages.** `net-wifi-root` and `net-mqtt-root` were appended when
-WiFi_MQTT_Connectivity landed and this diagram was never updated — it described a nine-page ring by
-coincidence while the real one had grown to eleven. Two of those eleven have since been absorbed (see §4.3),
-which brings it back to nine: seven info pages and the two network roots.
+**The DATASET's ring is nine entries, not nine info pages.** `net-wifi-root` and `net-mqtt-root` were
+appended when WiFi_MQTT_Connectivity landed and this diagram was never updated — it described a
+nine-page ring by coincidence while the real one had grown to eleven. Two of those eleven have since
+been absorbed (see §4.3), which brings it back to nine: seven info pages and the two network roots.
+
+**The ring the OPERATOR pages through is ten**, as of 2026-08-17. `UiNavigator` splices a
+firmware-owned `SELECT MENU` entry onto the end of the root level — `Loadable_UI_Menu_Packs.md` §3.4,
+implemented in `src/ui/core/ui_root_tail.h` — so DOWN off `net-mqtt-root` lands on it and DOWN again
+wraps to P0. It is in no dataset and no pack, which is what stops a pack removing the only
+discoverable route to menu selection, and is also why the diagram above and the mockup cannot show it.
 
 ### 4.2. Global Flow Indicator (Animated Dots)
 

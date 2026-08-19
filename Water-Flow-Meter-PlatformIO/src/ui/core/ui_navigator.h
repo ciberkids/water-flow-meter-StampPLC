@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "ui/generated/GeneratedUi.h"
+#include "ui/core/ui_root_tail.h"
 
 namespace ui {
 
@@ -47,6 +48,32 @@ class UiNavigator {
 
   /** The next sibling the operator can reach, stepping over any that are hidden. */
   const ui_exporter::Screen* nextVisibleSibling(const ui_exporter::Screen* from) const;
+
+  /** The member of this level BEFORE `from` — the ring closes, so this walks forward and stops at
+   *  the last one before coming back round. */
+  const ui_exporter::Screen* previousVisibleSibling(const ui_exporter::Screen* from) const;
+
+  /**
+   * Where DOWN goes, given the flow's declared target (which may be null). Splices the root tail.
+   *
+   * THE ONLY SANCTIONED WAY TO TAKE A SIBLING STEP, together with `siblingBefore`. `ui_actions.cpp`
+   * used to own the ring walk inline and must not reimplement it: the firmware-appended root tail is
+   * not any dataset screen's declared DOWN target, so a caller that trusted the declared target
+   * could never reach it, and a second copy of the rule is how paging and `ringPosition` would come
+   * to disagree about how long the root level is.
+   */
+  const ui_exporter::Screen* siblingAfter(const ui_exporter::Screen* from,
+                                          const ui_exporter::Screen* declared) const;
+
+  /** Where UP goes, given the flow's declared target (which may be null). Splices the root tail.
+   *  Same contract as `siblingAfter` above. */
+  const ui_exporter::Screen* siblingBefore(const ui_exporter::Screen* from,
+                                           const ui_exporter::Screen* declared) const;
+
+  /** Replaces the firmware-appended root tail. nullptr removes it — for tests that want the bare
+   *  dataset ring. */
+  void bindRootTail(const ui_exporter::Screen* tail) { rootTail_ = tail; }
+  const ui_exporter::Screen* rootTail() const { return rootTail_; }
 
   /** Establishes the root (P0) and places the operator on it. */
   void reset(const ui_exporter::Screen* root);
@@ -99,14 +126,29 @@ class UiNavigator {
   /**
    * Position of the current screen within its level's ring, for the scrollbar.
    *
-   * The ring is discovered by following DOWN flows until they come back round. The
-   * anchor is whichever member has the lowest address — arbitrary, but stable for a
-   * given build, which is all a position indicator needs.
+   * The ring is discovered by following DOWN flows until they come back round, with the
+   * firmware-appended root tail spliced in at depth 0. AT THE ROOT LEVEL the anchor is the ROOT
+   * itself, so P0 reports index 0; every deeper level still anchors on whichever member has the
+   * lowest address — arbitrary, but stable for a given build, which is all a position indicator
+   * needs. The root is a special case because the tail is a constant in a DIFFERENT translation
+   * unit, so link order could otherwise decide which member is index 0.
    */
   bool ringPosition(uint8_t* indexOut, uint8_t* countOut) const;
 
  private:
   static constexpr uint8_t kMaxRing = 16;
+
+  /** The raw DOWN step with the firmware-appended root tail spliced in. */
+  const ui_exporter::Screen* rawNextWithTail(const ui_exporter::Screen* from) const;
+
+  /**
+   * The Select Menu page the FIRMWARE appends to the end of the root level (§3.4).
+   *
+   * Bound BY DEFAULT, not by a wiring call. A `bindRootTail()` that firmware.cpp had to remember
+   * would be one more step that passes silently when it did nothing — and firmware.cpp is in no host
+   * link set, so nothing could catch the omission.
+   */
+  const ui_exporter::Screen* rootTail_ = &kSelectMenuScreen;
 
   const ui_exporter::Screen* root_ = nullptr;
   const ui_exporter::Screen* current_ = nullptr;

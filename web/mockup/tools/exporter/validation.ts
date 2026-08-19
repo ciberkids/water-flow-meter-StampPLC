@@ -121,10 +121,20 @@ const validationChecks: Array<
          * ready"). The §3 redesign dropped that row to give the walking dots their space, so no
          * dataset element surfaces a fault any more and this check found nothing.
          *
-         * The undersampling warning still reaches the operator, but through a path no dataset
-         * element can declare: `drawWarningBanner` paints it edge to edge over the footer row
-         * (§2c), from `context.warningFlags`, on whatever screen is showing. Asked whether the
-         * summary row should come back, the owner's answer was that the banner is enough FOR NOW.
+         * The fault summary still reaches the operator, but through a path no dataset element can
+         * declare: `drawWarningBanner` paints it edge to edge over the footer row (§2c) from
+         * `context.warningSummary` — the composed sentence, not the raw `warningFlags` this comment
+         * used to name — on whatever screen is showing. Asked whether the summary row should come
+         * back, the owner's answer was that the banner is enough FOR NOW.
+         *
+         * §2c HAS SINCE MADE THE BANNER CARRY MORE, which strengthens the ruling rather than
+         * changing it: the gate is now `bannerActive()`, i.e.
+         * `hasWarnings || (uncalibratedCount > 0 && !editorActive)`, so the commissioning gap
+         * ("3 channels not calibrated") reaches the panel too, and not only an undersampling fault.
+         * What has NOT changed is why this check still fires: the gate's two reassurance strings
+         * ("All sensors nominal", "No channels in use") are unreachable through the banner by
+         * construction, and the only ids that carry them — `telemetry.status` and `legend.warning` —
+         * are still bound by no element in the dataset.
          *
          * So this stays as a standing note rather than being deleted: "for now" is not "never", and
          * a check quietly removed is a decision nobody can find again. It does not block the export,
@@ -135,8 +145,8 @@ const validationChecks: Array<
           title: "Diagnostics banner is available",
           status: "warning",
           message:
-            "No dataset element surfaces a fault summary; undersampling reaches the operator only via " +
-            "the firmware-drawn banner over the footer row (§2c).",
+            "No dataset element surfaces a fault summary; an undersampling fault or a commissioning " +
+            "gap reaches the operator only via the firmware-drawn banner over the footer row (§2c).",
           recommendation:
             "Accepted by the owner for now. To put the summary back on the panel, bind a badge to " +
             "telemetry.status — P0 carried it before the §3 redesign."

@@ -432,12 +432,19 @@ describe("the summary lines report a commissioning gap, and rank it first", () =
     expect(statusSummaryText(oneEach)).toBe("1 channel not calibrated | 1 warning");
     expect(warningSummaryText(oneEach)).toBe("1 not calibrated, 1 undersampling");
 
-    // Alone, the sampling case keeps the wording and the channel list it always had.
+    // Alone, the sampling case is a COUNT too. It used to name the channels — "Sampling warning on
+    // sensors 5, 6" — and nothing bounded that: a 28-character prefix plus a 3k-2 list passed the
+    // banner's 37 columns at FOUR flagged channels, silently, because the firmware's banner gets none of
+    // the `~` clipping ordinary text elements receive.
     const samplingOnly = setSensor(setSensor(createSensorTable(), 5, { undersampling: true }), 6, {
       undersampling: true
     });
     expect(statusSummaryText(samplingOnly)).toBe("2 warnings");
-    expect(warningSummaryText(samplingOnly)).toBe("Sampling warning on sensors 5, 6");
+    expect(warningSummaryText(samplingOnly)).toBe("Sampling warning on 2 sensors");
+
+    // One flagged channel: the same plural idiom the uncalibrated branch beside it uses.
+    const oneFlagged = setSensor(createSensorTable(), 5, { undersampling: true });
+    expect(warningSummaryText(oneFlagged)).toBe("Sampling warning on 1 sensor");
   });
 
   it("still says all-ready when every in-use channel is calibrated and unflagged", () => {
@@ -491,6 +498,21 @@ describe("the summary lines report a commissioning gap, and rank it first", () =
       // Font0 draws a blank cell above 255 and the wrong glyph above 175 — §Font0, no exceptions.
       expect(/^[\x20-\x7E]*$/.test(text)).toBe(true);
     }
+
+    // ── The SAMPLING-ONLY worst case, which the case above does not reach ────────
+    //
+    // `{ qMaxLpm: 0, undersampling: true }` above routes to the COMBINED branch, so the sampling-only
+    // line had never been measured on either side — and it was 50 characters at eight channels while it
+    // named them. `ready` stays true here, which is the only state that reaches the branch at k=8.
+    let flaggedOnly = createSensorTable();
+    for (let number = 1; number <= kSensorCount; number += 1) {
+      flaggedOnly = setSensor(flaggedOnly, number, { undersampling: true });
+    }
+    expect(uncalibratedSensorNumbers(flaggedOnly)).toEqual([]);
+    expect(warningSensorNumbers(flaggedOnly).length).toBe(kSensorCount);
+    expect(warningSummaryText(flaggedOnly)).toBe("Sampling warning on 8 sensors");
+    // 37, not 40: this line is the BANNER's, and the banner starts at x=16.
+    expect(warningSummaryText(flaggedOnly).length).toBeLessThanOrEqual(37);
   });
 });
 

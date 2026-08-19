@@ -50,7 +50,10 @@ inline constexpr ActionDescriptor kActionCatalogue[] = {
     {"config.action.value.commit-override", "Save despite Nyquist warning",
      "Forces the pending value past a failed Nyquist check and raises bit n of register 30 "
      "(\u00a75.5)"},
-    {"config.action.value.discard", "Discard edit", "Abandon the pending value and ascend one level"}};
+    {"config.action.value.discard", "Discard edit", "Abandon the pending value and ascend one level"},
+    {"ui.action.pack.select-menu", "Open the Select Menu",
+     "Opens the firmware-drawn menu-pack selector. Declared by the firmware-appended root entry "
+     "(Loadable_UI_Menu_Packs.md §3.4); the same page the UP+DOWN+ENTER 3 s gesture opens"}};
 
 inline constexpr std::size_t kActionCatalogueCount =
     sizeof(kActionCatalogue) / sizeof(kActionCatalogue[0]);

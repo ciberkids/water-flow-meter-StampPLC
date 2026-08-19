@@ -324,10 +324,15 @@ export function useSimulatedButtons(
         emit(button, "long", Date.now());
 
         if (button !== "enter") {
-          // Display_UI_Requirements §3.1: UP/DOWN held repeat every 250 ms when navigating. Flat, not
-          // accelerating — the accelerating tiers belong to a numeric editor (§5.4) and are driven by
-          // `runEditorPass`, which clears these timers the moment it takes the button. ENTER is excluded
-          // because held ENTER is a countdown, never a repeat.
+          // These repeats mirror `button_input.cpp`'s event stream: a long press at 1.5 s, then a repeat
+          // every 250 ms, flat — the accelerating tiers belong to a numeric editor (§5.4) and are driven
+          // by `runEditorPass`, which clears these timers the moment it takes the button. ENTER is
+          // excluded because held ENTER is a countdown, never a repeat.
+          //
+          // Display_UI_Requirements §3.1.1 (2026-08-17) withdrew the repeating NAVIGATION step, so these
+          // events exist for fidelity with the firmware queue, not to page a ring. They are answered only
+          // where the firmware answers them: a `hold` flow if one is ever declared, and the Select Menu
+          // cursor, which moves on any event kind. Do not delete this timer with the requirement.
           runtime.repeatTimer = setInterval(() => {
             if (comboConsumed(comboRef.current)[button]) {
               return;

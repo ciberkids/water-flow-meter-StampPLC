@@ -92,7 +92,7 @@ export interface SimulatedSensor {
    * Bit n of `REG_UNDERSAMPLING_FLAGS` (modbus/register_map.h:30) — the PUBLISHED flag, not an input.
    *
    * A DISCONNECTED channel can never carry it: `evaluateSensorDiagnostics` skips
-   * `!inUse` before it looks at the configuration (modbus/modbus_manager.cpp:493-496). Every
+   * `!inUse` before it looks at the configuration (modbus/modbus_manager.cpp:518-521). Every
    * producer in this module clears the bit when `connected` is false, so the combination is
    * unreachable through the API.
    *
@@ -112,7 +112,7 @@ export interface SimulatedSensor {
    *
    * The one genuine INPUT of the three sampling facts, and the reason the panel still has a checkbox
    * after the flag became derived. `evaluateSensorDiagnostics` ORs both override arms into the flag
-   * (modbus_manager.cpp:500), so a channel awaiting a confirmation, or one whose operator confirmed
+   * (modbus_manager.cpp:525), so a channel awaiting a confirmation, or one whose operator confirmed
    * "save anyway", carries the warning even when its figures are inside budget — which is the point:
    * the operator was told the sampler cannot keep up and chose to proceed.
    *
@@ -246,7 +246,7 @@ export function configIsValid(sensor: SimulatedSensor): boolean {
  * second. The formula's multiplier is Hz per L/min by construction, so its product is already Hz.
  *
  * Returns null where `ModbusManager::meetsNyquistLimit` returns false before computing anything: no
- * `q_max` to convert, or a missing divisor for the form in use (modbus_manager.cpp:627-643). Null is not
+ * `q_max` to convert, or a missing divisor for the form in use (modbus_manager.cpp:734-762). Null is not
  * "unlimited" — it is "there is no ceiling to compute", and the caller must decide what that means.
  *
  * THE FLOOR IS THE FIRMWARE'S, INCLUDING ITS CONSEQUENCE: the formula arm clamps at 0, so a negative
@@ -276,7 +276,7 @@ export function samplingCeilingHz(sensor: SimulatedSensor): number | null {
 /**
  * `ModbusManager::meetsNyquistLimit` — can the sampler keep up with this channel at full flow?
  *
- * (modbus_manager.cpp:626-653.) `pollingRateKhz` is the achieved rate, the mockup's stand-in for
+ * (modbus_manager.cpp:734-762.) `pollingRateKhz` is the achieved rate, the mockup's stand-in for
  * `*deps_.pollingRateKhz`. Every arm is the firmware's, in its order:
  *
  *   no ceiling to compute      -> false   (q_max == 0, or the form's divisor is 0)
@@ -309,7 +309,7 @@ export function meetsSamplingLimit(sensor: SimulatedSensor, pollingRateKhz: numb
 /**
  * `ModbusManager::evaluateSensorDiagnostics` — recompute every channel's `undersampling` bit.
  *
- * (modbus_manager.cpp:491-506.) The per-channel rule, verbatim:
+ * (modbus_manager.cpp:516-531.) The per-channel rule, verbatim:
  *
  *   !inUse                                              -> no bit, config not even looked at
  *   (valid && !meets) || overrideActive_ || overridePending_ -> bit
@@ -351,7 +351,7 @@ export function deriveUndersampling(
  *  - A channel that is not flowing reads 0 L/s: the engine assigns
  *    `instantFlow_L_s = 0.0f` both for a disabled channel (sensor_state_engine.cpp:54) and
  *    for an enabled one that is not ready or has no multiplier (sensor_state_engine.cpp:44-46).
- *  - A disconnected channel carries no undersampling flag (modbus_manager.cpp:387-390).
+ *  - A disconnected channel carries no undersampling flag (modbus_manager.cpp:518-521).
  *
  * Totals are never touched here — see the file header for why the disconnect event's erasure
  * is not mirrored.
@@ -434,7 +434,7 @@ export function setSensor(
 /** True when this channel could carry an undersampling flag at all — i.e. it is connected. */
 export function mayUndersample(sensor: SimulatedSensor): boolean {
   // `evaluateSensorDiagnostics` tests `if (!deps_.sensors[i].inUse) continue;` BEFORE it reads
-  // the configuration or the Nyquist limit (modbus/modbus_manager.cpp:493-496). The limit itself needs
+  // the configuration or the Nyquist limit (modbus/modbus_manager.cpp:518-521). The limit itself needs
   // the polling rate, which is not per-sensor state — `deriveUndersampling` takes it as an argument for
   // that reason, and this predicate stays the cheap `inUse` half the firmware evaluates first.
   return sensor.connected;
@@ -517,12 +517,17 @@ export function statusSummaryText(table: readonly SimulatedSensor[]): string {
  * Composed in `UiController::update` rather than in the resolver, so the banner and the legend row
  * cannot disagree; this mirrors the same precedence with the same wording.
  *
- * The sampling case NAMES the channels, as the device does, but only when it is alone: naming both sets
- * needs more than the 37 characters the banner has at x=16 with 6 px glyphs, so when both kinds are
- * present the list is traded for a count — and so is the word "channels", because "8 channels not
- * calibrated, 8 undersampling" is 42. This is the one line that drops it; `statusSummaryText` keeps it
- * in every state. Channel identity is not lost either way — the flagged rows are drawn in the warning
- * colour and an uncalibrated row says `SET?` itself.
+ * EVERY STATE IS A COUNT, none of them a channel list. The sampling case used to name the flagged
+ * channels, on both sides, and nothing bounded it: the prefix was "Sampling warning on sensors " at 28
+ * characters, a k-channel list is 3k-2, so it passed the banner's 37 columns at FOUR flagged channels and
+ * reached 50 at eight — and on the device it overflowed silently, because `drawWarningBanner` prints
+ * straight to the panel and gets none of the `~` clipping ordinary text elements receive. "Sampling
+ * warning on 8 sensors" is 29.
+ *
+ * The word "channels" still goes in the COMBINED line, which is the widest at 33: "8 channels not
+ * calibrated, 8 undersampling" would be 42. This is the one line that drops it; `statusSummaryText` keeps
+ * it in every state, having 40 columns. Channel identity is not lost — the flagged rows are drawn in the
+ * warning colour and an uncalibrated row says `SET?` itself.
  */
 export function warningSummaryText(table: readonly SimulatedSensor[]): string {
   const uncalibrated = uncalibratedSensorNumbers(table).length;
@@ -534,7 +539,7 @@ export function warningSummaryText(table: readonly SimulatedSensor[]): string {
     return `${uncalibrated} channel${uncalibrated === 1 ? "" : "s"} not calibrated`;
   }
   if (flagged.length > 0) {
-    return `Sampling warning on sensors ${flagged.join(", ")}`;
+    return `Sampling warning on ${flagged.length} sensor${flagged.length === 1 ? "" : "s"}`;
   }
   if (table.every((sensor) => !sensor.connected)) {
     return "No channels in use";
@@ -1159,11 +1164,15 @@ export function resetCalibration(
           // undersampling anything.
           undersampling: false,
           // And the OVERRIDE goes with it, which is the firmware arm written out: `OFF_CMD_RESET_CALIBRATION`
-          // clears `overridePending_`/`overrideActive_` beside the config (modbus_manager.cpp:337-339),
-          // because the confirmation described the OLD meter. Left standing it would both keep the flag lit
-          // on a channel with nothing to undersample and wave the NEXT meter's first figures through
-          // unchecked. Now that the flag is derived, omitting this would be visible: S3 would come out of
-          // S.RESET still wearing a warning.
+          // clears `overridePending_`/`overrideActive_` beside the config (modbus_manager.cpp:362-364),
+          // because the confirmation described the OLD meter. `OFF_CMD_RESET_CONFIG` clears the same three
+          // since 2026-08-17, so both firmware reset arms agree; the mockup models only this one, and needs
+          // no second action. Left standing the override would keep the flag lit on a channel with nothing
+          // to undersample — it would NOT wave the next meter's first figures through unchecked, which is
+          // what this was first reported as: `prepareConfigUpdate` clears all three flags for any candidate
+          // failing `configIsValid`, and the first write onto an all-zero config is necessarily one. Now
+          // that the flag is derived, omitting this would be visible: S3 would come out of S.RESET still
+          // wearing a warning.
           samplingOverride: false
         })
       : normalizeSensor({ ...sensor })

@@ -15,9 +15,15 @@ namespace ui {
  * out — the same class of problem as the blind factory-reset combo §3.3 retired, and this project
  * has already shipped that mistake once.
  *
- * So the firmware appends this page to the end of the root level whatever the active pack defines,
- * and a pack cannot remove it. Entry 0 is always the embedded default, so returning to a
- * known-good UI never depends on the card being readable.
+ * So this LIST is firmware-owned, and so is the ENTRY that opens it: `ui/core/ui_root_tail.h` defines
+ * the `SELECT MENU` page `UiNavigator` appends to the end of the root level whatever the active pack
+ * defines, and a pack can neither remove nor shadow it. The two are separate on purpose — the entry
+ * is a `constexpr` screen the ordinary render path draws, while this list is live state read off the
+ * card, which no constant could be. ENTER-short on the entry and the UP+DOWN+ENTER 3 s gesture both
+ * open this page, through one flag with one consumer.
+ *
+ * Entry 0 is always the embedded default, so returning to a known-good UI never depends on the card
+ * being readable.
  *
  * Arduino-free: the list, the cursor and the commit decision are all pure state, so the awkward
  * cases — an empty card, a card with more packs than the list can hold, a selection whose file

@@ -1,7 +1,7 @@
 # Gesture Reference
 
-**Version:** 1.2
-**Date:** 2026-08-01
+**Version:** 1.3
+**Date:** 2026-08-17
 **Status:** reference — describes both what is *specified* and what is *built*, and these are
 not yet the same thing.
 
@@ -80,17 +80,22 @@ Status is measured, not assumed: ✅ means a host test in `test/host/` exercises
 | --- | --- | --- |
 | UP short | Previous sibling at this level, wrapping | ✅ `interaction_test` |
 | DOWN short | Next sibling at this level, wrapping | ✅ `interaction_test` |
-| UP/DOWN held | Repeats the sibling step every 250 ms | ✅ `interaction_test` |
+| UP/DOWN held | **Nothing.** Repeats are emitted and match no flow, at any depth | ✅ `interaction_test` (`heldRepeatScopeTests`) |
 | ENTER short | Descend into the current entry; on a `BACK` entry, ascend one level | ✅ `interaction_test` |
 | ENTER long (≥1.5 s) | Escape to the main screen (P0), clearing the whole stack | ⚠️ |
 | UP+DOWN short | Display off **and** reset navigation to P0, from any screen at any depth | ✅ `interaction_test` |
+
+A held UP/DOWN moving nothing is the *specified* behaviour as of 2026-08-17 —
+`Display_UI_Requirements` §3.1.1 withdrew the repeating navigation step. The repeats are still
+emitted, for §5.4's ramp (§3.2 below, timings in §2.1) and for the Select Menu cursor (§3.6),
+neither of which goes through the flow table.
 
 ### 3.2. In a value editor
 
 | Gesture | Effect | Status |
 | --- | --- | --- |
 | UP short / DOWN short | ±1 (exactly one step, always) | ⚠️ |
-| UP/DOWN held | Accelerating adjust per §2.1 | ⚠️ |
+| UP/DOWN held | Accelerating adjust per §2.1 | ✅ `interaction_test` |
 | ENTER short | **Commit** and ascend one level | ⚠️ |
 | ENTER long | **Discard** and ascend one level | ⚠️ |
 
@@ -149,6 +154,7 @@ no gesture table, no navigation diagram and no screen list.
 | Gesture | Effect | Status |
 | --- | --- | --- |
 | UP + DOWN + ENTER held 3 s | Opens the Select Menu, from any screen at any depth | ✅ `recoveryGestureTests` |
+| ENTER-short on the SELECT MENU root entry | Opens the Select Menu | ✅ `rootEntryTests` |
 | UP/DOWN while it is open | Move the cursor. Any event kind, not just a tap | ✅ |
 | ENTER-short while it is open | Commit the choice — **the device reboots into that pack** | ✅ |
 | ENTER-long while it is open | Leave without selecting | ✅ |
@@ -163,17 +169,20 @@ Four properties make it unlike every other gesture in this file:
   `feature addition/Loadable_UI_Menu_Packs.md` says the gesture must work "even if the active pack
   draws nothing at all", and that is only true if the firmware draws this page itself. It is therefore
   in no screen table, and a dataset-driven mockup cannot preview it.
-- **It is the only route in.** Which is a defect — see below.
+- **It is no longer the only route in.** §3.4's appended root entry is built — see the table below.
 
-> **The discoverable route is specified and not built.** §3.4 requires the firmware to append a Select
-> Menu page to the end of the root level, "always reachable by paging with UP/DOWN", and §3.4.1 argues
-> the case at length: a hidden gesture is "precisely the anti-pattern we retired with the blind UP+DOWN
-> factory-reset combo — nothing on screen says it exists, nothing confirms you are partway through it,
-> and it cannot be documented on the device itself."
+> **The discoverable route is built, as of 2026-08-17.** The firmware appends a `SELECT MENU` entry to
+> the end of the root level, so the root level has **ten** members: P0..P6, WIFI, MQTT, SELECT MENU.
+> UP/DOWN reach it like any sibling — DOWN off MQTT lands on it, DOWN again wraps to P0, and a single
+> UP from P0 arrives on it — and ENTER-short opens the same firmware-drawn page the three-button hold
+> opens, through the same `InteractionResult::openPackSelector` flag and the same single consumer.
 >
-> The root ring has nine entries and none of them is the selector; nothing in the navigator or the
-> router appends one. So the shipped behaviour is the hidden gesture the requirement rejected, with the
-> paged entry it asked for absent. Recorded in `active_work/open_decisions.md`.
+> The entry lives in `src/ui/core/ui_root_tail.h`, not in any pack and not in
+> `src/ui/generated/GeneratedUi.cpp`, so a pack can neither remove nor shadow it. Because it is in no
+> dataset, **the mockup still cannot preview it**, for the same reason it cannot preview the selector,
+> and neither can the geometry or spec audits — `rootEntryTests` in `test/host/interaction_test.cpp` is
+> its only gate. So §3.4.1's split — a normal page for everyday use, a gesture for when the UI is
+> broken — is now what the device does.
 
 ---
 
@@ -210,7 +219,7 @@ level is a trap reachable only by escaping all the way to P0.
 ## 6. What each screen class actually declares
 
 Counted from the generated table (`src/ui/generated/GeneratedUi.cpp`), so this is what the
-device really has:
+device really has — plus one row that is not in that table at all, marked as such below:
 
 | Screen class | Screens | Declared flows |
 | --- | --- | --- |
@@ -218,14 +227,19 @@ device really has:
 | Config lists + editors | 31 | UP/DOWN short, ENTER short, ENTER long |
 | Confirm | 3 | ENTER short (exit) + a Timeout flow carrying ENTER and a duration |
 | Toast | 2 | A Timeout flow with **no** button — an automatic dismissal |
+| Firmware-appended root entry | 1 | UP/DOWN short, ENTER short |
 | **Hold-gesture flows** | — | **0 across all 48 screens** |
 
-Two notes a menu author needs:
+Three notes a menu author needs:
 
 - **`info-p0-global-status` and `info-p1-instant-flow` declare no ENTER-short flow.** ENTER
   does nothing on the two most-visited screens. That may be intended (nothing to descend
   into) but it is worth knowing before wondering why the button feels dead.
 - **No screen anywhere declares a `hold` gesture**, which is why §8.2 exists.
+- **The firmware-appended root entry is in no screen table**, generated or pack. It is a
+  `constexpr ui_exporter::Screen` in `src/ui/core/ui_root_tail.h`, which is why it is counted
+  separately above and why the "48 screens" figure does not include it. Like `net-wifi-root` and
+  `net-mqtt-root` it declares no ENTER-long flow, so ENTER-long does nothing on it.
 
 ---
 
@@ -264,19 +278,20 @@ the panel.
 
 ### 8.2. Unverified, not broken ⚠️
 
-ENTER-long escape-to-P0, and the numeric editor's adjust/commit/discard. All implemented and
+ENTER-long escape-to-P0, and the numeric editor's commit and discard. All implemented and
 all plausible; none has a host test yet, so they carry ⚠️ rather than ✅. The harness exists,
 so this is a gap in coverage rather than in capability.
 
 ### 8.3. Closed on 2026-08-01 ✅
 
-Five defects, all listed as ❌ in v1.0 of this document and all repaired the same day:
+Five defects, all listed as ❌ in v1.0 of this document and all repaired the same day. Four of
+those repairs still stand; the third — the held UP/DOWN row — was itself superseded, see the row:
 
 | Was | Now |
 | --- | --- |
 | Confirm screens could not be confirmed — zero of 48 screens matched the arming predicate, which still looked for a two-screen page→overlay model | Arms on ENTER down against the confirm screen's own `Timeout` flow |
 | The blind UP+DOWN 30 s factory reset was live, and armed on the same buttons §3.1 uses for display-off | Removed, with a test that holds UP+DOWN for 36 s and asserts nothing is wiped |
-| Holding UP/DOWN on a navigation level stepped nothing, while the browser preview paged | Both resolve a repeat as a repetition of the Short flow |
+| Holding UP/DOWN on a navigation level stepped nothing, while the browser preview paged | Both now resolve a repeat as `hold` and nothing else, so both step nothing. The preview's short-flow fallback *was* the bug and was removed; `Display_UI_Requirements` §3.1.1 (2026-08-17) then withdrew the requirement, so this is now specified rather than merely tolerated |
 | The value editor opened on config **list** pages, swallowing UP/DOWN paging | Requires a `config.editor.pending` element |
 | Everything repainted at 1 Hz, because the fast cadence was gated on a retired mode | Driven from actual interactivity |
 

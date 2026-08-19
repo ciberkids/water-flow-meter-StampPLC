@@ -66,60 +66,44 @@ const SettingDescriptor* settingEditedByScreen(const ui_exporter::Screen* screen
   return nullptr;
 }
 
-// A sibling move: follow the flow's target without touching depth. Falls back to
-// the UiPage ring when the dataset names no target, so an under-specified screen
-// still pages.
 /**
  * Steps to the next reachable sibling, over any that are hidden.
  *
- * The flow's own target is the next sibling in the DATASET, which may be gated off — the calibration
- * branch hides Multiplier and Adjust on a pulses-calibrated channel. Following the target blindly
- * would land the operator on a screen the level no longer contains, which then draws rows for a
- * calibration form they are not using.
+ * THE STEP ITSELF NOW COMES FROM `UiNavigator::siblingAfter`, which is asked FIRST and
+ * unconditionally — the flow's declared target is passed to it as a hint, not consulted here. Both
+ * of the behaviours this function used to own are preserved inside it: hidden targets are stepped
+ * over (the calibration branch hides Multiplier and Adjust on a pulses-calibrated channel, and
+ * following the target blindly would land the operator on a screen the level no longer contains),
+ * and the UiPage ring is still the fallback when nothing resolves at all.
+ *
+ * The navigator has to be asked BEFORE the flow's target is trusted because of the
+ * firmware-appended root tail (§3.4): it is no dataset screen's declared DOWN target, so a paging
+ * path gated on `ctx.resolvedTarget` could never reach it and — worse — could never leave it.
  */
 void handlePageNext(const UiActionContext& ctx, const ui_exporter::Flow&) {
-  if (ctx.resolvedTarget) {
-    auto& nav = ctx.controller.navigator();
-    const ui_exporter::Screen* target = ctx.resolvedTarget;
-    if (!nav.screenVisible(target)) {
-      target = nav.nextVisibleSibling(target);
-    }
-    if (target) {
-      nav.goToSibling(target);
-      ctx.controller.syncPageFromScreen(target, ctx.nowMs);
-    }
+  auto& nav = ctx.controller.navigator();
+  if (const auto* target = nav.siblingAfter(nav.current(), ctx.resolvedTarget)) {
+    nav.goToSibling(target);
+    ctx.controller.syncPageFromScreen(target, ctx.nowMs);
     return;
   }
+  // Nothing resolvable at all: the UiPage ring, so an under-specified screen still pages.
   ctx.controller.nextPage(ctx.nowMs);
 }
 
 /**
  * The same, backwards.
  *
- * There is no `previousVisibleSibling`: the ring closes, so walking FORWARD from a hidden screen
- * eventually arrives at the one before it. Going forward from the hidden target lands on the next
- * visible screen after it, which is not where UP should go — so this walks forward from the CURRENT
- * screen instead and stops at the last visible one before it comes back round.
+ * `UiNavigator::previousVisibleSibling` now owns the forward walk this function used to inline —
+ * the ring closes, so the member before `from` is the last one reached before coming back round.
+ * It moved because an inline copy here could not see the firmware-appended root tail (§3.4), and
+ * two homes for one ring walk is how paging and the scrollbar came to disagree before.
  */
 void handlePagePrevious(const UiActionContext& ctx, const ui_exporter::Flow&) {
-  if (ctx.resolvedTarget) {
-    auto& nav = ctx.controller.navigator();
-    const ui_exporter::Screen* target = ctx.resolvedTarget;
-    if (!nav.screenVisible(target)) {
-      const ui_exporter::Screen* const start = nav.current();
-      const ui_exporter::Screen* candidate = nav.nextVisibleSibling(start);
-      const ui_exporter::Screen* previous = candidate;
-      // Walk the whole visible ring; the last member before returning to `start` is the one UP wants.
-      for (uint8_t hops = 0; candidate && candidate != start && hops < 16; ++hops) {
-        previous = candidate;
-        candidate = nav.nextVisibleSibling(candidate);
-      }
-      target = previous;
-    }
-    if (target) {
-      nav.goToSibling(target);
-      ctx.controller.syncPageFromScreen(target, ctx.nowMs);
-    }
+  auto& nav = ctx.controller.navigator();
+  if (const auto* target = nav.siblingBefore(nav.current(), ctx.resolvedTarget)) {
+    nav.goToSibling(target);
+    ctx.controller.syncPageFromScreen(target, ctx.nowMs);
     return;
   }
   ctx.controller.previousPage(ctx.nowMs);
@@ -217,6 +201,19 @@ void handleResetPortalLogin(const UiActionContext& ctx, const ui_exporter::Flow&
   if (ctx.settings && ctx.settings->net) {
     ctx.settings->net->resetPortalCredentials();
   }
+}
+
+/**
+ * ENTER-short on the firmware-appended root entry: ask for the Select Menu (§3.4).
+ *
+ * A REQUEST on the controller, not the page itself. Opening it needs the card scanned for packs,
+ * which lives in firmware.cpp — so this raises the same `InteractionResult::openPackSelector` flag
+ * the UP+DOWN+ENTER 3 s gesture raises and converges on that one consumer. A second code path there
+ * would be untestable by construction, because firmware.cpp is in no host link set.
+ */
+void handleOpenSelectMenu(const UiActionContext& ctx, const ui_exporter::Flow&) {
+  ctx.controller.notifyInteraction(ctx.nowMs);
+  ctx.controller.requestPackSelector();
 }
 
 void handleNavDescend(const UiActionContext& ctx, const ui_exporter::Flow&) {
@@ -404,6 +401,7 @@ constexpr UiActionBinding kDefaultBindings[] = {
     {"config.action.value.commit", handleValueCommit},
     {"config.action.value.commit-override", handleValueCommitOverride},
     {"config.action.value.discard", handleValueDiscard},
+    {"ui.action.pack.select-menu", handleOpenSelectMenu},
 };
 
 constexpr std::size_t kBindingCount = sizeof(kDefaultBindings) / sizeof(kDefaultBindings[0]);

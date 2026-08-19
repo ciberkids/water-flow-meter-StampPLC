@@ -36,16 +36,18 @@ function buttonFlowsFor(
  *
  * This file used to answer a repeat by taking the `short` flow instead whenever it named a target
  * screen, on the theory that "a repeat is the same transition again" and that §3.1's held UP/DOWN pages
- * the ring every 250 ms. §3.1 does say that, and the firmware does emit the repeats — but NOTHING answers
+ * the ring every 250 ms. §3.1 said that until it was amended on 2026-08-17, and the firmware does emit the
+ * repeats — but NOTHING answers
  * them: the dataset declares 196 short flows, 13 long, and zero hold. So a held UP/DOWN navigates nowhere
  * on the device, and that invented fallback was the whole of the reported bug. Holding UP on a setting
  * page paged the operator several settings away from the one they were reading, which the device never
  * did, and it also fought the editor: on an editor screen it dropped `f-inc` for having no target, so the
  * value froze while the ramp was still missing.
  *
- * §3.1's repeating navigation step being unimplemented is a real gap, but it is a FIRMWARE gap — closing
- * it means declaring `hold` flows or making `matchFlow` fall back, in the pipeline, where the host tests
- * can see it. It is not something the preview may quietly invent on its own.
+ * `Display_UI_Requirements` §3.1.1 has since withdrawn the repeating navigation step, so this is no longer
+ * a gap of any kind — a held UP/DOWN moving nothing on a navigation screen is now the requirement. If a
+ * `hold` flow is ever declared, it is declared in the pipeline, where the host tests can see it; the
+ * preview may still never invent one on its own.
  */
 export function findMatchingButtonFlows(
   screen: ScreenDefinition | undefined,

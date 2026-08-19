@@ -3,6 +3,7 @@ import { sampleValueFor } from "../utils/sampleValues";
 import { ScreenElement } from "../types";
 import { LayoutReport } from "../utils/layout";
 import { packSelectorLayout } from "../utils/packSelector";
+import { warningBannerLayout } from "../utils/warningBanner";
 import { useTheme } from "../theme/ThemeProvider";
 import { DeviceGrid } from "./DeviceGrid";
 
@@ -69,6 +70,21 @@ interface DisplayViewportProps {
    * page was open while the panel showed a different one, which is the one thing a viewport must not do.
    */
   packSelector?: PackSelectorState | null;
+  /**
+   * The firmware-drawn warning banner's text, or null when its gate is closed (§2c).
+   *
+   * THE SECOND THING THE DATASET CANNOT DESCRIBE, and the one that was missing rather than wrong.
+   * `UiRenderer::drawWarningBanner` paints an 18 px band edge to edge across y 116…133 from
+   * `context.warningSummary`, on whatever screen is showing, and no element declares it — so the
+   * simulator has to own it, exactly as it owns the Select Menu above. Until this prop existed the
+   * mockup drew NO banner at all while `Display_Per_Screen_Spec.md` §2c documented its pixels and
+   * `tools/audit/screen-spec.ts` measured every proposal against its band: a missing layer, which looks
+   * exactly like a screen with nothing wrong.
+   *
+   * The caller passes the string. The gate, the copy and the geometry live in `utils/warningBanner.ts`,
+   * because the gate needs a sensor table and an editor state this component has no business holding.
+   */
+  warningBanner?: string | null;
   /**
    * Aggregate flow in L/MIN (§2a), which decides whether the flow-dot chase runs at all.
    *
@@ -201,6 +217,7 @@ export function DisplayViewport({
   bindingDisplay = "sample",
   powered = true,
   packSelector = null,
+  warningBanner = null,
   aggregateFlowLpm = 0,
   animating = false,
   repaintCount = 0
@@ -535,6 +552,75 @@ export function DisplayViewport({
             : powered
               ? renderElementsForLayout(layout, { scrollIndicator })
               : null}
+          {/* THE WARNING BANNER (§2c), which is drawn by the firmware and by nothing in the dataset.
+              Six facts, each one the simulator would otherwise have to guess:
+
+              (a) IT PAINTS ABOVE THE SCREEN'S ELEMENTS, which is why the band comes after the render
+                  above and carries a higher zIndex than `baseStyle`'s 2. That mirrors the order the
+                  firmware now uses — `drawScreen` THEN `drawWarningBanner` — and the order is what makes
+                  "the banner replaces the footer" true rather than merely intended: text elements paint
+                  with an OPAQUE background, so with the banner drawn first the footer hint at y=124 would
+                  punch a background-coloured hole straight through it.
+              (b) IT IS SUPPRESSED WHILE THE SELECT MENU IS OPEN, because `UiRenderer::update`
+                  short-circuits to `drawPackSelector` and RETURNS before the banner is reached.
+              (c) IT DRAWS NOTHING UNPOWERED, because the `UiMode::Idle` branch returns after `fillScreen`
+                  with the backlight off — the same reason the elements above are gated on `powered`.
+              (d) NO CLIPPING CALL. `surfaceStyle`'s `overflow: hidden` plus `baseStyle`'s `nowrap`
+                  reproduce the device's own clip at the panel edge; routing the string through
+                  `clipToPanel` would truncate at a CHARACTER boundary, which `drawWarningBanner` does not
+                  do — it prints straight to the panel and gets none of `drawTextElement`'s `~` handling.
+                  Every branch of the summary fits the band's 37 columns today (widest 33), so this only
+                  matters if a phrasing grows.
+              (e) THE FILL IS THE badgeBorder TOKEN, not an invented `warning` one: the firmware maps
+                  `warningColor_` with `palette.color("badgeBorder", ...)`, and the text is a WHITE
+                  literal. `warningBannerLayout` holds both, and a unit test pins them.
+              (f) A DIVERGENCE RECORDED RATHER THAN INVENTED AROUND: on the device a hold repaints the
+                  current screen a second time with `overlay = true`, so a confirm screen's full-panel
+                  `overlay-bg` covers this band while the countdown runs. The mockup has no second overlay
+                  pass for any screen and deliberately did not grow one here. */}
+          {powered && !packSelector && warningBanner ? (
+            <>
+              <div
+                /* Test ids, because §2c's band is the one thing on this panel that NO dataset element
+                   declares — so a visual test cannot find it by screen id, element id or binding, and had
+                   no way to assert it existed at all (DF20). */
+                data-testid="warning-banner-band"
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: `${warningBannerLayout.y}px`,
+                  width: `${warningBannerLayout.panelWidth}px`,
+                  height: `${warningBannerLayout.height}px`,
+                  backgroundColor: theme.colors.badgeBorder,
+                  zIndex: 3
+                }}
+              />
+              <span
+                data-testid="warning-banner-marker"
+                style={{
+                  ...baseStyle,
+                  left: `${warningBannerLayout.markerX}px`,
+                  top: `${warningBannerLayout.y + warningBannerLayout.textDy}px`,
+                  color: warningBannerLayout.textColor,
+                  zIndex: 4
+                }}
+              >
+                {warningBannerLayout.marker}
+              </span>
+              <span
+                data-testid="warning-banner-text"
+                style={{
+                  ...baseStyle,
+                  left: `${warningBannerLayout.textX}px`,
+                  top: `${warningBannerLayout.y + warningBannerLayout.textDy}px`,
+                  color: warningBannerLayout.textColor,
+                  zIndex: 4
+                }}
+              >
+                {warningBanner}
+              </span>
+            </>
+          ) : null}
           {/* THE TRANSITION OVERLAY IS GONE (J7), not disabled.
 
               It faded a miniature of the incoming screen over the panel on every UP/DOWN — and on a device

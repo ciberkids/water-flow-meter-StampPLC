@@ -307,6 +307,13 @@ export function ThemeEditor({
           <h4>Live preview</h4>
           {layout ? (
             <div className="theme-editor__viewport">
+              {/* NO `warningBanner` PROP HERE, DELIBERATELY. The design tab has no simulated sensor
+                  table and no navigation state, so it has nothing to evaluate §2c's gate against — a band
+                  drawn here would have to come from invented state, and the design surface disagreeing
+                  with the simulator about whether the device has a fault is worse than the band being
+                  absent from a colour preview. The prop is optional for exactly this caller. Anyone who
+                  wants the band's colours previewed should reach for `badgeBorder`, which is the token the
+                  firmware fills it with. */}
               <DisplayViewport
                 layout={layout}
                 zoomPercent={previewZoom}

@@ -87,6 +87,18 @@ struct UiRenderContext {
    */
   bool interactive = false;
   /**
+   * A VALUE EDITOR is open — `UiEditorState::active`, published.
+   *
+   * Its own field rather than a reuse of either neighbour, because neither can answer the question.
+   * `mode` cannot: the note above records that nothing ever sets `UiMode::Configuration`, so an editor
+   * screen reports `Info` like everything else. `interactive` cannot either: it is deliberately the UNION
+   * of an editor and a countdown, because its job is the repaint cadence, and the two need opposite
+   * treatment from the warning banner — an editor suppresses it, a countdown's overlay outranks it.
+   *
+   * The single reader is `bannerActive()` below, which is where the reasoning lives.
+   */
+  bool editorActive = false;
+  /**
    * Network state, copied once per pass.
    *
    * A COPY, not a pointer to WifiManager: the renderer reads this context without locking while the
@@ -118,11 +130,21 @@ struct UiRenderContext {
   /**
    * A SAMPLING fault is present: `REG_UNDERSAMPLING_FLAGS` is non-zero.
    *
-   * Deliberately NOT widened to mean "something is wrong". It gates the warning banner
-   * (`UiRenderer::drawWarningBanner`), which paints edge to edge over y=34..52 on whatever screen is
-   * showing — including the config rows an operator uses to calibrate a channel. An uncalibrated
-   * channel therefore must not raise it: a factory-fresh device with channels declared and no
-   * calibration yet would wear that banner permanently, over the very screens that clear it.
+   * Exactly that and nothing more. It is NOT the warning banner's gate any longer — `bannerActive()`
+   * below is — and it was not widened to become one.
+   *
+   * WHY THE OLD OBJECTION IS RETIRED RATHER THAN REFUTED. This field used to carry a paragraph arguing
+   * that an uncalibrated channel must never raise the banner, because the banner painted edge to edge
+   * over y=34..52, mid-panel, across the very config rows an operator reads while calibrating: a
+   * factory-fresh device would have worn it permanently over the screens that clear it. That was
+   * CORRECT at bannerY = 34. Moving the banner to the footer row (§2c, y=116..133) is what defused it —
+   * a permanent commissioning banner now costs a gesture reminder rather than a reading, and the one
+   * reminder it must not cost is handled by `bannerActive()`'s editor term.
+   *
+   * The field stays narrow anyway, for a reason the relocation does not touch: widening it would make
+   * `hasWarnings` true while `warningCount == 0`, contradicting the first line above, and
+   * `ui_bindings.cpp`'s `telemetry.status` reads it as "how many warnings" rather than "is anything
+   * wrong".
    */
   bool hasWarnings = false;
   uint8_t warningCount = 0;
@@ -149,6 +171,34 @@ struct UiRenderContext {
   uint8_t uncalibratedCount = 0;
   std::string warningSummary;
   std::array<SensorSnapshot, plc::kNumSensors> sensors{};
+
+  /**
+   * THE WARNING BANNER'S GATE, and the one home for it.
+   *
+   * A predicate over the fields rather than a widening of `hasWarnings`, which keeps meaning exactly
+   * "REG_UNDERSAMPLING_FLAGS != 0" for its other readers. And ONE predicate rather than two copies of
+   * the condition, because `UiRenderer::drawWarningBanner` and the `legend.warning` row colour print the
+   * same string (`warningSummary`) and must agree about whether there is anything to say; two spellings
+   * of `hasWarnings || uncalibratedCount > 0` in one file is how they would come to disagree.
+   *
+   * A COMMISSIONING GAP RAISES IT. `SET?` channels are a problem the panel should announce without
+   * being paged to a sensor row, which is what §2c's relocation to the footer row made affordable.
+   *
+   * EXCEPT WHILE A VALUE EDITOR IS OPEN. Every `config-*-edit` screen carries a footer hint ending in
+   * `hold=cancel` at y=124 — the only place the abort gesture is documented anywhere — and the banner's
+   * band is exactly that row. There are THIRTEEN of them, counted out of the generated table; the decision
+   * note that raised this says eighteen, and it is wrong. On a factory-fresh device `uncalibratedCount` is
+   * 8, so without this term the banner would hide `hold=cancel` on every one of them, permanently, while
+   * the operator is calibrating: the one activity that clears the condition. A commissioning banner must
+   * not cover the abort gesture on the screens that close the commissioning gap.
+   *
+   * SAMPLING FAULTS ARE EXEMPT FROM THAT SUPPRESSION, on purpose. `hasWarnings` says a reading is WRONG
+   * — the number on the panel is not the flow — and that is urgent on every screen, including an editor.
+   * The uncalibrated half says a setup is UNFINISHED, which can wait for the operator to look up from
+   * the setting they are finishing. The asymmetry is the point: urgency about a value outranks a
+   * gesture reminder, a reminder about unfinished setup does not.
+   */
+  bool bannerActive() const { return hasWarnings || (uncalibratedCount > 0 && !editorActive); }
 };
 
 /**
@@ -263,6 +313,20 @@ class UiController {
                         const char* activeName,
                         uint32_t nowMs);
   void closePackSelector(uint32_t nowMs);
+  /**
+   * A root-entry ENTER asked for the Select Menu — read and cleared once (§3.4).
+   *
+   * A one-shot rather than a call that opens the page: opening needs the card listed, which only
+   * firmware.cpp can do. `InteractionHandler::update` transfers this to
+   * `InteractionResult::openPackSelector` on the SAME pass it is set, so it can never go stale, and
+   * both routes into the page — this and the gesture — end up on one flag with one consumer.
+   */
+  void requestPackSelector() { packSelectorRequested_ = true; }
+  bool consumePackSelectorRequest() {
+    const bool requested = packSelectorRequested_;
+    packSelectorRequested_ = false;
+    return requested;
+  }
   bool selectorActive() const { return selectorActive_; }
   ui::PackSelector& packSelector() { return packSelector_; }
   const ui::PackSelector& packSelector() const { return packSelector_; }
@@ -279,6 +343,7 @@ class UiController {
   ui::UiNavigator navigator_;
   ui::PackSelector packSelector_{};
   bool selectorActive_ = false;
+  bool packSelectorRequested_ = false;
   UiEditorState editor_{};
   UiRenderContext context_;
 };

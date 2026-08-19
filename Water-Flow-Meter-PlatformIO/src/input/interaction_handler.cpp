@@ -117,6 +117,15 @@ InteractionResult InteractionHandler::update(uint32_t nowMs,
     result.countdown.screenId = kFactoryResetCountdownScreenId;
   }
 
+  // The §3.4 root entry's ENTER converges here, on the SAME flag handleSelectorCombo raises for the
+  // §3.4.1 gesture. Read after the flow-event loop above, so a press dispatched on this pass is
+  // reported on this pass; firmware.cpp's consumer already guards against opening a page that is
+  // open. The early `return` on handlePackSelector above is correct rather than a hole: while the
+  // page is open the root entry cannot be pressed.
+  if (uiController.consumePackSelectorRequest()) {
+    result.openPackSelector = true;
+  }
+
   result.ledsSuspended = factoryResetState_.holdActive || factoryResetState_.restartScheduled;
   result.restartScheduled = factoryResetState_.restartScheduled;
   result.restartAtMs = factoryResetState_.restartAtMs;

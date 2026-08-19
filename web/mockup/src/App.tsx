@@ -50,6 +50,7 @@ import { FirmwareActionManifest, FirmwareActionDefinition, FirmwareValueDefiniti
 import { PreviewTargetState } from "./types/previewTarget";
 import { findMatchingButtonFlows } from "./utils/flowMatching";
 import { holdCountdownArms, holdCountdownText } from "./utils/holdCountdown";
+import { warningBannerText } from "./utils/warningBanner";
 import { ScreenHierarchyPanel } from "./components/design/ScreenHierarchyPanel";
 import { buildScreenHierarchy } from "./utils/screenHierarchy";
 import { DesignToolbox } from "./components/design/DesignToolbox";
@@ -1715,6 +1716,28 @@ export function App() {
   }, [aggregateFlowLpm, editorState, flowUnit, hierarchy, holdCountdown, manifestValueBindings, manifestValueById, navParents, pinnedValues, pollingRateKhz, screens, selectedScreen, selectedSensor, sensors, sessionStartEpoch, clockState]);
 
   /**
+   * The §2c warning banner's text for the panel, or null while its gate is closed.
+   *
+   * Taken from the SAME `sensors` table that feeds the sensor rows and `legend.warning`, which is the
+   * whole reason the firmware composes `warningSummary` once for two consumers: a band saying "3 channels
+   * not calibrated" above rows that all read `OK` would be the panel disagreeing with itself.
+   *
+   * THE EDITOR TERM IS DERIVED FROM THE SCREEN, NOT FROM `editorState`, and the difference is exactly the
+   * case that matters. The firmware opens the editor on DESCENT — `handleNavEnter` asks
+   * `settingEditedByScreen` for the setting the target screen's bindings name and calls `beginEdit`
+   * before any UP/DOWN, closing it again for a `SettingKind::Text` row because there is no on-device text
+   * entry. `editorState` here only becomes non-null after the first step, so gating on it would show the
+   * banner over `hold=cancel` on every freshly-entered edit screen with a commissioning gap live, which
+   * is the one thing `bannerActive()`'s editor term exists to prevent. `settingOfScreen` plus the
+   * `type !== "string"` test is the mirror of the firmware's own two questions.
+   */
+  const warningBannerLine = useMemo(() => {
+    const setting = settingOfScreen(selectedScreen, manifestValueById);
+    const editorOpen = setting !== undefined && setting.type !== "string";
+    return warningBannerText(sensors, editorOpen);
+  }, [manifestValueById, selectedScreen, sensors]);
+
+  /**
    * The stored integer a setting currently holds, from whichever home owns it.
    *
    * Per-sensor settings live in the sensor table; device-wide ones have no simulated store of their
@@ -1912,7 +1935,7 @@ export function App() {
    * would have carried. The flag is now derived in `deriveUndersampling`.
    *
    * What survives as an input is the half that genuinely is one: `overrideActive_ || overridePending_`,
-   * the §5.5 handshake (modbus_manager.cpp:500 ORs both arms into the flag). An operator who was told
+   * the §5.5 handshake (modbus_manager.cpp:525 ORs both arms into the flag). An operator who was told
    * "Sampling too slow" and pressed DOWN to save anyway is a real device state, it is per-channel, and
    * nothing else in the simulator can produce it — there is no write gate here to park a candidate in.
    * So the checkbox still raises a warning, but now it says WHY, and it can no longer contradict the
@@ -3089,6 +3112,10 @@ export function App() {
                           ? { entries: packEntries, cursor: packCursor, truncated: false }
                           : null
                       }
+                      // The other firmware-drawn layer (§2c). Passing it is what stops the mockup
+                      // showing a clean footer hint on a device the panel would be shouting about —
+                      // before this the simulator drew no banner at all.
+                      warningBanner={warningBannerLine}
                       // Flow decides WHETHER the dots move; the repaint rate decides how fast. That is
                       // `drawFlowDots`'s rule verbatim — one step per painted frame, never a period
                       // derived from millis() — and `repaintCount` is the only repaint this app counts,

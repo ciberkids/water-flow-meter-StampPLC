@@ -73,14 +73,36 @@ bool UiNavigator::screenVisible(const ui_exporter::Screen* screen) const {
 }
 
 /**
+ * The raw DOWN step with the firmware-appended root tail spliced in.
+ *
+ * The tail sits between the last DATASET member of the root level and the root — "the end of the
+ * root level" of §3.4, made concrete: the step that would wrap back to P0 lands on the tail first,
+ * and the tail's own step wraps. Only at depth 0; deeper levels are entirely the dataset's.
+ */
+const ui_exporter::Screen* UiNavigator::rawNextWithTail(const ui_exporter::Screen* from) const {
+  if (!rootTail_ || depth_ != 0) {
+    return rawNextSibling(from);
+  }
+  if (from == rootTail_) {
+    return root_;
+  }
+  const ui_exporter::Screen* next = rawNextSibling(from);
+  return (next && next == root_) ? rootTail_ : next;
+}
+
+/**
  * The next sibling the operator can actually reach — hidden screens are stepped over.
  *
  * One place, so navigation and `ringPosition` cannot disagree about how long a level is. Bounded by
  * kMaxRing: a ring whose every member is hidden would otherwise spin, and the honest answer there is
  * "nowhere to go" rather than a hang.
+ *
+ * The raw step is `rawNextWithTail`, not `rawNextSibling`: splicing the root tail at this one choke
+ * point is what makes `ringPosition` count it and `previousVisibleSibling` find it, without a second
+ * copy of the rule.
  */
 const ui_exporter::Screen* UiNavigator::nextVisibleSibling(const ui_exporter::Screen* from) const {
-  const ui_exporter::Screen* walk = rawNextSibling(from);
+  const ui_exporter::Screen* walk = rawNextWithTail(from);
   for (uint8_t hops = 0; walk && hops < kMaxRing; ++hops) {
     if (screenVisible(walk)) {
       return walk;
@@ -88,9 +110,60 @@ const ui_exporter::Screen* UiNavigator::nextVisibleSibling(const ui_exporter::Sc
     if (walk == from) {
       break;
     }
-    walk = rawNextSibling(walk);
+    walk = rawNextWithTail(walk);
   }
   return walk == from ? nullptr : walk;
+}
+
+const ui_exporter::Screen* UiNavigator::previousVisibleSibling(
+    const ui_exporter::Screen* from) const {
+  // The ring closes, so there is no backwards link to follow: walk FORWARD and keep the last
+  // member before coming back round. Moved here from ui_actions.cpp, where it was inline in
+  // handlePagePrevious and could not see the root tail.
+  const ui_exporter::Screen* candidate = nextVisibleSibling(from);
+  const ui_exporter::Screen* previous = candidate;
+  for (uint8_t hops = 0; candidate && candidate != from && hops < kMaxRing; ++hops) {
+    previous = candidate;
+    candidate = nextVisibleSibling(candidate);
+  }
+  return previous;
+}
+
+const ui_exporter::Screen* UiNavigator::siblingAfter(const ui_exporter::Screen* from,
+                                                     const ui_exporter::Screen* declared) const {
+  // The tail cases are answered BEFORE `declared` is consulted, because the tail declares no
+  // sibling of its own and a pack's declared target cannot know the tail exists.
+  if (rootTail_ && depth_ == 0 && from == rootTail_) {
+    return root_;
+  }
+  const ui_exporter::Screen* target = declared;
+  if (target && !screenVisible(target)) {
+    target = nextVisibleSibling(target);
+  }
+  if (!target) {
+    target = nextVisibleSibling(from);
+  }
+  // The step that would wrap lands on the tail first. Wrapping the DECLARED result rather than
+  // replacing it keeps the pack's own flow target on the resolution path. `target` is checked for
+  // null explicitly: without that, "nothing resolved" and "the root is unset" would both compare
+  // equal to `root_` and divert a caller that should fall through to the UiPage ring.
+  if (rootTail_ && depth_ == 0 && target && target == root_) {
+    return rootTail_;
+  }
+  return target;
+}
+
+const ui_exporter::Screen* UiNavigator::siblingBefore(const ui_exporter::Screen* from,
+                                                      const ui_exporter::Screen* declared) const {
+  // At the root with a tail bound, the declared target is stale by construction: P0's UP flow names
+  // the last DATASET member, and the tail now sits between them. The spliced walk is authoritative.
+  if (rootTail_ && depth_ == 0) {
+    return previousVisibleSibling(from);
+  }
+  if (declared && screenVisible(declared)) {
+    return declared;
+  }
+  return previousVisibleSibling(from);
 }
 
 void UiNavigator::reset(const ui_exporter::Screen* root) {
@@ -170,11 +243,25 @@ bool UiNavigator::ringPosition(uint8_t* indexOut, uint8_t* countOut) const {
     return false;
   }
 
-  // Anchor on the lowest address so the reported index is stable across renders.
-  const ui_exporter::Screen* anchor = members[0];
-  for (uint8_t i = 1; i < count; ++i) {
-    if (members[i] < anchor) {
-      anchor = members[i];
+  // At the root, anchor on the ROOT. The lowest-address rule below was "arbitrary but stable for a
+  // given build" only while every member lived in kGeneratedScreens; the firmware-appended tail is a
+  // constant in another translation unit, so link order could otherwise decide which member is index
+  // 0 — and then a host assertion about ringIndex would be no evidence about the device at all.
+  const ui_exporter::Screen* anchor = nullptr;
+  if (depth_ == 0 && root_) {
+    for (uint8_t i = 0; i < count; ++i) {
+      if (members[i] == root_) {
+        anchor = root_;
+        break;
+      }
+    }
+  }
+  if (!anchor) {
+    anchor = members[0];
+    for (uint8_t i = 1; i < count; ++i) {
+      if (members[i] < anchor) {
+        anchor = members[i];
+      }
     }
   }
   uint8_t index = 0;

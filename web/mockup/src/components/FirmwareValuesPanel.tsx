@@ -378,7 +378,7 @@ export function FirmwareValuesPanel({
                       point: the flag is not an input on the device. `evaluateSensorDiagnostics`
                       recomputes it every pass as
                       `(valid && !meetsNyquistLimit) || overrideActive_ || overridePending_`
-                      (modbus_manager.cpp:498-502), so only the two override arms are anybody's choice.
+                      (modbus_manager.cpp:523-527), so only the two override arms are anybody's choice.
                       Ticking this is the operator who was shown "Sampling too slow" and pressed DOWN to
                       save the figures anyway — a channel deliberately outside budget, which is why the
                       warning survives it.

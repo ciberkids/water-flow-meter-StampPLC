@@ -25,8 +25,13 @@ const BUTTON_METADATA: Record<PhysicalButton, { key: string; name: string; role:
    * `button_input.cpp` does emit repeats — from 1500 ms, every 250 ms — but `mapGesture` maps them to
    * `FlowGesture::Hold`, `matchFlow` demands an exact gesture match, and no screen in the dataset declares
    * a single hold flow. So every repeat is popped, matched against nothing, and dropped: a held UP/DOWN
-   * navigates NOWHERE on the device, at any depth. The one place a hold does something is inside a value
-   * editor, and there it is not a repeat at all but §5.4's ramp, which reads the button levels directly.
+   * navigates NOWHERE on the device, at any depth — and as of 2026-08-17 that is specified rather than
+   * merely observed (`Display_UI_Requirements` §3.1.1).
+   *
+   * Two paths bypass the flow table and do respond to a held button. §5.4's editor ramp, which is not a
+   * repeat at all but a read of the button LEVELS. And the firmware-drawn Select Menu, whose cursor moves
+   * on any event kind, because `handlePackSelector` drains the queue and switches on the button alone.
+   * Neither is reachable from these hints, which describe the ordinary screens.
    *
    * Someone holding UP on a setting page to dial a number faster was reading this line and believing it.
    */

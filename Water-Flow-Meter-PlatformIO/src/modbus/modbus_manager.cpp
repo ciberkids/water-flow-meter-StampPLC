@@ -306,6 +306,23 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
         deps_.sensors[sensorIndex] = SensorData{};
         deps_.sensors[sensorIndex].inUse = wasInUse;
         deps_.configs[sensorIndex] = SensorCharacteristics{};
+        // The Nyquist override described the configuration that just went. `evaluateSensorDiagnostics`
+        // below ORs both flags in, so leaving them set keeps this channel's undersampling bit lit for a
+        // channel with no configuration to undersample — and nothing would ever clear it: a
+        // decommissioned channel is not going to be reconfigured, and the flags are only cleared by a
+        // config write. The bit would stay lit on RS485 and on the MQTT diagnostics topic for the life of
+        // the device. This arm was the LAST site that invalidated a configuration without clearing the
+        // override it invalidated; the bitmap arms at the top of this function, the master reset at
+        // REG_MASTER_RESET_ALL_SENSORS and the swap arm below all already did.
+        //
+        // The stale exemption cannot ALSO be inherited by a replacement meter, though that is what this
+        // was first reported as: `prepareConfigUpdate` clears all three for any candidate failing
+        // `configIsValid`, and from an all-zero config the first single-register write is necessarily
+        // such a candidate. Owner decision 2026-08-17: clear them here anyway, so the two reset arms
+        // agree about the override and neither reader has to know which one it is looking at.
+        overridePending_[sensorIndex] = false;
+        overrideActive_[sensorIndex] = false;
+        pendingOverrides_[sensorIndex] = SensorCharacteristics{};
         saveCumulativeToNvs(sensorIndex);
       }
       syncSensorToHolding(sensorIndex);
@@ -328,12 +345,20 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
     case OFF_CMD_RESET_CALIBRATION:
       if (value == 1) {
         deps_.configs[sensorIndex] = SensorCharacteristics{};
-        // The Nyquist override belonged to the OLD meter's figures. Left standing, `overrideActive_`
-        // makes prepareConfigUpdate return true for the very first candidate entered for the NEW
-        // meter, so the replacement would be accepted without ever being sampling-checked — and
-        // `evaluateSensorDiagnostics` below ORs both flags in, so the undersampling bit would also
-        // stay lit for a channel that now has no configuration to undersample. The arm above does not
-        // clear these; that is a separate defect, reported rather than fixed here.
+        // The Nyquist override belonged to the OLD meter's figures. `evaluateSensorDiagnostics` below
+        // ORs both flags in, so left standing the undersampling bit would stay lit for a channel that
+        // now has no configuration to undersample — that is the reachable harm, and the reason both
+        // reset arms clear it.
+        //
+        // It would NOT let the replacement inherit the exemption, which is what this was first reported
+        // as. A latched `overrideActive_` waves through the first VALID candidate, and the first
+        // candidate entered from an all-zero config cannot be one: `prepareConfigUpdate`'s
+        // invalid-candidate branch clears all three flags before returning, and no single-register write
+        // can supply the two fields `configIsValid` demands at once.
+        //
+        // The arm above does the same, since 2026-08-17. That completes the rule: EVERY site that
+        // invalidates a configuration clears the override describing it, so no reader of
+        // `REG_UNDERSAMPLING_FLAGS` has to know which command got there first.
         overridePending_[sensorIndex] = false;
         overrideActive_[sensorIndex] = false;
         pendingOverrides_[sensorIndex] = SensorCharacteristics{};

@@ -64,7 +64,15 @@ static_assert(sizeof(kInfoScreenIds) / sizeof(kInfoScreenIds[0]) ==
 inline constexpr const char* kConfigurationScreenId = "config-modbus";
 inline constexpr const char* kFactoryResetCountdownScreenId = "confirm-factory-reset";
 
-/** Every screen id the firmware resolves by name, for the generated manifest. */
+/**
+ * Every screen id the firmware resolves by name, for the generated manifest.
+ *
+ * The firmware-appended Select Menu entry (`ui/core/ui_root_tail.h`) is deliberately ABSENT.
+ * Everything listed here is a screen a PACK must supply — `web/mockup/tools/exporter/validation.ts`
+ * fails an export whose dataset omits any of them. Listing the Select Menu would therefore force it
+ * into every pack, which is exactly the trap `Loadable_UI_Menu_Packs.md` §3.4 exists to prevent: a
+ * pack that dropped the row would take the only discoverable route to pack selection with it.
+ */
 inline constexpr ScreenRole kRequiredScreens[] = {
     {kInfoScreenIds[0], "info-page-0 (UiPage::GlobalStatus)"},
     {kInfoScreenIds[1], "info-page-1 (UiPage::InstantFlow)"},

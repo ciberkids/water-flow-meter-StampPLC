@@ -56,7 +56,7 @@ Future exporters can evolve schema as long as `UiAssets` remains the boundary. A
 
 <!-- BEGIN GENERATED ACTION TABLE — node tools/wiki/gen-actions.mjs --write -->
 
-*18 actions, generated from `src/ui/core/ui_action_catalogue.h`. Do not edit by hand:
+*19 actions, generated from `src/ui/core/ui_action_catalogue.h`. Do not edit by hand:
 CI regenerates this table and fails on any difference.*
 
 | Action ID | Designer label | What it does |
@@ -79,6 +79,7 @@ CI regenerates this table and fails on any difference.*
 | `config.action.value.commit` | Commit value | Clamp, write the mapped register, validate, then ascend one level |
 | `config.action.value.commit-override` | Save despite Nyquist warning | Forces the pending value past a failed Nyquist check and raises bit n of register 30 (§5.5) |
 | `config.action.value.discard` | Discard edit | Abandon the pending value and ascend one level |
+| `ui.action.pack.select-menu` | Open the Select Menu | Opens the firmware-drawn menu-pack selector. Declared by the firmware-appended root entry (Loadable_UI_Menu_Packs.md §3.4); the same page the UP+DOWN+ENTER 3 s gesture opens |
 
 <!-- END GENERATED ACTION TABLE -->
 

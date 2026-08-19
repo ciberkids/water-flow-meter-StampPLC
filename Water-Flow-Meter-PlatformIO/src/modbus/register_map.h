@@ -114,9 +114,15 @@ inline constexpr uint16_t OFF_CFG_PULSES_PER_L = 24;
  * wrong one for the case this register serves: a broken meter swapped for one with different
  * characteristics, where the volume the old meter measured was real and has to keep accumulating.
  *
- * Nineteen is left exactly as it is. Any Modbus master already issuing it expects the wipe it performs,
- * and narrowing a shipped command's effect silently is worse than adding a second one that says what it
- * does.
+ * Nineteen keeps that wipe exactly as it is. Any Modbus master already issuing it expects it, and
+ * narrowing a shipped command's effect silently is worse than adding a second one that says what it does
+ * — which is why this register exists rather than 19 being changed.
+ *
+ * What nineteen DID gain, on 2026-08-17: it now clears the channel's Nyquist override alongside the
+ * configuration it destroys, exactly as this register does. `REG_UNDERSAMPLING_FLAGS` is derived from
+ * `overrideActive_ || overridePending_`, and nothing clears those but a config write, so a decommissioned
+ * channel nobody reconfigures would have carried its undersampling bit for the life of the device. That
+ * is a bit dropping, not a measurement surviving, so no master's expectation of 19 changes.
  *
  * Nor could the panel achieve this by writing zeros to offsets 20-24: `prepareConfigUpdate` refuses a
  * candidate that fails `configIsValid` when the channel currently holds one that passes, and q_max = 0

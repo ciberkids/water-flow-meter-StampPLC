@@ -1072,7 +1072,13 @@ void logicTaskCode(void * pvParameters) {
       Serial.println("[ui] menu pack rendered; boot-loop guard cleared");
     }
 
-    // ── §3.4.1: the recovery gesture opens the firmware-drawn Select Menu page ──────
+    // ── The one consumer for BOTH routes into the firmware-drawn Select Menu page ───
+    //
+    // §3.4.1's UP+DOWN+ENTER 3 s recovery gesture and §3.4's appended `SELECT MENU` root entry both
+    // raise `openPackSelector`, deliberately — the entry's ENTER-short goes through
+    // `UiController::requestPackSelector`, which `InteractionHandler::update` transfers onto this
+    // same flag on the same pass. A second block here would be a second code path in the one file
+    // no host test links.
     if (interactions.openPackSelector && !uiController.selectorActive()) {
       // The directory is scanned fresh, not cached: the card may have been changed since the page
       // was last opened, and a stale list would offer a pack that is no longer there. This is the
