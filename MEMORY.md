@@ -195,7 +195,7 @@ evidence at all. Before this branch, `interaction_handler.cpp`, `ui_controller.c
 ## 6. Where to pick up
 
 **The item list is not here.** Every open item has a stable ID and lives in the index at the top of
-`docs/active_work/open_decisions.md` — **ten lines**, no 🔴, governed by rule **I3**. Cite the ID
+`docs/active_work/open_decisions.md` — **nine lines**, no 🔴, governed by rule **I3**. Cite the ID
 (`DF18`, `J1`, `N-d1`). This section carries only what an index cannot: the ordering, and the state of
 the working tree.
 
@@ -277,8 +277,10 @@ clean checkout, where the catalogue has 18.
    exists, passes, and is negative-tested — but `warningBanner` is not in HEAD at all (zero references in
    `App.tsx` and `DisplayViewport.tsx`; `utils/warningBanner.ts` is untracked), so it lands with the §2c
    round. Wire `test:visual` into CI only after that, or CI locks in a gate that still misses the band.
-4. **`J1`** and **`J6`** — export gates that `Loadable_UI_Menu_Packs.md` and SI-04 assume and that do
-   not exist.
+4. ~~**`J1`**~~ — **built 2026-08-18**: `checkRingClosure` fails an export whose paging rings do not close,
+   four failure modes with their own messages, seven tests. The exporter's own fixture corrected the first
+   version: a paging edge is a BUTTON press, not merely the action id. **`J6`** remains — an axe pass over
+   the workspace, which needs a new dependency and so a decision.
 5. **WiFi slice N0** — still the recommended next feature slice, and still blocked on **G1**, which
    needs the board.
 

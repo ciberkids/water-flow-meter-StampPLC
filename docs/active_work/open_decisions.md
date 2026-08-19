@@ -24,7 +24,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Ten open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
+**Nine open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
 DF10", "DF19 go ahead" — and this file is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
 they are append-only and never reused, so a gap means an item closed, not an item lost.
 
@@ -37,7 +37,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **N-d1** | 🟡 | feature, queued | The clock can be set from no route at all; next step is the Modbus date/time block |
 | **N-c** | 🟡 | feature, queued | MQTT is report-only — §4.4.1's command topics are unbuilt, and register 565 reports results that cannot arrive |
 | **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
-| **J1** | 🟡 | gate, unbuilt | No export gate proves a level's DOWN ring closes — and paging wraps in the dataset, not in code. Same family as N-b |
 | **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
 | **J6** | 🟡 | gate, unbuilt | Nothing verifies the workspace is accessible — no axe/pa11y/lighthouse in the workspace |
 | **DF20** | ⏸️ | gate, **written** | The banner snapshot exists and passes; `warningBanner` is not in HEAD, so it lands with the §2c round |
@@ -196,7 +195,7 @@ the bottom of this file, verbatim in
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
 | `DF` | defect — opened 2026-08-18 | DF1–DF21 | **two open** — DF20 written but waiting on §2c, DF21 undecided — nineteen fixed |
-| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **two open** (J1, J6); J2, J3, J4, J5, J7 and J8 fixed |
+| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **one open** (J6); the other seven fixed |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
 group — they are in the closed table at the bottom of this file and throughout the archive. The defect
@@ -977,7 +976,7 @@ survive verification is recorded under "Not promoted" at the end of this section
 **J6 came later the same day, from `docs/backlog/SI-20251111-04`** — the last file still keeping its own
 list — and J7 and J8 were found while fixing DF17.
 
-### J1 — No export gate proves a level's DOWN ring closes 🟡
+### J1 — ~~No export gate proves a level's DOWN ring closes~~ ✅ FIXED 2026-08-18
 
 `runExportValidations` in `web/mockup/tools/exporter/validation.ts` runs four coverage checks
 (`checkManifestActionCoverage`, `…ValueCoverage`, `…ScreenCoverage`) plus `checkRenderableElementKinds`.
@@ -991,6 +990,29 @@ is closed because the generator emits it that way; a third-party pack has no suc
 
 **Same family as N-b:** both are export-time gates that `Loadable_UI_Menu_Packs.md` assumes and that do
 not exist. Worth building in one round.
+
+**Built 2026-08-18: `checkRingClosure` in `tools/exporter/validation.ts`,** wired into
+`runExportValidations` so a broken ring fails the export rather than shipping. The shipped dataset reports
+**14 rings covering 60 screens**, closing both ways, with UP the inverse of DOWN throughout.
+
+**Four failure modes, each with its own message,** because "the ring is broken" is not actionable: a target
+naming no screen; a walk that never returns to its start (a dead end, or a jump into another level); **UP
+that is not the exact inverse of DOWN**, which is how a ring loses a member in one direction while looking
+whole in the other; and a screen carrying one direction and not the other. Seven tests cover the closing
+case, one per mode, and the case below.
+
+**What it deliberately does not require: that every screen belong to a ring.** Twenty of the eighty do not —
+editors, `-back` rows and confirm screens are entered by ENTER and left by hold — and demanding a ring of
+them would fail the shipped dataset for being correct. A test pins that too.
+
+**A paging edge is a BUTTON PRESS, not merely the action id** — and the exporter's own fixture is what taught
+me. Matching on `actionId` alone failed it: it carries a `page.next` on a **timeout** trigger with no target,
+a confirm screen advancing itself after a hold, which is not paging and has no ring to belong to. The fixture
+was right and the first version of the gate was wrong, which is the more useful way round.
+
+**Still not covered, and worth naming:** this gate runs at export. A `.uipack` handed to a device by some
+other route never passes through it, and the loader does not check rings. That is a different gate, on the
+device, and it is not built.
 
 ### J2 — ~~`animation` was dropped by C1 and still survives in five layers~~ ✅ FIXED 2026-08-18
 
