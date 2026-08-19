@@ -40,7 +40,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **J1** | 🟡 | gate, unbuilt | No export gate proves a level's DOWN ring closes — and paging wraps in the dataset, not in code. Same family as N-b |
 | **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
 | **J6** | 🟡 | gate, unbuilt | Nothing verifies the workspace is accessible — no axe/pa11y/lighthouse in the workspace |
-| **DF20** | 🟡 | gate, unbuilt | No snapshot drives a warning state, so the repaired visual suite still never renders the banner |
+| **DF20** | ⏸️ | gate, **written** | The banner snapshot exists and passes; `warningBanner` is not in HEAD, so it lands with the §2c round |
 | **DF21** | 🟡 | gate, unbuilt | CI runs no `test:visual` step — the reason DF17 stayed invisible |
 
 **DF1–DF9, DF11–DF13** are fixed and keep their IDs, struck through in place below. **I2** and **I3** are
@@ -195,7 +195,7 @@ the bottom of this file, verbatim in
 | `H` | menu behaviour | H1–H6 | closed |
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
-| `DF` | defect — opened 2026-08-18 | DF1–DF21 | **two open** (DF20, DF21), nineteen fixed |
+| `DF` | defect — opened 2026-08-18 | DF1–DF21 | **two open** — DF20 written but waiting on §2c, DF21 undecided — nineteen fixed |
 | `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **two open** (J1, J6); J2, J3, J4, J5, J7 and J8 fixed |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
@@ -919,7 +919,7 @@ exemption, because §2c legislates the scrollbar's bottom even though no glyph i
 band check from this branch's **uncommitted** §2c work, so it is not mine to commit and stays in the working
 tree with the round it belongs to.
 
-### DF20 — No snapshot drives a warning state, so the visual suite never renders the banner 🟡
+### DF20 — No snapshot drives a warning state, so the visual suite never renders the banner ⏸️ WRITTEN, WAITING ON §2c
 
 Found while fixing DF17, and the reason that repair does not close §2c's verification gap. Every snapshot
 captures a workspace with no warning live, so `warningBanner` is empty in all 21 baselines and the band at
@@ -929,6 +929,29 @@ y=116 is never painted in any of them.
 controls are the lever — and snapshots the panel with the banner up. That is the only gate that would catch
 the banner drifting back over the footer, which is what DF7 fixed. Until it exists, the banner's position is
 asserted by host tests and the geometry audit but seen by nothing.
+
+**Written 2026-08-18, passing — and it cannot be committed. That is the finding.** `warningBanner` does not
+exist at `HEAD`: zero references in `App.tsx`, zero in `DisplayViewport.tsx`, and `utils/warningBanner.ts` is
+untracked. The banner belongs to this branch's **unfinished §2c round**, so a test asserting it would fail on
+a clean checkout. DF20 waits on that round landing, not on the test being written.
+
+**What is ready, in the working tree:**
+
+- `tests/visual/warning-banner.spec.ts` — three cases: a sampling override raises the band; an uncalibrated
+  channel raises it through the panel's own route (select S1 → open *Sensor settings (S1)* → clear `q_max`,
+  which only works as a lever because DF16 made `ready` derived); and the band **clears** when the fault
+  does, because a banner that never clears looks identical to one that never lit.
+- Three `data-testid`s on the band, marker and text in `DisplayViewport`. That band is the one thing on the
+  panel no dataset element declares, so a test cannot find it by screen id, element id or binding.
+- A snapshot that **clips to `.display-surface`** — 240 × 135, about 10 KB — rather than `fullPage`. The 21
+  baselines next door are 200–800 KB each and move whenever any panel changes; this one moves when the panel
+  does, which is what §2c is about.
+
+**The negative test found a flaw in my own test first.** The geometry assertions read `warningBannerLayout.y`,
+so moving the band back to y=34 moved the module and the assertion together and only the snapshot noticed.
+They are literals now — 116, 18, 4, 16, read off `UiRenderer::drawWarningBanner` — plus one assertion whose
+whole job is to catch the module drifting from them. Re-run: two tests fail with `Expected: 116, Received:
+34`. It is the same trap DF10's test carries a comment about, so it is evidently easy to walk into twice.
 
 ### DF21 — CI runs no `test:visual` step 🟡
 

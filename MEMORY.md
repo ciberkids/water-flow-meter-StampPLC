@@ -221,6 +221,8 @@ state, so the banner still has no pixel verification), **DF21** (CI runs no `tes
 
 **Two of my changes could NOT be committed and sit in that tree deliberately:**
 
+0. **`tests/visual/warning-banner.spec.ts`** and its `.display-surface` baseline (untracked), plus three
+   `data-testid`s on the banner in `DisplayViewport` — DF20's whole deliverable, waiting on the §2c round.
 0. The **audit's own comment** in `screen-geometry.ts`, which said non-zero was the correct state of the
    banner-band line. It is zero now, by repair — the comment says so, and says a future non-zero is real.
 0. **`ui_root_tail.h`'s `Screen` initializer**, one pair shorter since J2 narrowed the generated struct.
@@ -271,8 +273,10 @@ clean checkout, where the catalogue has 18.
    positions but not SIZES, so DF19's six scrollbar heights had left `default.uipack` stale and passing.
    Fixed and negative-tested. Look for that shape elsewhere — a gate reading a committed snapshot has to
    compare every field it can.
-3. **`DF20` then `DF21`** — build the banner-state snapshot first, because wiring `test:visual` into CI
-   before it covers the banner locks in a gate that still misses §2c.
+3. **`DF20` is WRITTEN and cannot be committed; `DF21` is next in line.** `tests/visual/warning-banner.spec.ts`
+   exists, passes, and is negative-tested — but `warningBanner` is not in HEAD at all (zero references in
+   `App.tsx` and `DisplayViewport.tsx`; `utils/warningBanner.ts` is untracked), so it lands with the §2c
+   round. Wire `test:visual` into CI only after that, or CI locks in a gate that still misses the band.
 4. **`J1`** and **`J6`** — export gates that `Loadable_UI_Menu_Packs.md` and SI-04 assume and that do
    not exist.
 5. **WiFi slice N0** — still the recommended next feature slice, and still blocked on **G1**, which
