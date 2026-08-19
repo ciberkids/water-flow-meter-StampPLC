@@ -78,7 +78,13 @@ const GLOBAL = [
   ["REG_UNDERSAMPLING_FLAGS", "r", "u16", "—", "Bit *n* set = sensor *n+1* is pulsing faster than the sampler can count, so its readings are low. Also published on the MQTT diagnostics topic."],
   ["REG_LED_RED_VOLUME_STEP", "rw", "u16", "L", "How many litres of cumulative volume make the red LED pulse once."],
   ["REG_LED_RED_PULSE_PERIOD", "rw", "u16", "ms", "How long that pulse lasts."],
-  ["REG_DISPLAY_FLOW_UNIT", "rw", "u16", "enum", "What the PANEL shows flows in: `0` L/min, `1` L/s, `2` m³/h. **A display preference only.** Every wire surface — these registers, MQTT, Home Assistant — stays L/min regardless, so a master must never rescale because somebody changed the screen."]
+  ["REG_DISPLAY_FLOW_UNIT", "rw", "u16", "enum", "What the PANEL shows flows in: `0` L/min, `1` L/s, `2` m³/h. **A display preference only.** Every wire surface — these registers, MQTT, Home Assistant — stays L/min regardless, so a master must never rescale because somebody changed the screen."],
+  ["REG_CLOCK_SET_EPOCH_HI", "rw", "u16", "—", "Clock: the HIGH word of a Unix epoch to set, staged. Write this and 51, then the magic to 52; nothing happens until then, because two registers are not atomic under FC6 and an epoch composed from one new half and one old one is a timestamp nobody chose."],
+  ["REG_CLOCK_SET_EPOCH_LO", "rw", "u16", "—", "Clock: the LOW word of the staged epoch. See 50."],
+  ["REG_CLOCK_APPLY", "w", "u16", "—", "Clock: write `0x5AA5` — the same magic as registers 44 and 730 — to set the clock from the epoch staged in 50-51, with source `operator`. The write is REFUSED as a Modbus exception if the composed value falls outside 2020-01-01 … 2100-01-01, which is `DeviceClock`'s plausibility floor: a drifted RTC comes up in 2000 and a mistyped year is the other case, and both look plausible on a panel. A refusal changes nothing and leaves the staged halves alone, so a retry with a corrected high word need not resend both. Confirm success by reading 53-55 back."],
+  ["REG_CLOCK_NOW_HI", "r", "u16", "s", "Clock: HIGH word of the current time, Unix epoch seconds, or 0 when the clock has never been set. Advanced from the MCU between syncs rather than re-read from the RTC, because the RTC shares the I2C bus with the pulse inputs."],
+  ["REG_CLOCK_NOW_LO", "r", "u16", "s", "Clock: LOW word of the current time. See 53."],
+  ["REG_CLOCK_SOURCE", "r", "u16", "—", "Clock: who says so — 0 none, 1 RTC (it ran across the power cut with VLF clear), 2 operator, 3 NTP. Published beside the time because a master deciding whether to trust a timestamp needs the second question answered too. A 0 here means 53-54 are meaningless rather than 1970."]
 ];
 
 // Every row is [name, access, encoding, unit, meaning]. Asserted rather than tolerated: a row missing

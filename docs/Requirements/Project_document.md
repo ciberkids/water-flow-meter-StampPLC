@@ -149,6 +149,38 @@ deliberate and lets the firmware finish the in-flight response first.
 
 > Writes originating from the on-device UI skip staging and apply on commit: the operator is
 > physically present and is not depending on the link that is about to change.
+
+#### 4.1.2. Clock Block (50–55)
+
+| Address | Name                  | Type       | R/W | Notes |
+| ------- | --------------------- | ---------- | --- | ----- |
+| 50      | Set Epoch (high)      | `uint16_t` | R/W | High word of a Unix epoch to set. **Staged** — see the apply note below. |
+| 51      | Set Epoch (low)       | `uint16_t` | R/W | Low word of the staged epoch. |
+| 52      | Clock Apply           | `uint16_t` | W   | Write `0x5AA5` to set the clock from 50–51 with source *operator*. **Refused as an exception** when the composed value falls outside 2020-01-01 … 2100-01-01. |
+| 53      | Time Now (high)       | `uint16_t` | R   | High word of the current time, or **0 when the clock has never been set**. |
+| 54      | Time Now (low)        | `uint16_t` | R   | Low word of the current time. |
+| 55      | Clock Source          | `uint16_t` | R   | `0` none, `1` RTC, `2` operator, `3` NTP. |
+| 56–59   | Reserved              | —          | —   | Reserved for the last-sync and session-start timestamps, which the panel already derives. |
+
+**Why the clock needs a register block at all.** Every other setting is writable from RS485 and the clock
+was not: `DeviceClock::setTime` had no production caller, so a device whose RTC lost power across a shipment
+read `UNSET` for the rest of its life unless somebody reflashed it. This is the write that makes the
+remaining clock routes — the portal page, then NTP — additions rather than prerequisites.
+
+**Epoch seconds, not broken-down fields.** The clock's own API and its plausibility floor are expressed in
+`uint32_t` Unix seconds. A Y/M/D/h/m/s block would put date arithmetic and a timezone story in the firmware,
+where every conversion is somewhere to be wrong about February; a master that prefers fields converts once,
+where it has a library.
+
+**Why an explicit apply step here too.** Two registers are not atomic under FC6, so an epoch applied on the
+low word would briefly be composed from one new half and one old one — a timestamp nobody chose, which is the
+failure the whole clock module exists to prevent. The magic is `0x5AA5`, the same value registers 44 and 730
+take, so an integrator learns one.
+
+**How a refusal is reported.** As a Modbus exception, not a status register: `setTime` refuses an implausible
+value and changes nothing, so there is no half-applied state to describe. A refusal leaves the staged halves
+intact, so correcting one word and re-applying works. Success is confirmed by reading 53–55 back.
+
 >
 > **Startup ordering requirement.** Link settings must load from NVS *before* the RS485
 > port is opened, so the firmware must initialise `Preferences` ahead of `Serial.begin()` in

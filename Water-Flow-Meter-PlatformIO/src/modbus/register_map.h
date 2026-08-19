@@ -69,6 +69,46 @@ inline constexpr uint16_t REG_LINK_STOP_BITS = 43;
 inline constexpr uint16_t REG_LINK_APPLY = 44;
 inline constexpr uint16_t REG_LINK_REVISION = 45;
 
+/**
+ * ── THE CLOCK BLOCK, 50-55 ────────────────────────────────────────────────────────────────────────
+ *
+ * The write that makes the device's clock settable at all (N-d1). Before this, `DeviceClock::setTime` had
+ * no production caller: no register reached it, no portal page offered it, the panel could not (there is no
+ * on-device text editor), and NTP existed only in a comment. A device in the field therefore read `UNSET`
+ * unless its RX8130CE happened to hold a date it was allowed to trust — and a Modbus master, which is the
+ * source of truth for every other setting, had no way to fix that.
+ *
+ * EPOCH SECONDS, not broken-down fields. `DeviceClock`'s whole API is `uint32_t` Unix seconds and its
+ * plausibility floor is expressed there; a Y/M/D/h/m/s block would need date arithmetic and a timezone
+ * story on the firmware side, and every conversion is a place to be wrong about February. A master that
+ * prefers fields converts once, where it has a library, rather than the device converting on every write.
+ *
+ * STAGED, THEN APPLIED, exactly like the link block above it and the network block at 730. Two registers
+ * cannot be written atomically by FC6, so an epoch applied on the low word would be briefly composed from
+ * one new half and one old one — a timestamp nobody chose, which is the failure this module exists to
+ * prevent. `REG_CLOCK_APPLY` takes `LinkSettingsManager::kApplyMagic` (0x5AA5), the same value the other
+ * two blocks take, so an integrator learns one magic rather than three.
+ *
+ * A REFUSAL IS A MODBUS EXCEPTION, not a status register. `setTime` refuses anything outside
+ * 2020-01-01 … 2100-01-01 and changes nothing when it does; the apply write returns false, which the
+ * manager turns into an exception response. So a master that fat-fingers the year hears about it on the
+ * wire, and one that wants to confirm success reads 53-55 back.
+ */
+inline constexpr uint16_t REG_CLOCK_SET_EPOCH_HI = 50;
+inline constexpr uint16_t REG_CLOCK_SET_EPOCH_LO = 51;
+inline constexpr uint16_t REG_CLOCK_APPLY = 52;
+/** Read-only: the current time, or 0 when the clock has never been set. */
+inline constexpr uint16_t REG_CLOCK_NOW_HI = 53;
+inline constexpr uint16_t REG_CLOCK_NOW_LO = 54;
+/**
+ * Read-only: `ClockSource` — 0 none, 1 RTC, 2 operator, 3 NTP.
+ *
+ * Published beside the time because "what is the time" and "who says so" are different questions, and a
+ * master deciding whether to trust a timestamp needs the second one. A 0 here means registers 53-54 are
+ * meaningless rather than "1970".
+ */
+inline constexpr uint16_t REG_CLOCK_SOURCE = 55;
+
 // Sensor register layout
 inline constexpr uint16_t SENSOR_BLOCK_SIZE = 40;
 inline constexpr uint16_t SENSOR_1_BASE_ADDR = 100;
