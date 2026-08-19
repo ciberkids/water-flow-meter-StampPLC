@@ -386,6 +386,7 @@ describe("undersampling", () => {
  * tells an operator neither.
  */
 describe("the summary lines report a commissioning gap, and rank it first", () => {
+  /**
    * Uncalibrated in this table means what the ROW means: connected, and not ready.
    *
    * Since DF16 that state is reached by clearing the CALIBRATION, because `ready` is derived from

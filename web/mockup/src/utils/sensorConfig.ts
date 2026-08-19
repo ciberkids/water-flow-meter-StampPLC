@@ -53,6 +53,7 @@ export interface SimulatedSensor {
   number: number;
   /** `SensorData::inUse` (modbus/sensor_types.h:20) — bit n of the connected-sensors bitmap. */
   connected: boolean;
+  /**
    * DERIVED, not authored (DF16). `normalizeSensor` recomputes it as `configIsValid(sensor)` on every
    * producer, mirroring `ui_controller.cpp:189`. Setting it on an input object has no effect — write the
    * calibration fields instead, which is also the only way to change it on the device.
@@ -362,6 +363,7 @@ function normalizeSensor(sensor: SimulatedSensor): SimulatedSensor {
   // engine's gate is `configIsValid(config)`, which refuses that channel and zeroes its flow, while the
   // inline test called it calibrated and let the flow stand. Sharing the predicate is also what stops the
   // sampling flag and the flow row disagreeing about whether a channel is configured at all.
+  /**
    * `ready` IS DERIVED HERE (DF16), because on the device it is not stored at all.
    *
    * `ui_controller.cpp:189` assigns `dst.ready = configIsValid(configs[i])` on every frame, and
