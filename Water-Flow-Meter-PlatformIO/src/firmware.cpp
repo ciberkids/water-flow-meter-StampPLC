@@ -241,7 +241,27 @@ plc::HaRepublishPolicy haRepublish;
 // No PortalSettingStore is injected. Only NetSettings-backed fields are reachable through the portal
 // for now; the store exists so non-network settings (a slave id, a sensor calibration) can be
 // offered later, and passing nullptr is the supported "not yet" rather than an oversight.
-plc::PortalForm portalForm(netSettings, nullptr, kNumSensors);
+/**
+ * The portal's route to the clock (N-d1's second route, after the Modbus block at 50-52).
+ *
+ * `PortalForm` is deliberately Arduino-free so its whole surface is host-testable, which means it cannot
+ * call `millis()` — the one thing `DeviceClock::setTime` needs. So the dependency is inverted exactly as
+ * `PortalSettingStore` inverts the settings store: the form asks, this adapter supplies the tick.
+ *
+ * `ClockSource::Operator` because that is what it is. A person read a browser's clock and pressed a button;
+ * the panel and register 55 both say so, and NTP will say something different when it exists.
+ */
+class FirmwarePortalClock final : public plc::PortalClockWriter {
+ public:
+  uint32_t nowEpoch() const override { return deviceClock.isSet() ? deviceClock.now(millis()) : 0u; }
+  uint8_t sourceValue() const override { return static_cast<uint8_t>(deviceClock.source()); }
+  bool setEpoch(uint32_t epoch) override {
+    return deviceClock.setTime(epoch, plc::ClockSource::Operator, millis());
+  }
+};
+FirmwarePortalClock portalClock;
+
+plc::PortalForm portalForm(netSettings, nullptr, kNumSensors, &portalClock);
 plc::ArduinoPortalServer portalServer(portalForm);
 /** The birth message, latched on esp-mqtt's task and consumed on the logic task. */
 volatile bool haBirthLatched = false;

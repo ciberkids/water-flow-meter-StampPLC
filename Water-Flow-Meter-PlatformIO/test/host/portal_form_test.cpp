@@ -45,6 +45,7 @@ void checkStr(const char* actual, const char* expected, const char* what) {
 using plc::NetField;
 using plc::NetSettings;
 using plc::PortalFieldError;
+using plc::PortalClockWriter;
 using plc::PortalForm;
 using plc::PortalSettingStore;
 using plc::PortalSubmitResult;
@@ -679,6 +680,106 @@ void warningTests() {
 // Breaks if: external writes stop happening, are sent the wrong sensor index, run before
 // validation, or a store refusal is swallowed instead of reported.
 // ────────────────────────────────────────────────────────────────────────────────────
+/**
+ * A stand-in for `DeviceClock` behind the portal's writer interface.
+ *
+ * Records what the page asked for, and refuses the same window the real clock refuses so the page's own
+ * bound and the device's cannot drift apart in this test without one of them noticing.
+ */
+class FakeClock : public PortalClockWriter {
+ public:
+  uint32_t nowEpoch() const override { return now_; }
+  uint8_t sourceValue() const override { return source_; }
+  bool setEpoch(uint32_t epoch) override {
+    ++attempts;
+    if (epoch < 1577836800u || epoch > 4102444800u) {
+      return false;
+    }
+    now_ = epoch;
+    source_ = 2;  // operator
+    lastAccepted = epoch;
+    return true;
+  }
+
+  void preset(uint32_t epoch, uint8_t source) {
+    now_ = epoch;
+    source_ = source;
+  }
+
+  int attempts = 0;
+  uint32_t lastAccepted = 0;
+
+ private:
+  uint32_t now_ = 0;
+  uint8_t source_ = 0;
+};
+
+void clockTests() {
+  std::printf("\n[the clock section — the portal as the SECOND route to the clock (N-d1)]\n");
+
+  NetSettings net;
+  FakeStore store;
+  FakeClock clock;
+  PortalForm form(net, &store, plc::kNumSensors, &clock);
+
+  // ── The page, unset ────────────────────────────────────────────────────────────────────
+  StringSink unsetPage;
+  form.renderSettingsForm(unsetPage);
+  check(contains(unsetPage.text(), "<h2>Clock</h2>"), "the form has a Clock section");
+  check(contains(unsetPage.text(), "not set"),
+        "which says the clock is NOT SET rather than showing a plausible 1970");
+  check(contains(unsetPage.text(), "name=\"config.clock.epoch\""), "and offers the field to set it");
+  check(contains(unsetPage.text(), "Math.floor(Date.now()/1000)"),
+        "with a script that fills the epoch in, so the operator types nothing");
+  check(contains(unsetPage.text(), "with scripting off, type the seconds"),
+        "and a hint for the no-script case, because the field still works then");
+
+  // ── Setting it ─────────────────────────────────────────────────────────────────────────
+  const PortalSubmitResult set = form.submit("config.clock.epoch=1787043600");
+  check(set.ok(), "a submission carrying a plausible epoch is accepted");
+  check(clock.lastAccepted == 1787043600u, "and reaches the clock unchanged");
+  check(set.storedSomething() && set.externalWrites == 1,
+        "counted as a write, so the result page cannot say nothing changed");
+
+  StringSink setPage;
+  form.renderSettingsForm(setPage);
+  check(contains(setPage.text(), "2026-08-18 09:00:00 UTC"),
+        "and the page now shows the time as a human date, in UTC, saying so");
+  check(contains(setPage.text(), "set by an operator"), "with WHO set it — the source, not just the value");
+
+  // ── The bounds, which the page reports before the clock is troubled ────────────────────
+  clock.attempts = 0;
+  const PortalSubmitResult tooEarly = form.submit("config.clock.epoch=1577836799");
+  check(!tooEarly.ok(), "one second before 2020-01-01 is refused");
+  check(tooEarly.errorCount == 1 && tooEarly.errors[0].error == PortalFieldError::OutOfRange,
+        "as OutOfRange, which names the problem better than a flat refusal");
+  check(clock.attempts == 0, "and the clock was never asked — the page checks its own bound first");
+
+  const PortalSubmitResult notANumber = form.submit("config.clock.epoch=yesterday");
+  check(!notANumber.ok() && notANumber.errors[0].error == PortalFieldError::NotANumber,
+        "and a word where a number belongs is NotANumber");
+
+  // ── Blank means leave it alone, exactly like the write-only password ───────────────────
+  const uint32_t before = clock.lastAccepted;
+  clock.attempts = 0;
+  const PortalSubmitResult blank = form.submit("config.clock.epoch=&config.modbusSlaveId=9");
+  check(blank.ok(), "an empty clock field is accepted");
+  check(clock.attempts == 0 && clock.lastAccepted == before,
+        "and changes NOTHING — the page renders every setting on every save, so blank cannot mean 1970");
+
+  // ── A firmware with no clock ───────────────────────────────────────────────────────────
+  NetSettings clocklessNet;
+  PortalForm clockless(clocklessNet, &store, plc::kNumSensors);
+  StringSink clocklessPage;
+  clockless.renderSettingsForm(clocklessPage);
+  check(contains(clocklessPage.text(), "supplied no clock"),
+        "a build with no clock SAYS so rather than hiding the section");
+  check(contains(clocklessPage.text(), "disabled"), "and disables the field instead of accepting writes");
+  const PortalSubmitResult refused = clockless.submit("config.clock.epoch=1787043600");
+  check(!refused.ok() && refused.errors[0].error == PortalFieldError::Refused,
+        "and a submission to it is reported as refused, not silently dropped");
+}
+
 void storeTests() {
   std::printf("\n[the injected store — settings that do not live in NetSettings]\n");
 
@@ -949,6 +1050,7 @@ int main() {
   authTests();
   warningTests();
   storeTests();
+  clockTests();
   capacityAgreementTests();
   constantTimeTests();
   applyOnlyWhenStagedTests();

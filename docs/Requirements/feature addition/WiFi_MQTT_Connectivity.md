@@ -1232,6 +1232,37 @@ The **MQTT info** and **AP info** pages already show the IP, which is exactly wh
 >
 > This also means the page cannot offer a setting the firmware does not have, or omit one it does.
 
+> **R7.9d — Three fields on that page are NOT generated, and the clock is the third** (N-d1, built
+> 2026-08-18).
+>
+> The portal login pair has no descriptor because R7.9a needs the login to land on the change-password
+> form. The clock has none for a different and sharper reason: catalogue values are `int32_t`, and a Unix
+> epoch outgrows that in **2038**. Making the clock a `SettingDescriptor` would have shipped a Y2038 bug
+> into the one subsystem whose entire subject is being right about time, so `config.clock.epoch` is
+> rendered and parsed explicitly as `uint32_t`.
+>
+> **What the section shows:** the device time as `YYYY-MM-DD HH:MM:SS UTC` — UTC, and it says so, because
+> the device has no timezone and inventing one makes every timestamp ambiguous — plus **who set it**
+> (`ClockSource`), because a reader deciding whether to trust a timestamp needs that answered too. An unset
+> clock says *not set* rather than rendering a plausible 1970.
+>
+> **How it is set, and why not `datetime-local`.** That widget submits a local wall-clock string with no
+> offset, so the firmware would have to parse a date AND guess a timezone — the two things the Modbus block
+> at 50–52 was designed to avoid. Instead a small inline script asks the BROWSER, which knows both, to
+> compute the epoch, and the firmware receives the same `uint32_t` it receives from RS485: one code path,
+> one validation, one plausibility floor. The script only prefills, so with scripting off the field still
+> submits and the hint tells the operator to type seconds.
+>
+> **Blank means leave it alone**, exactly like the write-only password: the page renders every setting on
+> every save, and a blank clock field must never read as "set the clock to 1970". An out-of-range year is
+> reported as `OutOfRange` before the clock is troubled at all, and a refusal by `DeviceClock` surfaces as
+> `Refused`.
+>
+> **Dependency-inverted, like the settings store.** `PortalForm` is Arduino-free so its whole surface stays
+> host-testable, and `DeviceClock::setTime` needs `millis()`; `PortalClockWriter` is the seam, implemented in
+> `firmware.cpp`. A null writer renders the section saying the build supplied no clock rather than hiding it,
+> because a section that vanishes is indistinguishable from a firmware that has no clock.
+
 > **R7.10** — The page is served over **HTTP**. So the login password, the MQTT broker password and
 > the WiFi passphrase all cross the LAN in clear text whenever the form is submitted.
 >

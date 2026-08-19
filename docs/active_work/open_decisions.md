@@ -145,8 +145,15 @@ millis gap; `device_clock.cpp:107-116` records the sync epoch instead, because t
 before that moment and that is the tightest available bound. Backdating would look more precise and be a
 fabrication, since nothing recorded a trustworthy anchor at the reset. The test asserts the bound and says so.
 
-**What it unblocks, in the owner's ordering:** the portal page, then NTP on `WifiState::Connected`, then MQTT
-last because it needs N-c's unbuilt command topics. Those are additions now, not prerequisites.
+**The portal page followed the same day** — the clock's second route, specified as **R7.9d** in
+`WiFi_MQTT_Connectivity.md`. It shows the time as `YYYY-MM-DD HH:MM:SS UTC` and who set it, and takes an epoch
+computed by the BROWSER rather than a `datetime-local` string, because that widget would put date parsing and
+a timezone guess in the firmware — the two things the Modbus block was designed to avoid. One code path, one
+validation, one floor. It is not a catalogue setting: those are `int32_t` and an epoch outgrows that in 2038,
+which would have put a Y2038 bug in the subsystem whose subject is being right about time.
+
+**What is left of the chain, in the owner's ordering:** NTP on `WifiState::Connected`, then MQTT last because
+it needs N-c's unbuilt command topics. Both are additions now, not prerequisites.
 
 **The gap it closed, for the record:**
 

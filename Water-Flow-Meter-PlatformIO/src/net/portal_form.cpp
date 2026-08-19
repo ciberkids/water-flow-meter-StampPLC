@@ -1,6 +1,7 @@
 #include "net/portal_form.h"
 
 #include <cstdio>
+#include <ctime>
 #include <cstring>
 
 namespace plc {
@@ -448,8 +449,9 @@ const char* portalFieldErrorText(PortalFieldError error) {
   return "refused";
 }
 
-PortalForm::PortalForm(NetSettings& net, PortalSettingStore* store, std::size_t sensorCount)
-    : net_(net), store_(store), sensorCount_(sensorCount) {}
+PortalForm::PortalForm(NetSettings& net, PortalSettingStore* store, std::size_t sensorCount,
+                       PortalClockWriter* clock)
+    : net_(net), store_(store), sensorCount_(sensorCount), clock_(clock) {}
 
 bool PortalForm::warningRequired() const { return net_.portalPasswordIsDefault(); }
 
@@ -697,6 +699,94 @@ void PortalForm::renderRow(PortalSink& out,
   out.writeText("</p></div>");
 }
 
+/**
+ * An epoch as `YYYY-MM-DD HH:MM:SS UTC`, for a human reading the page.
+ *
+ * FORMATTING is safe here in a way PARSING would not be. N-d1 refused broken-down fields on the Modbus block
+ * because turning operator input into an epoch puts date arithmetic where being wrong yields a wrong clock;
+ * turning a known epoch into text for display cannot corrupt anything, and `gmtime_r` is standard C on both
+ * the host and newlib. Showing `1787043600` to an operator is not an option — the whole point of this page is
+ * that a person can read it.
+ *
+ * UTC, and it says so. The device has no timezone and inventing one would make every timestamp ambiguous.
+ */
+void PortalForm::formatEpochUtc(uint32_t epoch, char* out, std::size_t size) {
+  const std::time_t stamp = static_cast<std::time_t>(epoch);
+  std::tm parts{};
+  if (gmtime_r(&stamp, &parts) == nullptr) {
+    std::snprintf(out, size, "unavailable");
+    return;
+  }
+  std::snprintf(out, size, "%04d-%02d-%02d %02d:%02d:%02d UTC", parts.tm_year + 1900, parts.tm_mon + 1,
+                parts.tm_mday, parts.tm_hour, parts.tm_min, parts.tm_sec);
+}
+
+/** `ClockSource`'s underlying value as the word the panel uses. */
+static const char* clockSourceWord(uint8_t source) {
+  switch (source) {
+    case 1:
+      return "the RTC, which ran across the last power cut";
+    case 2:
+      return "an operator";
+    case 3:
+      return "NTP";
+    default:
+      return "nobody";
+  }
+}
+
+/**
+ * The clock section (N-d1's second route).
+ *
+ * WHY A NUMBER FIELD AND A SCRIPT, rather than `<input type="datetime-local">`. A datetime field submits a
+ * local wall-clock string with no offset, so the firmware would have to parse a date AND guess a timezone —
+ * the two things the Modbus block deliberately avoided. Instead the browser, which knows both, computes the
+ * epoch itself and the firmware receives the same `uint32` it receives from RS485. One code path, one
+ * validation, one plausibility floor.
+ *
+ * The script only PREFILLS. With JavaScript disabled the field is still there and still submits, so the page
+ * degrades to "type an epoch" rather than to "you cannot set the clock", and the hint says so.
+ */
+void PortalForm::renderClockSection(PortalSink& out) const {
+  out.writeText("<h2>Clock</h2><div class=\"row\"><p>");
+  if (clock_ == nullptr) {
+    out.writeText("This firmware build supplied no clock, so the time cannot be set from here.");
+  } else if (clock_->nowEpoch() == 0) {
+    out.writeText("The device clock is <strong>not set</strong>, so every timestamp it reports is absent "
+                  "rather than wrong. Set it below.");
+  } else {
+    char stamp[40] = {};
+    formatEpochUtc(clock_->nowEpoch(), stamp, sizeof(stamp));
+    out.writeText("Device time is <strong>");
+    portalWriteEscaped(out, stamp);
+    out.writeText("</strong>, set by ");
+    portalWriteEscaped(out, clockSourceWord(clock_->sourceValue()));
+    out.writeText(".");
+  }
+  out.writeText("</p></div>");
+
+  out.writeText("<div class=\"row\"><label for=\"");
+  portalWriteEscaped(out, kClockEpochField);
+  out.writeText("\">Set the clock</label><input id=\"");
+  portalWriteEscaped(out, kClockEpochField);
+  out.writeText("\" name=\"");
+  portalWriteEscaped(out, kClockEpochField);
+  out.writeText("\" type=\"number\" min=\"1577836800\" max=\"4102444800\" step=\"1\"");
+  if (clock_ == nullptr) {
+    out.writeText(" disabled");
+  }
+  out.writeText("><p>Unix epoch seconds, UTC. Leave blank to keep the current time. This browser fills it "
+                "in for you; with scripting off, type the seconds.</p></div>");
+
+  if (clock_ != nullptr) {
+    // No frameworks, no external fetch: the captive portal is served by the device and may be the only
+    // thing the browser can reach.
+    out.writeText("<script>(function(){var f=document.getElementById(\"");
+    portalWriteEscaped(out, kClockEpochField);
+    out.writeText("\");if(f){f.value=Math.floor(Date.now()/1000);}})();</script>");
+  }
+}
+
 void PortalForm::renderSettingsForm(PortalSink& out) const {
   out.writeText("<form method=\"post\" action=\"");
   portalWriteEscaped(out, kFormAction);
@@ -712,6 +802,8 @@ void PortalForm::renderSettingsForm(PortalSink& out) const {
                 netFieldCapacity(NetField::PortalUser), false, false);
   renderTextRow(out, kPortalPasswordField, kPortalPasswordField, "Login password for this page", "",
                 netFieldCapacity(NetField::PortalPassword), true, false);
+
+  renderClockSection(out);
 
   char currentGroup[48] = {};
   for (std::size_t i = 0; i < ui::settingCount(); ++i) {
@@ -878,6 +970,48 @@ void PortalForm::handleField(const char* name,
                             const char* value,
                             Pass pass,
                             PortalSubmitResult& result) {
+  /**
+   * THE CLOCK, handled before `resolve` because it has no descriptor and is not a NetSettings field.
+   *
+   * It is not in the catalogue on purpose: those values are `int32_t` and an epoch outgrows that in 2038,
+   * so a `SettingDescriptor` would have shipped a Y2038 bug into the subsystem whose whole subject is being
+   * right about time. `uint32_t` is parsed here and handed to `DeviceClock` unchanged, the same value the
+   * Modbus block at 50-52 hands it.
+   *
+   * BLANK MEANS LEAVE IT ALONE, like the write-only password above: the page renders every other setting on
+   * every save, and a blank clock field must not read as "set the clock to 1970".
+   */
+  if (std::strcmp(name, kClockEpochField) == 0) {
+    if (value[0] == '\0') return;
+    if (clock_ == nullptr) {
+      if (pass == Pass::Validate) addError(result, name, PortalFieldError::Refused);
+      return;
+    }
+    int64_t parsed = 0;
+    if (!parseInt64(value, parsed)) {
+      if (pass == Pass::Validate) addError(result, name, PortalFieldError::NotANumber);
+      return;
+    }
+    // The bounds are DeviceClock's own floor and ceiling, checked here so the page reports OutOfRange for
+    // an obviously wrong year instead of the flatter Refused. setTime re-checks: this module cannot be the
+    // only thing standing between a browser and the clock.
+    if (parsed < 1577836800 || parsed > 4102444800) {
+      if (pass == Pass::Validate) addError(result, name, PortalFieldError::OutOfRange);
+      return;
+    }
+    if (pass == Pass::WriteExternal) {
+      if (clock_->setEpoch(static_cast<uint32_t>(parsed))) {
+        // Counted like a store write, so `storedSomething()` is true and the result page says the
+        // submission changed something. A clock set through a form that reported "nothing changed" is
+        // exactly the confusion R7.11's result page exists to prevent.
+        ++result.externalWrites;
+      } else {
+        addError(result, name, PortalFieldError::Refused);
+      }
+    }
+    return;
+  }
+
   FieldRef ref;
   if (!resolve(name, ref)) {
     if (pass == Pass::Validate) addError(result, name, PortalFieldError::UnknownField);
