@@ -195,7 +195,7 @@ evidence at all. Before this branch, `interaction_handler.cpp`, `ui_controller.c
 ## 6. Where to pick up
 
 **The item list is not here.** Every open item has a stable ID and lives in the index at the top of
-`docs/active_work/open_decisions.md` — **eleven lines**, no 🔴, governed by rule **I3**. Cite the ID
+`docs/active_work/open_decisions.md` — **ten lines**, no 🔴, governed by rule **I3**. Cite the ID
 (`DF18`, `J1`, `N-d1`). This section carries only what an index cannot: the ordering, and the state of
 the working tree.
 
@@ -221,6 +221,8 @@ state, so the banner still has no pixel verification), **DF21** (CI runs no `tes
 
 **Two of my changes could NOT be committed and sit in that tree deliberately:**
 
+0. The **audit's own comment** in `screen-geometry.ts`, which said non-zero was the correct state of the
+   banner-band line. It is zero now, by repair — the comment says so, and says a future non-zero is real.
 0. **`ui_root_tail.h`'s `Screen` initializer**, one pair shorter since J2 narrowed the generated struct.
    Without it the firmware does not compile — so whoever commits that file must keep this edit.
 1. The **scrollbar band rule** in `tools/audit/screen-geometry.ts` — reports any scrollbar reaching the
@@ -264,8 +266,11 @@ clean checkout, where the catalogue has 18.
    broke on a positional `ui_exporter::Screen` initializer in the untracked `ui_root_tail.h`, which J7 alone
    would not have surfaced. Flash fell 656 bytes. J7 turned out to be a NARROWING, not a deletion: its
    entry claimed nothing read the state, and `ScreenSelector`'s `.preview-target` ring does.
-2. **`DF18`** — needs a design decision, not a repair: authoring `screens/nyquist-warning.json` to move
-   an option row out of the banner band. It is the geometry audit's one remaining finding, by design.
+2. ~~**`DF18`**~~ — **done 2026-08-18.** The spec file exists, the audit reads 0 findings because the
+   overlap is gone, and it surfaced a gate that was not checking: the host round-trip compared element
+   positions but not SIZES, so DF19's six scrollbar heights had left `default.uipack` stale and passing.
+   Fixed and negative-tested. Look for that shape elsewhere — a gate reading a committed snapshot has to
+   compare every field it can.
 3. **`DF20` then `DF21`** — build the banner-state snapshot first, because wiring `test:visual` into CI
    before it covers the banner locks in a gate that still misses §2c.
 4. **`J1`** and **`J6`** — export gates that `Loadable_UI_Menu_Packs.md` and SI-04 assume and that do

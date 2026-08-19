@@ -24,7 +24,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Eleven open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
+**Ten open lines.** No 🔴 — DF17 closed 2026-08-18. Ask for work by ID — "fix J3", "decide
 DF10", "DF19 go ahead" — and this file is the one place that says what an ID means. Rule **I3** below governs them; the short version is that
 they are append-only and never reused, so a gap means an item closed, not an item lost.
 
@@ -34,7 +34,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | correction + measurement | Nothing protects the VLF probe's position above `M5StamPLC.begin()`, and whether the RTC survives power loss is unknown |
-| **DF18** | 🟡 | **decision** (design) | `nyquist-warning`'s `option-down` sits inside the banner band; fixing it means authoring the screen's first spec file |
 | **N-d1** | 🟡 | feature, queued | The clock can be set from no route at all; next step is the Modbus date/time block |
 | **N-c** | 🟡 | feature, queued | MQTT is report-only — §4.4.1's command topics are unbuilt, and register 565 reports results that cannot arrive |
 | **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
@@ -196,7 +195,7 @@ the bottom of this file, verbatim in
 | `H` | menu behaviour | H1–H6 | closed |
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-d2 | **N-b, N-c, N-d1, N-d2 open**; N-a closed |
-| `DF` | defect — opened 2026-08-18 | DF1–DF21 | **three open**, eighteen fixed |
+| `DF` | defect — opened 2026-08-18 | DF1–DF21 | **two open** (DF20, DF21), nineteen fixed |
 | `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **two open** (J1, J6); J2, J3, J4, J5, J7 and J8 fixed |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
@@ -222,7 +221,7 @@ a future batch takes `J` or a new two-letter prefix, never a letter that once me
 
 ---
 
-## Defects found — DF1–DF21, eighteen fixed and three open
+## Defects found — DF1–DF21, nineteen fixed and two open
 
 None is a decision — each is known, each has a diagnosis, and they are here because this is the file
 that gets read before picking up work.
@@ -829,7 +828,7 @@ baselines still showed a PORTRAIT button and *SAVE VALUE* buttons. Green twice a
 **Two things this did NOT fix, stated plainly because the entry above claims them:** the banner still has no
 pixel-level verification (**DF20**), and CI still does not run the suite (**DF21**).
 
-### DF18 — `nyquist-warning` puts an option row inside the banner band 🟡
+### DF18 — ~~`nyquist-warning` puts an option row inside the banner band~~ ✅ FIXED 2026-08-18
 
 **Found by the new gate, on its first run.** Teaching `tools/audit/screen-geometry.ts` the banner band
 took it from "0 findings" to "1 finding" — and the finding is correct. `option-down`
@@ -851,6 +850,33 @@ in-place `config.sensor.nyquistWarning` row on each edit screen and this overlap
 today. But note the irony before deciding: it is the ONE screen where the banner and the content are
 guaranteed on-screen together, so it may deserve to be the screen that RESERVES the band rather than
 sacrificing it.
+
+**Decided by the owner 2026-08-18: compact the stack, keep one option row per button, and let the band be
+reserved.** `screens/nyquist-warning.json` now exists — title 40, details 56/68, the bound value 80,
+`UP = Edit values` 92, `DOWN = Save anyway` 104 (ending at 112, four pixels clear of 116), footer 124 with
+`bannerReplaces: true`. Deleting the screen was offered and declined: it is an authored §5.5 prompt with its
+own two flows, and removing the subject to make a finding disappear is not the same as fixing it.
+
+Five y-values moved; flows, element ids, their order and every other screen verified unchanged field by
+field. Still unreachable on the device — that was never the defect, and wiring it is a separate question.
+
+**The audit now reads 0 findings, and that is the correct state** — reached by fixing the overlap, not by
+weakening the check. The comment in `screen-geometry.ts` that said "non-zero is the CORRECT state of this
+line today" has been updated to say so, and to say that a future non-zero is real.
+
+**AND IT SURFACED A GATE THAT WAS NOT CHECKING, which is the part worth carrying.** The host round-trip
+(`pack_test.cpp`) compared element x/y, kind and binding — **not width or height**. So DF19's six scrollbar
+heights left the committed `default.uipack` disagreeing with `screens.json` by exactly six bytes, and *"every
+screen, element and flow round-trips identically"* passed over it. **My own DF19 commit left it stale**, and
+nothing failed.
+
+- The round-trip now compares sizes. Negative-tested: with the stale pack in place it reports
+  `confirm-reset-totals-back/3: size 5x104 != 5x100` on all six screens.
+- `default.uipack` is regenerated and its bytes are fully accounted for: the emitter is deterministic (two
+  runs, identical output), and the 15 bytes differing from HEAD are 5 for this change, 6 for DF19's heights,
+  and 4 for the CRC.
+- The lesson generalises past this pack: a gate that reads a committed snapshot has to compare **every field
+  it can**, because the fields it skips are exactly where staleness accumulates unseen.
 
 ### DF19 — ~~Six shipped scrollbars are 104 px where §2c requires 100~~ ✅ FIXED 2026-08-18
 
