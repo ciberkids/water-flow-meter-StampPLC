@@ -5,7 +5,6 @@ import { LayoutReport } from "../utils/layout";
 import { packSelectorLayout } from "../utils/packSelector";
 import { useTheme } from "../theme/ThemeProvider";
 import { DeviceGrid } from "./DeviceGrid";
-import { TransitionPreviewState } from "../types/transitionPreview";
 
 /** One row of the Select Menu. Index 0 is always the built-in default and never comes from the card. */
 export interface PackSelectorEntry {
@@ -32,7 +31,6 @@ interface DisplayViewportProps {
    * the only path from it to pixels was a fan-out into `valueOverrides`, which then shadowed it.
    */
   boundValues?: Record<string, string>;
-  pendingTransition?: TransitionPreviewState | null;
   scrollIndicator?: string;
   firmwareValues?: import("../types/firmwareActions").FirmwareValueDefinition[];
   /**
@@ -198,7 +196,6 @@ export function DisplayViewport({
   zoomPercent,
   showGrid,
   boundValues,
-  pendingTransition,
   scrollIndicator,
   firmwareValues,
   bindingDisplay = "sample",
@@ -538,56 +535,15 @@ export function DisplayViewport({
             : powered
               ? renderElementsForLayout(layout, { scrollIndicator })
               : null}
-          {pendingTransition ? (
-            <div
-              className={`transition-overlay transition-overlay--${pendingTransition.effect}`}
-              style={
-                {
-                  ["--transition-ease" as const]: theme.animation.easing ?? "ease-in-out"
-                } as CSSProperties
-              }
-            >
-              <div className="transition-overlay__glass">
-                <div className="transition-overlay__screen">
-                  {pendingTransition.previewLayout ? (
-                    <div
-                      className="transition-overlay__screen-zoom"
-                      style={{
-                        width: `${pendingTransition.previewLayout.bounds.width}px`,
-                        height: `${pendingTransition.previewLayout.bounds.height}px`,
-                        transform: `scale(${MINI_PREVIEW_SCALE})`
-                      }}
-                    >
-                      <div
-                        className="transition-overlay__mini-surface"
-                        style={{
-                          width: `${pendingTransition.previewLayout.bounds.width}px`,
-                          height: `${pendingTransition.previewLayout.bounds.height}px`,
-                          backgroundColor: theme.colors.displayBackground,
-                          borderColor: theme.colors.badgeBorder
-                        }}
-                      >
-                        {renderElementsForLayout(pendingTransition.previewLayout)}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="transition-overlay__placeholder">
-                      {pendingTransition.screenName ?? pendingTransition.screenId}
-                    </div>
-                  )}
-                </div>
-                <div className="transition-overlay__meta">
-                  <span className="transition-overlay__target">
-                    {pendingTransition.screenName ?? pendingTransition.screenId}
-                  </span>
-                  {pendingTransition.actionLabel ? (
-                    <span className="transition-overlay__action">{pendingTransition.actionLabel}</span>
-                  ) : null}
-                  <span className="transition-overlay__trigger">{pendingTransition.triggerLabel}</span>
-                </div>
-              </div>
-            </div>
-          ) : null}
+          {/* THE TRANSITION OVERLAY IS GONE (J7), not disabled.
+
+              It faded a miniature of the incoming screen over the panel on every UP/DOWN — and on a device
+              whose whole navigation IS UP/DOWN, that meant an animation over almost every press, obscuring
+              the thing this viewport exists to show. The firmware draws no such transition; it clears and
+              repaints. `App.tsx` had been passing `pendingTransition={undefined}` ever since that decision,
+              so this branch could not render, and its state, its type, its 1500 ms timer and 23 lines of CSS
+              stayed behind it. What the decision did NOT kill is the ring `ScreenSelector` puts on the target
+              row, which is a workspace affordance rather than a device simulation and still works. */}
         </div>
       </div>
     </div>
