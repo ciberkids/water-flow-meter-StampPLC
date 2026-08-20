@@ -7017,7 +7017,7 @@
     {
       "id": "net-mqtt-info-3",
       "name": "M.I3 — MQTT publish",
-      "description": "MQTT information, page 3 of 3 — publish behaviour. Was B7, B8 and B9.",
+      "description": "MQTT information, page 3 of 3 — publish behaviour, plus the last command result (R4.4.2d). Was B7, B8 and B9.",
       "elements": [
         {
           "id": "hdr-title",
@@ -7080,6 +7080,22 @@
           "x": 84,
           "y": 62,
           "binding": "config.mqtt.qos",
+          "emphasis": "strong"
+        },
+        {
+          "id": "row3-label",
+          "kind": "text",
+          "x": 2,
+          "y": 80,
+          "content": "Last cmd",
+          "emphasis": "muted"
+        },
+        {
+          "id": "row3-value",
+          "kind": "text",
+          "x": 84,
+          "y": 80,
+          "binding": "net.mqtt.lastCommandResult",
           "emphasis": "strong"
         },
         {

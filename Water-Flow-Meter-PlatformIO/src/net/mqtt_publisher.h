@@ -8,6 +8,7 @@
 // The ONE base-topic rule (owner decision 5A). `isValidBaseTopic` and `netFieldCapacity` are inline
 // and constexpr, so this include costs a header dependency and NOT a link-time one — which is what
 // lets `configure()` use the shared validator without net_settings.cpp joining this test's link set.
+#include "net/mqtt_command_router.h"
 #include "net/net_settings.h"
 
 namespace plc {
@@ -160,6 +161,25 @@ struct MqttDiagnosticsTelemetry {
   float boardTemperatureC = 0.0f;
   uint32_t uptimeSeconds = 0;
   int8_t wifiRssiDbm = 0;
+  /**
+   * R4.4.2d — the outcome of the last MQTT command, so a refusal is visible and not merely logged.
+   *
+   * STICKY: it holds its value until the next command, which is what makes it useful. `offer()`
+   * publishes on payload change, so a result that changes is published on the next tick whether or
+   * not anything else moved, and a result that does not change costs nothing.
+   *
+   * It rides the DIAGNOSTICS payload, i.e. `<base>/diagnostics/state`. R4.4.2d says "published on
+   * the status topic", which reads literally as `<base>/status` — but that topic is R4.5.1's
+   * retained `online`/`offline` will message and putting a JSON object there would break every
+   * entity's availability. The diagnostics topic is where the other non-measurement facts already
+   * live (`rssi`, `uptimeS`), so it is where this one goes.
+   *
+   * Not a Home Assistant entity, for the reason `uncalibratedFlags` above is not one: naming it in
+   * `ha_discovery` republishes discovery to every existing install, which is a dashboard decision
+   * rather than a side effect of telling the truth here. The panel and register 565 are the two
+   * surfaces R4.4.2d actually requires.
+   */
+  MqttCommandResult lastCommandResult = MqttCommandResult::Idle;
 };
 
 struct MqttSnapshot {
@@ -363,6 +383,19 @@ class MqttPublisher {
 
   /** Resets the cadence state so the reconnect republishes in full. Does not publish. */
   void onDisconnected();
+
+  /**
+   * Arms the next tick to publish everything, ignoring both change detection and the rate limit.
+   *
+   * R4.4.4 — "a command is acknowledged by the resulting telemetry, not by a reply topic". After a
+   * reset the totals ARE the acknowledgement, so they cannot wait up to a full publish period: an
+   * operator pressing a dashboard button would see nothing happen and press it again, which is the
+   * loop R4.4.2 is built to stop.
+   *
+   * Arms rather than publishes, like `onConnected`, so this stays callable from the logic task
+   * without reaching the network from it.
+   */
+  void requestFullPublish() { forceFull_ = true; }
 
   /**
    * Queues a message. Used directly by N6 for discovery; telemetry goes through `tick()`.

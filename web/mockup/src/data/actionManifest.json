@@ -997,6 +997,14 @@
       "description": "MQTT broker connection state"
     },
     {
+      "id": "net.mqtt.lastCommandResult",
+      "category": "derived",
+      "type": "string",
+      "register": 565,
+      "readOnly": true,
+      "description": "Outcome of the last MQTT command topic (R4.4.2d) — accepted, rate-limited, ..."
+    },
+    {
       "id": "net.ap.ssid",
       "category": "derived",
       "type": "string",

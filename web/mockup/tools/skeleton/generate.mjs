@@ -641,7 +641,11 @@ const MQTT_INFO_PAGES = [
     id: "net-mqtt-info-3", page: "M.I3", title: "MQTT publish", rows: [
       { label: "HA discovery", binding: "config.mqtt.haDiscovery" },
       { label: "Period", binding: "config.mqtt.publishPeriod" },
-      { label: "QoS", binding: "config.mqtt.qos" }
+      { label: "QoS", binding: "config.mqtt.qos" },
+      // R4.4.2d — the panel half of "a refusal must be visible, not merely logged". On M.I3 because
+      // it is the one MQTT page with a free row; a fourth page for one value would add a ring hop
+      // between the operator and everything else, which §2c's paging exists to keep short.
+      { label: "Last cmd", binding: "net.mqtt.lastCommandResult" }
     ]
   }
 ];

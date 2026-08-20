@@ -54,7 +54,56 @@ struct NetStatusSnapshot {
   /** True once a broker host is configured, so "off" and "configured but down" can differ. */
   bool mqttConfigured = false;
   bool mqttEnabled = false;
+  /**
+   * R4.4.2d — the outcome of the last §4.4.1 command, for the panel and register 565.
+   *
+   * Carried as the enum's underlying value rather than the enum, because this header is included by
+   * the UI layer and `net_status.h` deliberately depends on nothing in `src/net` beyond the two
+   * managers it builds from. `mqttCommandResultText` turns it back into words at both ends.
+   *
+   * Filled by `firmware.cpp` after the snapshot is built, not by `netStatusFrom`: the result lives in
+   * the router, and the router is not one of the two things this file knows how to read.
+   */
+  uint8_t mqttLastCommandResult = 0;  // MqttCommandResult::Idle
 };
+
+/**
+ * What register 561 carries, and what the panel's MQTT indicator says — ONE definition.
+ *
+ * 561 was declared read-only, documented in the register wiki as "broker connection state" and
+ * written by nothing, so a Modbus master read 0 forever. Giving it a value meant naming the states,
+ * and the panel had already named them: `mqttStateText` distinguishes exactly these four, because
+ * "no broker configured" and "configured and down" are the difference between "finish setting it up"
+ * and "go look at the broker". Two spellings of that decision would let the panel and the bus
+ * disagree about the same device, which is the one thing the RS485-is-the-source-of-truth principle
+ * forbids — so the panel now derives from this too.
+ *
+ * APPEND-ONLY, like every other wire enum here (I2): an integrator's template reads these numbers.
+ */
+enum class MqttLinkState : uint8_t {
+  Off = 0,    /**< The client is disabled. Nothing is wrong. */
+  Unset = 1,  /**< Enabled, but no broker host is configured — commissioning is unfinished. */
+  Down = 2,   /**< Configured and not connected. Something to look at. */
+  Ok = 3      /**< Connected. */
+};
+
+/** The state from the three facts that decide it. Ordered as the panel decides them. */
+inline MqttLinkState mqttLinkState(bool enabled, bool configured, bool connected) {
+  if (!enabled) return MqttLinkState::Off;
+  if (connected) return MqttLinkState::Ok;
+  return configured ? MqttLinkState::Down : MqttLinkState::Unset;
+}
+
+/** The panel's four words. ASCII and =<6 characters, for §4.6's Font0 budget. */
+inline const char* mqttLinkStateText(MqttLinkState state) {
+  switch (state) {
+    case MqttLinkState::Off:   return "OFF";
+    case MqttLinkState::Unset: return "UNSET";
+    case MqttLinkState::Down:  return "DOWN";
+    case MqttLinkState::Ok:    return "OK";
+  }
+  return "OFF";
+}
 
 namespace net_status_detail {
 /** Bounded copy — the snapshot's buffers are fixed and the sources are NUL-terminated. */

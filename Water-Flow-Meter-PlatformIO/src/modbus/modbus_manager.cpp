@@ -535,6 +535,14 @@ void ModbusManager::syncGlobalRegisters() {
     for (uint16_t i = 0; i < sizeof(block) / sizeof(block[0]); ++i) {
       deps_.registers->setUint16(static_cast<uint16_t>(plc::net_reg::kBase + i), block[i]);
     }
+    // AFTER the block, because the block zeroes them. `publish` packs settings; these two are live state,
+    // and a master reading 561 got 0 forever until this line existed.
+    if (deps_.mqttStateValue) {
+      deps_.registers->setUint16(plc::net_reg::kMqttState, *deps_.mqttStateValue);
+    }
+    if (deps_.mqttLastCommandResult) {
+      deps_.registers->setUint16(plc::net_reg::kMqttLastCmdResult, *deps_.mqttLastCommandResult);
+    }
   }
   deps_.registers->setFloat(REG_POLLING_RATE_KHZ, *deps_.pollingRateKhz);
   deps_.registers->setUint16(REG_CONNECTED_SENSORS_BITMAP, *deps_.connectedBitmap);

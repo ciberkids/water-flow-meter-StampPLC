@@ -43,6 +43,7 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "net/ha_discovery.h"
 #include "net/mqtt_publisher.h"
 #include "net/mqtt_reconnect.h"
+#include "net/mqtt_command_router.h"
 #include "net/mqtt_transport_esp.h"
 #include "net/net_status.h"
 #include "net/portal_form.h"
@@ -135,6 +136,18 @@ bool allSensorsReadyCache = true;
  */
 plc::NetSettings netSettings;
 
+/**
+ * Registers 561 and 565, mirrored here because `NetRegisterMap::publish` cannot carry them.
+ *
+ * That function packs the network SETTINGS into a 233-register block and writes the whole block on
+ * every sync, so any live value written into it elsewhere is zeroed on the next pass. `ModbusManager`
+ * writes these two AFTER the block from these pointers. Register 561 was declared, documented in the
+ * wiki and read by nothing at all until this line existed — a master polling MQTT state got 0
+ * ("disabled") no matter what the broker connection was doing.
+ */
+uint16_t mqttStateRegisterValue = 0;
+uint16_t mqttLastCommandResultValue = static_cast<uint16_t>(plc::MqttCommandResult::Idle);
+
 ModbusDependencies modbusDeps{.sensors = sensors,
                               .configs = configs,
                               .preferences = &preferences,
@@ -143,6 +156,10 @@ ModbusDependencies modbusDeps{.sensors = sensors,
                               .ledController = &ledController,
                               // So a session reset arriving by ANY route is dated (time/device_clock.h).
                               .clock = &deviceClock,
+                              // R4.4.2d and register 561 — two LIVE values the network block cannot
+                              // carry, written after it. See ModbusDependencies.
+                              .mqttStateValue = &mqttStateRegisterValue,
+                              .mqttLastCommandResult = &mqttLastCommandResultValue,
                               .connectedBitmap = &connectedSensorsBitmap,
                               .undersamplingFlags = &undersamplingFlags,
                               .totalSessionLitersCache = &totalSessionLitersCache,
@@ -280,6 +297,29 @@ plc::PortalForm portalForm(netSettings, nullptr, kNumSensors, &portalClock);
 plc::ArduinoPortalServer portalServer(portalForm);
 /** The birth message, latched on esp-mqtt's task and consumed on the logic task. */
 volatile bool haBirthLatched = false;
+
+/**
+ * §4.4.1's command router, and the ONE command waiting to be acted on.
+ *
+ * A SINGLE SLOT, newest wins. R4.4.5 says commands are never queued — "a reset the operator asked
+ * for two hours ago is not one they still want" — and a queue is also how a redelivered QoS 1 burst
+ * turns into a burst of resets. The rate limit would refuse the repeats, but a queue that holds them
+ * is a queue that has to be drained, and the shape R4.4.2 is built around is exactly the one that
+ * survives a reboot.
+ *
+ * `volatile` for the same reason as the two latches above: esp-mqtt's task writes, the logic task
+ * reads and clears. The buffers are fixed and the copies bounded, so nothing here allocates on a task
+ * that must never block the sampler.
+ */
+plc::MqttCommandRouter mqttCommandRouter;
+volatile bool mqttCommandLatched = false;
+char mqttCommandTopic[plc::MqttPublisher::kMaxTopicBytes] = {};
+char mqttCommandPayload[16] = {};
+volatile bool mqttCommandRetained = false;
+
+/** NVS keys for R4.4.2b's persisted guard — the half of the rate limit that survives a reboot. */
+constexpr const char* kPrefCmdEpochSession = "cmd_ep_ses";
+constexpr const char* kPrefCmdEpochTotals = "cmd_ep_tot";
 /** True once begin() has created a client, so start/stop is idempotent. */
 bool mqttClientUp = false;
 /** Settings revision the client was configured against, so a change reconfigures it. */
@@ -311,19 +351,106 @@ void onMqttState(void*, bool connected) {
 }
 
 void onMqttData(void*, const char* topic, std::size_t topicLength, const char* data,
-                std::size_t dataLength) {
+                std::size_t dataLength, bool retained) {
   // esp-mqtt does not NUL-terminate either buffer, hence the copies. Bounded and small; this runs on
   // esp-mqtt's task so it does the minimum and latches.
   char t[plc::MqttPublisher::kMaxTopicBytes] = {};
   char d[16] = {};
-  const std::size_t tn = topicLength < sizeof(t) - 1 ? topicLength : sizeof(t) - 1;
-  const std::size_t dn = dataLength < sizeof(d) - 1 ? dataLength : sizeof(d) - 1;
-  std::memcpy(t, topic, tn);
-  std::memcpy(d, data, dn);
+  // REFUSED rather than truncated. Truncation is not a size bug here, it is a correctness one: a
+  // publisher-chosen topic long enough to be cut can be cut precisely at `.../cmd/reset-session`, so
+  // an arbitrary string would arrive as a valid destructive command. §4.4.1 already concedes that
+  // anyone who can publish to the broker can zero the totals, so this is not a privilege boundary —
+  // it is the difference between a command the operator sent and one they did not.
+  if (topicLength >= sizeof(t) || dataLength >= sizeof(d)) {
+    return;
+  }
+  std::memcpy(t, topic, topicLength);
+  std::memcpy(d, data, dataLength);
   if (haRepublish.onStatusMessage(haDiscovery, t, d) != plc::HaRepublishReason::None) {
     // R4.4.7 — and now the PRIMARY discovery mechanism rather than the backstop, since Home
     // Assistant's own docs prefer birth-triggered republish over relying on retained configs.
     haBirthLatched = true;
+    return;
+  }
+  // §4.4.1. Nothing is DECIDED here: the retain flag, the payload and both rate limits are the
+  // router's business, and the router needs a clock and NVS. This latches and returns, so a command
+  // arriving during a publish storm cannot stall esp-mqtt's task.
+  bool underCmdPrefix = false;
+  plc::MqttCommandRouter::commandFor(t, mqttPublisher.baseTopic(), &underCmdPrefix);
+  if (!underCmdPrefix) {
+    return;  // not ours — a subscription we did not ask for, or HA's status topic already handled
+  }
+  std::memcpy(mqttCommandTopic, t, sizeof(mqttCommandTopic));
+  std::memcpy(mqttCommandPayload, d, sizeof(mqttCommandPayload));
+  mqttCommandRetained = retained;
+  mqttCommandLatched = true;  // LAST, so the logic task never reads a half-written topic
+}
+
+/**
+ * Acts on the one latched §4.4.1 command, on the LOGIC task.
+ *
+ * Everything that needs a clock, NVS, the Modbus manager or the display's timing budget happens here
+ * rather than in `onMqttData`, which runs on esp-mqtt's own task.
+ */
+void serviceMqttCommand(uint32_t now) {
+  if (!mqttCommandLatched) {
+    return;
+  }
+  mqttCommandLatched = false;
+  char topic[sizeof(mqttCommandTopic)] = {};
+  char payload[sizeof(mqttCommandPayload)] = {};
+  std::memcpy(topic, mqttCommandTopic, sizeof(topic));
+  std::memcpy(payload, mqttCommandPayload, sizeof(payload));
+  const bool retained = mqttCommandRetained;
+
+  // R4.4.5, re-checked HERE and not only at subscribe time: "accepted only while MQTT is enabled and
+  // connected, and never queued". Between the latch and this line the operator may have disabled MQTT
+  // in the portal or the link may have dropped, and in both cases the command is swallowed rather
+  // than performed against a device state nobody asked it to act on.
+  if (!netSettings.mqttEnabled() || !mqttTransport.connected()) {
+    Serial.println("[mqtt] command dropped: MQTT no longer enabled and connected (R4.4.5)");
+    return;
+  }
+
+  const plc::MqttCommand command =
+      plc::MqttCommandRouter::commandFor(topic, mqttPublisher.baseTopic());
+  // 0 when the clock is unset, which disables R4.4.2b's persisted guard for this call and leaves the
+  // millis() guard doing the work. Stated in mqtt_command_router.h rather than hidden: a device with a
+  // dead RTC and no network is one nobody has commissioned.
+  const uint32_t nowEpoch = deviceClock.isSet() ? deviceClock.now(now) : 0u;
+  const plc::MqttCommandResult result =
+      mqttCommandRouter.evaluate(command, payload, retained, now, nowEpoch);
+  mqttLastCommandResultValue = static_cast<uint16_t>(result);
+
+  // R4.4.2d, and for EVERY result rather than only the accepted ones. `MqttPublisher::tick` returns
+  // early on `!heartbeat && !rateLimitCleared`, BEFORE it formats anything, so change detection alone
+  // would leave a refusal invisible for up to a full publish period — and an operator whose button
+  // appears to do nothing presses it again, which is the loop R4.4.2 exists to stop.
+  mqttPublisher.requestFullPublish();
+  Serial.printf("[mqtt] command %s -> %s\n", topic, plc::mqttCommandResultText(result));
+
+  if (result != plc::MqttCommandResult::Accepted) {
+    return;
+  }
+  if (command == plc::MqttCommand::Republish) {
+    // The same latch Home Assistant's birth message sets, so there is one republish path (R4.4.7).
+    haBirthLatched = true;
+    return;
+  }
+  // R4.4.3 — the reset a MASTER performs. `applyHoldingWrite` is the single entry point for every
+  // holding write, so a reset from HA, from the panel's confirm screen and from a Modbus frame are
+  // one implementation. Writing the register value directly would set a number nothing acts on.
+  const uint16_t reg = plc::MqttCommandRouter::registerFor(command);
+  if (reg != 0) {
+    modbusManager.applyHoldingWrite(reg, plc::MqttCommandRouter::kRegisterValue,
+                                    plc::WriteOrigin::Bus);  // a remote master, not the panel
+  }
+  // R4.4.2b — persisted ONLY on acceptance. Writing on every rejection would mean a looping command
+  // loops NVS writes too, turning a nuisance into flash wear (Loadable_UI_Menu_Packs §3.6's rule).
+  if (nowEpoch != 0) {
+    preferences.putUInt(command == plc::MqttCommand::ResetSession ? kPrefCmdEpochSession
+                                                                 : kPrefCmdEpochTotals,
+                        nowEpoch);
   }
 }
 
@@ -771,6 +898,14 @@ void logicTaskCode(void * pvParameters) {
   if (displayFlowUnit > 2) {
     displayFlowUnit = 0;
   }
+  // R4.4.2b — the half of the reset rate limit that survives a reboot, restored before any command
+  // can arrive. The loop that matters most is the one that reboots: reset, crash, reconnect,
+  // redelivered command, reset — and `millis()` starts again at zero each time round it. 0 means
+  // "never accepted", which is what a device that has genuinely never had one should read.
+  mqttCommandRouter.seedLastAcceptedEpoch(plc::MqttCommand::ResetSession,
+                                          preferences.getUInt(kPrefCmdEpochSession, 0));
+  mqttCommandRouter.seedLastAcceptedEpoch(plc::MqttCommand::ResetTotals,
+                                          preferences.getUInt(kPrefCmdEpochTotals, 0));
   for (std::size_t i = 0; i < kNumSensors; ++i) {
     loadCumulativeData(static_cast<uint8_t>(i));
     loadSensorConfig(i);
@@ -880,6 +1015,9 @@ void logicTaskCode(void * pvParameters) {
                          auto snapshot = plc::netStatusFrom(wifiManager, netSettings);
                          // The display's MQTT indicator stops being hard-wired false here.
                          snapshot.mqttConnected = mqttTransport.connected();
+                         // R4.4.2d — the panel is the surface an operator standing at the device has.
+                         snapshot.mqttLastCommandResult =
+                             static_cast<uint8_t>(mqttLastCommandResultValue);
                          return snapshot;
                        }(),
                         deviceClock);
@@ -908,6 +1046,19 @@ void logicTaskCode(void * pvParameters) {
         mqttTransport.subscribe(statusTopic, 1);
       }
 
+      // §4.4.1's commands, on the same side of the announcement and for a related reason: a dashboard
+      // button pressed while we were away is delivered the moment we subscribe, and subscribing after
+      // the availability publish would drop it. QoS 1, so a press is not lost to a single dropped
+      // packet — the duplicate a QoS 1 redelivery can cause is precisely what R4.4.2's rate limit is
+      // for. One wildcard rather than three exact topics: a typo under `cmd/` then arrives and is
+      // reported as `unknown-command` instead of vanishing at the broker, which is the whole reason
+      // `MqttCommandResult::UnknownCommand` exists.
+      char cmdTopic[plc::MqttPublisher::kMaxTopicBytes] = {};
+      if (std::snprintf(cmdTopic, sizeof(cmdTopic), "%s/cmd/#", mqttPublisher.baseTopic()) > 0 &&
+          cmdTopic[0] != '\0') {
+        mqttTransport.subscribe(cmdTopic, 1);
+      }
+
       // R4.5.1 — availability, retained, so a subscriber that joins later still learns we are up.
       // MqttClass::Availability, so R4.1.3 never evicts it.
       mqttPublisher.enqueue(plc::MqttClass::Availability, mqttPublisher.availabilityTopic(),
@@ -925,7 +1076,23 @@ void logicTaskCode(void * pvParameters) {
       mqttReconnect.noteDisconnected();
       mqttPublisher.onDisconnected();
       haRepublish.noteDisconnected();
+      // R4.4.5 — a command that arrived just before the drop is discarded, not held for the
+      // reconnect. The consumer re-checks the link as well; this is the earlier of the two, so the
+      // stale command does not sit in the slot shadowing a fresh one.
+      mqttCommandLatched = false;
     }
+    // Register 561, from the one function that decides this (net_status.h). Written every pass rather
+    // than on an edge: `syncGlobalRegisters` republishes the whole 233-register network block and
+    // zeroes everything the settings packing does not fill, so a value written once would survive
+    // only until the next sync.
+    mqttStateRegisterValue = static_cast<uint16_t>(plc::mqttLinkState(
+        netSettings.mqttEnabled(), netSettings.mqttConfigured(), mqttTransport.connected()));
+
+    // AFTER both latches: a command that arrived in the same pass as a disconnect is swallowed by the
+    // branch above rather than acted on, and one that arrived with a connect is acted on with the
+    // subscription already in place.
+    serviceMqttCommand(now);
+
     if (mqttWanted) {
       mqttReconnect.update(now);
     }
@@ -1061,6 +1228,9 @@ void logicTaskCode(void * pvParameters) {
       snapshot.diagnostics.uncalibratedFlags = uncalibratedFlags;
       snapshot.diagnostics.uptimeSeconds = now / 1000;
       snapshot.diagnostics.wifiRssiDbm = static_cast<int8_t>(wifiManager.rssiDbm());
+      // R4.4.2d's remote half. Sticky, so it describes the last command rather than the last tick.
+      snapshot.diagnostics.lastCommandResult =
+          static_cast<plc::MqttCommandResult>(mqttLastCommandResultValue);
       mqttPublisher.tick(now, snapshot);
 
       // Drain a bounded number per pass. Unbounded would let a full queue monopolise a logic pass

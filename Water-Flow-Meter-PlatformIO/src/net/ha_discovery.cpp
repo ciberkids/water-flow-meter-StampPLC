@@ -159,6 +159,9 @@ void writeEntityName(Writer& w, HaEntityRef ref) {
     case HaEntity::PollingRate:          w.raw("Polling rate"); break;
     case HaEntity::Undersampling:        w.raw("Undersampling"); break;
     case HaEntity::WifiRssi:             w.raw("WiFi signal"); break;
+    case HaEntity::ButtonResetSession:   w.raw("Reset session"); break;
+    case HaEntity::ButtonResetTotals:    w.raw("Reset lifetime totals"); break;
+    case HaEntity::ButtonRepublish:      w.raw("Republish discovery"); break;
     case HaEntity::Count:                break;
   }
 }
@@ -242,6 +245,11 @@ const char* haEntityValueKey(HaEntity entity) {
     case HaEntity::PollingRate:          return "pollingRateKhz";
     case HaEntity::Undersampling:        return "undersampling";
     case HaEntity::WifiRssi:             return "rssi";
+    // A button reads no value, so it has no key in any state payload. Not "" — nullptr, so a caller
+    // that forgets to branch crashes in a test rather than emitting `value_json.` and shipping.
+    case HaEntity::ButtonResetSession:
+    case HaEntity::ButtonResetTotals:
+    case HaEntity::ButtonRepublish:
     case HaEntity::Count:                return nullptr;
   }
   return nullptr;
@@ -259,6 +267,12 @@ const char* haEntityDeviceClass(HaEntity entity) {
     case HaEntity::PollingRate:          return nullptr;
     case HaEntity::Undersampling:        return nullptr;
     case HaEntity::WifiRssi:             return nullptr;
+    // §4.4.a specifies none for the buttons either. Home Assistant defines `restart` and `identify`
+    // for buttons and neither is what clearing a water total is, so nothing is invented.
+    case HaEntity::ButtonResetSession:
+    case HaEntity::ButtonResetTotals:
+    case HaEntity::ButtonRepublish:
+      return nullptr;
     case HaEntity::Count:                return nullptr;
   }
   return nullptr;
@@ -273,6 +287,10 @@ const char* haEntityUnit(HaEntity entity) {
     case HaEntity::PollingRate:          return "kHz";
     case HaEntity::Undersampling:        return nullptr;  // a bitmap of sensors, not a quantity
     case HaEntity::WifiRssi:             return "dBm";
+    case HaEntity::ButtonResetSession:
+    case HaEntity::ButtonResetTotals:
+    case HaEntity::ButtonRepublish:
+      return nullptr;  // a press is not a quantity
     case HaEntity::Count:                return nullptr;
   }
   return nullptr;
@@ -290,6 +308,11 @@ const char* haEntityStateClass(HaEntity entity) {
     case HaEntity::PollingRate:          return "measurement";
     case HaEntity::Undersampling:        return "measurement";
     case HaEntity::WifiRssi:             return "measurement";
+    // Omitted from a button payload entirely — see `haEntityIsButton`.
+    case HaEntity::ButtonResetSession:
+    case HaEntity::ButtonResetTotals:
+    case HaEntity::ButtonRepublish:
+      return nullptr;
     case HaEntity::Count:                return nullptr;
   }
   return nullptr;
@@ -304,6 +327,10 @@ uint8_t haEntityPrecision(HaEntity entity) {
     case HaEntity::PollingRate:          return 2;
     case HaEntity::Undersampling:        return 0;
     case HaEntity::WifiRssi:             return 0;
+    case HaEntity::ButtonResetSession:
+    case HaEntity::ButtonResetTotals:
+    case HaEntity::ButtonRepublish:
+      return 0;
     case HaEntity::Count:                return 0;
   }
   return 0;
@@ -322,6 +349,11 @@ bool haEntityIsDiagnostic(HaEntity entity) {
     case HaEntity::SensorSessionVolume:
     case HaEntity::SensorLifetimeVolume:
     case HaEntity::BoardTemperature:
+    // A reset button is not diagnostic. `entity_category` would hide it in the device page's
+    // diagnostics fold, and §4.4.1's whole reason for existing is "buttons in a dashboard".
+    case HaEntity::ButtonResetSession:
+    case HaEntity::ButtonResetTotals:
+    case HaEntity::ButtonRepublish:
     case HaEntity::Count:
       return false;
   }
@@ -338,6 +370,9 @@ bool haEntityIsPerSensor(HaEntity entity) {
     case HaEntity::PollingRate:
     case HaEntity::Undersampling:
     case HaEntity::WifiRssi:
+    case HaEntity::ButtonResetSession:
+    case HaEntity::ButtonResetTotals:
+    case HaEntity::ButtonRepublish:
     case HaEntity::Count:
       return false;
   }
@@ -353,9 +388,82 @@ const char* haEntityObjectIdSuffix(HaEntity entity) {
     case HaEntity::PollingRate:          return "polling_rate";
     case HaEntity::Undersampling:        return "undersampling";
     case HaEntity::WifiRssi:             return "wifi_rssi";
+    // `cmd_` prefixed so a glance at an entity list separates the three that ACT from the eleven
+    // that observe. 17 bytes at the longest, inside kHaMaxObjectIdBytes, which the host test proves.
+    case HaEntity::ButtonResetSession:   return "cmd_reset_session";
+    case HaEntity::ButtonResetTotals:    return "cmd_reset_totals";
+    case HaEntity::ButtonRepublish:      return "cmd_republish";
     case HaEntity::Count:                return "";
   }
   return "";
+}
+
+bool haEntityIsButton(HaEntity entity) {
+  switch (entity) {
+    case HaEntity::ButtonResetSession:
+    case HaEntity::ButtonResetTotals:
+    case HaEntity::ButtonRepublish:
+      return true;
+    case HaEntity::SensorFlow:
+    case HaEntity::SensorSessionVolume:
+    case HaEntity::SensorLifetimeVolume:
+    case HaEntity::BoardTemperature:
+    case HaEntity::PollingRate:
+    case HaEntity::Undersampling:
+    case HaEntity::WifiRssi:
+    case HaEntity::Count:
+      return false;
+  }
+  return false;
+}
+
+const char* haEntityComponent(HaEntity entity) {
+  return haEntityIsButton(entity) ? "button" : "sensor";
+}
+
+const char* haEntityCommandSuffix(HaEntity entity) {
+  // The exact topics of §4.4.1, and the exact strings `MqttCommandRouter::commandFor` matches. Two
+  // ends of one contract again: a mismatch here discovers a button that publishes to a topic nothing
+  // is subscribed to, which looks identical to a broken broker.
+  switch (entity) {
+    case HaEntity::ButtonResetSession: return "/cmd/reset-session";
+    case HaEntity::ButtonResetTotals:  return "/cmd/reset-totals";
+    case HaEntity::ButtonRepublish:    return "/cmd/republish";
+    case HaEntity::SensorFlow:
+    case HaEntity::SensorSessionVolume:
+    case HaEntity::SensorLifetimeVolume:
+    case HaEntity::BoardTemperature:
+    case HaEntity::PollingRate:
+    case HaEntity::Undersampling:
+    case HaEntity::WifiRssi:
+    case HaEntity::Count:
+      return nullptr;
+  }
+  return nullptr;
+}
+
+const char* haEntityPressPayload(HaEntity entity) {
+  switch (entity) {
+    // R4.4.1's magic. Without this key Home Assistant sends `PRESS` and the router answers
+    // `bad-payload` — a button that ships broken and reports why only if somebody looks.
+    case HaEntity::ButtonResetSession:
+    case HaEntity::ButtonResetTotals:
+      return "RESET";
+    // republish takes any payload, so this is HA's own default spelled out rather than relied on:
+    // the payload a subscriber sees should say what it is.
+    case HaEntity::ButtonRepublish:
+      return "PRESS";
+    case HaEntity::SensorFlow:
+    case HaEntity::SensorSessionVolume:
+    case HaEntity::SensorLifetimeVolume:
+    case HaEntity::BoardTemperature:
+    case HaEntity::PollingRate:
+    case HaEntity::Undersampling:
+    case HaEntity::WifiRssi:
+    case HaEntity::Count:
+      return nullptr;
+  }
+  return nullptr;
 }
 
 const char* haRepublishReasonText(HaRepublishReason reason) {
@@ -443,7 +551,9 @@ HaBuildResult HaDiscovery::discoveryTopic(HaEntityRef ref, char* out, std::size_
   Writer w(out, size);
   if (!configured_ || !refValid(ref)) return HaBuildResult{};
   w.raw(prefix_);
-  w.raw("/sensor/");
+  w.raw("/");
+  w.raw(haEntityComponent(ref.kind));
+  w.raw("/");
   w.raw(nodeId_);
   w.raw("/");
   writeObjectId(w, ref);
@@ -470,6 +580,10 @@ HaBuildResult HaDiscovery::uniqueId(HaEntityRef ref, char* out, std::size_t size
 HaBuildResult HaDiscovery::stateTopic(HaEntityRef ref, char* out, std::size_t size) const {
   Writer w(out, size);
   if (!configured_ || !refValid(ref)) return HaBuildResult{};
+  // A button has no state topic. Refusing is the point: `writeStateTopic`'s else-branch would hand
+  // back `<base>/diagnostics/state`, which is a real topic carrying real JSON, so a caller that
+  // published a button's "state" there would corrupt the diagnostics payload and look successful.
+  if (haEntityIsButton(ref.kind)) return HaBuildResult{};
   writeStateTopic(w, Emit::Raw, base_, ref);
   return w.finish();
 }
@@ -528,6 +642,26 @@ HaBuildResult HaDiscovery::discoveryPayload(HaEntityRef ref, char* out, std::siz
   w.raw("_");
   writeObjectId(w, ref);
 
+  // §4.4.1's buttons diverge here and return early. A button carries a `command_topic` where a
+  // sensor carries a `state_topic`, and NONE of the reading keys below — Home Assistant rejects a
+  // payload with keys the component does not define, and a rejected payload is an entity that never
+  // appears with nothing logged (R4.4.8's failure, reached a different way).
+  if (haEntityIsButton(ref.kind)) {
+    w.raw("\",\"command_topic\":\"");
+    w.escaped(base_);
+    w.raw(haEntityCommandSuffix(ref.kind));
+    w.raw("\",\"payload_press\":\"");
+    w.raw(haEntityPressPayload(ref.kind));
+    // Availability is shared with every other entity (R4.5.1): a button on an offline device shows
+    // as unavailable rather than as a press that vanishes.
+    w.raw("\",\"availability_topic\":\"");
+    w.escaped(base_);
+    w.raw("/");
+    w.raw(kHaStatusTopicSuffix);
+    w.raw("\"}");
+    return w.finish();
+  }
+
   // One state topic shared by the three per-sensor entities, each picking its value out with a
   // template (§4.2 — eight publishes per cycle instead of forty).
   w.raw("\",\"state_topic\":\"");
@@ -581,6 +715,13 @@ std::size_t HaDiscovery::enumerateEntities(uint16_t connectedBitmap, HaEntityRef
                                             HaEntity::SensorLifetimeVolume};
   static constexpr HaEntity kPerDevice[] = {HaEntity::BoardTemperature, HaEntity::PollingRate,
                                             HaEntity::Undersampling, HaEntity::WifiRssi};
+  // §4.4.1's buttons exist regardless of the sensor bitmap, unlike the per-sensor entities: a device
+  // with nothing wired up yet can still be told to republish, and `reset-totals` on a device whose
+  // channels were just disabled is exactly when an operator wants it. R4.4.5's "only while
+  // connected" is enforced where the command ARRIVES, not by withholding the entity — the shared
+  // availability topic already shows the button as unavailable while the device is offline.
+  static constexpr HaEntity kCommandButtons[] = {
+      HaEntity::ButtonResetSession, HaEntity::ButtonResetTotals, HaEntity::ButtonRepublish};
   std::size_t written = 0;
   for (std::size_t sensor = 0; sensor < kNumSensors; ++sensor) {
     // Only connected sensors get entities, which is what makes "enabling a sensor makes its entity
@@ -594,6 +735,12 @@ std::size_t HaDiscovery::enumerateEntities(uint16_t connectedBitmap, HaEntityRef
     }
   }
   for (HaEntity kind : kPerDevice) {
+    if (written >= capacity) return written;
+    out[written].kind = kind;
+    out[written].sensor = 0;
+    ++written;
+  }
+  for (HaEntity kind : kCommandButtons) {
     if (written >= capacity) return written;
     out[written].kind = kind;
     out[written].sensor = 0;

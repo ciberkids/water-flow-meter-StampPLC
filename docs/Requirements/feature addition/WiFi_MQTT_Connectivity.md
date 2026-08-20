@@ -1553,14 +1553,20 @@ resolved before the expensive work.
 | ~~**N2a**~~ | Text-editor engine — **built then deleted** (§6.3). Its 47 checks went with it. | A8 | ⊘ withdrawn |
 | **N2b** | Text settings are **display-only** at the panel; the wiring was removed with the engine | A8 | ✅ 16 checks |
 | **N3** | Network register block 500–751, staged apply, revision, error reporting | A5, A6, A7 | ✅ 50 checks |
-| **N4** | WiFi state machine, backoff, NVS persistence, status bindings | A13 | ▶ next — also unblocks the §7.1 info pages |
-| **N5** | MQTT client (`esp-mqtt`, §4.1.1), topic layout, cadence, LWT, queue policy | A11 | unblocked 2026-08-03 |
-| **N6** | Home Assistant discovery payloads (§4.4.a/b) and republish rules | A2, A3, A4 | unblocked 2026-08-03 |
+| **N4** | WiFi state machine, backoff, NVS persistence, status bindings | A13 | ✅ 154 checks |
+| **N5** | MQTT client (`esp-mqtt`, §4.1.1), topic layout, cadence, LWT, queue policy | A11 | ✅ 191 checks |
+| **N6** | Home Assistant discovery payloads (§4.4.a/b) and republish rules | A2, A3, A4 | ✅ 262 checks |
+| **N6a** | Command topics (§4.4.1) — the router, the two safeguards, `button` discovery, register 565 | A2, A11 | ✅ 49 checks, 2026-08-20 |
 | **N7a** | Default-pack editors for all 14 settings, regenerated `.uipack` | A9, A12 | ✅ 34 screens, 82 total |
 | **N7b** | Menu screens with flow guards, completeness migration (Q7) | A10 | |
 | **N8a** | Configuration web portal (§7.6) — `WebServer` + `DNSServer`, catalogue-generated form. **Load-bearing since §6.3**: with no wheel this is the only way to provision a device with no Modbus master. | A9 | ▶ raised in priority |
 | **N8b** | SD-card credential file (Q2) | — | |
 | **N9** | Hardware validation: polling rate, brownout under TX, HA end-to-end, **task-WDT survival with the portal active** | A1–A4, R9.3.1 | ⛔ needs hardware |
+
+**N4, N5 and N6 read "next" and "unblocked" here until 2026-08-20**, long after all three had shipped
+with the check counts now shown. Corrected when N6a landed beside them. It is the same failure the open
+register was rewritten to undo: a state column that is a second home for a fact recorded elsewhere, and
+nobody moves it. The counts are cited so the next reader can re-measure rather than believe this table.
 
 **Why N1c and N7a are one change, not two.** `assertCoversEverySetting` in the exporter refuses to
 emit a pack that does not reach every declared setting. Declaring the settings without their

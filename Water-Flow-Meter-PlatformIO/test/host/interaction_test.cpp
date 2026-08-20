@@ -21,6 +21,7 @@
 #include "led/led_controller.h"
 #include "modbus/modbus_manager.h"
 #include "modbus/register_map.h"
+#include "net/mqtt_command_router.h"
 #include "net/net_register_map.h"
 #include "modbus/sensor_types.h"
 #include "ui/core/ui_bindings.h"
@@ -2480,6 +2481,49 @@ void networkBindingTests() {
   checkStr(render("net.mqtt.state"), "OK", "and connected says OK");
   checkStr(render("net.status"), "WiFi OK  MQTT OK", "the summary tracks both");
 
+  // ── The same four states, as register 561 ──────────────────────────────────────
+  //
+  // 561 was declared read-only, documented in the register wiki as "broker connection state" and
+  // written by NOTHING: `NetRegisterMap::publish` packs the settings and zeroes the rest of its
+  // 233-register block, so a Modbus master polling MQTT state read 0 — "disabled" — on a device
+  // happily publishing telemetry. Giving it a value meant naming the states, and the panel above had
+  // already named them, so both now come from `mqttLinkState`. These checks exist to keep it that
+  // way: two implementations of one decision is how the panel and the bus end up describing
+  // different devices.
+  check(plc::mqttLinkState(false, true, true) == plc::MqttLinkState::Off,
+        "disabled outranks everything — a switched-off client cannot be connected");
+  check(plc::mqttLinkState(true, false, false) == plc::MqttLinkState::Unset, "561 = 1 when unset");
+  check(plc::mqttLinkState(true, true, false) == plc::MqttLinkState::Down, "561 = 2 when down");
+  check(plc::mqttLinkState(true, true, true) == plc::MqttLinkState::Ok, "561 = 3 when connected");
+  // The wire values themselves, because an integrator's template reads the numbers and I2 makes them
+  // append-only. A reordering that kept the names would pass every check above.
+  check(static_cast<uint16_t>(plc::MqttLinkState::Off) == 0 &&
+            static_cast<uint16_t>(plc::MqttLinkState::Unset) == 1 &&
+            static_cast<uint16_t>(plc::MqttLinkState::Down) == 2 &&
+            static_cast<uint16_t>(plc::MqttLinkState::Ok) == 3,
+        "and the four wire values are 0..3, in that order (I2)");
+  // The agreement itself: whatever the panel renders is what `mqttLinkStateText` returns for the
+  // state the register carries. Checked through the live snapshot, not by restating the mapping.
+  checkStr(render("net.mqtt.state"),
+           plc::mqttLinkStateText(plc::mqttLinkState(dev.netStatus.mqttEnabled,
+                                                    dev.netStatus.mqttConfigured,
+                                                    dev.netStatus.mqttConnected)),
+           "the panel renders exactly what the register's state spells");
+
+  // ── R4.4.2d — the command result, on the panel ────────────────────────────────
+  checkStr(render("net.mqtt.lastCommandResult"), "idle",
+           "a device that has had no command says idle, not a success it never had");
+  dev.netStatus.mqttLastCommandResult = static_cast<uint8_t>(plc::MqttCommandResult::RetainedIgnored);
+  dev.tick(10);
+  checkStr(render("net.mqtt.lastCommandResult"), "retained-ignored",
+           "and a retained command that was discarded says so — R4.4.2d's whole point");
+  check(std::strlen(render("net.mqtt.lastCommandResult")) <= 26,
+        "the longest result fits the 26 characters the value column has at x=84");
+  dev.netStatus.mqttLastCommandResult = static_cast<uint8_t>(plc::MqttCommandResult::RateLimited);
+  dev.tick(10);
+  checkStr(render("net.mqtt.lastCommandResult"), "rate-limited",
+           "and a refused repeat reads rate-limited rather than looking like nothing happened");
+
   // ── The AP, and R5.3's deliberate asymmetry ───────────────────────────────────
   dev.netStatus.apIpAddress = (192u << 24) | (168u << 16) | (4u << 8) | 1u;
   std::snprintf(dev.netStatus.apSsid, sizeof(dev.netStatus.apSsid), "%s", "water_flow_meter_309245");
@@ -2516,7 +2560,7 @@ void networkBindingTests() {
     }
   }
   std::printf("      %zu network values declared\n", netValues);
-  check(netValues == 10, "ten network values are declared");
+  check(netValues == 11, "eleven network values are declared");
   check(allResolve, "and every one of them resolves — no declared value renders blank");
 }
 

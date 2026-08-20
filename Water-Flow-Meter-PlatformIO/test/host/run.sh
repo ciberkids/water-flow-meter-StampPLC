@@ -40,6 +40,12 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/device_clock_test" \
 g++ "${CXXFLAGS[@]}" -o "$OUT/ntp_policy_test" \
   test/host/ntp_policy_test.cpp
 
+# §4.4.1's command topics and R4.4.2's safeguards. Arduino-free: every rule is a safety decision on a
+# metering device, and none is observable without a broker, a clock and an hour.
+g++ "${CXXFLAGS[@]}" -o "$OUT/mqtt_command_router_test" \
+  test/host/mqtt_command_router_test.cpp \
+  src/net/mqtt_command_router.cpp
+
 # The clock's one WIRING, as opposed to its logic: does a session reset arriving through
 # ModbusManager actually date it? `ModbusDependencies::clock` is nullable and was null in both host
 # tests that construct the struct, so noteSessionStart() was exercised by nothing — a nullable
@@ -186,12 +192,14 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/httpd_task_policy_test" \
 # N5 — the MQTT publish policy: cadence, the drop order, topic construction.
 g++ "${CXXFLAGS[@]}" -o "$OUT/mqtt_publisher_test" \
   test/host/mqtt_publisher_test.cpp \
-  src/net/mqtt_publisher.cpp
+  src/net/mqtt_publisher.cpp \
+  src/net/mqtt_command_router.cpp
 
 # N6 — Home Assistant discovery payloads, including the R4.4.8 worst-case buffer bound.
 g++ "${CXXFLAGS[@]}" -o "$OUT/ha_discovery_test" \
   test/host/ha_discovery_test.cpp \
-  src/net/ha_discovery.cpp
+  src/net/ha_discovery.cpp \
+  src/net/mqtt_command_router.cpp
 
 # N8a — the configuration portal's form generation, parsing, validation and escaping.
 g++ "${CXXFLAGS[@]}" -o "$OUT/portal_form_test" \
@@ -230,6 +238,7 @@ g++ "${CXXFLAGS[@]}" -I test/host/stubs -o "$OUT/interaction_test" \
   src/net/net_settings.cpp \
   src/net/net_register_map.cpp \
   src/net/wifi_manager.cpp \
+  src/net/mqtt_command_router.cpp \
   src/ui/generated/GeneratedUi.cpp
 
 "$OUT/nav_test"
@@ -237,6 +246,7 @@ echo
 "$OUT/accel_test"
 "$OUT/device_clock_test"
 "$OUT/ntp_policy_test"
+"$OUT/mqtt_command_router_test"
 echo
 "$OUT/modbus_manager_clock_test"
 echo

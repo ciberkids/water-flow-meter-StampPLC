@@ -68,6 +68,18 @@ struct ModbusDependencies {
    * rather than the field being required, so adding it cannot break a test that has no opinion about time.
    */
   plc::DeviceClock* clock = nullptr;
+
+  /**
+   * Two LIVE network values, as their underlying enum values. Nullable.
+   *
+   * `NetRegisterMap::publish` packs the network SETTINGS and leaves every other cell of its 233-register
+   * block at zero, so 561 and 565 were published as 0 on every sync no matter what was happening — which
+   * for `kMqttState` meant a master could never see the broker connection state at all, and for
+   * `kMqttLastCmdResult` would have silently undone R4.4.2d the moment it was written. They are live, so
+   * they are written AFTER the block, from here.
+   */
+  const uint16_t* mqttStateValue = nullptr;
+  const uint16_t* mqttLastCommandResult = nullptr;
   uint16_t* connectedBitmap = nullptr;
   uint16_t* undersamplingFlags = nullptr;
   double* totalSessionLitersCache = nullptr;

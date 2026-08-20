@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-19T09:38:22.934Z",
+  "generatedAt": "2026-08-20T07:30:08.631Z",
   "screenCount": 80,
-  "elementCount": 666,
+  "elementCount": 668,
   "dataset": [
     {
       "id": "info-p0-global-status",
@@ -11657,7 +11657,7 @@
     {
       "id": "net-mqtt-info-3",
       "name": "M.I3 — MQTT publish",
-      "description": "MQTT information, page 3 of 3 — publish behaviour. Was B7, B8 and B9.",
+      "description": "MQTT information, page 3 of 3 — publish behaviour, plus the last command result (R4.4.2d). Was B7, B8 and B9.",
       "elements": [
         {
           "id": "hdr-title",
@@ -11782,6 +11782,37 @@
             }
           },
           "binding": "config.mqtt.qos"
+        },
+        {
+          "id": "row3-label",
+          "position": {
+            "x": 2,
+            "y": 80
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Last cmd",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row3-value",
+          "position": {
+            "x": 84,
+            "y": 80
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "net.mqtt.lastCommandResult"
         },
         {
           "id": "footer-hint",

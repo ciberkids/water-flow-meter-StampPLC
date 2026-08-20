@@ -1755,6 +1755,8 @@ static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3Row1Label_Te
 static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3Row1Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3Row2Label_Text = { "QoS", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3Row2Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
+static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3Row3Label_Text = { "Last cmd", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
+static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3Row3Value_Text = { "", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
 static constexpr ui_exporter::TextPayload kNetMqttInfo3_NetMqttInfo3FooterHint_Text = { "Set via web portal or RS485", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kNetMqttInfo3Elements[] = {
@@ -1766,6 +1768,8 @@ static constexpr ui_exporter::Element kNetMqttInfo3Elements[] = {
     { "row1-value", ui_exporter::ElementType::Text, 84, 44, 0, 0, &kNetMqttInfo3_NetMqttInfo3Row1Value_Text, nullptr, "config.mqtt.publishPeriod" },
     { "row2-label", ui_exporter::ElementType::Text, 2, 62, 0, 0, &kNetMqttInfo3_NetMqttInfo3Row2Label_Text, nullptr, nullptr },
     { "row2-value", ui_exporter::ElementType::Text, 84, 62, 0, 0, &kNetMqttInfo3_NetMqttInfo3Row2Value_Text, nullptr, "config.mqtt.qos" },
+    { "row3-label", ui_exporter::ElementType::Text, 2, 80, 0, 0, &kNetMqttInfo3_NetMqttInfo3Row3Label_Text, nullptr, nullptr },
+    { "row3-value", ui_exporter::ElementType::Text, 84, 80, 0, 0, &kNetMqttInfo3_NetMqttInfo3Row3Value_Text, nullptr, "net.mqtt.lastCommandResult" },
     { "footer-hint", ui_exporter::ElementType::Text, 2, 124, 0, 0, &kNetMqttInfo3_NetMqttInfo3FooterHint_Text, nullptr, nullptr },
     { "level-position", ui_exporter::ElementType::Scrollbar, 232, 14, 5, 100, nullptr, nullptr, nullptr }
 };
@@ -2238,7 +2242,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-19T09:38:22.934Z", 80, 666
+    "2026-08-20T07:30:08.631Z", 80, 668
 };
 
 }  // namespace ui_exporter

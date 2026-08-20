@@ -29,10 +29,11 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Five open lines, and not one of them is a defect.** As of 2026-08-18 every `DF` (1–21) and every `J` (1–8)
-is closed; what remains is two queued FEATURES, two things that need the board, and one missing gate. Ask
-for work by ID — "build N-c", "decide N-b" — and this file is the one place that says what an ID means.
-Rule **I3** below governs them: append-only, never reused, so a gap means an item closed, not an item lost.
+**Five open lines, one of them a defect.** `N-c` closed on 2026-08-20 and `DF22` opened in the same round —
+it was found by building `N-c`, which is the usual way. What remains is one queued FEATURE, one defect, two
+things that need the board, and one missing gate. Ask for work by ID — "fix DF22", "decide N-b" — and this
+file is the one place that says what an ID means. Rule **I3** below governs them: append-only, never reused,
+so a gap means an item closed, not an item lost.
 
 The **Shape** column is the one that answers *can I just say go ahead?*
 
@@ -40,20 +41,21 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | correction + measurement | Nothing protects the VLF probe's position above `M5StamPLC.begin()`, and whether the RTC survives power loss is unknown |
-| **N-c** | 🟡 | feature, queued | MQTT is report-only — §4.4.1's command topics are unbuilt, and register 565 reports results that cannot arrive |
+| **DF22** | 🟡 | defect, found 2026-08-20 | Eight of the network block's read-only LIVE registers are written by nothing (WiFi state, RSSI, IP, MAC, the AP trio, the portal timer), and `NET_LAST_ERROR` is written then erased on the next sync — so §5.1's refusal report reads as success |
 | **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
 | **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
 
-**DF1–DF21 and J1–J8** are fixed and keep their IDs — moved to
+**DF1–DF21, J1–J8 and N-c** are fixed and keep their IDs — moved to
 [`../archive/open_decisions-closed-2026-08-18.md`](../archive/open_decisions-closed-2026-08-18.md), verbatim,
 because I3 makes them append-only and a retired id must still resolve. **I2** and **I3** are standing rules
 that never close.
 
 **What this list is NOT.** Nothing here is blocking a build, a test or an export: every gate in the
-repository is green (host 1,887 checks, 220 unit, 51 exporter, 51 visual, 0 audit findings, and a firmware
-that compiles at RAM 24.6% / Flash 38.0%). Two of the five are features nobody has started, two need
-hardware that has never existed for this project, and `I2a` is a rule enforced by prose. That is a different
-condition from "twelve things are broken", which is what this register looked like a day ago.
+repository is green (host **1,970 checks across 24 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
+findings, and a firmware that compiles at RAM 24.6% / Flash 38.1%, measured 2026-08-20). One is a feature
+nobody has started, two need hardware that has never existed for this project, `I2a` is a rule enforced by
+prose, and `DF22` is a real defect that costs a Modbus master nine registers of live status. That is a
+different condition from "twelve things are broken", which is what this register looked like two days ago.
 
 ---
 
@@ -102,22 +104,111 @@ at all to a third-party pack on an SD card.
 
 ---
 
-## N-c 🟡 MQTT is a REPORT-ONLY surface, so "every setting is writable from every route" is not true of it
+## DF22 🟡 Eight LIVE network registers are written by nothing, and §5.1's error report is erased
 
-Recorded because the four-surface question keeps being asked as though MQTT were one of the four. It is
-not, today. The only subscription is `<prefix>/status` — Home Assistant's birth message — so nothing a
-broker sends can change a setting. The command topics are specified in
-`../Requirements/feature addition/WiFi_MQTT_Connectivity.md` §4.4.1 and are **not built**, and
-`kMqttLastCmdResult` (register 565) exists to report the result of a command that cannot yet arrive.
+Found 2026-08-20 while building N-c, which needed register 565 to actually reach a master.
 
-**This is a feature, queued by the owner, not a defect** — which is exactly why it belongs here rather
-than in the defect list below. The three routes that DO write (panel, RS485, portal) agree, and RS485
-remains the source of truth.
+`ModbusManager::syncGlobalRegisters` republishes the whole 233-register network block from
+`NetRegisterMap::publish` on every sync. That function packs the **settings** and the revision, and
+zeroes everything else in the block — so every read-only LIVE register in it reads 0 forever, no matter
+what the device is doing:
 
-**One consequence worth stating:** the panel cannot edit text at all (there is no on-device text
+| Register | What a master reads | What it should read |
+| --- | --- | --- |
+| `501` `kWifiState` | always 0 = *disabled* | the `WifiState` enum, on a device that may be associated |
+| `502` `kWifiRssi` | always 0 | dBm while associated |
+| `503`–`504` `kWifiIp` | always 0.0.0.0 | the DHCP address |
+| `505`–`507` `kWifiMac` | always 0 | the station MAC — the `<mac-suffix>` every MQTT identity derives from |
+| `675` `kPortalRemainingS` | always 0 = *no portal open* | seconds left before R7.6 closes the window |
+| `676`–`691` `kApSsid` | always empty | the provisioning AP an on-site colleague must join |
+| `692`–`707` `kApPassword` | always empty | its WPA2 key — shown in clear ON PURPOSE, R5.3 |
+| `708`–`709` `kApIp` | always 0.0.0.0 | the address to browse to while the portal is up |
+
+Eight fields, nineteen registers. `731` `kRevision` is the one read-only register in the block that *is*
+written — `publish` fills it every sync — which is what made the gap easy to miss: the block is not
+entirely dead.
+
+**And `732` `kLastError` is worse than dead.** It IS written, at `modbus_manager.cpp:84`, when a master's
+`NET_APPLY` is refused — and §5.1 requires exactly that, because a block write across the region must
+SUCCEED rather than except, so the refusal has nowhere else to go. But the next `syncGlobalRegisters()`
+zeroes it, and that runs on the logic loop. So the one channel §5.1 gives a master for "your apply was
+refused, and why" reports success a few milliseconds later. A master polling the register after its own
+write will usually read 0 and conclude the apply worked.
+
+That makes `kLastError` the sharpest half of this item and the one to fix first: the others withhold
+information, this one contradicts itself. It also needs a different fix — not "publish the live value",
+but "do not zero this one", i.e. read the current value before the block loop and write it back after, or
+keep it in `firmware.cpp` like 561 and 565. The second is consistent with what N-c already did.
+
+**Why this matters more than a missing value.** `MEMORY.md`'s first principle is that RS485 is the source
+of truth, and the network block is the one place that is flatly untrue: a master can WRITE every network
+setting and READ none of the resulting state. Of the eight silent ones, `kWifiMac` costs most — an
+integrator deriving the device's MQTT identity from register 505 gets zeros, and that identity is
+documented as MAC-derived — and `kPortalRemainingS` next: a remote operator cannot tell whether the portal
+an on-site colleague needs is still open. (`kLastError` above is worse than any of them, but it is a
+different bug with a different fix.)
+
+**Registers 561 and 565 are NOT in this list because N-c fixed them**, and fixed them in a way this item
+should copy rather than reinvent: two `const uint16_t*` on `ModbusDependencies`, written **after** the
+block loop in `syncGlobalRegisters`, from values `firmware.cpp` maintains. Fixing the other nine is the
+same shape plus the packing that `publish` already owns for IP, MAC and text — which is the argument for
+doing it inside `NetRegisterMap` with a status argument, rather than nine more pointers.
+
+**The decision this needs, and it is small:** `publish(settings, out, count)` gains a
+`const NetStatusSnapshot&`, or a second function `publishStatus(status, out, count)` runs after it. The
+first keeps one packing implementation; the second keeps the settings path free of a dependency on
+`net_status.h`. **Recommendation: the second** — `publish` is called from the portal tests with no
+snapshot to hand, and a second function is additive, so no existing caller changes. `kLastError` is not
+part of that: it is not in any snapshot, it is a record of something that already happened, and it wants
+preserving rather than republishing.
+
+**What is NOT wrong here.** The panel shows every one of these correctly: it reads
+`NetStatusSnapshot` directly through `ui_bindings.cpp`, never the register bank. So this is invisible on
+the device and only a master sees it — which is exactly why it survived this long.
+
+**Blocks.** Any integration that reads network status over RS485, and any master that checks whether its
+own `NET_APPLY` was accepted. Nothing on the device, and nothing in MQTT.
+
+**Verify a fix like this:** write a bad staged value, apply it, and read `732` *after* at least one logic
+pass — not immediately. Reading it in the same breath as the write is what would make a broken fix look
+correct, and is presumably how this passed review when §5.1 was implemented.
+
+---
+
+## ~~N-c~~ ✅ FIXED 2026-08-20 — MQTT accepts commands, with both safeguards
+
+Recorded because the four-surface question kept being asked as though MQTT were one of the four. It now
+is, for measurements: §4.4.1's three command topics are built, discovered as Home Assistant `button`
+entities, and a reset arrives through the same holding-register write a Modbus master performs (R4.4.3),
+so a reset from HA, from the panel's confirm screen and from the bus are one implementation.
+
+**What landed.** `MqttCommandRouter` (Arduino-free, host-tested, 49 checks) owns every decision: the
+magic payload, the retain check, both halves of the rate limit, and the command→register mapping.
+`firmware.cpp` is a five-line adapter on esp-mqtt's task that latches and returns, plus a consumer on the
+logic task that has the clock, NVS and the Modbus manager. Three `button` entities carry
+`payload_press` — without it Home Assistant sends `PRESS`, the router answers `bad-payload`, and the
+button ships broken, which is the one thing in this slice that was going to be wrong.
+
+**Three things it taught, worth keeping:**
+
+1. **Change detection does not rescue a changed value.** `MqttPublisher::tick` returns early on
+   `!heartbeat && !rateLimitCleared` *before* formatting anything, so a refusal left to change detection
+   alone is invisible for up to a full publish period. Every evaluated command now arms a full publish.
+   The test says so, because I had written the opposite and it passed for the wrong reason.
+2. **The persisted guard is only as good as the clock**, and that is stated rather than hidden: with no
+   trusted time it cannot fire and the `millis()` half carries it alone. All three clock routes exist
+   now (N-d1), so the degraded case is a device nobody commissioned.
+3. **R4.4.2d says "the status topic"**, which reads literally as `<base>/status` — R4.5.1's retained
+   `online`/`offline` will message. A JSON object there would break every entity's availability, so the
+   result rides `<base>/diagnostics/state` beside `rssi` and `uptimeS`. Written down in
+   `mqtt_publisher.h` because the next reader will check.
+
+**One consequence worth restating:** the panel cannot edit text at all (there is no on-device text
 editor), so SSID, broker host and topics are portal-or-Modbus only. That is a decision, not a gap, and
 it means a device with no Modbus master and an expired provisioning window has no route to its own
-network settings. The portal timer is the thing standing between an operator and a reflash.
+network settings. The portal timer is the thing standing between an operator and a reflash. And nothing
+that changes *configuration* is reachable over MQTT, deliberately: a reset is recoverable by re-reading
+the meter, a repointed broker is not.
 
 ---
 
@@ -159,9 +250,9 @@ error under a second); retry two minutes after a failure; fifteen seconds of sil
 knows SNTP answered because the SYSTEM clock becomes plausible — `time()` starts at 1970 and only SNTP moves
 it, while `DeviceClock` keeps its own base, so it cannot be an echo of what the operator or RTC supplied.
 
-**What is left of the chain:** MQTT, and only because it needs N-c's unbuilt command topics. Three of the four
-routes are built, and the two that work without a network — Modbus and the portal — were the first two
-deliberately.
+**What is left of the chain:** nothing. All four routes are built — Modbus (N-d1), the portal (R7.9d), NTP
+(R7.13), and MQTT, whose command topics landed with N-c on 2026-08-20. The two that work without a network
+were the first two, deliberately.
 
 **The gap it closed, for the record:**
 
@@ -175,7 +266,8 @@ date it is allowed to trust, and **a Modbus master has no way to set it.**
 **Where the feature stopped**, in the owner's own ordering: the clock and its trust state are built,
 a session reset is dated through `ModbusManager::Dependencies::clock`, and P3 shows the session start.
 Next is the **Modbus date/time block** — the one that makes every later item settable — then the portal
-page, then NTP on `WifiState::Connected`, with MQTT last because it needs the unbuilt command topics.
+page, then NTP on `WifiState::Connected`, with MQTT last because it needed N-c's command topics. All four
+landed, in that order.
 
 **N-d2 ⏸️ Nothing protects the VLF probe's position, and whether the RTC survives power loss is
 unknown.** A second, sharper thing on the same subject, and the half that needs the board.

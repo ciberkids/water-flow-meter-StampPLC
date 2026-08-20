@@ -25,6 +25,8 @@ const kByBinding: Record<string, string> = {
   "net.wifi.ip": "192.168.1.50",
   "net.wifi.rssi": "-57",
   "net.mqtt.state": "OK",
+  // The IDLE wording, not a success: a device that has had no command must not display one (R4.4.2d).
+  "net.mqtt.lastCommandResult": "idle",
   "net.ap.ssid": "water_flow_meter_309245",
   "net.ap.password": "KU67QJ4DRPDP",
   "net.ap.ip": "192.168.4.1",
