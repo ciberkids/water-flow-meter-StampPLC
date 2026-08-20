@@ -141,6 +141,13 @@ read  kWifiState  (501)                        -> 2 connecting, then 3 connected
 read  kLastError  (732)                        -> if the apply was refused
 ```
 
+Two of those three reads returned 0 no matter what happened, until 2026-08-20. `kWifiState` was
+never written at all — the whole live half of the block was zeroed on every republish — and
+`kLastError` was written on a refusal and erased within a second. So this sequence, the one route a
+device with no portal window has, could not distinguish a successful association from a refused
+apply. It works now, and the registers refresh once a second; if you are reading this against
+firmware older than that, only `kRevision` means anything.
+
 Staging matters here for the same reason it does on the serial link: these fields have to change
 together or not at all. A committed SSID with an uncommitted passphrase is a device that cannot
 associate and has forgotten how it used to.

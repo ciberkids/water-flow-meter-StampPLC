@@ -30,11 +30,12 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Six open lines, one of them a defect — and it is the only 🔴 on the board.** `N-c` closed on 2026-08-20 and `DF22` opened in the same round —
-it was found by building `N-c`, which is the usual way. What remains is one queued FEATURE, one defect, two
-things that need the board, and one missing gate. Ask for work by ID — "fix DF22", "decide N-b" — and this
-file is the one place that says what an ID means. Rule **I3** below governs them: append-only, never reused,
-so a gap means an item closed, not an item lost.
+**Five open lines, and not one of them is a defect.** `N-c` and `DF22` both closed on 2026-08-20 —
+`DF22` was found by building `N-c`, which is the usual way, and was the only 🔴 the board has had since
+the register was rewritten. What remains is one queued FEATURE, one missing gate, one piece of residue,
+and three things that need the board. Ask for work by ID — "decide N-b", "build I2a" — and this file is
+the one place that says what an ID means. Rule **I3** below governs them: append-only, never reused, so
+a gap means an item closed, not an item lost.
 
 **`N-c` stays in this file rather than moving to the archive**, because one thing in it is verified by
 reading only: `MQTT_EVENT_DATA`'s retain flag, which R4.4.2c depends on entirely and which no host test
@@ -47,23 +48,20 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | correction + measurement | Nothing protects the VLF probe's position above `M5StamPLC.begin()`, and whether the RTC survives power loss is unknown |
-| **DF22** | 🔴 | defect, found 2026-08-20 | Eight of the network block's read-only LIVE registers are written by nothing and `NET_LAST_ERROR` is erased on the next sync, so the wiki's "fully remote path" for provisioning over Modbus cannot be followed: two of its three verification reads always return 0 |
 | **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
 | **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
 | **J9** | 🟢 | residue, found 2026-08-20 | `nyquist-warning` is a screen in the dataset that nothing can navigate to — the earlier design of §5.5's prompt, left behind when the in-place one replaced it |
 
-**DF1–DF21 and J1–J8** are fixed and keep their IDs — moved to
+**DF1–DF22 and J1–J8** are fixed and keep their IDs — `DF1`–`DF21` and `J1`–`J8` moved to
 [`../archive/open_decisions-closed-2026-08-18.md`](../archive/open_decisions-closed-2026-08-18.md), verbatim,
 because I3 makes them append-only and a retired id must still resolve. **I2** and **I3** are standing rules
 that never close.
 
 **What this list is NOT.** Nothing here is blocking a build, a test or an export: every gate in the
-repository is green (host **1,970 checks across 24 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
-findings, and a firmware that compiles at RAM 24.6% / Flash 38.1%, measured 2026-08-20). One is a feature
+repository is green (host **1,997 checks across 24 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
+findings, and a firmware that compiles at RAM 24.7% / Flash 38.2%, measured 2026-08-20). One is a feature
 nobody has started, two need hardware that has never existed for this project, `I2a` is a rule enforced by
-prose, and `DF22` is a real defect: eight fields of live status across nineteen registers, plus an error
-report that contradicts itself, which together break the documented remote-provisioning procedure. That
-is a
+prose, and `J9` is residue. That is a
 different condition from "twelve things are broken", which is what this register looked like two days ago.
 
 ---
@@ -113,93 +111,57 @@ at all to a third-party pack on an SD card.
 
 ---
 
-## DF22 🟡 Eight LIVE network registers are written by nothing, and §5.1's error report is erased
+## ~~DF22~~ ✅ FIXED 2026-08-20 — the network block's live half is published, and 732 stops lying
 
-Found 2026-08-20 while building N-c, which needed register 565 to actually reach a master.
+Found while building `N-c`, which needed register 565 to actually reach a master, and closed the same
+day in two commits because it was two defects wearing one name.
 
-`ModbusManager::syncGlobalRegisters` republishes the whole 233-register network block from
-`NetRegisterMap::publish` on every sync. That function packs the **settings** and the revision, and
-zeroes everything else in the block — so every read-only LIVE register in it reads 0 forever, no matter
-what the device is doing:
+**The eight silent fields.** `ModbusManager::syncGlobalRegisters` republishes the whole 233-register
+network block from `NetRegisterMap::publish`, which packs the settings and zeroes everything else — so
+501 `kWifiState`, 502 `kWifiRssi`, 503-504 `kWifiIp`, 505-507 `kWifiMac`, 675 `kPortalRemainingS`,
+676-691 `kApSsid`, 692-707 `kApPassword` and 708-709 `kApIp` read 0 forever. Fixed with
+`NetRegisterMap::publishStatus`, additive and run after `publish`, fed by a `NetStatusSnapshot` that
+`firmware.cpp` refreshes once per logic pass and that **the panel reads too** — one snapshot, so an
+operator at the device and a master on the bus cannot describe different states.
 
-| Register | What a master reads | What it should read |
-| --- | --- | --- |
-| `501` `kWifiState` | always 0 = *disabled* | the `WifiState` enum, on a device that may be associated |
-| `502` `kWifiRssi` | always 0 | dBm while associated |
-| `503`–`504` `kWifiIp` | always 0.0.0.0 | the DHCP address |
-| `505`–`507` `kWifiMac` | always 0 | the station MAC — the `<mac-suffix>` every MQTT identity derives from |
-| `675` `kPortalRemainingS` | always 0 = *no portal open* | seconds left before R7.6 closes the window |
-| `676`–`691` `kApSsid` | always empty | the provisioning AP an on-site colleague must join |
-| `692`–`707` `kApPassword` | always empty | its WPA2 key — shown in clear ON PURPOSE, R5.3 |
-| `708`–`709` `kApIp` | always 0.0.0.0 | the address to browse to while the portal is up |
+**And 732 `kLastError`, which was worse than silent.** `applyHoldingWrite` writes it when an apply is
+refused, because §5.1 requires a block write across the region to succeed rather than except, so the
+refusal has nowhere else to go — and the next sync zeroed it. `0` is `NetApplyError::None`, so the
+register did not go blank, it reported success. Fixed by carrying the value across the block write: it
+is a RECORD, not a reading, so it belongs to neither `publish` nor a snapshot.
 
-Eight fields, nineteen registers. `731` `kRevision` is the one read-only register in the block that *is*
-written — `publish` fills it every sync — which is what made the gap easy to miss: the block is not
-entirely dead.
+**A timing claim in this entry was wrong.** It said the erase happened "a few milliseconds later"
+because the sync "runs on the logic loop". `syncGlobalRegisters` is not called per pass — it runs from
+`sensorStateEngine.update`, which the loop gates behind `now - lastCalcTime >= 1000`, plus on a
+master's reset, a link restart and a rollback. So the window was up to **one second**, not
+milliseconds. The defect is identical in substance and the correction is here rather than quietly
+edited away, because "how often does this actually happen" was the question that decided the fix's
+shape: at 1 Hz, a `publishStatus` inside the existing sync is fresh enough for a radio state, and no
+separate periodic writer was needed.
 
-**And `732` `kLastError` is worse than dead.** It IS written, at `modbus_manager.cpp:84`, when a master's
-`NET_APPLY` is refused — and §5.1 requires exactly that, because a block write across the region must
-SUCCEED rather than except, so the refusal has nowhere else to go. But the next `syncGlobalRegisters()`
-zeroes it, and that runs on the logic loop. So the one channel §5.1 gives a master for "your apply was
-refused, and why" reports success a few milliseconds later. A master polling the register after its own
-write will usually read 0 and conclude the apply worked.
+**What made it findable, and what hid it.** Three places already recorded the silent half —
+`wifi_manager.h`, `wifi_manager_test.cpp` and `ui_renderer.cpp` all say some form of "`publish()` does
+not write 501" — each stating it as a *reason* rather than as a gap, and none of them in this register.
+What hid the 732 half is sharper: the existing assertion in `modbus_write_multiple_test.cpp` read the
+register in the same breath as the write, so it passed over the erase completely. The new one syncs
+first and says why.
 
-That makes `kLastError` the sharpest half of this item and the one to fix first: the others withhold
-information, this one contradicts itself. **And the wiki already tells integrators to rely on it** —
-`tools/wiki/pages/WiFi.md:141` documents the provisioning sequence as ending `read kLastError (732) ->
-if the apply was refused`. So the published interface promises a check that reports success whatever
-happened. The page is right about what the register is FOR; the firmware is what needs to catch up, and
-the page should not be softened to match the defect. It also needs a different fix — not "publish the live value",
-but "do not zero this one", i.e. read the current value before the block loop and write it back after, or
-keep it in `firmware.cpp` like 561 and 565. The second is consistent with what N-c already did.
+**The cost, stated as it was found.** `WiFi.md` calls the Modbus route "the fully remote path, and
+currently the reliable one" and ends it with three verification reads — `kRevision`, `kWifiState`,
+`kLastError` — of which one worked. A master could not tell a successful association from a refused
+apply, on a device whose only other remote route is a portal window that expires. That page now says
+so, including for anyone reading it against older firmware.
 
-**The published provisioning procedure cannot be followed.** `tools/wiki/pages/WiFi.md:130-141` calls
-the Modbus route "the fully remote path, and currently the reliable one" and ends it with three reads:
+**One thing the fix corrected on the way past:** `wifi_manager.h` said the MAC is "published at
+registers 503–508", which is the IP's window and one register too many. It is 505-507. Nothing
+published it at all until now, which is why the wrong span went unnoticed.
 
-```
-read  kRevision   (731)   -> incremented, so the write took          # works
-read  kWifiState  (501)   -> 2 connecting, then 3 connected          # always 0 = disabled
-read  kLastError  (732)   -> if the apply was refused                # always 0 = no error
-```
-
-One of the three works. An integrator following the documented sequence commits credentials, sees state
-`0` — which the register reference spells *disabled* — and `kLastError` `0`, and has no way to tell a
-successful association from a refused apply from a radio that never came up. This is the single best
-argument for the item's priority: it is not a missing convenience, it is the advertised commissioning
-path for a device with no other remote route.
-
-**Why this matters more than a missing value.** `MEMORY.md`'s first principle is that RS485 is the source
-of truth, and the network block is the one place that is flatly untrue: a master can WRITE every network
-setting and READ none of the resulting state. Of the eight silent ones, `kWifiMac` costs most — an
-integrator deriving the device's MQTT identity from register 505 gets zeros, and that identity is
-documented as MAC-derived — and `kPortalRemainingS` next: a remote operator cannot tell whether the portal
-an on-site colleague needs is still open. (`kLastError` above is worse than any of them, but it is a
-different bug with a different fix.)
-
-**Registers 561 and 565 are NOT in this list because N-c fixed them**, and fixed them in a way this item
-should copy rather than reinvent: two `const uint16_t*` on `ModbusDependencies`, written **after** the
-block loop in `syncGlobalRegisters`, from values `firmware.cpp` maintains. Fixing the other nine is the
-same shape plus the packing that `publish` already owns for IP, MAC and text — which is the argument for
-doing it inside `NetRegisterMap` with a status argument, rather than nine more pointers.
-
-**The decision this needs, and it is small:** `publish(settings, out, count)` gains a
-`const NetStatusSnapshot&`, or a second function `publishStatus(status, out, count)` runs after it. The
-first keeps one packing implementation; the second keeps the settings path free of a dependency on
-`net_status.h`. **Recommendation: the second** — `publish` is called from the portal tests with no
-snapshot to hand, and a second function is additive, so no existing caller changes. `kLastError` is not
-part of that: it is not in any snapshot, it is a record of something that already happened, and it wants
-preserving rather than republishing.
-
-**What is NOT wrong here.** The panel shows every one of these correctly: it reads
-`NetStatusSnapshot` directly through `ui_bindings.cpp`, never the register bank. So this is invisible on
-the device and only a master sees it — which is exactly why it survived this long.
-
-**Blocks.** Any integration that reads network status over RS485, and any master that checks whether its
-own `NET_APPLY` was accepted. Nothing on the device, and nothing in MQTT.
-
-**Verify a fix like this:** write a bad staged value, apply it, and read `732` *after* at least one logic
-pass — not immediately. Reading it in the same breath as the write is what would make a broken fix look
-correct, and is presumably how this passed review when §5.1 was implemented.
+**Verified:** 27 new host checks across two suites — the packing (exact register values, both word
+orders, the span boundaries, and that `publishStatus` before `publish` is erased by it) and the
+integration (that the manager calls it, in the right order, and that a second sync does not lose it).
+Negative-tested by reversing the call order (8 failures), flipping the IP word order (caught), and
+writing `kLastError` back as zero (caught). A null snapshot leaves the registers alone, which is the
+boot pass. Host 1,997 checks; RAM 24.6 % → 24.7 %, the cost of one cached snapshot.
 
 ---
 
@@ -236,7 +198,7 @@ button ships broken, which is the one thing in this slice that was going to be w
 The retain check (R4.4.2c) rests entirely on `event->retain` being populated for `MQTT_EVENT_DATA` in
 this build, and **nothing that has run touches that field.** `mqtt_transport_esp.h` is not
 host-compiled — which is why the host suite went green the instant the callback grew the parameter — so
-the 1,970 checks cover the router's *decisions* and none of the adapter: the latch, the retain flag, the
+the 1,997 checks cover the router's *decisions* and none of the adapter: the latch, the retain flag, the
 R4.4.5 re-check, the persist-on-accept, the `requestFullPublish` arming and the boot seed are all
 verified by reading only.
 

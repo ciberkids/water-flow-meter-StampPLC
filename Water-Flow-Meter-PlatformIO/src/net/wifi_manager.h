@@ -283,7 +283,9 @@ class WifiManager {
    *
    * DEGRADATION worth knowing: if the adapter hands back a zero MAC, every device derives the same
    * name — the identity swap R7.5a exists to prevent. That is why the MAC is also exposed above
-   * and published at registers 503–508: an all-zero MAC is then visible rather than silent.
+   * and published at registers 505-507: an all-zero MAC is then visible rather than silent. (It said
+   * 503-508 until 2026-08-20, which is the IP's window and one register too many — and nothing
+   * published it at all until then, which is why the wrong span went unnoticed.)
    */
   const char* apSsid() const { return apSsid_; }
 

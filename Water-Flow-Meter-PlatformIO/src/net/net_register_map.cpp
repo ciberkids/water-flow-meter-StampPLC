@@ -1,5 +1,7 @@
 #include "net/net_register_map.h"
 
+#include "net/net_status.h"
+
 #include <cstring>
 
 namespace plc {
@@ -137,6 +139,30 @@ NetApplyError NetRegisterMap::applyWrite(NetSettings& settings, uint16_t value) 
   return settings.apply() ? NetApplyError::None : NetApplyError::NothingStaged;
 }
 
+namespace {
+
+/**
+ * Packs a NUL-terminated string into consecutive registers, two characters each, high byte first.
+ *
+ * The same convention `publish` uses for the settings text, written once here because the AP strings
+ * are read-only and so cannot go through the `NetField` loop that packs the rest.
+ */
+template <typename Put>
+void putText(const Put& put, uint16_t base, std::size_t capacityBytes, const char* value) {
+  const uint16_t registers = net_reg::textRegisters(capacityBytes);
+  for (uint16_t r = 0; r < registers; ++r) {
+    const std::size_t at = static_cast<std::size_t>(r) * 2;
+    const char high = value[at] != '\0' ? value[at] : '\0';
+    const char low = high != '\0' && value[at + 1] != '\0' ? value[at + 1] : '\0';
+    put(static_cast<uint16_t>(base + r), NetRegisterMap::packChars(high, low));
+    if (high == '\0') {
+      break;  // the block is already zeroed, so a short string needs no padding written
+    }
+  }
+}
+
+}  // namespace
+
 void NetRegisterMap::publish(const NetSettings& settings, uint16_t* out, std::size_t count) {
   if (!out) {
     return;
@@ -181,6 +207,61 @@ void NetRegisterMap::publish(const NetSettings& settings, uint16_t* out, std::si
       }
     }
   }
+}
+
+void NetRegisterMap::publishStatus(const NetStatusSnapshot& status, uint16_t* out,
+                                   std::size_t count) {
+  if (!out) {
+    return;
+  }
+  const std::size_t span = net_reg::kEnd - net_reg::kBase;
+  const std::size_t limit = count < span ? count : span;
+  const auto put = [&](uint16_t address, uint16_t value) {
+    const std::size_t index = address - net_reg::kBase;
+    if (index < limit) {
+      out[index] = value;
+    }
+  };
+  // NOTE the absence of a zero-fill. `publish` did that; this runs after it and adds to the block,
+  // so a caller that forgets the ordering gets settings-only rather than status-only — the failure
+  // that was already the status quo, instead of a new one that wipes the settings.
+
+  // 501. The enum IS the wire encoding, pinned by wifi_manager_test's wireEncodingTests: nothing
+  // else defines these numbers, because the value does not live in NetSettings.
+  put(net_reg::kWifiState, static_cast<uint16_t>(status.wifiState));
+  // 502, int16 two's complement. RSSI is negative dBm, so the cast is the encoding, not a shortcut.
+  put(net_reg::kWifiRssi, static_cast<uint16_t>(status.rssiDbm));
+  // 503-504, high word first. The snapshot already holds `(a<<24)|(b<<16)|(c<<8)|d`, which is the
+  // order gen-registers publishes, so splitting it is the whole conversion.
+  put(net_reg::kWifiIp, static_cast<uint16_t>(status.ipAddress >> 16));
+  put(static_cast<uint16_t>(net_reg::kWifiIp + 1), static_cast<uint16_t>(status.ipAddress & 0xFFFFu));
+  // 505-507, two bytes per register, high byte first — the same order as text, and the same helper.
+  for (uint16_t r = 0; r < 3; ++r) {
+    const std::size_t at = static_cast<std::size_t>(r) * 2;
+    put(static_cast<uint16_t>(net_reg::kWifiMac + r),
+        packChars(static_cast<char>(status.macAddress[at]),
+                  static_cast<char>(status.macAddress[at + 1])));
+  }
+  // 675. Zero means no portal is open, which is why it cannot be left at zero while one is.
+  put(net_reg::kPortalRemainingS, status.portalRemainingS);
+  // 676-691 and 692-707. The AP password goes on the bus IN CLEAR, and that is R5.3 rather than an
+  // oversight: this describes an access point the device is BROADCASTING, which anyone in radio
+  // range already sees, and a remote operator needs it to direct somebody standing at the panel.
+  // The operator's own WiFi passphrase is a different thing entirely — `netFieldIsSecret` makes
+  // `publish` read it back as zeros, and nothing here changes that.
+  // The spans come from the ADDRESSES either side of each field, not from a `NetField` capacity that
+  // happens to match today: borrowing `WifiSsid`'s 32 bytes would give one span two homes, and the
+  // day somebody grew that field the AP strings would quietly start writing past their window.
+  static constexpr std::size_t kApSsidBytes = (net_reg::kApPassword - net_reg::kApSsid) * 2;
+  static constexpr std::size_t kApPasswordBytes = (net_reg::kApIp - net_reg::kApPassword) * 2;
+  static_assert(kApSsidBytes == 32 && kApPasswordBytes == 32,
+                "the AP strings are 32 bytes each; the snapshot's buffers are char[33]");
+  putText(put, net_reg::kApSsid, kApSsidBytes, status.apSsid);
+  putText(put, net_reg::kApPassword, kApPasswordBytes, status.apPassword);
+  // 708-709, high word first, as 503-504.
+  put(net_reg::kApIp, static_cast<uint16_t>(status.apIpAddress >> 16));
+  put(static_cast<uint16_t>(net_reg::kApIp + 1),
+      static_cast<uint16_t>(status.apIpAddress & 0xFFFFu));
 }
 
 }  // namespace plc

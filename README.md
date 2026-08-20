@@ -29,11 +29,11 @@ cd ../../Water-Flow-Meter-PlatformIO && podman build -t stampplc-fw .
 podman run --rm -v "$PWD":/workspace:Z -w /workspace stampplc-fw pio run -e m5stack-stamplc
 ```
 
-Expected, **measured 2026-08-20 on this branch**: host suite exit 0 with **1,970 checks across 24
+Expected, **measured 2026-08-20 on this branch**: host suite exit 0 with **1,997 checks across 24
 suites, 0 failures** and "manifest is up to date"; **220 unit tests in 13 files**; **51 exporter
 tests**; **51 visual tests**; export `ok` with **9 gates passing and 1 warning** (no dataset element
 surfaces a fault summary — the §2c banner is firmware-drawn). Firmware SUCCESS at **RAM 24.6 % /
-Flash 38.1 %**.
+Flash 38.2 %**.
 
 **The visual suite is green now, and it is the fifth command.** `npm run test:visual` (Playwright)
 passed **51 of 51** on this measurement. It failed 32 of 46 until **`DF17`** was fixed on 2026-08-18,
@@ -194,7 +194,7 @@ not a work list.
 
 ## Nothing has run on hardware
 
-Not once. The firmware compiles on two independent toolchains and passes 1,970 host checks, but the
+Not once. The firmware compiles on two independent toolchains and passes 1,997 host checks, but the
 RS485 pin assignment, the LED behaviour and every gesture and timing are verified only against
 the datasheet, the specifications and those tests.
 

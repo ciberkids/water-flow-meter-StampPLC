@@ -1,5 +1,8 @@
 #include "modbus/modbus_manager.h"
 
+// Dereferenced for publishStatus; net_register_map.h only forward-declares the snapshot.
+#include "net/net_status.h"
+
 #include <Preferences.h>
 
 #include <algorithm>
@@ -532,6 +535,13 @@ void ModbusManager::syncGlobalRegisters() {
     // convention. That convention having exactly one implementation is the point of NetRegisterMap.
     uint16_t block[plc::net_reg::kEnd - plc::net_reg::kBase] = {};
     plc::NetRegisterMap::publish(*deps_.net, block, sizeof(block) / sizeof(block[0]));
+    // AFTER publish, which zeroes the block: this adds the eight read-only fields that describe what
+    // the radio and the portal are doing. Null until the logic loop has built a snapshot, which is
+    // the boot pass — see ModbusDependencies::netStatus.
+    if (deps_.netStatus) {
+      plc::NetRegisterMap::publishStatus(*deps_.netStatus, block,
+                                         sizeof(block) / sizeof(block[0]));
+    }
     // NET_LAST_ERROR is a RECORD, not a reading, and it is the one cell in this block that must
     // survive the republish. `applyHoldingWrite` writes it when a master's NET_APPLY is refused —
     // §5.1 requires that, because a block write across the region must succeed rather than except,

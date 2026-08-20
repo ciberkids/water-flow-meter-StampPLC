@@ -32,6 +32,7 @@
 
 #include "led/led_controller.h"
 #include "modbus/modbus_manager.h"
+#include "net/net_status.h"
 #include "modbus/register_bank.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_types.h"
@@ -70,6 +71,7 @@ struct Device {
   LedController leds;
   plc::DeviceClock clock;
   plc::NetSettings net;
+  plc::NetStatusSnapshot netStatus;
   uint16_t connectedBitmap = 0x01;
   uint16_t undersamplingFlags = 0;
   double totalSessionLiters = 0.0;
@@ -87,6 +89,7 @@ struct Device {
     d.ledController = &leds;
     d.clock = &clock;
     d.net = &net;  // THE point of this file: null here makes the whole network branch unreachable
+    d.netStatus = &netStatus;  // DF22 — the live half of that block
     d.connectedBitmap = &connectedBitmap;
     d.undersamplingFlags = &undersamplingFlags;
     d.totalSessionLitersCache = &totalSessionLiters;
@@ -443,12 +446,62 @@ void singleWriteStillWorks() {
 
 }  // namespace
 
+void liveStatusSurvivesTheBlockRepublish() {
+  std::printf("\n[DF22 — the live registers survive syncGlobalRegisters, which used to zero them]\n");
+
+  Device dev;
+  ModbusManager modbus(dev.deps());
+
+  dev.netStatus.wifiState = plc::WifiState::Connected;
+  dev.netStatus.rssiDbm = -57;
+  dev.netStatus.ipAddress = (192u << 24) | (168u << 16) | (1u << 8) | 50u;
+  const uint8_t mac[6] = {0xA1, 0xB2, 0xC3, 0xD4, 0xE5, 0xF6};
+  std::memcpy(dev.netStatus.macAddress, mac, sizeof(mac));
+  dev.netStatus.portalRemainingS = 540;
+  std::snprintf(dev.netStatus.apSsid, sizeof(dev.netStatus.apSsid), "%s", "water_flow_meter_309245");
+  dev.netStatus.apIpAddress = (192u << 24) | (168u << 16) | (4u << 8) | 1u;
+
+  // The unit test next door proves publishStatus PACKS these. This proves the manager CALLS it, in
+  // the right order, inside the function that republishes the whole 233-register block — which is the
+  // half that was missing: publish() zeroes everything it does not pack, so a correct packer wired
+  // before it would still leave a master reading zeros.
+  modbus.syncGlobalRegisters();
+
+  check(dev.registers.at(plc::net_reg::kWifiState) == 3, "501 reads Connected after a sync");
+  check(static_cast<int16_t>(dev.registers.at(plc::net_reg::kWifiRssi)) == -57, "502 reads -57 dBm");
+  check(dev.registers.at(plc::net_reg::kWifiIp) == 0xC0A8, "503 reads the address");
+  check(dev.registers.at(plc::net_reg::kWifiMac) == 0xA1B2, "505 reads the MAC");
+  check(dev.registers.at(plc::net_reg::kPortalRemainingS) == 540, "675 reads the portal countdown");
+  check(dev.registers.at(plc::net_reg::kApSsid) != 0, "676 reads the AP name");
+  check(dev.registers.at(plc::net_reg::kApIp) == 0xC0A8, "708 reads the AP address");
+
+  // A SECOND sync must not lose them either. The first could pass on a lucky ordering; this is the
+  // one that would catch a fix applied outside the loop that publishes the block.
+  modbus.syncGlobalRegisters();
+  check(dev.registers.at(plc::net_reg::kWifiState) == 3, "and a second sync leaves 501 alone");
+
+  // The settings half is untouched by all of this.
+  check(dev.registers.at(plc::net_reg::kRevision) == dev.net.revision(),
+        "while 731 still carries the settings revision publish() packs");
+
+  // A null snapshot leaves the registers alone rather than publishing zeros as though they were
+  // readings — the boot pass, before firmware.cpp has built one.
+  Device bare;
+  ModbusDependencies noStatus = bare.deps();
+  noStatus.netStatus = nullptr;
+  ModbusManager without(noStatus);
+  without.syncGlobalRegisters();
+  check(bare.registers.at(plc::net_reg::kWifiState) == 0,
+        "a null snapshot publishes nothing, and 0 is Disabled — which is true before the radio starts");
+}
+
 int main() {
   std::printf("FC16 write-multiple, through the real frame handler\n");
   ssidOverBlockWrite();
   theAsymmetryThatGaveItAway();
   blockWriteAcrossTheWholeRegion();
   applyIsDeferredToTheEndOfTheBlock();
+  liveStatusSurvivesTheBlockRepublish();
   thePortalPasswordIsWritableToItsFullCapacity();
   theApplyMustCommitAFTERTheRegistersBEYONDIt();
   refusalsThatMustStay();

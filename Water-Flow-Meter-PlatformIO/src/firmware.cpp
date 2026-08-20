@@ -137,6 +137,20 @@ bool allSensorsReadyCache = true;
 plc::NetSettings netSettings;
 
 /**
+ * The live network status, refreshed once per logic pass and read by two consumers.
+ *
+ * A cache rather than a value built at each use, because there are now two users a pass and they must
+ * not disagree: the panel, which renders it, and `syncGlobalRegisters`, which publishes eight of its
+ * fields to registers 501-507, 675-709. Building it twice would let a master and an operator standing
+ * at the device describe different states, which is the whole failure the RS485-source-of-truth
+ * principle exists to prevent.
+ *
+ * Zero-initialised, and `ModbusDependencies::netStatus` is null until the first refresh, so the boot
+ * sync does not publish a zeroed snapshot as though it were a reading.
+ */
+plc::NetStatusSnapshot netStatusCache;
+
+/**
  * Registers 561 and 565, mirrored here because `NetRegisterMap::publish` cannot carry them.
  *
  * That function packs the network SETTINGS into a 233-register block and writes the whole block on
@@ -160,6 +174,8 @@ ModbusDependencies modbusDeps{.sensors = sensors,
                               // carry, written after it. See ModbusDependencies.
                               .mqttStateValue = &mqttStateRegisterValue,
                               .mqttLastCommandResult = &mqttLastCommandResultValue,
+                              // DF22 — the eight read-only registers `publish` cannot fill.
+                              .netStatus = &netStatusCache,
                               .connectedBitmap = &connectedSensorsBitmap,
                               .undersamplingFlags = &undersamplingFlags,
                               .totalSessionLitersCache = &totalSessionLitersCache,
@@ -473,6 +489,21 @@ void serviceMqttCommand(uint32_t now) {
                                                                  : kPrefCmdEpochTotals,
                         nowEpoch);
   }
+}
+
+/**
+ * Rebuilds `netStatusCache` from the radio, the settings, and the two facts neither of them holds.
+ *
+ * `netStatusFrom` covers everything the WiFi manager and the settings own — including the MAC, which
+ * `WifiManager::macAddress` exposes for exactly this reason. What is added here is the pair only this
+ * file can know: whether the broker connection is up, and the outcome of the last MQTT command.
+ */
+void refreshNetStatusCache() {
+  netStatusCache = plc::netStatusFrom(wifiManager, netSettings);
+  // The display's MQTT indicator stops being hard-wired false here.
+  netStatusCache.mqttConnected = mqttTransport.connected();
+  // R4.4.2d — the panel is the surface an operator standing at the device has.
+  netStatusCache.mqttLastCommandResult = static_cast<uint8_t>(mqttLastCommandResultValue);
 }
 
 /** Publishes every discovery config for the currently connected sensors (§4.4.b). */
@@ -934,6 +965,10 @@ void logicTaskCode(void * pvParameters) {
     modbusManager.syncSensorToHolding(i);
   }
   sensorStateEngine.refreshDiagnostics();
+  // Before the first sync, because that sync publishes the status registers: without it 505-507 go
+  // out as an all-zero MAC, which `apSsid()`'s note calls the failure worth making visible — so
+  // publishing it as a fact rather than as a not-yet-read would be the wrong kind of true.
+  refreshNetStatusCache();
   modbusManager.syncGlobalRegisters();
   for (std::size_t i = 0; i < kNumSensors; ++i) {
     persistedCumulative[i] = sensors[i].cumulativeLiters;
@@ -962,6 +997,12 @@ void logicTaskCode(void * pvParameters) {
 
     const InteractionResult interactions =
         interactionHandler.update(now, buttonInput, uiController);
+
+    // BEFORE the once-a-second block below, whose `sensorStateEngine.update` ends in
+    // `syncGlobalRegisters()` — the call that publishes eight of these fields to the bus. Refreshing
+    // after it would put a one-second-old radio state on the registers, which is the difference
+    // between a master seeing `Connecting` and seeing `Connected`.
+    refreshNetStatusCache();
 
     if (now - lastCalcTime >= 1000) {
       // §3.4: the boot pattern ends the moment core 0 reports a polling rate, which is
@@ -1032,15 +1073,9 @@ void logicTaskCode(void * pvParameters) {
                         pollingRate_kHz,
                         ledController,
                         interactions.countdown,
-                       [&] {
-                         auto snapshot = plc::netStatusFrom(wifiManager, netSettings);
-                         // The display's MQTT indicator stops being hard-wired false here.
-                         snapshot.mqttConnected = mqttTransport.connected();
-                         // R4.4.2d — the panel is the surface an operator standing at the device has.
-                         snapshot.mqttLastCommandResult =
-                             static_cast<uint8_t>(mqttLastCommandResultValue);
-                         return snapshot;
-                       }(),
+                        // The same snapshot the registers publish, so the panel and the bus cannot
+                        // describe different devices. Refreshed at the top of this pass.
+                        netStatusCache,
                         deviceClock);
 
     // ── MQTT (N5) ────────────────────────────────────────────────────────────────

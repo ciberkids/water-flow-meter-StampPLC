@@ -9,6 +9,13 @@
 namespace plc {
 
 /**
+ * Declared, not included: only `publishStatus`'s DEFINITION needs the members, so `net_status.h`
+ * stays out of this header's include graph — and with it `wifi_manager.h`, which `net_status.h`
+ * needs for `netStatusFrom` and which nothing else here has any business pulling in.
+ */
+struct NetStatusSnapshot;
+
+/**
  * The network holding-register block (WiFi_MQTT_Connectivity.md §5).
  *
  * Placed at 500, leaving 420-499 free so the sensor count can grow — the sensor blocks currently
@@ -272,6 +279,26 @@ class NetRegisterMap {
 
   /** Packs the live settings into `out`, which must span the whole block. */
   static void publish(const NetSettings& settings, uint16_t* out, std::size_t count);
+
+  /**
+   * Packs the LIVE STATUS into the same block, and must run AFTER `publish`.
+   *
+   * A second function rather than an argument to `publish` for two reasons: `publish` is called from
+   * tests that have no snapshot to hand, and additive means no existing caller changes. It writes
+   * only the eight read-only fields that describe what the device is doing right now — 501, 502,
+   * 503-504, 505-507, 675, 676-691, 692-707, 708-709 — and touches nothing `publish` owns.
+   *
+   * Every one of those read 0 forever until this existed, because `publish` zeroes the whole block
+   * and packs only settings. The cost was not a missing convenience: `WiFi.md` documents the Modbus
+   * route as "the fully remote path, and currently the reliable one" and ends it with three
+   * verification reads, of which only `kRevision` worked. A master could not tell a successful
+   * association from a refused apply.
+   *
+   * Byte and word order are the published contract in `gen-registers.mjs`, not a local choice:
+   * `ipv4` is "2 registers, high word first", `mac` is "3 registers, 2 bytes each, high byte first",
+   * and text is "2 characters per register, high byte first, NUL-padded".
+   */
+  static void publishStatus(const NetStatusSnapshot& status, uint16_t* out, std::size_t count);
 
   /**
    * The current `kMqttFlags` word, assembled from the LIVE settings.

@@ -6,6 +6,7 @@
 // bench, and all of it is what a master will do on its first afternoon.
 #include "net/net_register_map.h"
 #include "net/net_settings.h"
+#include "net/net_status.h"
 
 #include <cstdio>
 #include <cstring>
@@ -619,6 +620,92 @@ void discoveryPrefixTests() {
         "but the rest of the block still applied — one bad field must not block every surface");
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// DF22 — the eight LIVE registers publish() cannot fill
+// ═══════════════════════════════════════════════════════════════════════════════════════
+void statusRegisterTests() {
+  std::printf("\n[DF22 — registers 501-507 and 675-709 carry live status, or a master reads zeros]\n");
+
+  plc::NetStatusSnapshot status;
+  status.wifiState = plc::WifiState::Connected;
+  status.rssiDbm = -57;
+  status.ipAddress = (192u << 24) | (168u << 16) | (1u << 8) | 50u;
+  const uint8_t mac[6] = {0xA1, 0xB2, 0xC3, 0xD4, 0xE5, 0xF6};
+  std::memcpy(status.macAddress, mac, sizeof(mac));
+  status.portalRemainingS = 540;
+  std::snprintf(status.apSsid, sizeof(status.apSsid), "%s", "water_flow_meter_309245");
+  std::snprintf(status.apPassword, sizeof(status.apPassword), "%s", "KU67QJ4DRPDP");
+  status.apIpAddress = (192u << 24) | (168u << 16) | (4u << 8) | 1u;
+
+  // A real NetSettings, because the ordering below is the point: publish() zeroes the block.
+  NetSettings settings;
+  writeText(settings, NetField::WifiPsk, "hunter2hunter2");
+  settings.apply();
+
+  // Pre-filled with 0xFFFF so "the field was written" and "the field happened to be zero" cannot be
+  // confused — a register that reads 0 forever is the whole of this defect.
+  std::vector<uint16_t> block(plc::net_reg::kEnd - plc::net_reg::kBase, 0xFFFF);
+  NetRegisterMap::publish(settings, block.data(), block.size());
+  NetRegisterMap::publishStatus(status, block.data(), block.size());
+  const auto readAt = [&](uint16_t address) { return block[address - plc::net_reg::kBase]; };
+
+  check(readAt(plc::net_reg::kWifiState) == 3,
+        "501 carries WifiState::Connected as 3 — the enum IS the wire encoding");
+  // int16 two's complement, so -57 is 0xFFC7. Asserted as the bit pattern a master reads, not as a
+  // signed comparison, because the register is sixteen unsigned bits on the wire.
+  check(readAt(plc::net_reg::kWifiRssi) == 0xFFC7, "502 carries -57 dBm as two's complement");
+  check(static_cast<int16_t>(readAt(plc::net_reg::kWifiRssi)) == -57,
+        "which a master decoding it as int16 reads back as -57");
+
+  // gen-registers.mjs publishes "2 registers, high word first: a.b.c.d as (a<<24)|(b<<16)|(c<<8)|d".
+  // The hazard is the other order: ui_bindings.cpp carries a comment that a raw cast prints
+  // 50.1.168.192, and getting this wrong would put that bug on the bus instead of the screen.
+  check(readAt(plc::net_reg::kWifiIp) == 0xC0A8, "503 is the HIGH word of 192.168.1.50");
+  check(readAt(plc::net_reg::kWifiIp + 1) == 0x0132, "504 is the low word");
+  check(readAt(plc::net_reg::kApIp) == 0xC0A8 && readAt(plc::net_reg::kApIp + 1) == 0x0401,
+        "708-709 carry the AP address 192.168.4.1 the same way");
+
+  // "3 registers, 2 bytes each, high byte first" — and this is the value every MQTT identity in §4.4
+  // is derived from, so an integrator reading it is reading the device's name.
+  check(readAt(plc::net_reg::kWifiMac) == 0xA1B2 &&
+            readAt(plc::net_reg::kWifiMac + 1) == 0xC3D4 &&
+            readAt(plc::net_reg::kWifiMac + 2) == 0xE5F6,
+        "505-507 carry the MAC, high byte first");
+
+  check(readAt(plc::net_reg::kPortalRemainingS) == 540,
+        "675 carries the portal countdown — 0 means no portal, so it cannot sit at 0 while one is up");
+
+  // The AP strings, in the same packing as every other text field. The password goes out IN CLEAR and
+  // that is R5.3: it describes an access point the device is broadcasting, which anyone in radio
+  // range already sees.
+  check(readAt(plc::net_reg::kApSsid) == NetRegisterMap::packChars('w', 'a'),
+        "676 starts the AP SSID, two characters per register");
+  check(readAt(plc::net_reg::kApPassword) == NetRegisterMap::packChars('K', 'U'),
+        "692 starts the AP password, published in clear by R5.3");
+  check(readAt(plc::net_reg::kWifiPsk) == 0,
+        "while the OPERATOR's passphrase is still zeros — R5.3's asymmetry, not an inconsistency");
+
+  // The spans must not run into each other. Derived from the addresses rather than from a NetField
+  // capacity that happens to match, so growing WifiSsid cannot silently move them.
+  check(readAt(plc::net_reg::kApPassword - 1) == 0,
+        "the SSID stops inside its own window rather than running into 692");
+  check(readAt(plc::net_reg::kApIp - 1) == 0, "and the password stops before 708");
+
+  // Ordering is load-bearing: publish() zeroes the whole block, so status-then-settings loses the
+  // status. Stated as a test because the two calls look interchangeable at the call site.
+  std::vector<uint16_t> wrongOrder(plc::net_reg::kEnd - plc::net_reg::kBase, 0xFFFF);
+  NetRegisterMap::publishStatus(status, wrongOrder.data(), wrongOrder.size());
+  NetRegisterMap::publish(settings, wrongOrder.data(), wrongOrder.size());
+  check(wrongOrder[plc::net_reg::kWifiState - plc::net_reg::kBase] == 0,
+        "publishStatus BEFORE publish is erased by it — the order in syncGlobalRegisters matters");
+
+  // And a short count truncates rather than writing past the caller's buffer.
+  std::vector<uint16_t> tiny(4, 0xFFFF);
+  NetRegisterMap::publishStatus(status, tiny.data(), tiny.size());
+  check(tiny[plc::net_reg::kWifiState - plc::net_reg::kBase] == 3 && tiny.size() == 4,
+        "a short block is filled as far as it reaches and no further");
+}
+
 int main() {
   std::printf("plc::NetSettings — text settings storage and register packing\n\n");
   defaultsTests();
@@ -633,6 +720,7 @@ int main() {
   baseTopicRegisterTests();
   portalResetTests();
   discoveryPrefixTests();
+  statusRegisterTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

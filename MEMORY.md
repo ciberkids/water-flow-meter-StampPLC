@@ -260,9 +260,11 @@ Nothing is blocking. The register's five remaining lines are, in the order that 
    guard against a retained `RESET` wiping the totals on every reboot — the rate limit cannot catch that
    one, because a reboot clears the `millis()` guard and any downtime over a minute clears the persisted
    one. One `mosquitto_pub -r` and a power cycle settles it; the register entry has the commands.
-3. **`DF22`** — eight read-only LIVE network registers are written by nothing, and `NET_LAST_ERROR` is
-   written on a refused apply and erased by the next sync, so §5.1's refusal report reads as success. The
-   only 🟡 defect, and the one place "RS485 is the source of truth" is flatly untrue.
+3. ~~**`DF22`**~~ — **fixed 2026-08-20**, the day it was found, in two commits: `publishStatus` for the
+   eight silent live registers, and carrying `NET_LAST_ERROR` across the block write. One snapshot now
+   feeds both the panel and the bus, so they cannot describe different states. It also corrected a claim
+   I had written in the entry: the sync runs at 1 Hz, from `sensorStateEngine.update`, not on every
+   logic pass — which is what decided the fix's shape.
 4. **`N-b`** — the catalogue version in the manifest, so growing the settings catalogue stops silently
    invalidating authored packs. `J1`'s ring gate and this are the two the pack format assumes.
 5. **`I2a`** — a checked-in `id → meaning` snapshot that CI diffs, which is the only thing that would make
@@ -273,6 +275,12 @@ Two gates that exist but are narrower than they look, worth widening when someon
 visual suite with `--ignore-snapshots` (pixels are a local gate until baselines are generated in the CI
 image), and the accessibility spec checks names and ids but not contrast or focus order, which needs an `axe`
 dependency decision.
+
+**A fourth, and it is the shape this project keeps finding:** an assertion that reads a register in the
+same breath as the write that set it cannot see anything a later pass does to it. That is exactly how
+`NET_LAST_ERROR` shipped reporting success — `modbus_write_multiple_test.cpp` checked 732 immediately
+after a refused apply and passed, while the next `syncGlobalRegisters` zeroed it. When a value is
+published on a cadence, test it *after* one.
 
 **A third, learned on 2026-08-20:** `MqttPublisher::tick` returns early on `!heartbeat && !rateLimitCleared`
 *before* formatting anything, so its change detection cannot rescue a value that changed inside the

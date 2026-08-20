@@ -25,6 +25,16 @@ struct NetStatusSnapshot {
   int16_t rssiDbm = 0;
   /** `(a << 24) | (b << 16) | (c << 8) | d`, or 0 before DHCP. */
   uint32_t ipAddress = 0;
+  /**
+   * The factory MAC, six bytes — registers 505-507, and the only place a master can read it.
+   *
+   * From `WifiManager::macAddress`, whose own comment names this as its purpose: the AP identity is
+   * MAC-derived, and "if the adapter hands back a zero MAC, every device derives the same name", so
+   * publishing the MAC is what makes that failure visible instead of silent. It matters beyond that
+   * too — every MQTT identity in §4.4 is documented as derived from the last three bytes, so an
+   * integrator reading 505-507 is reading the device's name.
+   */
+  uint8_t macAddress[6] = {};
   char ssid[33] = {};
 
   // ── The provisioning AP (§5.2, R7.5, R7.5a) ────────────────────────────────────
@@ -133,6 +143,7 @@ inline NetStatusSnapshot netStatusFrom(const WifiManager& wifi, const NetSetting
   out.apIpAddress = wifi.apIpAddress();
   out.portalRemainingS = wifi.portalRemainingS();
   net_status_detail::copyField(out.ssid, sizeof(out.ssid), wifi.ssid());
+  wifi.macAddress(out.macAddress);
   net_status_detail::copyField(out.apSsid, sizeof(out.apSsid), wifi.apSsid());
   net_status_detail::copyField(out.apPassword, sizeof(out.apPassword), wifi.apPassword());
   out.mqttEnabled = settings.mqttEnabled();

@@ -80,6 +80,17 @@ struct ModbusDependencies {
    */
   const uint16_t* mqttStateValue = nullptr;
   const uint16_t* mqttLastCommandResult = nullptr;
+
+  /**
+   * The live network status, for the eight read-only registers `publish` cannot fill.
+   *
+   * Nullable and checked so the host tests can leave it out, but `firmware.cpp` sets it for the
+   * device's whole life. That is safe because the snapshot is honest before the radio starts: the
+   * state machine constructs as `Disabled`, there is no address and no AP, and those are the values
+   * a master should read from a device that has not brought its radio up yet. The one field that
+   * would be wrong is the MAC, so the boot pass refreshes the cache before its first sync.
+   */
+  const plc::NetStatusSnapshot* netStatus = nullptr;
   uint16_t* connectedBitmap = nullptr;
   uint16_t* undersamplingFlags = nullptr;
   double* totalSessionLitersCache = nullptr;
