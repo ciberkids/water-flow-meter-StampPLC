@@ -6,6 +6,7 @@
 #include <string_view>
 
 #include "modbus/register_map.h"
+#include "net/mqtt_command_router.h"
 // Included directly rather than relied on through ui_controller.h: this file names plc::civilFromEpoch
 // and plc::UtcCivil itself, and a transitive include is one refactor away from disappearing.
 #include "time/device_clock.h"
@@ -140,13 +141,15 @@ void formatIpv4(uint32_t packed, char* out, std::size_t size) {
                 static_cast<unsigned>((packed >> 8) & 0xFF), static_cast<unsigned>(packed & 0xFF));
 }
 
-/** The MQTT half of the summary, kept honest about the three states it can be in. */
+/**
+ * The MQTT half of the summary, kept honest about the four states it can be in.
+ *
+ * The decision moved to `net_status.h` when register 561 stopped being dead: the bus and the panel
+ * report one device, so they derive from one function rather than from two agreeing copies.
+ */
 const char* mqttStateText(const plc::NetStatusSnapshot& net) {
-  if (!net.mqttEnabled) return "OFF";
-  if (net.mqttConnected) return "OK";
-  // Enabled but not connected. Distinguishing "no broker configured" from "configured and down" is
-  // the difference between "finish setting it up" and "go look at the broker".
-  return net.mqttConfigured ? "DOWN" : "UNSET";
+  return plc::mqttLinkStateText(
+      plc::mqttLinkState(net.mqttEnabled, net.mqttConfigured, net.mqttConnected));
 }
 
 }  // namespace
@@ -186,6 +189,16 @@ bool UiBindingResolver::resolveNetworkBinding(const UiRenderContext& context,
   }
   if (binding == "net.mqtt.state") {
     return copyLiteral(mqttStateText(net), buffer, bufferSize);
+  }
+  if (binding == "net.mqtt.lastCommandResult") {
+    // R4.4.2d — the panel is one of the two surfaces a refusal has to reach. The words come from
+    // `mqttCommandResultText` rather than being spelled again here: they are also the wire values in
+    // the diagnostics payload and the catalogue, and three spellings of one fact is the shape this
+    // codebase keeps finding wrong. The longest is `retained-ignored` at 16 characters, which fits
+    // the 26 the value column has at x=84 (§4.6's 6-pixel Font0).
+    return copyLiteral(
+        plc::mqttCommandResultText(static_cast<plc::MqttCommandResult>(net.mqttLastCommandResult)),
+        buffer, bufferSize);
   }
   if (binding == "net.ap.ssid") {
     return copyLiteral(net.apSsid[0] != '\0' ? net.apSsid : "(inactive)", buffer, bufferSize);

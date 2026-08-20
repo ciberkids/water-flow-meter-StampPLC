@@ -258,21 +258,30 @@ void clearsTheNyquistOverrideWithTheCalibration() {
    * `evaluateSensorDiagnostics` recomputes the flag as `(valid && !meets) || overrideActive_ ||
    * overridePending_`. After the reset the config is invalid, so the first term is false and the bit can
    * only still be lit if one of the override flags survived. A clear bit is therefore exactly the
-   * statement "both override flags were cleared" — and it is the assertion the contrast case below
-   * fails, which is what makes it a real check rather than a tautology.
+   * statement "both override flags were cleared".
    *
-   * Why it matters: a latched override makes `prepareConfigUpdate` accept the FIRST candidate offered
-   * without a sampling check. Left standing, the exemption granted to the meter that broke would be
-   * silently inherited by the meter that replaced it.
+   * WHAT KEEPS THAT FROM BEING A TAUTOLOGY is `latchNyquistOverride`'s own last line, which asserts the
+   * bit WAS lit before the reset was issued. A helper that quietly stopped latching would fail there
+   * rather than hand this case a clear bit it never earned. (It used to be the offset-19 contrast case
+   * below that made the point, by asserting the opposite bit; since 2026-08-17 that arm clears the
+   * override too, so it agrees with this one and can no longer serve as the contrast.)
+   *
+   * Why it matters: `evaluateSensorDiagnostics` ORs both override arms into `REG_UNDERSAMPLING_FLAGS`, so
+   * the exemption the broken meter earned would keep a sampling warning lit over the replacement's
+   * perfectly ordinary figures — on RS485 and on the panel. It would NOT let the replacement inherit the
+   * exemption itself: `prepareConfigUpdate` clears all three flags for any candidate failing
+   * `configIsValid`, and the first candidate entered from an all-zero config is necessarily one of those.
    */
   check((dev.undersamplingFlags & 0x04) == 0,
-        "and the override goes with it - the new meter does not inherit the old one's exemption");
+        "and the override goes with it - no warning is left lit over the new meter's figures");
   check(dev.registers.at(plc::REG_UNDERSAMPLING_FLAGS) == 0,
         "with the diagnostics register republished, not just the shadow variable");
 }
 
-void theDecommissionArmIsStillDifferentInBothWays() {
-  std::printf("\n[OFF_CMD_RESET_CONFIG, side by side - the reason 25 exists at all]\n");
+void theDecommissionArmStillDestroysTheMeasurementsAndNowClearsTheOverrideToo() {
+  std::printf(
+      "\n[OFF_CMD_RESET_CONFIG, side by side - it destroys the measurements, and now clears the "
+      "override too]\n");
 
   Device dev;
   dev.armChannel(2, 1, 98765.0);
@@ -285,19 +294,73 @@ void theDecommissionArmIsStillDifferentInBothWays() {
   check(modbus.applyHoldingWrite(address, 1), "offset 19 is issued instead");
 
   /**
-   * Offset 19's behaviour, PINNED rather than corrected.
+   * THE MEASUREMENT WIPE IS STILL PINNED AS-IS. The four assertions below document a shipped command
+   * exactly as it behaves, so narrowing it later is a deliberate act with a failing test attached rather
+   * than an accident. It is the right command for decommissioning a channel; it is still the wrong one
+   * for a meter swap, and that — not the override — is the reason offset 25 exists at all
+   * (register_map.h's OFF_CMD_RESET_CALIBRATION note).
    *
-   * These four assertions document a shipped command exactly as it behaves, including the stale
-   * override, so that narrowing it later is a deliberate act with a failing test attached rather than
-   * an accident. It is the right command for decommissioning a channel; it is the wrong one for a meter
-   * swap, and every line here is a line the arm at offset 25 does the opposite of.
+   * THE STALE OVERRIDE IS NO LONGER PART OF WHAT IS PINNED. This case used to assert that offset 19 left
+   * the flag lit, labelled a defect reported rather than fixed. The owner decided on 2026-08-17 to clear
+   * it in 19 too, so the flag assertion below pins the NEW behaviour and dies on any revert of the three
+   * clears in modbus_manager.cpp's offset-19 arm. It is a deliberate narrowing, which is exactly what
+   * that earlier pinning existed to make possible.
+   *
+   * The reason is `REG_UNDERSAMPLING_FLAGS`: `evaluateSensorDiagnostics` derives it from
+   * `overrideActive_ || overridePending_`, and only a config write clears those — so a decommissioned
+   * channel nobody reconfigures would carry the bit for the life of the device. The harm the defect was
+   * FIRST reported as, a replacement meter inheriting the exemption, is unreachable and always was:
+   * `prepareConfigUpdate`'s invalid-candidate branch clears all three flags, and the first single-register
+   * write onto an all-zero config is necessarily such a candidate.
    */
   check(dev.sensors[2].cumulativeLiters == 0.0, "it DOES destroy the lifetime total");
   check(dev.sensors[2].sessionLiters == 0.0f, "and the session volume");
   check(dev.sensors[2].maxFlowSinceReset == 0.0f, "and the peak");
-  check((dev.undersamplingFlags & 0x04) != 0,
-        "and it leaves the Nyquist override latched, which is a defect reported, not fixed here");
+  check((dev.undersamplingFlags & 0x04) == 0,
+        "and the Nyquist override goes with the config it described - no bit left lit");
+  check(dev.registers.at(plc::REG_UNDERSAMPLING_FLAGS) == 0,
+        "with the diagnostics register republished, not just the shadow variable");
   check(dev.sensors[2].inUse, "though it does keep the channel in use");
+}
+
+/**
+ * The OTHER override flag, which the case above cannot see.
+ *
+ * `latchNyquistOverride` writes twice, and the second write CONFIRMS the override: it leaves
+ * `overridePending_` false and `overrideActive_` true. So the case above would still pass with
+ * `overridePending_[sensorIndex] = false;` deleted from the offset-19 arm. One refused write parks the
+ * candidate without confirming it, which is the only state in which `overridePending_` is set — and
+ * `ModbusManager::nyquistOverridePending` is public, so it can be asserted directly rather than inferred
+ * from the flag.
+ *
+ * The third clear, `pendingOverrides_[sensorIndex] = SensorCharacteristics{}`, has NO observable effect
+ * either way: its only reader is guarded by `overridePending_[index] &&`, so once that is false the
+ * parked candidate is unreachable by construction. It mirrors offset 25 for hygiene and no assertion here
+ * or anywhere else can distinguish it.
+ */
+void offsetNineteenDoesNotLeaveAConfirmationParkedEither() {
+  std::printf("\n[OFF_CMD_RESET_CONFIG clears a PARKED override too, not just a confirmed one]\n");
+
+  Device dev;
+  dev.armChannel(2, 1, 900.0);
+  dev.configs[2].f_multiplier = 1;
+  ModbusManager modbus(dev.deps());
+
+  // ONE write, deliberately not two: refused, and parked awaiting the §5.5 confirmation.
+  check(!modbus.applyHoldingWrite(Device::cfgAddress(2, plc::OFF_CFG_Q_MAX), 65000),
+        "an undersampling figure is refused once and parked for confirmation");
+  check(modbus.nyquistOverridePending(2), "so the channel has a candidate awaiting confirmation");
+  check((dev.undersamplingFlags & 0x04) != 0, "with the flag lit while it waits");
+
+  const uint16_t address =
+      static_cast<uint16_t>(plc::sensorBaseAddress(2) + plc::OFF_CMD_RESET_CONFIG);
+  check(modbus.applyHoldingWrite(address, 1), "the channel is then decommissioned with offset 19");
+
+  check(!modbus.nyquistOverridePending(2),
+        "offset 19 does not leave a confirmation parked for a channel it just decommissioned");
+  check((dev.undersamplingFlags & 0x04) == 0, "so no undersampling flag survives it");
+  check(dev.registers.at(plc::REG_UNDERSAMPLING_FLAGS) == 0,
+        "in the diagnostics register as well as the shadow variable");
 }
 
 /**
@@ -520,7 +583,8 @@ int main() {
   onlyAWriteOfOneIsTheCommand();
   anUnwiredChannelRefusesTheCommand();
   clearsTheNyquistOverrideWithTheCalibration();
-  theDecommissionArmIsStillDifferentInBothWays();
+  theDecommissionArmStillDestroysTheMeasurementsAndNowClearsTheOverrideToo();
+  offsetNineteenDoesNotLeaveAConfirmationParkedEither();
   bothEntryOrdersReachAValidConfigurationFromAllZeros();
   thePulsesPerLitreFormCanBeEnteredToo();
   aPulsesPerLitreChannelIsSamplingCheckedOnItsOwnTerms();

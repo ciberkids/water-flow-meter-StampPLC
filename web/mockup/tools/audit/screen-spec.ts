@@ -32,12 +32,27 @@ const kBadgePadX = 3;
 const kBadgePadY = 2;
 
 /**
- * Where the firmware paints its undersampling banner while a warning is live (`ui_renderer.cpp:427-428`).
+ * Where the firmware paints its warning banner while the banner's gate is open —
+ * `UiRenderer::drawWarningBanner` in `ui_renderer.cpp` (`bannerY = 116` and `bannerH = 18`, currently
+ * :549-550; cited by function name because the line numbers here were already stale once, having pointed
+ * at :427-428 for a function that had moved).
  *
- * RELOCATED by decision §2c: it was `bannerY = 34`, which put 18 px of full-width overlay mid-panel on all
- * 79 screens — the one place every screen keeps its content. It now covers the FOOTER row, the least valuable
+ * RELOCATED by decision §2c, AND THE FIRMWARE HAS LANDED THE MOVE — this is no longer a proposal these
+ * constants anticipate. `bannerY` was 34, which put 18 px of full-width overlay mid-panel on all 80
+ * screens, the one place every screen keeps its content. It now covers the FOOTER row, the least valuable
  * row anywhere: a gesture reminder read once. A warning replacing it costs nothing while a warning is live,
  * and no screen has to reserve a band or nominate an element to sacrifice.
+ *
+ * Two things landed with the coordinate, and both matter to what "sits under the banner" means here.
+ * `drawWarningBanner` is now called AFTER `drawScreen`, so an element in this band is COVERED rather than
+ * punching a background-coloured hole through the band; and the gate widened from `hasWarnings` to
+ * `bannerActive()` (`hasWarnings || (uncalibratedCount > 0 && !editorActive)`), so the band is live for a
+ * commissioning gap too — which is far more of the time than a sampling fault, and is why an element
+ * reported here is worth moving rather than tolerating.
+ *
+ * `tools/audit/screen-geometry.ts` holds these same two numbers for the 80 SHIPPED screens; this tool only
+ * ever sees the 61 proposals in `screens/`. Both are needed: `bannerReplaces` below is spec-only metadata
+ * the generator strips, so the shipped-dataset check cannot use it and allows the footer by element id.
  */
 const kBannerTop = 116;
 const kBannerBottom = 134;

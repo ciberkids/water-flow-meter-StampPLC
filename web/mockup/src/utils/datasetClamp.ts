@@ -55,16 +55,38 @@ export const clampHeight = (value: number, bounds: DisplayBounds = DEFAULT_BOUND
   return clampValue(value, 0, bounds.height);
 };
 
+/**
+ * The upper bound for a coordinate: the display, LESS the element's own size along that axis.
+ *
+ * `extent` is why this exists (J8). Without it the limit was the panel dimension itself, so x = 240 was
+ * "legal" on a 240-wide display and the element sat entirely outside the visible area, rendering with
+ * `clientWidth` 0. `clampElementGeometry` below — the path every IMPORT takes — has always used
+ * `bound - size`, so the same geometry was corrected one way on import and accepted the other way when
+ * typed into the Design panel. An element you cannot see is not a placement, so the size-aware rule wins
+ * and both paths now share this helper.
+ *
+ * `Math.max(0, …)` keeps the bound sane for an element LARGER than the display: the coordinate pins to 0
+ * and the overflow shows up as width/height, which is what the clamp buttons are for.
+ */
+export const coordinateLimit = (
+  axis: "x" | "y",
+  extent: number,
+  bounds: DisplayBounds = DEFAULT_BOUNDS
+): number => {
+  const limit = axis === "x" ? bounds.width : bounds.height;
+  return Math.max(0, limit - (Number.isFinite(extent) ? Math.max(0, extent) : 0));
+};
+
 export const clampCoordinate = (
   value: number,
   axis: "x" | "y",
-  bounds: DisplayBounds = DEFAULT_BOUNDS
+  bounds: DisplayBounds = DEFAULT_BOUNDS,
+  extent = 0
 ): number => {
   if (Number.isNaN(value)) {
     return 0;
   }
-  const limit = axis === "x" ? bounds.width : bounds.height;
-  return clampValue(value, 0, limit);
+  return clampValue(value, 0, coordinateLimit(axis, extent, bounds));
 };
 
 export const clampElementGeometry = (
@@ -108,14 +130,15 @@ export const clampElementGeometry = (
   const widthForRange = clampedWidth ?? originalWidth ?? 0;
   const heightForRange = clampedHeight ?? originalHeight ?? 0;
 
+  // One rule, one home: the same helper the Design panel's inputs use (J8). These four lines used to
+  // spell out `bounds.width - widthForRange` themselves, which is how the panel came to disagree with
+  // the importer without anything failing.
   const rawX = element.x ?? 0;
-  const maxX = Math.max(0, bounds.width - widthForRange);
-  const clampedX = clampValue(rawX, 0, maxX);
+  const clampedX = clampValue(rawX, 0, coordinateLimit("x", widthForRange, bounds));
   recordChange("x", element.x, clampedX);
 
   const rawY = element.y ?? 0;
-  const maxY = Math.max(0, bounds.height - heightForRange);
-  const clampedY = clampValue(rawY, 0, maxY);
+  const clampedY = clampValue(rawY, 0, coordinateLimit("y", heightForRange, bounds));
   recordChange("y", element.y, clampedY);
 
   if (adjustments.length === 0) {

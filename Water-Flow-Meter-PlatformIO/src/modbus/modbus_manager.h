@@ -68,6 +68,18 @@ struct ModbusDependencies {
    * rather than the field being required, so adding it cannot break a test that has no opinion about time.
    */
   plc::DeviceClock* clock = nullptr;
+
+  /**
+   * Two LIVE network values, as their underlying enum values. Nullable.
+   *
+   * `NetRegisterMap::publish` packs the network SETTINGS and leaves every other cell of its 233-register
+   * block at zero, so 561 and 565 were published as 0 on every sync no matter what was happening — which
+   * for `kMqttState` meant a master could never see the broker connection state at all, and for
+   * `kMqttLastCmdResult` would have silently undone R4.4.2d the moment it was written. They are live, so
+   * they are written AFTER the block, from here.
+   */
+  const uint16_t* mqttStateValue = nullptr;
+  const uint16_t* mqttLastCommandResult = nullptr;
   uint16_t* connectedBitmap = nullptr;
   uint16_t* undersamplingFlags = nullptr;
   double* totalSessionLitersCache = nullptr;
@@ -122,6 +134,17 @@ class ModbusManager {
   ModbusMessage handleWriteMultiple(ModbusMessage request);
 
  private:
+  void publishClock();
+  /**
+   * The staged halves of a clock write, held here until `REG_CLOCK_APPLY` composes them (N-d1).
+   *
+   * Not written into the register bank as they arrive, and not applied on the low word: two registers are
+   * not atomic under FC6, so an epoch composed from one new half and one old one is a timestamp nobody
+   * chose. They start at 0, which `setTime` refuses, so an apply before any staging cannot set the clock
+   * to 1970.
+   */
+  uint16_t stagedClockHi_ = 0;
+  uint16_t stagedClockLo_ = 0;
   bool meetsNyquistLimit(const SensorCharacteristics& cfg) const;
   void resetRuntimeCaches();
   void saveCumulativeToNvs(std::size_t index);

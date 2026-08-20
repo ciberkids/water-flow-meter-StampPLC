@@ -143,7 +143,8 @@ valid but HA infers **0 decimals** for that device class, so a payload without
 ### Nothing has run on hardware
 
 Not once. The RS485 pin correction, the LED patterns, the SD adapter and every gesture and timing
-are verified only against the datasheet, the specifications and 356 host checks. **G1** — measuring
+are verified only against the datasheet, the specifications and 1,870 host checks (measured
+2026-08-18). **G1** — measuring
 `pollingRate_kHz` — is the only item that strictly needs the device, and it is now also a
 prerequisite for the WiFi work, whose acceptance criterion is a 5 % budget against a radio-off
 baseline that does not exist yet.
@@ -152,16 +153,21 @@ baseline that does not exist yet.
 
 ## 4. Documents you can and cannot trust
 
-| Trust | Do not trust |
-| --- | --- |
-| `docs/Requirements/Gesture_Reference.md` — every ✅ names its test | `README.md` — five referenced paths do not exist; its firmware test command cannot work |
-| `docs/active_work/open_decisions.md` — rewritten 2026-08-12 to what is actually open; the 41 closed entries are in `docs/archive/open_decisions-closed-2026-08-12.md` | `web/mockup/README.md` — describes a portrait display and an empty dataset |
-| `Project_document.md` §4.1/§4.2 — the register map, verified line-for-line | `UI_Firmware_Interface.md` — **the most dangerous live document**: lists 4 actions where there are 15 |
-| `Loadable_UI_Menu_Packs.md` — as a *specification* | `Implementation_Alignment_Report.md` — audits a file layout that no longer exists |
+**This section no longer keeps its own table.** It duplicated `README.md`'s and the two disagreed —
+including about whether `README.md` itself could be trusted. The map of which file answers which
+question now lives in **`README.md` § Source of truth**, and the documents known to be wrong are
+register items with IDs (**J4** `web/mockup/README.md`, **J5** `UI_Firmware_Interface.md`).
 
-`open_decisions.md` was rewritten 2026-08-12: it lists only what is genuinely open. The old
-caveat — ✅ meaning *agreed* rather than *landed*, with 40 headings still marked as blocking after
-their decisions had shipped — applies to the archived copy, not to the current file.
+Two corrections this section was carrying, both verified 2026-08-18:
+
+- Its claim that `README.md` **"references five paths that do not exist"** is **stale**. Every path the
+  README names resolves — checked by extracting each one and testing it. Its firmware test command is
+  also correct: there is no `pio test` target, and `test/host/run.sh` is the suite.
+- Its **"356 host checks"** and the README's "199" were both wrong. Measured: **1,870 checks across 23
+  suites, 0 failures**, plus a fresh manifest. Both files now carry the measured figure and its date.
+
+The one judgement worth keeping here: **any undated status claim in this repository is untrustworthy,
+including in this file.** Re-measure rather than quote.
 
 ---
 
@@ -188,18 +194,91 @@ evidence at all. Before this branch, `interaction_handler.cpp`, `ui_controller.c
 
 ## 6. Where to pick up
 
-1. **Wire the loader into `firmware.cpp`** — call it at boot before the display comes up (§4.5
-   keeps that window contention-free), append the selector to the root ring, and implement the
-   UP+DOWN+ENTER recovery gesture of §3.4.1. That gesture has to reach the selector from any
-   state *without consulting the active pack*, which is what makes it a recovery route. This is
-   also where the feature stops being host-provable.
-2. **Or WiFi slice N0** — the polling-rate spike. Its acceptance criterion budgets 5 % against a
-   radio-off baseline that does not exist yet; that baseline is **G1** and needs the board.
-3. Smaller and still open: the export gate for ring closure, the I2 append-only catalogue check,
-   `animation` residue across five layers, the simulator's missing nav stack, `carea/` (tracked,
-   18 files), and rewrites of `web/mockup/README.md` and `UI_Firmware_Interface.md`.
+**The item list is not here.** Every open item has a stable ID and lives in the index at the top of
+`docs/active_work/open_decisions.md` — **five lines**, none of them a defect, governed by rule **I3**. Cite the ID
+(`DF18`, `J1`, `N-d1`). This section carries only what an index cannot: the ordering, and the state of
+the working tree.
 
----
+### Session of 2026-08-18 — every defect closed, and the banner round landed
+
+**Closed:** DF10, DF14, DF15, DF16, DF17, DF18, DF19, DF20, DF21 and J1–J8. That is **every `DF` and every
+`J`**. Opened and closed the same day: DF20, DF21, J6, J7 — a repaired gate finds things.
+
+**Also landed, at the owner's instruction:** the §2c warning-banner round and the firmware-drawn Select Menu,
+which had been sitting uncommitted in the tree. I did not author it; I verified it, regenerated the action
+table its catalogue entry required, and committed it as one round because splitting it would have produced
+commits that do not build.
+
+**What remains is five lines and not one is a defect:** `N-b` and `N-c` are queued FEATURES, `G1` and
+`N-d2` need the board, `I2a` is a rule nothing enforces. Every gate in the repository is green.
+
+### The working tree is CLEAN as of 2026-08-18
+
+It held 40 modified and 3 untracked files all day — the unfinished §2c round — and they are all committed
+now. Nothing is parked, and the four pieces of mine that were waiting on that round (DF20's visual test, the
+scrollbar band rule, `ui_root_tail.h`'s shortened `Screen` initializer, two comment tweaks) went in with it.
+
+**The staging discipline that tree forced is still worth keeping**, because the next round of someone else's
+work will look the same: check `git status` for the SPECIFIC file before `git add`, and if it is dirty, stage
+HEAD-plus-your-hunks:
+
+```bash
+git show HEAD:path > /tmp/base && python3 - <<'EOF'   # apply only your replacement to /tmp/base
+EOF
+blob=$(git hash-object -w /tmp/base) && git update-index --cacheinfo 100644,$blob,path
+```
+
+**And then VERIFY THE INDEX, not the working tree.** A reconstruction is a different artefact from the file
+you tested, and commit `97132ea` proved it: three `/**` openers were dropped by a helper that started at a
+marker phrase on a comment's second line, so HEAD did not typecheck while the working tree passed 220 tests.
+Repaired in `54f191d`. The check that catches it:
+
+```bash
+tree=$(git write-tree) && mkdir /tmp/chk && git archive $tree | tar -x -C /tmp/chk
+cd /tmp/chk/web/mockup && ln -s <repo>/web/mockup/node_modules node_modules
+npx tsc --noEmit && npm run test:unit && npm run test:exporter
+```
+
+### The action table gate, which now has nothing to forgive
+
+`gen-actions.mjs --write` and the committed table agreed again the moment the catalogue's nineteenth action
+(`ui.action.pack.select-menu`) landed with the §2c round — running it was the last step before that commit.
+The gate exists because the table had been advertising two actions that no longer existed.
+
+### Next, in the order I would take them
+
+Nothing is blocking. The register's five remaining lines are, in the order that unblocks the most (the two struck through are kept because I3 makes an ID append-only):
+
+1. ~~**`N-d1`**~~ — **built 2026-08-18**, and the whole clock chain with it: registers 50-55 (staged epoch
+   plus `0x5AA5`, refusal as a Modbus exception), the portal page (R7.9d), and NTP (R7.13). All four routes
+   to the clock now exist. The clock corrected me once while I built it: setting the time BOUNDS an undated
+   session to the sync moment rather than backdating it, because nothing recorded a trustworthy anchor at
+   the reset.
+2. ~~**`N-c`**~~ — **built 2026-08-20**: §4.4.1's command topics, `button` discovery, both safeguards, and
+   register 565 finally reporting something. It found `DF22` on the way out. **One ⏸️ in it needs the
+   board:** `MQTT_EVENT_DATA`'s retain flag is verified by reading the SDK header only, and it is the sole
+   guard against a retained `RESET` wiping the totals on every reboot — the rate limit cannot catch that
+   one, because a reboot clears the `millis()` guard and any downtime over a minute clears the persisted
+   one. One `mosquitto_pub -r` and a power cycle settles it; the register entry has the commands.
+3. **`DF22`** — eight read-only LIVE network registers are written by nothing, and `NET_LAST_ERROR` is
+   written on a refused apply and erased by the next sync, so §5.1's refusal report reads as success. The
+   only 🟡 defect, and the one place "RS485 is the source of truth" is flatly untrue.
+4. **`N-b`** — the catalogue version in the manifest, so growing the settings catalogue stops silently
+   invalidating authored packs. `J1`'s ring gate and this are the two the pack format assumes.
+5. **`I2a`** — a checked-in `id → meaning` snapshot that CI diffs, which is the only thing that would make
+   I2's append-only rule more than prose.
+6. **`G1`** and **`N-d2`** — both need the board, and both have their procedure written down.
+
+Two gates that exist but are narrower than they look, worth widening when someone is in the area: CI runs the
+visual suite with `--ignore-snapshots` (pixels are a local gate until baselines are generated in the CI
+image), and the accessibility spec checks names and ids but not contrast or focus order, which needs an `axe`
+dependency decision.
+
+**A third, learned on 2026-08-20:** `MqttPublisher::tick` returns early on `!heartbeat && !rateLimitCleared`
+*before* formatting anything, so its change detection cannot rescue a value that changed inside the
+rate-limit window. Anything that must be visible promptly has to call `requestFullPublish()`. I reasoned the
+opposite, wrote a test that asserted it, and the test failed — which is the only reason this is written down
+rather than shipped.
 
 ## 7. Mistakes to know about
 

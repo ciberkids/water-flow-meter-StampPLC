@@ -254,6 +254,19 @@ Therefore: **the firmware appends a "Select Menu" page to the end of the root le
 whatever the active pack defines. A pack cannot remove it, and it is always reachable by
 paging with UP/DOWN.
 
+> **Built 2026-08-17.** `UiNavigator` splices a firmware-owned screen (`src/ui/core/ui_root_tail.h`,
+> id `ui-select-menu`) between the last dataset member of the root level and the root, so DOWN from
+> the last pack-defined root page lands on it and DOWN again wraps to P0. UP from P0 reaches it
+> directly. It is deliberately not in `kRequiredScreens`: a pack that had to declare it could drop it.
+> The root level is now ten members — P0..P6, WIFI, MQTT, SELECT MENU.
+>
+> **The appended page is the ENTRY, not the list.** The layout below describes the selector itself,
+> which the firmware draws (§3.4.1) and which ENTER-short on the entry opens — the same page the
+> recovery gesture opens, through the same `InteractionResult::openPackSelector` flag. The entry is a
+> titled root page like WIFI and MQTT. Making the root page *be* the list would put a card mount and
+> a directory scan behind every DOWN press onto it, and would leave it in two visual states — the
+> live list, then a purposeless bare screen once ENTER-long closed it.
+
 The page lists, using the ordinary navigation gestures:
 
 ```
@@ -295,6 +308,11 @@ pack draws nothing at all. The anti-boot-loop counter (§3.6) covers the worse c
 pack crashes before any input is processed.
 
 So: **a normal page for everyday use, and a recovery gesture for when the UI is broken.**
+
+**Both exist as of 2026-08-17.** The everyday page is the appended root entry of §3.4
+(`rootEntryTests` in `test/host/interaction_test.cpp`); the recovery gesture is unchanged and still
+covered by `recoveryGestureTests`. They converge on one flag with one consumer in `firmware.cpp`
+rather than two code paths — the gesture was added to, not replaced.
 See §7 Q11 if you would still prefer it hidden outright.
 
 ### 3.5. Selecting a menu reboots
@@ -362,7 +380,10 @@ drift — see §4.3.
 4. One allocation for the pack buffer. No per-screen or per-element allocation.
 5. SD access happens **only** at boot. Nothing reads the card during rendering or button
    handling, so removing the card mid-operation cannot fault.
-6. The "Select Menu" page (§3.4) is firmware-native and appended to the root level.
+6. Menu selection is firmware-native throughout, in two parts: the "Select Menu" **entry** is a
+   firmware-owned screen appended to the root level (§3.4, `src/ui/core/ui_root_tail.h`), and the
+   **selector it opens** is firmware-drawn from live card state (§3.4.1, `ui::PackSelector`). A pack
+   can neither supply nor remove either one.
 7. NVS holds only `ui_pack_try` (u8), the load-attempt counter. The selection is
    `/ui/active` on the card (§3.1.1) — never duplicated into NVS, so the two can never
    disagree.

@@ -47,9 +47,10 @@ import { ExporterPanel } from "./components/ExporterPanel";
 import { SimulationTracePanel } from "./components/SimulationTracePanel";
 import { SimulationTraceEntry } from "./types/simulationTrace";
 import { FirmwareActionManifest, FirmwareActionDefinition, FirmwareValueDefinition } from "./types/firmwareActions";
-import { TransitionEffect, TransitionPreviewState } from "./types/transitionPreview";
+import { PreviewTargetState } from "./types/previewTarget";
 import { findMatchingButtonFlows } from "./utils/flowMatching";
 import { holdCountdownArms, holdCountdownText } from "./utils/holdCountdown";
+import { warningBannerText } from "./utils/warningBanner";
 import { ScreenHierarchyPanel } from "./components/design/ScreenHierarchyPanel";
 import { buildScreenHierarchy } from "./utils/screenHierarchy";
 import { DesignToolbox } from "./components/design/DesignToolbox";
@@ -212,17 +213,22 @@ const normalizeElementUpdate = (
   bounds: DisplayBounds
 ): ScreenElement => {
   const next: Partial<ScreenElement> = { ...updates };
-  if (updates.x !== undefined) {
-    next.x = clampCoordinate(updates.x, "x", bounds);
-  }
-  if (updates.y !== undefined) {
-    next.y = clampCoordinate(updates.y, "y", bounds);
-  }
+  // SIZE FIRST, then the coordinates, because a coordinate's limit is `bound - size` (J8) and a single
+  // update can carry both. Clamping x against the OLD width would accept a position the new width makes
+  // invisible — the same class of disagreement J8 was: two paths, two answers, nothing failing.
   if (updates.width !== undefined) {
     next.width = clampWidth(updates.width, bounds);
   }
   if (updates.height !== undefined) {
     next.height = clampHeight(updates.height, bounds);
+  }
+  const effectiveWidth = next.width ?? element.width ?? 0;
+  const effectiveHeight = next.height ?? element.height ?? 0;
+  if (updates.x !== undefined) {
+    next.x = clampCoordinate(updates.x, "x", bounds, effectiveWidth);
+  }
+  if (updates.y !== undefined) {
+    next.y = clampCoordinate(updates.y, "y", bounds, effectiveHeight);
   }
   return { ...element, ...next };
 };
@@ -243,18 +249,6 @@ type ClampNotice = {
 const formatTriggerLabel = (event: SimulatedButtonEvent): string =>
   `${event.button.toUpperCase()} • ${event.kind}`;
 
-const deriveTransitionEffect = (event: SimulatedButtonEvent): TransitionEffect => {
-  if (event.button === "down") {
-    return "slide-up";
-  }
-  if (event.button === "up") {
-    return "slide-down";
-  }
-  if (event.button === "enter" && event.kind === "short") {
-    return "scale";
-  }
-  return "fade";
-};
 
 const buildClampNotice = (corrections: ClampCorrection[], context: string): ClampNotice => ({
   timestamp: Date.now(),
@@ -353,7 +347,7 @@ export function App() {
   const [interactionLog, setInteractionLog] = useState<string[]>([]);
   const [traceEntries, setTraceEntries] = useState<SimulationTraceEntry[]>([]);
   const [traceFilter, setTraceFilter] = useState<string>("");
-  const [transitionPreview, setTransitionPreview] = useState<TransitionPreviewState | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<PreviewTargetState | null>(null);
   const [activePanel, setActivePanel] = useState<"simulation" | "design" | "importExport" | "help">("simulation");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const manifestInputRef = useRef<HTMLInputElement | null>(null);
@@ -1182,18 +1176,20 @@ export function App() {
     }
   }, [dataset.theme, theme, updateTheme]);
 
+  // Clears the ring when its 1500 ms are up. Unchanged by J7 except for the name: this is the half of the
+  // old transition preview that something actually reads.
   useEffect(() => {
-    if (!transitionPreview) {
+    if (!previewTarget) {
       return undefined;
     }
-    const remaining = transitionPreview.expiresAt - Date.now();
+    const remaining = previewTarget.expiresAt - Date.now();
     if (remaining <= 0) {
-      setTransitionPreview(null);
+      setPreviewTarget(null);
       return undefined;
     }
-    const timer = window.setTimeout(() => setTransitionPreview(null), remaining);
+    const timer = window.setTimeout(() => setPreviewTarget(null), remaining);
     return () => window.clearTimeout(timer);
-  }, [transitionPreview]);
+  }, [previewTarget]);
 
   useEffect(() => {
     setDataset((current) => {
@@ -1247,36 +1243,22 @@ export function App() {
     setTraceEntries([]);
   }, []);
 
-  const previewTransition = useCallback(
-    (payload: {
-      targetScreenId?: string;
-      actionId?: string;
-      actionLabel?: string;
-      triggerLabel: string;
-      effect: TransitionEffect;
-    }) => {
-      if (!payload.targetScreenId && !payload.actionLabel) {
+  /**
+   * Rings the row of the screen a press navigated to, for 1500 ms.
+   *
+   * Narrowed from `previewTransition` (J7): the effect, the action and trigger labels and the computed
+   * `previewLayout` existed only for the overlay that is off by decision, and computing a whole layout on
+   * every answered press to feed a branch guarded by `undefined` was the residue worth removing. A press
+   * that names no target screen rings nothing — there is no row to ring.
+   */
+  const markPreviewTarget = useCallback(
+    (targetScreenId?: string) => {
+      if (!targetScreenId) {
         return;
       }
-
-      const targetScreen = payload.targetScreenId
-        ? dataset.screens.find((candidate) => candidate.id === payload.targetScreenId)
-        : undefined;
-      const previewLayout =
-        targetScreen && payload.targetScreenId ? computeLayout(targetScreen, orientation) : undefined;
-
-      setTransitionPreview({
-        screenId: payload.targetScreenId ?? selectedScreen?.id ?? "—",
-        screenName: targetScreen?.name ?? payload.targetScreenId ?? selectedScreen?.name,
-        actionId: payload.actionId,
-        actionLabel: payload.actionLabel ?? payload.actionId,
-        triggerLabel: payload.triggerLabel,
-        effect: payload.effect,
-        previewLayout,
-        expiresAt: Date.now() + 1500
-      });
+      setPreviewTarget({ screenId: targetScreenId, expiresAt: Date.now() + 1500 });
     },
-    [dataset.screens, orientation, selectedScreen?.id, selectedScreen?.name]
+    []
   );
 
   const selectByOffset = useCallback(
@@ -1734,6 +1716,28 @@ export function App() {
   }, [aggregateFlowLpm, editorState, flowUnit, hierarchy, holdCountdown, manifestValueBindings, manifestValueById, navParents, pinnedValues, pollingRateKhz, screens, selectedScreen, selectedSensor, sensors, sessionStartEpoch, clockState]);
 
   /**
+   * The §2c warning banner's text for the panel, or null while its gate is closed.
+   *
+   * Taken from the SAME `sensors` table that feeds the sensor rows and `legend.warning`, which is the
+   * whole reason the firmware composes `warningSummary` once for two consumers: a band saying "3 channels
+   * not calibrated" above rows that all read `OK` would be the panel disagreeing with itself.
+   *
+   * THE EDITOR TERM IS DERIVED FROM THE SCREEN, NOT FROM `editorState`, and the difference is exactly the
+   * case that matters. The firmware opens the editor on DESCENT — `handleNavEnter` asks
+   * `settingEditedByScreen` for the setting the target screen's bindings name and calls `beginEdit`
+   * before any UP/DOWN, closing it again for a `SettingKind::Text` row because there is no on-device text
+   * entry. `editorState` here only becomes non-null after the first step, so gating on it would show the
+   * banner over `hold=cancel` on every freshly-entered edit screen with a commissioning gap live, which
+   * is the one thing `bannerActive()`'s editor term exists to prevent. `settingOfScreen` plus the
+   * `type !== "string"` test is the mirror of the firmware's own two questions.
+   */
+  const warningBannerLine = useMemo(() => {
+    const setting = settingOfScreen(selectedScreen, manifestValueById);
+    const editorOpen = setting !== undefined && setting.type !== "string";
+    return warningBannerText(sensors, editorOpen);
+  }, [manifestValueById, selectedScreen, sensors]);
+
+  /**
    * The stored integer a setting currently holds, from whichever home owns it.
    *
    * Per-sensor settings live in the sensor table; device-wide ones have no simulated store of their
@@ -1931,14 +1935,17 @@ export function App() {
    * would have carried. The flag is now derived in `deriveUndersampling`.
    *
    * What survives as an input is the half that genuinely is one: `overrideActive_ || overridePending_`,
-   * the §5.5 handshake (modbus_manager.cpp:500 ORs both arms into the flag). An operator who was told
+   * the §5.5 handshake (modbus_manager.cpp:525 ORs both arms into the flag). An operator who was told
    * "Sampling too slow" and pressed DOWN to save anyway is a real device state, it is per-channel, and
    * nothing else in the simulator can produce it — there is no write gate here to park a candidate in.
    * So the checkbox still raises a warning, but now it says WHY, and it can no longer contradict the
    * configuration on screen beside it.
    */
   const handleSensorFieldChange = useCallback(
-    (sensorNumber: number, field: "connected" | "ready" | "samplingOverride", value: boolean) => {
+    // `ready` is NOT in this union any more (DF16): it is derived from the calibration in
+    // `normalizeSensor`, so a write to it was silently discarded the moment the derivation landed. The
+    // way to make a channel `SET?` is to clear its calibration, here as on the device.
+    (sensorNumber: number, field: "connected" | "samplingOverride", value: boolean) => {
       setSensors((table) => setSensor(table, sensorNumber, { [field]: value }));
     },
     []
@@ -2050,7 +2057,6 @@ export function App() {
   const handleButtonEvent = useCallback(
     (event: SimulatedButtonEvent) => {
       const triggerLabel = formatTriggerLabel(event);
-      const effect = deriveTransitionEffect(event);
       let activeScreenId = selectedScreen?.id ?? screens[0]?.id ?? "—";
 
       /* ── Multi-button gestures, BEFORE flow matching ──────────────────────────────────────
@@ -2508,13 +2514,7 @@ export function App() {
             actionParams: flow.actionParams ?? null,
             targetScreenId: flow.targetScreenId
           });
-          previewTransition({
-            targetScreenId: flow.targetScreenId,
-            actionId: flow.actionId,
-            actionLabel: actionDefinition?.label ?? flow.label,
-            triggerLabel,
-            effect
-          });
+          markPreviewTarget(flow.targetScreenId);
         });
       } else {
         /**
@@ -2565,7 +2565,7 @@ export function App() {
         `[${new Date(event.timestamp).toLocaleTimeString()}] ${triggerLabel} → ${activeScreenId}`
       );
     },
-    [actionCatalog, appendLog, previewTransition, recordTraceEntry, selectById, selectByOffset, selectedScreen, screens, pushNavParent, popNavParent, clearNavParents, setDisplay, setSelector]
+    [actionCatalog, appendLog, markPreviewTarget, recordTraceEntry, selectById, selectByOffset, selectedScreen, screens, pushNavParent, popNavParent, clearNavParents, setDisplay, setSelector]
   );
 
   /**
@@ -2998,7 +2998,7 @@ export function App() {
           <ScreenSelector
             screens={screens}
             activeId={selectedScreen?.id ?? ""}
-            previewId={transitionPreview?.screenId}
+            previewId={previewTarget?.screenId}
             onSelect={jumpToScreen}
           />
         </section>
@@ -3112,6 +3112,10 @@ export function App() {
                           ? { entries: packEntries, cursor: packCursor, truncated: false }
                           : null
                       }
+                      // The other firmware-drawn layer (§2c). Passing it is what stops the mockup
+                      // showing a clean footer hint on a device the panel would be shouting about —
+                      // before this the simulator drew no banner at all.
+                      warningBanner={warningBannerLine}
                       // Flow decides WHETHER the dots move; the repaint rate decides how fast. That is
                       // `drawFlowDots`'s rule verbatim — one step per painted frame, never a period
                       // derived from millis() — and `repaintCount` is the only repaint this app counts,
@@ -3127,7 +3131,6 @@ export function App() {
                       // thing the viewport exists to show. The firmware draws no such transition; it
                       // clears and repaints. Keeping a preview the device cannot produce made the
                       // panel less faithful, not more.
-                      pendingTransition={undefined}
                       scrollIndicator={scrollIndicator}
                       firmwareValues={firmwareManifest.values ?? []}
                     />
@@ -3389,8 +3392,7 @@ export function App() {
                         onSelectElement={setSelectedElementId}
                         onClampElement={handleClampElement}
                         overflowElementIds={overflowElementIds}
-                        maxCoordinateX={layoutReport?.bounds.width ?? DISPLAY_WIDTH}
-                        maxCoordinateY={layoutReport?.bounds.height ?? DISPLAY_HEIGHT}
+                        displayBounds={layoutReport?.bounds ?? LANDSCAPE_BOUNDS}
                         maxWidth={layoutReport?.bounds.width ?? DISPLAY_WIDTH}
                         maxHeight={layoutReport?.bounds.height ?? DISPLAY_HEIGHT}
                         maxInputLength={MAX_INPUT_LENGTH}
@@ -3452,6 +3454,7 @@ export function App() {
                     type="file"
                     accept="application/json"
                     onChange={handleDatasetImport}
+                    aria-label="Import a screen dataset JSON file"
                     data-testid="dataset-import"
                     style={{ display: "none" }}
                   />
@@ -3470,6 +3473,7 @@ export function App() {
                     ref={manifestInputRef}
                     type="file"
                     accept="application/json"
+                    aria-label="Import a firmware action manifest JSON file"
                     onChange={handleManifestImport}
                     style={{ display: "none" }}
                   />

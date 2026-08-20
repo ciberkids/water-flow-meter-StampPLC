@@ -130,7 +130,7 @@ describe("the ceiling is the state engine's own inversion, evaluated at q_max", 
   });
 
   it("has NO ceiling where the firmware returns false before computing one", () => {
-    // modbus_manager.cpp:627-643 — q_max is fatal to both forms, each divisor only to its own.
+    // modbus_manager.cpp:734-762 — q_max is fatal to both forms, each divisor only to its own.
     expect(samplingCeilingHz(formula(0, 10))).toBeNull();
     expect(samplingCeilingHz(pulses(0, 450))).toBeNull();
     expect(samplingCeilingHz(formula(150, 0))).toBeNull();
@@ -262,13 +262,15 @@ describe("the §5.5 override is the arm that stays an input", () => {
     const table = deriveUndersampling(stored, 3.3);
     expect(meetsSamplingLimit(sensorAt(table, 6)!, 3.3)).toBe(true);
     expect(sensorAt(table, 6)?.undersampling).toBe(true);
-    expect(warningSummaryText(table)).toBe("Sampling warning on sensors 6");
+    expect(warningSummaryText(table)).toBe("Sampling warning on 1 sensor");
   });
 
   it("is cleared by S.RESET, because the confirmation described the OLD meter", () => {
-    // modbus_manager.cpp:337-339 clears both override arms beside the config. Left standing, the flag
-    // would survive on a channel with nothing to undersample AND wave the next meter's first figures
-    // through unchecked. Now the flag is derived, omitting it would be VISIBLE.
+    // modbus_manager.cpp:362-364 clears both override arms beside the config (and offset 19 clears the
+    // same three since 2026-08-17). Left standing, the flag would survive on a channel with nothing to
+    // undersample — it would NOT wave the next meter's first figures through unchecked, because
+    // `prepareConfigUpdate` clears the flags for any candidate failing `configIsValid` and the first write
+    // onto an all-zero config is necessarily one. Now the flag is derived, omitting it would be VISIBLE.
     const stored = setSensor(createSensorTable(), 6, { samplingOverride: true });
     const after = resetCalibration(stored, 6);
     expect(sensorAt(after, 6)?.samplingOverride).toBe(false);
@@ -277,13 +279,15 @@ describe("the §5.5 override is the arm that stays an input", () => {
 });
 
 describe("the warning the panel paints from the flag", () => {
-  it("names the channels when sampling is the only fault", () => {
+  it("counts the channels when sampling is the only fault", () => {
     const table = deriveUndersampling(setSensor(createSensorTable(), 3, { multiplier: 40 }), 3.3);
-    expect(warningSummaryText(table)).toBe("Sampling warning on sensors 3");
+    // A COUNT, not a list, and singular at one — the wording the firmware composes in
+    // `UiController::update`. Naming them cost 28 characters of prefix and overflowed the banner at four.
+    expect(warningSummaryText(table)).toBe("Sampling warning on 1 sensor");
     expect(statusSummaryText(table)).toBe("1 warning");
   });
 
-  it("trades the list for counts when a commissioning gap shares the screen", () => {
+  it("drops the noun \"channels\" when a commissioning gap shares the screen", () => {
     let stored = setSensor(createSensorTable(), 3, { multiplier: 40 });
     stored = setSensor(stored, 7, { qMaxLpm: 0, ready: false });
     const table = deriveUndersampling(stored, 3.3);
@@ -300,8 +304,13 @@ describe("the warning the panel paints from the flag", () => {
    * write, and the simulator has no write gate to refuse one. So an out-of-budget configuration lights the
    * flag here; it does not push that screen.
    *
-   * And on hardware the flag's banner is drawn at y=34 instead of §2c's y=116 and is overpainted by the
-   * screen's own rows (open_decisions.md). Nothing here should be read as "the operator sees this".
+   * What used to be the second caveat here is fixed: on hardware the banner is now drawn at §2c's y=116,
+   * over the footer row, and it paints AFTER the screen rather than being overpainted by the screen's own
+   * rows. What survives is the caveat about this SCREEN: `nyquist-warning` is in no flow's
+   * targetScreenId and is named in no `ui_pages.h` table, so UiScreenRouter can never resolve it and the
+   * device cannot show it. The live surface is the in-place `config.sensor.nyquistWarning` text element on
+   * each edit screen. So "nothing here should be read as 'the operator sees this'" still holds — for the
+   * reachability reason, not the painting one.
    */
   it("resolves the per-channel row from the derived bit", () => {
     const table = deriveUndersampling(setSensor(createSensorTable(), 3, { multiplier: 40 }), 3.3);
@@ -419,30 +428,43 @@ describe("divergences from SANE that are STILL mirrored on purpose", () => {
    * accepts would show a warning hardware will not show. Pinned so the mirror cannot be "improved"
    * silently — and so that narrowing the C++ bound makes a test fail here and be revisited.
    */
-  it("accepts an offset ten times the reachable frequency", () => {
-    // `configIsValid`'s bound is `q_max * multiplier * 10` while its comment says the offset "may not
-    // exceed the frequency the channel can actually reach" — which is `q_max * multiplier`. Recorded as an
-    // open decision: narrowing it is a statement about what the predicate promises.
+  it("REFUSES an offset ten times the reachable frequency, which it used to accept (DF14)", () => {
+    // The bound was `q_max * multiplier * 10` while the comment beside it said the offset "may not exceed
+    // the frequency the channel can actually reach" — `q_max * multiplier`, ten times smaller. The code and
+    // its own stated rule disagreed, and the code was the looser of the two. DF14 kept the comment's
+    // promise, so this magnitude is now invalid whichever sign it carries.
+    expect(configIsValid(formula(150, 10, 15000))).toBe(false);
     const sensor = formula(150, 10, -15000);
-    expect(configIsValid(sensor)).toBe(true);
-    // WHAT CHANGED IS THE CONSEQUENCE, not the bound. The sampling gate now catches this one, so the
-    // channel is flagged and a master's write is parked instead of installed silently.
+    expect(configIsValid(sensor)).toBe(false);
+    // The sampling arms are unchanged and still say what they said: this ceiling is unreachable. Nothing
+    // about the SAMPLER was wrong in either of these cases, which is why the rule belongs in the
+    // configuration predicate.
     expect(meetsSamplingLimit(sensor, 3.3)).toBe(false);
-    expect(warningSensorNumbers(deriveUndersampling([sensor], 3.3))).toEqual([sensor.number]);
-    // The engine still reads full scale on a dry pipe if such a config is ever installed — which §5.5's
-    // override still permits on a second identical write. That is the residue of this fix.
-    expect(advanceSensorTick(sensor, { pulses: 0, elapsedMs: 1000 }).instantFlowLpm).toBe(150);
+    // And the engine now measures nothing, where it used to read full scale on a dry pipe.
+    expect(advanceSensorTick(sensor, { pulses: 0, elapsedMs: 1000 }).instantFlowLpm).toBe(0);
   });
 
-  it("still admits a SMALL negative offset, which the ceiling arm cannot catch", () => {
-    // The part the sampling gate does NOT reach, and the reason the bound is still an open question: at
-    // m=10, q=150, a=-1400 the ceiling is a healthy 100 Hz and passes, while zero pulses read
-    // (0 + 1400) / 10 = 140 L/min on a dry pipe.
+  it("REFUSES a small negative offset, which the ceiling arm could never catch (DF14)", () => {
+    // INVERTED, not deleted — the pinning test for the case that decided DF14. At m=10, q=150, a=-1400 the
+    // ceiling is a healthy 100 Hz, so every sampling arm passes it: `samplingCeilingHz` is fine,
+    // `meetsSamplingLimit` is fine, and no undersampling warning is raised. Nothing about the SAMPLER was
+    // ever wrong here. What was wrong is the calibration, and only `configIsValid` can say so — which is
+    // why the rule went there and not into the gate.
     const sensor = formula(150, 10, -1400);
-    expect(configIsValid(sensor)).toBe(true);
+    expect(configIsValid(sensor)).toBe(false);
     expect(samplingCeilingHz(sensor)).toBe(100);
     expect(meetsSamplingLimit(sensor, 3.3)).toBe(true);
     expect(warningSensorNumbers(deriveUndersampling([sensor], 3.3))).toEqual([]);
-    expect(advanceSensorTick(sensor, { pulses: 0, elapsedMs: 1000 }).instantFlowLpm).toBe(140);
+    // 140 L/min on a dry pipe was the harm. An invalid calibration measures nothing instead.
+    expect(advanceSensorTick(sensor, { pulses: 0, elapsedMs: 1000 }).instantFlowLpm).toBe(0);
+  });
+
+  it("still accepts the offsets a datasheet actually prints", () => {
+    // The tightening has a cost and this is its shape: a POSITIVE offset up to the reachable frequency is
+    // fine, one beyond it is not, and the ten-times headroom that used to hide the difference is gone.
+    expect(configIsValid(formula(150, 10, 0))).toBe(true);
+    expect(configIsValid(formula(150, 10, 1500))).toBe(true);   // exactly q_max * multiplier
+    expect(configIsValid(formula(150, 10, 1501))).toBe(false);  // one past it — accepted before DF14
+    expect(configIsValid(formula(150, 10, -1))).toBe(false);    // and no negative offset at all
   });
 });

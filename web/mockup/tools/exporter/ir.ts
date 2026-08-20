@@ -4,7 +4,6 @@ import type {
   ScreenElement,
   ScreenFlow,
   ScreenGraphicAsset,
-  ScreenAnimation,
   ScreenSubmenu
 } from "../../src/types.js";
 import type { ThemeTokens } from "../../src/theme/types.js";
@@ -118,7 +117,6 @@ function convertScreen(
 ): IRScreen {
   const flows: ScreenFlow[] = screen.flows ?? [];
   const assets: ScreenGraphicAsset[] = screen.assets ?? [];
-  const animations: ScreenAnimation[] = screen.animations ?? [];
   const submenus: ScreenSubmenu[] = screen.submenus ?? [];
 
   return {
@@ -130,7 +128,6 @@ function convertScreen(
     events: screen.events ? [...screen.events] : [],
     flows: [...flows],
     assets: [...assets],
-    animations: [...animations],
     submenus: [...submenus]
   };
 }
@@ -143,8 +140,7 @@ function transformTheme(theme: ThemeTokens) {
   return {
     name: theme.name,
     colors,
-    typography: { ...theme.typography },
-    animation: { ...theme.animation }
+    typography: { ...theme.typography }
   };
 }
 

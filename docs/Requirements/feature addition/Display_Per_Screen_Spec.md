@@ -165,9 +165,11 @@ Global addresses 46-99 are free and existing groups are spaced by ten, so the bl
 Two conventions that belong in `register_map.h` beside the addresses, not in a reader's head:
 
 - **The sensor number is 1-based and 0 means none.** It matches the panel's `S1`..`S8` and `UiNavigator`'s
-  own `sensorIndex_ = 0` sentinel. It also avoids spreading a hazard the tree already carries: the web
-  portal names per-sensor fields `@0`..`@7` while `ui::readSetting` takes a 1-based index where 0 is
-  invalid (`portal_form.h:165`), so one careless adapter drops sensor 1 and misroutes the rest.
+  own `sensorIndex_ = 0` sentinel. **The web portal now agrees** — it names per-sensor fields `@1`..`@8`
+  and refuses `@0`, so the same number means the same sensor on every route and an adapter forwards the
+  index untouched. It did not until 2026-08-18: the form was `@0`..`@7` against a settings API where 0 is
+  invalid, and the first adapter written against it would have dropped sensor 1 and landed every other
+  calibration one channel low (**DF10**, decided in favour of aligning the portal).
 - **Ties resolve to the lowest sensor number.** A master cannot reproduce a rule it was never told, and
   not having to reproduce the rule is the entire point of register 56.
 
@@ -183,30 +185,126 @@ Edge cases, matching what the panel shows:
 publish over MQTT, but `kHaMaxEntities = kNumSensors * 3 + 4` (`ha_discovery.h:120`) budgets exactly four
 globals, so adding four more changes that constant and the discovery payload's size.
 
-## 2c. The warning banner lives in the footer row  *(decided)*
+## 2c. The warning banner lives in the footer row, and a commissioning gap raises it  *(decided, implemented)*
 
-`drawWarningBanner` paints `fillRect(0, bannerY, 240, 18)` whenever `context.hasWarnings` is set
-(`ui_renderer.cpp:422-435`), followed by `!` at x=4 and the summary at x=16. **`bannerY` was 34**, which put
-18 px of full-width overlay mid-panel — the one place every screen keeps its content — on all 79 screens, and
-no requirement document mentioned it.
+`UiRenderer::drawWarningBanner` (`ui_renderer.cpp` — cited by function name on purpose: the line numbers
+written here were stale within one round, having pointed at a range the function had moved out of) paints
+`fillRect(0, 116, 240, 18)` followed by `!` at x=4 and the summary at x=16, both at `bannerY + 4`, i.e. y=120.
+The band is y 116…133, so 134 is the first row below it — the number both audit tools spell as
+`kBannerBottom`. It is the panel's last band, and the firmware carries a
+`static_assert(bannerY + bannerH <= kPanelHeight)` so that stays true by build failure rather than by
+arithmetic somebody re-checks.
+
+**`bannerY` was 34**, which put 18 px of full-width overlay mid-panel — the one place every screen keeps its
+content — on all 80 screens in the dataset, and no requirement document mentioned it. That is history now,
+recorded because the argument is what the decision rests on.
 
 **Decision: `bannerY = 116`, so the banner covers the footer row.** The footer hint is the least valuable row
 on any screen: a gesture reminder an operator reads once. A warning replacing it costs nothing while a warning
-is live, and no screen has to reserve a band or nominate an element to sacrifice. It is a one-line firmware
-change.
+is live, and no screen has to reserve a band or nominate an element to sacrifice.
 
-The case for moving rather than reserving is P1. With the banner at y=34, its second row sits at y=44, so a
-per-sensor undersampling warning would **hide sensors 2 and 6 while naming a sensor** — and no arrangement of
-eight sensors on four rows avoids that band.
+**It is not a one-line change, and calling it one is what left it undone.** This section said "one line" here
+and again in §8, and an executing agent who moved only the coordinate would have produced a banner the footer
+hint perforates: `drawWarningBanner` was called BEFORE `drawScreen`, and `drawTextElement` sets an OPAQUE text
+background, so the screen's own rows stamp background-coloured cells into the band. At y=34 that merely
+disfigured it; at y=116 the footer hint at y=124 would punch its text straight through the band and "the banner
+replaces the footer" would have been false rather than merely untidy. The move is two changes — the coordinate
+and the draw order, which is now `drawScreen` then `drawWarningBanner` then the countdown overlay — plus the
+gate below. The countdown overlay stays LAST so a modal's own abort instruction outranks the banner while a
+hold runs.
+
+**The case for moving rather than reserving was P1, and it is now history.** At y=34 the banner's second row
+sat at y=44, so a per-sensor undersampling warning **hid sensors 2 and 6 while naming a sensor** — and no
+arrangement of eight sensors on four rows avoided that band.
 
 What comes with the decision:
 
-- **The banner inherits the footer's budget**: 40 characters at 6 px. `!` at x=4 and the summary at x=16 leave
-  **37 characters**, which holds the widest summary the device can produce (`! S1,2,3,4,5,6,7,8` is 18).
+- **The banner inherits the footer's budget, and the summary was measured against it properly only after this
+  section claimed it fit.** 40 characters at 6 px; `!` at x=4 and the summary at x=16 leave **37**. That was
+  stated here as sufficient against `! S1,2,3,4,5,6,7,8` (18 characters) — a summary format the device had
+  stopped composing. `UiController::update` chooses between five phrasings, and the sampling-only one read
+  `Sampling warning on sensors %s` with the full channel list: a 28-character prefix plus a 3k−2 list, which
+  passed 37 at **four** flagged channels and reached **50** at eight (right edge x=316, 76 px off a 240 px
+  panel). It overflowed SILENTLY, because `drawWarningBanner` prints straight to the panel and gets none of
+  `drawTextElement`'s `~` truncation, and no test on either side had reached the branch above two channels.
+  **Resolved: every branch is a count.** The sampling-only line is `Sampling warning on 8 sensors` (29), the
+  combined one `8 not calibrated, 8 undersampling` (33) — the widest of the five, four columns spare — and
+  the uncalibrated one `8 channels not calibrated` (25). Channel identity is not lost: flagged rows are drawn
+  in the warning colour from `warningFlags` and an uncalibrated row says `SET?` itself, so the band says how
+  many and which kind. `src/utils/__tests__/warningBanner.test.ts` pins the 33 and the 214 px right edge in
+  both languages' mirror; the renderer still has no clipping, so the bound belongs on the composition.
 - **Exactly one element per screen may sit in y 116…134** — the footer hint, marked `bannerReplaces` in the
-  screen's JSON. Anything else there is reported as a collision, so this is not a blanket exemption.
+  screen's JSON. Anything else there is reported as a collision, so this is not a blanket exemption. That
+  holds across all 61 files in `screens/`, checked by `tools/audit/screen-spec.ts` against
+  `kBannerTop = 116` / `kBannerBottom = 134`. **It did not hold across the dataset**, because 19 shipped
+  screens have no file here and `tools/audit/screen-geometry.ts` had no banner check at all — the band this
+  decision rests on was verified on the proposals and on nothing that ships. `screen-geometry.ts` now checks
+  the band for all 80, and it reports one element: `nyquist-warning`'s `option-down` at y 112…120, four
+  pixels inside the band, on the one screen that asks an operator to accept an undersampling warning. **That
+  finding is open and deliberate** — the audit went from "0 findings" to "1 finding" the day it started
+  checking the real band, and a later round must not make it read 0 by deleting the check. The overlap
+  survives because `nyquist-warning` has no spec file and the generator's deterministic footer re-stack
+  reproduces y=112 on every `--write`, so the only fix is authoring `screens/nyquist-warning.json` — a fresh
+  design decision about where two option rows go. It is deferred on the grounds that the screen is
+  unreachable on the device: no flow's `targetScreenId` names it and it is in no `ui_pages.h` table, so the
+  overlap is a mockup-only artefact today.
 - `level-position` shortens from 104 px to **100 px** (y 14…114) on every screen that carries it: at 104 it
-  grazed the band by 2 px.
+  grazes the band by 2 px. **True of every file in `screens/` AND of the dataset since 2026-08-18** — all 61
+  scrollbars are 100, in `screens.json` and in the generated firmware table.
+  It was not, and the reason is worth keeping: `tools/skeleton/generate.mjs`'s own layout table held
+  `scrollbar.height: 104`, and the six `confirm-*-back` screens have no spec file to override it, so
+  `confirm-reset-totals-back`, `confirm-reset-session-back`, `confirm-reset-max-flow-back`,
+  `confirm-reset-calibration-back`, `confirm-factory-reset-back` and `confirm-reset-portal-login-back`
+  shipped a bar whose bottom was y=118 while the other 55 came out at 100 from their spec files — one fact
+  with two homes, and the wrong home was the live one (**DF19**). The fix was that single number plus
+  `node tools/skeleton/generate.mjs --write`, which changed exactly six lines of the dataset rather than the
+  wholesale regeneration the deferral had feared, and `tools/audit/screen-geometry.ts` now reports any
+  scrollbar that reaches the band so it cannot drift back unnoticed.
+
+**And the gate widens: an uncalibrated channel raises the banner.**
+
+The gate was `context.hasWarnings`, i.e. `REG_UNDERSAMPLING_FLAGS != 0` — sampling faults only — so the two
+uncalibrated phrasings `UiController::update` composes were built every pass and painted nowhere. It is now
+`UiRenderContext::bannerActive()`, which is `hasWarnings || (uncalibratedCount > 0 && !editorActive)`. One
+predicate rather than two spellings of the condition, because the banner and the `legend.warning` row colour
+print the same string and must agree about whether there is anything to say. Three things make it safe:
+
+1. **The order is the argument.** `UiRenderContext`'s own comment objected that a factory-fresh device would
+   wear the banner permanently over the very config screens that clear the condition. That objection was
+   CORRECT at y=34, which is why the band moved FIRST; at y=116 it costs a gesture reminder rather than a
+   reading. Moving then widening is not a preference — it is what makes widening safe.
+2. **A factory-fresh device does not raise it.** The connected bitmap comes out of NVS with a default of 0
+   and `uncalibratedCount` counts `enabled && !ready`, so both counts are zero, the gate is closed, and the
+   summary reads "No channels in use".
+3. **The banner never covers `hold=cancel`.** Every `config-*-edit` screen carries a footer hint ending in
+   `hold=cancel` at y=124 — the only place the abort gesture is written down anywhere — and the band is
+   exactly that row. There are **thirteen** such screens, counted out of the generated table; the decision
+   note that raised this said eighteen and was wrong. `editorActive` suppresses the uncalibrated half of the
+   gate on them, because on a factory-fresh device `uncalibratedCount` is 8 and the banner would otherwise
+   hide the abort gesture permanently, while the operator is doing the one thing that clears the condition.
+   **Sampling faults are exempt from that suppression, on purpose**: `hasWarnings` says a reading is wrong —
+   the number on the panel is not the flow — and that outranks a gesture reminder on every screen. The
+   suppression is of the GATE, not of the wording: with both kinds present and an editor open the line still
+   names both, because `warningSummary` is composed with no knowledge of the editor at all.
+
+**So the banner can now only ever show a fault.** The gate is true only when one of the counts is non-zero,
+so "All sensors nominal" and "No channels in use" are unreachable THROUGH THE BANNER by construction. They
+remain reachable only through `telemetry.status` and `legend.warning`, which no dataset element binds — which
+is why the exporter's `diagnostics-banner` gate still emits its standing WARNING on every run, by design and
+not by neglect. Both catalogue entries stay: rule I2 makes the catalogue append-only, so deleting the
+unreachable strings was never an option, and the check stays a WARNING rather than being rewritten to pass on
+something it does not verify.
+
+**The simulator has the banner at last.** `web/mockup/src/utils/warningBanner.ts` owns the geometry, the gate
+and the copy, and `DisplayViewport` draws the band above the screen's elements, as the firmware now does.
+Before this round the mockup drew NO banner at all while this section documented its pixels — a missing layer,
+which looks exactly like a screen with nothing wrong, and is the more dangerous half of a parity gap than a
+wrong number. Two facts the module pins because a simulator would otherwise guess them: the fill is the
+theme's **`badgeBorder`** token (`warningColor_ = toRgb565(palette.color("badgeBorder", …))`) and NOT an
+invented `warning` token the mockup's `ThemeColorTokens` does not have, and the text is a `WHITE` literal.
+One divergence is recorded rather than invented around: on the device a hold repaints the current screen with
+`overlay = true`, so a confirm screen's full-panel `overlay-bg` covers this band while the countdown runs, and
+the mockup has no second overlay pass for any screen.
 
 ## 3. P0 — System Status  *(agreed)*
 
@@ -1152,7 +1250,13 @@ with its litres pages and its 43 overflowing footers. Closing that gap, in order
      `Project_document.md` register table that documents them as L/s, `RGB_LED_Behavior.md`'s 0.0 L/s
      threshold, and `drawFlowDots`' 0.1–10.0 clamp.
    - **Aggregate registers** 50–56 (§2b), including which sensor holds the peak.
-   - **`bannerY = 116`** (§2c) — one line.
+   - **`bannerY = 116`, the draw order, and the widened gate** (§2c) — three changes, not the one line this
+     list claimed, and the claim is why it sat outstanding. `drawWarningBanner` moves AFTER `drawScreen` or
+     the footer hint punches through the band; the gate becomes
+     `hasWarnings || (uncalibratedCount > 0 && !editorActive)` so the commissioning summary reaches the panel
+     at all, with the editor term keeping the band off `hold=cancel` on the thirteen edit screens. ✅ done,
+     with two deferrals named in §2c: `nyquist-warning`'s `option-down` and the six `confirm-*-back`
+     scrollbars still at 104 px.
    - **Four catalogue values**: `telemetry.totalFlowLpm`, `telemetry.maxFlowLpm`, `legend.status`,
      `config.editor.range`. Each needs a resolver arm, and the exporter's resolvable check only *warns*, so
      treat a missing arm as fatal for these four.

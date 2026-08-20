@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-17T08:14:02.020Z",
+  "generatedAt": "2026-08-20T07:30:08.631Z",
   "screenCount": 80,
-  "elementCount": 666,
+  "elementCount": 668,
   "dataset": [
     {
       "id": "info-p0-global-status",
@@ -210,7 +210,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -557,7 +556,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -899,7 +897,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -1272,7 +1269,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -1630,7 +1626,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -1754,13 +1749,12 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
       "id": "nyquist-warning",
       "name": "Nyquist Validation Warning",
-      "description": "Shown when f_theoretical exceeds Nyquist limit. UP=Edit, DOWN=Save anyway.",
+      "description": "§5.5's full-screen refusal: the pending calibration reaches a frequency the sampler cannot resolve. UP returns to the editor, DOWN forces the write and raises bit n of register 30. — laid out so the warning banner's band (y 116…134) carries no content, which is the point of this screen: it is the ONE screen where a live warning and its own prompt are guaranteed on the panel together, so it reserves the band rather than competing with it (DF18).",
       "elements": [
         {
           "id": "overlay-bg",
@@ -1799,7 +1793,7 @@
           "id": "detail-1",
           "position": {
             "x": 5,
-            "y": 60
+            "y": 56
           },
           "kind": {
             "type": "text",
@@ -1814,7 +1808,7 @@
           "id": "detail-2",
           "position": {
             "x": 5,
-            "y": 72
+            "y": 68
           },
           "kind": {
             "type": "text",
@@ -1829,7 +1823,7 @@
           "id": "nyquist-value",
           "position": {
             "x": 5,
-            "y": 88
+            "y": 80
           },
           "kind": {
             "type": "value",
@@ -1845,7 +1839,7 @@
           "id": "option-up",
           "position": {
             "x": 5,
-            "y": 100
+            "y": 92
           },
           "kind": {
             "type": "text",
@@ -1860,7 +1854,7 @@
           "id": "option-down",
           "position": {
             "x": 5,
-            "y": 112
+            "y": 104
           },
           "kind": {
             "type": "text",
@@ -1911,7 +1905,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -1969,7 +1962,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -2109,7 +2101,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -2249,7 +2240,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -2404,7 +2394,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -2528,7 +2517,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -2670,7 +2658,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -2883,7 +2870,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -3025,7 +3011,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -3220,7 +3205,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -3362,7 +3346,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -3557,7 +3540,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -3699,7 +3681,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -3894,7 +3875,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -4018,7 +3998,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -4160,7 +4139,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -4355,7 +4333,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -4497,7 +4474,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -4692,7 +4668,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -4849,7 +4824,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -5046,7 +5020,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -5170,7 +5143,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -5388,7 +5360,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -5606,7 +5577,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -5824,7 +5794,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -6042,7 +6011,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -6260,7 +6228,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -6478,7 +6445,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -6696,7 +6662,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -6914,7 +6879,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -7038,7 +7002,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -7212,7 +7175,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -7407,7 +7369,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -7596,7 +7557,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -7809,7 +7769,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -8002,7 +7961,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -8219,7 +8177,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -8475,7 +8432,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -8770,7 +8726,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -9026,7 +8981,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -9321,7 +9275,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -9573,7 +9526,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -9864,7 +9816,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -10020,7 +9971,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -10144,7 +10094,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -10284,7 +10233,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -10424,7 +10372,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -10647,7 +10594,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -10808,7 +10754,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -10918,7 +10863,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -11042,7 +10986,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -11265,7 +11208,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -11488,7 +11430,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -11711,13 +11652,12 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
       "id": "net-mqtt-info-3",
       "name": "M.I3 — MQTT publish",
-      "description": "MQTT information, page 3 of 3 — publish behaviour. Was B7, B8 and B9.",
+      "description": "MQTT information, page 3 of 3 — publish behaviour, plus the last command result (R4.4.2d). Was B7, B8 and B9.",
       "elements": [
         {
           "id": "hdr-title",
@@ -11844,6 +11784,37 @@
           "binding": "config.mqtt.qos"
         },
         {
+          "id": "row3-label",
+          "position": {
+            "x": 2,
+            "y": 80
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "Last cmd",
+              "emphasis": "muted",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "row3-value",
+          "position": {
+            "x": 84,
+            "y": 80
+          },
+          "kind": {
+            "type": "text",
+            "payload": {
+              "text": "",
+              "emphasis": "strong",
+              "align": "left"
+            }
+          },
+          "binding": "net.mqtt.lastCommandResult"
+        },
+        {
           "id": "footer-hint",
           "position": {
             "x": 2,
@@ -11903,7 +11874,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -12027,7 +11997,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -12196,7 +12165,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -12336,7 +12304,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -12399,12 +12366,12 @@
             "type": "scrollbar",
             "payload": {
               "width": 5,
-              "height": 104
+              "height": 100
             }
           },
           "size": {
             "width": 5,
-            "height": 104
+            "height": 100
           }
         }
       ],
@@ -12444,7 +12411,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -12584,7 +12550,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -12647,12 +12612,12 @@
             "type": "scrollbar",
             "payload": {
               "width": 5,
-              "height": 104
+              "height": 100
             }
           },
           "size": {
             "width": 5,
-            "height": 104
+            "height": 100
           }
         }
       ],
@@ -12692,7 +12657,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -12832,7 +12796,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -12895,12 +12858,12 @@
             "type": "scrollbar",
             "payload": {
               "width": 5,
-              "height": 104
+              "height": 100
             }
           },
           "size": {
             "width": 5,
-            "height": 104
+            "height": 100
           }
         }
       ],
@@ -12940,7 +12903,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -13096,7 +13058,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -13159,12 +13120,12 @@
             "type": "scrollbar",
             "payload": {
               "width": 5,
-              "height": 104
+              "height": 100
             }
           },
           "size": {
             "width": 5,
-            "height": 104
+            "height": 100
           }
         }
       ],
@@ -13204,7 +13165,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -13343,7 +13303,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -13406,12 +13365,12 @@
             "type": "scrollbar",
             "payload": {
               "width": 5,
-              "height": 104
+              "height": 100
             }
           },
           "size": {
             "width": 5,
-            "height": 104
+            "height": 100
           }
         }
       ],
@@ -13451,7 +13410,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -13591,7 +13549,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -13654,12 +13611,12 @@
             "type": "scrollbar",
             "payload": {
               "width": 5,
-              "height": 104
+              "height": 100
             }
           },
           "size": {
             "width": 5,
-            "height": 104
+            "height": 100
           }
         }
       ],
@@ -13699,7 +13656,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -13769,7 +13725,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -13839,7 +13794,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -13909,7 +13863,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -13979,7 +13932,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     },
     {
@@ -14049,7 +14001,6 @@
         }
       ],
       "assets": [],
-      "animations": [],
       "submenus": []
     }
   ],
@@ -14105,9 +14056,6 @@
       "base": 8,
       "value": 10,
       "badge": 8
-    },
-    "animation": {
-      "easing": "ease-in-out"
     }
   }
 }

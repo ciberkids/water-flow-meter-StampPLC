@@ -69,6 +69,46 @@ inline constexpr uint16_t REG_LINK_STOP_BITS = 43;
 inline constexpr uint16_t REG_LINK_APPLY = 44;
 inline constexpr uint16_t REG_LINK_REVISION = 45;
 
+/**
+ * ── THE CLOCK BLOCK, 50-55 ────────────────────────────────────────────────────────────────────────
+ *
+ * The write that makes the device's clock settable at all (N-d1). Before this, `DeviceClock::setTime` had
+ * no production caller: no register reached it, no portal page offered it, the panel could not (there is no
+ * on-device text editor), and NTP existed only in a comment. A device in the field therefore read `UNSET`
+ * unless its RX8130CE happened to hold a date it was allowed to trust — and a Modbus master, which is the
+ * source of truth for every other setting, had no way to fix that.
+ *
+ * EPOCH SECONDS, not broken-down fields. `DeviceClock`'s whole API is `uint32_t` Unix seconds and its
+ * plausibility floor is expressed there; a Y/M/D/h/m/s block would need date arithmetic and a timezone
+ * story on the firmware side, and every conversion is a place to be wrong about February. A master that
+ * prefers fields converts once, where it has a library, rather than the device converting on every write.
+ *
+ * STAGED, THEN APPLIED, exactly like the link block above it and the network block at 730. Two registers
+ * cannot be written atomically by FC6, so an epoch applied on the low word would be briefly composed from
+ * one new half and one old one — a timestamp nobody chose, which is the failure this module exists to
+ * prevent. `REG_CLOCK_APPLY` takes `LinkSettingsManager::kApplyMagic` (0x5AA5), the same value the other
+ * two blocks take, so an integrator learns one magic rather than three.
+ *
+ * A REFUSAL IS A MODBUS EXCEPTION, not a status register. `setTime` refuses anything outside
+ * 2020-01-01 … 2100-01-01 and changes nothing when it does; the apply write returns false, which the
+ * manager turns into an exception response. So a master that fat-fingers the year hears about it on the
+ * wire, and one that wants to confirm success reads 53-55 back.
+ */
+inline constexpr uint16_t REG_CLOCK_SET_EPOCH_HI = 50;
+inline constexpr uint16_t REG_CLOCK_SET_EPOCH_LO = 51;
+inline constexpr uint16_t REG_CLOCK_APPLY = 52;
+/** Read-only: the current time, or 0 when the clock has never been set. */
+inline constexpr uint16_t REG_CLOCK_NOW_HI = 53;
+inline constexpr uint16_t REG_CLOCK_NOW_LO = 54;
+/**
+ * Read-only: `ClockSource` — 0 none, 1 RTC, 2 operator, 3 NTP.
+ *
+ * Published beside the time because "what is the time" and "who says so" are different questions, and a
+ * master deciding whether to trust a timestamp needs the second one. A 0 here means registers 53-54 are
+ * meaningless rather than "1970".
+ */
+inline constexpr uint16_t REG_CLOCK_SOURCE = 55;
+
 // Sensor register layout
 inline constexpr uint16_t SENSOR_BLOCK_SIZE = 40;
 inline constexpr uint16_t SENSOR_1_BASE_ADDR = 100;
@@ -114,9 +154,15 @@ inline constexpr uint16_t OFF_CFG_PULSES_PER_L = 24;
  * wrong one for the case this register serves: a broken meter swapped for one with different
  * characteristics, where the volume the old meter measured was real and has to keep accumulating.
  *
- * Nineteen is left exactly as it is. Any Modbus master already issuing it expects the wipe it performs,
- * and narrowing a shipped command's effect silently is worse than adding a second one that says what it
- * does.
+ * Nineteen keeps that wipe exactly as it is. Any Modbus master already issuing it expects it, and
+ * narrowing a shipped command's effect silently is worse than adding a second one that says what it does
+ * — which is why this register exists rather than 19 being changed.
+ *
+ * What nineteen DID gain, on 2026-08-17: it now clears the channel's Nyquist override alongside the
+ * configuration it destroys, exactly as this register does. `REG_UNDERSAMPLING_FLAGS` is derived from
+ * `overrideActive_ || overridePending_`, and nothing clears those but a config write, so a decommissioned
+ * channel nobody reconfigures would have carried its undersampling bit for the life of the device. That
+ * is a bit dropping, not a measurement surviving, so no master's expectation of 19 changes.
  *
  * Nor could the panel achieve this by writing zeros to offsets 20-24: `prepareConfigUpdate` refuses a
  * candidate that fails `configIsValid` when the channel currently holds one that passes, and q_max = 0

@@ -172,7 +172,13 @@ class PortalSettingStore {
  public:
   virtual ~PortalSettingStore() = default;
 
-  /** Current value, for pre-filling the form. False when unavailable. */
+  /**
+   * Current value, for pre-filling the form. False when unavailable.
+   *
+   * `sensorIndex` is ONE-BASED for a per-sensor setting — 1 is the sensor the panel calls S1 — and 0
+   * for a global one, which is exactly `ui::writeSetting`'s convention. So an adapter forwards the
+   * index UNTOUCHED; adding or subtracting one is the bug this alignment removed (DF10).
+   */
   virtual bool readValue(const ui::SettingDescriptor& setting,
                          uint8_t sensorIndex,
                          int32_t& out) const = 0;
@@ -180,11 +186,41 @@ class PortalSettingStore {
   /**
    * Commits a value already validated against its descriptor.
    *
+   * `sensorIndex` is one-based, as in `readValue` above: forward it to `ui::writeSetting` unchanged.
+   *
    * False means refused — reported as PortalFieldError::Refused rather than retried.
    */
   virtual bool writeValue(const ui::SettingDescriptor& setting,
                           uint8_t sensorIndex,
                           int32_t value) = 0;
+};
+
+/**
+ * Sets and reads the device clock on the portal's behalf.
+ *
+ * Injected for the same reason `PortalSettingStore` is: this module is Arduino-free so its whole surface
+ * stays host-testable, and `DeviceClock::setTime` needs `millis()`. The adapter supplies it. A null writer
+ * renders the clock section read-only-with-nothing-to-read, exactly as a null store renders a disabled row,
+ * because a section that vanishes is indistinguishable from a firmware that has no clock.
+ *
+ * Follows N-d1's Modbus block: the portal is the SECOND route to the clock, and the ordering (block, portal,
+ * NTP, MQTT) is the owner's.
+ */
+class PortalClockWriter {
+ public:
+  virtual ~PortalClockWriter() = default;
+
+  /** Unix epoch seconds, or 0 when the clock has never been set. */
+  virtual uint32_t nowEpoch() const = 0;
+
+  /** `ClockSource` as its underlying value: 0 none, 1 RTC, 2 operator, 3 NTP. */
+  virtual uint8_t sourceValue() const = 0;
+
+  /**
+   * Commits an operator-supplied epoch. False means refused — the plausibility floor, reported as
+   * `PortalFieldError::Refused` rather than silently clamped.
+   */
+  virtual bool setEpoch(uint32_t epoch) = 0;
 };
 
 class PortalForm {
@@ -221,10 +257,24 @@ class PortalForm {
   static constexpr const char* kPortalPasswordField = "config.portal.password";
 
   /**
+   * The clock field, which like the two above has no catalogue descriptor.
+   *
+   * It is deliberately NOT a `SettingDescriptor`: the catalogue's numeric values are `int32_t` and an epoch
+   * outgrows that in 2038, so making the clock a setting would have shipped a Y2038 bug into the one
+   * subsystem whose entire subject is being right about time.
+   */
+  static constexpr const char* kClockEpochField = "config.clock.epoch";
+
+  /**
    * `sensorCount` bounds the per-sensor rows (`config.sensor.multiplier@3`). Passed in rather than
    * taken from plc::kNumSensors so the loop bound is exercised at a value other than the real one.
    */
-  PortalForm(NetSettings& net, PortalSettingStore* store, std::size_t sensorCount);
+  /**
+   * `clock` is nullable and defaults to null so every existing caller and test compiles unchanged; the
+   * clock section then renders with its field disabled and says the firmware supplied no clock.
+   */
+  PortalForm(NetSettings& net, PortalSettingStore* store, std::size_t sensorCount,
+             PortalClockWriter* clock = nullptr);
 
   /**
    * Checks an HTTP Basic `Authorization` header value against the stored portal login (R7.9b).
@@ -322,7 +372,11 @@ class PortalForm {
 
   NetSettings& net_;
   PortalSettingStore* store_;
+  void renderClockSection(PortalSink& out) const;
+  static void formatEpochUtc(uint32_t epoch, char* out, std::size_t size);
+
   std::size_t sensorCount_;
+  PortalClockWriter* clock_;
 };
 
 }  // namespace plc

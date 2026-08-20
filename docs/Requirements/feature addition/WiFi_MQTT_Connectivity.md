@@ -773,18 +773,33 @@ Strings are packed two characters per register, high byte first, `NUL`-padded, n
 | 618–633 | `NET_MQTT_PASSWORD` | text, 32 bytes, **write-only** |
 | 634–657 | `NET_MQTT_BASE_TOPIC` | text, 48 bytes |
 | 658–673 | `NET_MQTT_DISCOVERY_PREFIX` | text, 32 bytes |
-| 674 | `NET_PORTAL_ENABLED` | bool — the STA-side config page ONLY (R7.9). Never touches the radio. |
-| 711 | `NET_AP_REQUEST` | bool — raise or drop the provisioning AP (R5.4a) |
+| 674 | `NET_PORTAL_ENABLED` | **SPECIFIED, NOT BUILT** — reserved. bool, the STA-side config page ONLY (R7.9). Never touches the radio. No constant declares it in `net_register_map.h`; a read returns whatever the unclaimed address returns |
 | 675 | `NET_PORTAL_REMAINING_S` | uint16, read-only — seconds left on the AP/portal timer |
 | 676–691 | `NET_AP_SSID` | text, 32 bytes, read-only (§5.2) |
 | 692–707 | `NET_AP_PASSWORD` | text, 32 bytes, read-only (§5.2) |
-| 708–711 | `NET_AP_IP` | packed, read-only — the portal address |
+| 708–709 | `NET_AP_IP` | packed, read-only — the portal address. **TWO** registers: `kApIp = 708` |
+| 711 | `NET_AP_REQUEST` | **SPECIFIED, NOT BUILT** — reserved. bool, raise or drop the provisioning AP (R5.4a). 711 is genuinely free, verified against the header rather than assumed |
 | 712–719 | `NET_PORTAL_USER` | text, 16 bytes |
 | 720–729 | *reserved* | formerly `NET_PORTAL_PASSWORD`; writes ignored — see the note below |
 | 730 | `NET_APPLY` | write `0x5AA5` to commit the staged block |
 | 731 | `NET_REVISION` | increments on each successful apply |
 | 732 | `NET_LAST_ERROR` | enum, read-only |
 | 736–751 | `NET_PORTAL_PASSWORD` | text, 32 bytes, **write-only** |
+
+> **TWO ROWS ABOVE DESCRIBE REGISTERS THAT DO NOT EXIST, and are labelled so** (DF15). `674`
+> (`NET_PORTAL_ENABLED`, R7.9) and `711` (`NET_AP_REQUEST`, R5.4a) are decided features with addresses
+> chosen and nothing implemented: neither appears in `net_register_map.h`. They stay in this table, marked,
+> rather than being deleted — deleting them would discard a requirement and let a future block reuse an
+> address that is already spoken for. An integrator reads this table to decode real hardware, so a row that
+> silently describes nothing is the worst outcome of the three.
+>
+> **`NET_AP_IP` is 708–709, not 708–711.** The header declares `kApIp = 708` over two registers, packed;
+> `kPortalReset` is at 710 and `kPortalUser` at 712. The old four-register range double-booked 711 against
+> `NET_AP_REQUEST` **inside this same table**, while R5.4a's own decision note said 711 was chosen
+> *because* it is free. The header was right and the table was wrong in two places at once.
+>
+> The `static_assert`s in `net_register_map.h` cover overlaps between things that EXIST; they cannot catch
+> an address that exists only on paper, which is why this note is the gate for these two rows.
 
 > **The portal password is at 736, not 720.** It was placed at 720 with 16 registers for its 32 bytes
 > and did not have them: `NET_APPLY` is at 730, so registers 720–729 staged only bytes 0..19, a write
@@ -1217,6 +1232,63 @@ The **MQTT info** and **AP info** pages already show the IP, which is exactly wh
 >
 > This also means the page cannot offer a setting the firmware does not have, or omit one it does.
 
+> **R7.9d — Three fields on that page are NOT generated, and the clock is the third** (N-d1, built
+> 2026-08-18).
+>
+> The portal login pair has no descriptor because R7.9a needs the login to land on the change-password
+> form. The clock has none for a different and sharper reason: catalogue values are `int32_t`, and a Unix
+> epoch outgrows that in **2038**. Making the clock a `SettingDescriptor` would have shipped a Y2038 bug
+> into the one subsystem whose entire subject is being right about time, so `config.clock.epoch` is
+> rendered and parsed explicitly as `uint32_t`.
+>
+> **What the section shows:** the device time as `YYYY-MM-DD HH:MM:SS UTC` — UTC, and it says so, because
+> the device has no timezone and inventing one makes every timestamp ambiguous — plus **who set it**
+> (`ClockSource`), because a reader deciding whether to trust a timestamp needs that answered too. An unset
+> clock says *not set* rather than rendering a plausible 1970.
+>
+> **How it is set, and why not `datetime-local`.** That widget submits a local wall-clock string with no
+> offset, so the firmware would have to parse a date AND guess a timezone — the two things the Modbus block
+> at 50–52 was designed to avoid. Instead a small inline script asks the BROWSER, which knows both, to
+> compute the epoch, and the firmware receives the same `uint32_t` it receives from RS485: one code path,
+> one validation, one plausibility floor. The script only prefills, so with scripting off the field still
+> submits and the hint tells the operator to type seconds.
+>
+> **Blank means leave it alone**, exactly like the write-only password: the page renders every setting on
+> every save, and a blank clock field must never read as "set the clock to 1970". An out-of-range year is
+> reported as `OutOfRange` before the clock is troubled at all, and a refusal by `DeviceClock` surfaces as
+> `Refused`.
+>
+> **Dependency-inverted, like the settings store.** `PortalForm` is Arduino-free so its whole surface stays
+> host-testable, and `DeviceClock::setTime` needs `millis()`; `PortalClockWriter` is the seam, implemented in
+> `firmware.cpp`. A null writer renders the section saying the build supplied no clock rather than hiding it,
+> because a section that vanishes is indistinguishable from a firmware that has no clock.
+
+> **R7.13 — NTP, the clock's third route** (built 2026-08-18).
+>
+> On every WiFi association the device asks `pool.ntp.org` for the time, and re-asks every six hours. The
+> answer goes through the same `DeviceClock::setTime` the other two routes use, so the same plausibility floor
+> applies and the source is recorded as `ntp` — visible on register 55 and on the portal page.
+>
+> **Four decisions live in `NtpPolicy`, host-tested, not in `firmware.cpp`:** only ask while associated (SNTP
+> against a powered-down radio spends the ladder on a dead interface, which is the mistake `mqtt_reconnect.h`
+> documents for MQTT in the same loop); ask once per association rather than once per pass; retry a failure
+> after **two minutes**, because DNS that did not answer will not answer faster; and treat **fifteen seconds**
+> of silence as a failure, since SNTP is asynchronous and something has to decide when silence means no.
+>
+> **Six hours** comes from the RX8130CE's ±3 ppm drift — about 0.8 s/day — which keeps the accumulated error
+> well under a second while asking a public pool four times a day rather than continuously.
+>
+> **How the device knows SNTP answered:** the SYSTEM clock becomes plausible. `time()` starts at 1970 and is
+> moved only by SNTP, while `DeviceClock` keeps its own base, so a plausible value there cannot be an echo of
+> a time the operator or the RTC supplied. It is a test of the network rather than of ourselves.
+>
+> **The server is a constant, not a setting.** Adding it to the catalogue would invalidate every authored menu
+> pack (N-b), and a device needing a private time server has two routes that set the clock directly.
+>
+> **NTP does not outrank the operator by policy — it simply wins by being later.** A network time is strictly
+> better than a typed one, the clock records which it holds, and every surface reports the source, so nothing
+> has to guess.
+
 > **R7.10** — The page is served over **HTTP**. So the login password, the MQTT broker password and
 > the WiFi passphrase all cross the LAN in clear text whenever the form is submitted.
 >
@@ -1481,14 +1553,20 @@ resolved before the expensive work.
 | ~~**N2a**~~ | Text-editor engine — **built then deleted** (§6.3). Its 47 checks went with it. | A8 | ⊘ withdrawn |
 | **N2b** | Text settings are **display-only** at the panel; the wiring was removed with the engine | A8 | ✅ 16 checks |
 | **N3** | Network register block 500–751, staged apply, revision, error reporting | A5, A6, A7 | ✅ 50 checks |
-| **N4** | WiFi state machine, backoff, NVS persistence, status bindings | A13 | ▶ next — also unblocks the §7.1 info pages |
-| **N5** | MQTT client (`esp-mqtt`, §4.1.1), topic layout, cadence, LWT, queue policy | A11 | unblocked 2026-08-03 |
-| **N6** | Home Assistant discovery payloads (§4.4.a/b) and republish rules | A2, A3, A4 | unblocked 2026-08-03 |
+| **N4** | WiFi state machine, backoff, NVS persistence, status bindings | A13 | ✅ 154 checks |
+| **N5** | MQTT client (`esp-mqtt`, §4.1.1), topic layout, cadence, LWT, queue policy | A11 | ✅ 191 checks |
+| **N6** | Home Assistant discovery payloads (§4.4.a/b) and republish rules | A2, A3, A4 | ✅ 262 checks |
+| **N6a** | Command topics (§4.4.1) — the router, the two safeguards, `button` discovery, register 565 | A2, A11 | ✅ 49 checks, 2026-08-20 |
 | **N7a** | Default-pack editors for all 14 settings, regenerated `.uipack` | A9, A12 | ✅ 34 screens, 82 total |
 | **N7b** | Menu screens with flow guards, completeness migration (Q7) | A10 | |
 | **N8a** | Configuration web portal (§7.6) — `WebServer` + `DNSServer`, catalogue-generated form. **Load-bearing since §6.3**: with no wheel this is the only way to provision a device with no Modbus master. | A9 | ▶ raised in priority |
 | **N8b** | SD-card credential file (Q2) | — | |
 | **N9** | Hardware validation: polling rate, brownout under TX, HA end-to-end, **task-WDT survival with the portal active** | A1–A4, R9.3.1 | ⛔ needs hardware |
+
+**N4, N5 and N6 read "next" and "unblocked" here until 2026-08-20**, long after all three had shipped
+with the check counts now shown. Corrected when N6a landed beside them. It is the same failure the open
+register was rewritten to undo: a state column that is a second home for a fact recorded elsewhere, and
+nobody moves it. The counts are cited so the next reader can re-measure rather than believe this table.
 
 **Why N1c and N7a are one change, not two.** `assertCoversEverySetting` in the exporter refuses to
 emit a pack that does not reach every declared setting. Declaring the settings without their

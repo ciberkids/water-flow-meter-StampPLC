@@ -40,8 +40,10 @@ const kMinimalIr: ExportIR = {
     theme: {
         name: "Test",
         colors: {},
-        typography: { base: 8, value: 10, badge: 8 },
-        animation: { easing: "linear" }
+        // No `animation`: the IR theme stopped carrying the easing token with J2. The DATASET still has
+        // it — the workspace's own CSS transitions read it through `--theme-animation-easing` — but nothing
+        // on the device did, so it is no longer emitted or modelled here.
+        typography: { base: 8, value: 10, badge: 8 }
     }
 };
 

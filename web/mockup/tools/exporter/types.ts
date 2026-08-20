@@ -1,5 +1,4 @@
 import type {
-  ScreenAnimation,
   ScreenDataset,
   ScreenElement,
   ScreenFlow,
@@ -53,8 +52,6 @@ export interface IRAsset {
   embeddedFrames?: string[];
 }
 
-export interface IRAnimation extends ScreenAnimation { }
-
 export interface IRSubmenu extends ScreenSubmenu { }
 
 export interface IRScreenEvent {
@@ -73,7 +70,6 @@ export interface IRScreen {
   events: IRScreenEvent[];
   flows: IRFlow[];
   assets: IRAsset[];
-  animations: IRAnimation[];
   submenus: IRSubmenu[];
 }
 
@@ -81,7 +77,6 @@ export interface IRTheme {
   name: string;
   colors: Record<string, IRNumberColor>;
   typography: ThemeTokens["typography"];
-  animation: ThemeTokens["animation"];
 }
 
 export interface ExportIR {

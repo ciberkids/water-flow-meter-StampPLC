@@ -9,6 +9,7 @@
 // written afterwards asserts the buffer that was already chosen instead of the length actually
 // needed.
 #include "net/ha_discovery.h"
+#include "net/mqtt_command_router.h"
 
 // The ONE base-topic rule (owner decision 5A). Named explicitly rather than leaned on through
 // ha_discovery.h, because the agreement checks below call it directly and must not depend on
@@ -755,11 +756,21 @@ void enumerationTests() {
   const HaDiscovery ha = defaultDiscovery();
   HaEntityRef entities[plc::kHaMaxEntities];
 
+  // Four per-device readings plus §4.4.1's three command buttons. The buttons are deliberately NOT
+  // conditioned on the bitmap: a device with nothing wired can still be told to republish, and
+  // `reset-totals` is most wanted exactly when the channels have just been turned off.
+  constexpr std::size_t kPerDevice = 4 + 3;
   const std::size_t none = ha.enumerateEntities(0x0000, entities, plc::kHaMaxEntities);
-  check(none == 4, "with no sensors connected only the four per-device entities are published");
+  check(none == kPerDevice,
+        "with no sensors connected the per-device entities and the three buttons are published");
+  std::size_t buttons = 0;
+  for (std::size_t i = 0; i < none; ++i) {
+    if (plc::haEntityIsButton(entities[i].kind)) ++buttons;
+  }
+  check(buttons == 3, "and all three buttons are there — §4.4.1 has exactly three topics");
 
   const std::size_t one = ha.enumerateEntities(0x0001, entities, plc::kHaMaxEntities);
-  check(one == 7, "one sensor adds exactly its three entities");
+  check(one == kPerDevice + 3, "one sensor adds exactly its three entities");
   bool onlySensorOne = true;
   int perSensor = 0;
   for (std::size_t i = 0; i < one; ++i) {
@@ -780,7 +791,7 @@ void enumerationTests() {
     else if (entities[i].sensor == 7) sensorEight = true;
     else nothingElse = false;
   }
-  check(gapped == 10 && sensorTwo && sensorEight && nothingElse,
+  check(gapped == kPerDevice + 6 && sensorTwo && sensorEight && nothingElse,
         "sensors 2 and 8 connected yields sensors 2 and 8 — not 1 and 2");
 
   // The caller's array must never be overrun, whatever it claims to be.
@@ -993,6 +1004,90 @@ void baseTopicAgreementTests() {
         "and a topic filling the whole field still configures — R4.4.8's worst case needs it");
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// §4.4.1 — the command buttons
+// ═══════════════════════════════════════════════════════════════════════════════════════
+void commandButtonTests() {
+  std::printf("\n[§4.4.1 — the three commands are `button` entities that can actually be pressed]\n");
+
+  const HaDiscovery ha = defaultDiscovery();
+  const HaEntityRef session{HaEntity::ButtonResetSession, 0};
+  const HaEntityRef totals{HaEntity::ButtonResetTotals, 0};
+  const HaEntityRef republish{HaEntity::ButtonRepublish, 0};
+
+  // THE assertion of this file. Home Assistant's default press payload is `PRESS`; R4.4.1 accepts
+  // only `RESET`. A button discovered without `payload_press` therefore ships broken — it appears,
+  // it presses, and the device answers `bad-payload` where nobody is looking. Everything else here
+  // is structure; this is the one that was going to be wrong.
+  const std::string s = payloadOf(ha, session);
+  const std::string t = payloadOf(ha, totals);
+  check(contains(s.c_str(), "\"payload_press\":\"RESET\""),
+        "reset-session carries payload_press RESET, not Home Assistant's default PRESS");
+  check(contains(t.c_str(), "\"payload_press\":\"RESET\""), "and so does reset-totals");
+  checkStr(plc::haEntityPressPayload(HaEntity::ButtonResetSession), plc::MqttCommandRouter::kResetPayload,
+           "and that payload is character-for-character the one the router demands");
+
+  // The topic the button publishes to has to be the topic the router matches. Compared through
+  // `commandFor` rather than against a literal, so the two ends are checked against each other and
+  // not both against my typing.
+  const std::string cmdTopic = std::string("watermeter/a1b2c3") +
+                               plc::haEntityCommandSuffix(HaEntity::ButtonResetSession);
+  check(contains(s.c_str(), (std::string("\"command_topic\":\"") + cmdTopic + "\"").c_str()),
+        "the command topic is <base>/cmd/reset-session");
+  check(plc::MqttCommandRouter::commandFor(cmdTopic.c_str(), "watermeter/a1b2c3") ==
+            plc::MqttCommand::ResetSession,
+        "and the router resolves that exact string back to the command — both ends of §4.4.1 agree");
+  check(plc::MqttCommandRouter::commandFor(
+            (std::string("watermeter/a1b2c3") + plc::haEntityCommandSuffix(HaEntity::ButtonResetTotals))
+                .c_str(),
+            "watermeter/a1b2c3") == plc::MqttCommand::ResetTotals,
+        "reset-totals likewise");
+  check(plc::MqttCommandRouter::commandFor(
+            (std::string("watermeter/a1b2c3") + plc::haEntityCommandSuffix(HaEntity::ButtonRepublish))
+                .c_str(),
+            "watermeter/a1b2c3") == plc::MqttCommand::Republish,
+        "and republish likewise");
+
+  // The discovery topic addresses the `button` component. Published under `sensor/` the entity would
+  // be created as a sensor with a command topic it cannot use — or rejected outright.
+  const std::string topic = topicOf(ha, session);
+  checkStr(topic.c_str(), "homeassistant/button/wfm_a1b2c3/cmd_reset_session/config",
+           "the discovery topic addresses button/, not sensor/");
+
+  // The reading keys must be ABSENT. Home Assistant rejects a payload carrying keys the component
+  // does not define, and a rejected payload is an entity that silently never appears.
+  for (const std::string& p : {s, t, payloadOf(ha, republish)}) {
+    check(!contains(p.c_str(), "state_topic"), "a button payload has no state_topic");
+    check(!contains(p.c_str(), "value_template"), "nor a value_template");
+    check(!contains(p.c_str(), "state_class"), "nor a state_class");
+    check(!contains(p.c_str(), "suggested_display_precision"), "nor a display precision");
+    check(!contains(p.c_str(), "unit_of_measurement"), "nor a unit — a press is not a quantity");
+    check(!contains(p.c_str(), "entity_category"),
+          "and no entity_category: a reset button belongs in the dashboard, not the diagnostics fold");
+    // What it must have: identity and availability, like every other entity.
+    check(contains(p.c_str(), "\"availability_topic\":\"watermeter/a1b2c3/status\""),
+          "but it shares the availability topic, so an offline device greys the button out");
+    check(contains(p.c_str(), "\"device\":{\"identifiers\":[\"wfm_a1b2c3\"]"),
+          "and the device block, so it groups with the sensors (R4.4.2)");
+  }
+
+  // `stateTopic` must refuse a button rather than handing back the diagnostics topic, which is a
+  // real topic carrying real JSON: publishing a button "state" there would corrupt the diagnostics
+  // payload and report success.
+  char buffer[plc::kHaStateTopicBytes] = {};
+  check(!ha.stateTopic(session, buffer, sizeof(buffer)).complete,
+        "stateTopic refuses a button instead of returning <base>/diagnostics/state");
+  check(buffer[0] == '\0', "and leaves the buffer empty rather than half-written");
+
+  // Three distinct unique_ids, since one duplicated id silently collapses two buttons into one.
+  const std::string ids[] = {payloadOf(ha, session), payloadOf(ha, totals), payloadOf(ha, republish)};
+  check(contains(ids[0].c_str(), "\"unique_id\":\"wfm_a1b2c3_cmd_reset_session\"") &&
+            contains(ids[1].c_str(), "\"unique_id\":\"wfm_a1b2c3_cmd_reset_totals\"") &&
+            contains(ids[2].c_str(), "\"unique_id\":\"wfm_a1b2c3_cmd_republish\""),
+        "each button has its own unique_id (R4.4.3)");
+}
+
 }  // namespace
 
 int main() {
@@ -1007,6 +1102,7 @@ int main() {
   birthMessageTests();
   republishPolicyTests();
   enumerationTests();
+  commandButtonTests();
   configValidationTests();
   baseTopicAgreementTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,

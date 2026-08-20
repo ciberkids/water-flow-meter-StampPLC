@@ -152,6 +152,20 @@ void roundTripTests(const std::vector<uint8_t>& bytes) {
                     want.y);
         ++mismatches;
       }
+      /**
+       * SIZE, not just position.
+       *
+       * This loop compared x/y, kind and binding and stopped there, so a pack whose element SIZES had
+       * gone stale round-tripped "identically". It was not hypothetical: DF19 changed six scrollbar
+       * heights from 104 to 100 in `screens.json`, the committed `default.uipack` was never regenerated,
+       * and this check passed over a fixture that disagreed with the dataset by exactly those six bytes.
+       * A scrollbar is where it matters most — its height IS the information it carries.
+       */
+      if (element.width != want.width || element.height != want.height) {
+        std::printf("      %s/%u: size %dx%d != %dx%d\n", id, e, element.width, element.height,
+                    want.width, want.height);
+        ++mismatches;
+      }
       if (element.kind != static_cast<uint8_t>(want.type)) {
         std::printf("      %s/%u: kind %u != %u\n", id, e, element.kind,
                     static_cast<uint8_t>(want.type));

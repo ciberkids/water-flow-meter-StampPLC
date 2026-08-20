@@ -32,7 +32,12 @@ bool ModbusManager::isWritableAddress(uint16_t address) const {
       address == REG_LINK_BAUD_INDEX ||
       address == REG_LINK_PARITY ||
       address == REG_LINK_STOP_BITS ||
-      address == REG_LINK_APPLY) {
+      address == REG_LINK_APPLY ||
+      // The clock block's writable third (N-d1). 53-55 are read-only: a master that could write the
+      // published time would be able to make the device disagree with its own clock.
+      address == REG_CLOCK_SET_EPOCH_HI ||
+      address == REG_CLOCK_SET_EPOCH_LO ||
+      address == REG_CLOCK_APPLY) {
     return true;
   }
   if (address < SENSOR_1_BASE_ADDR) {
@@ -127,6 +132,37 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
       return false;
     }
     deps_.link->publish(*deps_.registers);
+    return true;
+  }
+
+  if (address == REG_CLOCK_SET_EPOCH_HI) {
+    stagedClockHi_ = value;
+    return true;
+  }
+  if (address == REG_CLOCK_SET_EPOCH_LO) {
+    stagedClockLo_ = value;
+    return true;
+  }
+  if (address == REG_CLOCK_APPLY) {
+    /**
+     * Refused, not clamped, and refused on the WIRE (N-d1).
+     *
+     * Returning false gives the master a Modbus exception, which is the only report this block has and
+     * deliberately so: `DeviceClock::setTime` already refuses anything outside 2020…2100 and changes
+     * nothing when it does, so there is no half-applied state for a status register to describe. A master
+     * confirming success reads 53-55 back.
+     *
+     * The staged halves are left alone on failure. A master retrying with a corrected high word should not
+     * have to resend both.
+     */
+    if (!deps_.clock || value != LinkSettingsManager::kApplyMagic) {
+      return false;
+    }
+    const uint32_t epoch = (static_cast<uint32_t>(stagedClockHi_) << 16) | stagedClockLo_;
+    if (!deps_.clock->setTime(epoch, plc::ClockSource::Operator, millis())) {
+      return false;
+    }
+    publishClock();
     return true;
   }
 
@@ -306,6 +342,23 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
         deps_.sensors[sensorIndex] = SensorData{};
         deps_.sensors[sensorIndex].inUse = wasInUse;
         deps_.configs[sensorIndex] = SensorCharacteristics{};
+        // The Nyquist override described the configuration that just went. `evaluateSensorDiagnostics`
+        // below ORs both flags in, so leaving them set keeps this channel's undersampling bit lit for a
+        // channel with no configuration to undersample — and nothing would ever clear it: a
+        // decommissioned channel is not going to be reconfigured, and the flags are only cleared by a
+        // config write. The bit would stay lit on RS485 and on the MQTT diagnostics topic for the life of
+        // the device. This arm was the LAST site that invalidated a configuration without clearing the
+        // override it invalidated; the bitmap arms at the top of this function, the master reset at
+        // REG_MASTER_RESET_ALL_SENSORS and the swap arm below all already did.
+        //
+        // The stale exemption cannot ALSO be inherited by a replacement meter, though that is what this
+        // was first reported as: `prepareConfigUpdate` clears all three for any candidate failing
+        // `configIsValid`, and from an all-zero config the first single-register write is necessarily
+        // such a candidate. Owner decision 2026-08-17: clear them here anyway, so the two reset arms
+        // agree about the override and neither reader has to know which one it is looking at.
+        overridePending_[sensorIndex] = false;
+        overrideActive_[sensorIndex] = false;
+        pendingOverrides_[sensorIndex] = SensorCharacteristics{};
         saveCumulativeToNvs(sensorIndex);
       }
       syncSensorToHolding(sensorIndex);
@@ -328,12 +381,20 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
     case OFF_CMD_RESET_CALIBRATION:
       if (value == 1) {
         deps_.configs[sensorIndex] = SensorCharacteristics{};
-        // The Nyquist override belonged to the OLD meter's figures. Left standing, `overrideActive_`
-        // makes prepareConfigUpdate return true for the very first candidate entered for the NEW
-        // meter, so the replacement would be accepted without ever being sampling-checked — and
-        // `evaluateSensorDiagnostics` below ORs both flags in, so the undersampling bit would also
-        // stay lit for a channel that now has no configuration to undersample. The arm above does not
-        // clear these; that is a separate defect, reported rather than fixed here.
+        // The Nyquist override belonged to the OLD meter's figures. `evaluateSensorDiagnostics` below
+        // ORs both flags in, so left standing the undersampling bit would stay lit for a channel that
+        // now has no configuration to undersample — that is the reachable harm, and the reason both
+        // reset arms clear it.
+        //
+        // It would NOT let the replacement inherit the exemption, which is what this was first reported
+        // as. A latched `overrideActive_` waves through the first VALID candidate, and the first
+        // candidate entered from an all-zero config cannot be one: `prepareConfigUpdate`'s
+        // invalid-candidate branch clears all three flags before returning, and no single-register write
+        // can supply the two fields `configIsValid` demands at once.
+        //
+        // The arm above does the same, since 2026-08-17. That completes the rule: EVERY site that
+        // invalidates a configuration clears the override describing it, so no reader of
+        // `REG_UNDERSAMPLING_FLAGS` has to know which command got there first.
         overridePending_[sensorIndex] = false;
         overrideActive_[sensorIndex] = false;
         pendingOverrides_[sensorIndex] = SensorCharacteristics{};
@@ -474,6 +535,14 @@ void ModbusManager::syncGlobalRegisters() {
     for (uint16_t i = 0; i < sizeof(block) / sizeof(block[0]); ++i) {
       deps_.registers->setUint16(static_cast<uint16_t>(plc::net_reg::kBase + i), block[i]);
     }
+    // AFTER the block, because the block zeroes them. `publish` packs settings; these two are live state,
+    // and a master reading 561 got 0 forever until this line existed.
+    if (deps_.mqttStateValue) {
+      deps_.registers->setUint16(plc::net_reg::kMqttState, *deps_.mqttStateValue);
+    }
+    if (deps_.mqttLastCommandResult) {
+      deps_.registers->setUint16(plc::net_reg::kMqttLastCmdResult, *deps_.mqttLastCommandResult);
+    }
   }
   deps_.registers->setFloat(REG_POLLING_RATE_KHZ, *deps_.pollingRateKhz);
   deps_.registers->setUint16(REG_CONNECTED_SENSORS_BITMAP, *deps_.connectedBitmap);
@@ -486,6 +555,24 @@ void ModbusManager::syncGlobalRegisters() {
   if (deps_.displayFlowUnit) {
     deps_.registers->setUint16(REG_DISPLAY_FLOW_UNIT, *deps_.displayFlowUnit);
   }
+  publishClock();
+}
+
+/**
+ * The clock's read side: the time, and who says so (N-d1).
+ *
+ * Published from the clock on every cycle rather than latched at apply time, because `now()` advances from
+ * `millis()` between syncs — a latched copy would be a timestamp going stale in a register an integrator
+ * reads as current. Zero when unset, with `REG_CLOCK_SOURCE` at 0 saying why, so 1970 never appears.
+ */
+void ModbusManager::publishClock() {
+  if (!deps_.clock) {
+    return;
+  }
+  const uint32_t epoch = deps_.clock->isSet() ? deps_.clock->now(millis()) : 0u;
+  deps_.registers->setUint16(REG_CLOCK_NOW_HI, static_cast<uint16_t>(epoch >> 16));
+  deps_.registers->setUint16(REG_CLOCK_NOW_LO, static_cast<uint16_t>(epoch & 0xFFFFu));
+  deps_.registers->setUint16(REG_CLOCK_SOURCE, static_cast<uint16_t>(deps_.clock->source()));
 }
 
 void ModbusManager::evaluateSensorDiagnostics() {

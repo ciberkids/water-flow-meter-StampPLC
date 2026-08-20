@@ -21,6 +21,7 @@
 #include "led/led_controller.h"
 #include "modbus/modbus_manager.h"
 #include "modbus/register_map.h"
+#include "net/mqtt_command_router.h"
 #include "net/net_register_map.h"
 #include "modbus/sensor_types.h"
 #include "ui/core/ui_bindings.h"
@@ -30,6 +31,7 @@
 #include "ui/core/ui_module.h"
 #include "ui/core/ui_pages.h"
 #include "ui/core/ui_renderer.h"
+#include "ui/core/ui_root_tail.h"
 #include "ui/core/ui_screen_router.h"
 #include "ui/core/ui_settings.h"
 
@@ -495,8 +497,12 @@ void navigationRingTests() {
   const auto* start = dev.controller.navigator().current();
 
   // Cycling the root ring must return to where it began, and must never leave the table.
+  //
+  // 23, not 20: the root level is now ten members, and 20 steps is exactly two laps — a symmetry
+  // check that lands back where it started for free would pass with UP broken. 23 is coprime with
+  // both 9 and 10, so the check keeps its teeth whichever the ring turns out to be.
   bool everNull = false;
-  for (int i = 0; i < 20; ++i) {
+  for (int i = 0; i < 23; ++i) {
     dev.tap(ButtonInputManager::Button::Down);
     if (dev.controller.navigator().current() == nullptr) everNull = true;
   }
@@ -504,9 +510,9 @@ void navigationRingTests() {
   check(dev.controller.navigator().depth() == 0, "cycling siblings does not change depth");
 
   // Back to the start by going the other way the same number of steps.
-  for (int i = 0; i < 20; ++i) dev.tap(ButtonInputManager::Button::Up);
+  for (int i = 0; i < 23; ++i) dev.tap(ButtonInputManager::Button::Up);
   check(dev.controller.navigator().current() == start,
-        "the root ring is symmetric: 20 down then 20 up returns to the starting screen");
+        "the root ring is symmetric: 23 down then 23 up returns to the starting screen");
 }
 
 /**
@@ -740,12 +746,13 @@ void configListPagingTests() {
 /**
  * A HELD UP/DOWN navigates NOWHERE, and this is where that is written down.
  *
- * §3.1 says a held UP/DOWN repeats the navigation step every 250 ms, and `button_input.cpp` faithfully
- * emits those repeats from the 1.5 s threshold. Nothing answers them. `mapGesture` maps a repeat to
+ * §3.1 said a held UP/DOWN repeats the navigation step every 250 ms, until §3.1.1 withdrew that step on
+ * 2026-08-17. `button_input.cpp` still emits those repeats from the 1.5 s threshold, because §5.4's ramp
+ * needs a held button, and nothing on the flow-table path answers them. `mapGesture` maps a repeat to
  * `FlowGesture::Hold`, `matchFlow` requires an exact gesture match with no fallback, and the generated
  * table declares no hold flow on any screen — so every repeat is popped, matched against nothing, and
- * dropped. §3.1's repeating step is emitted-but-unimplemented, which is a different thing from absent and
- * is exactly the kind of gap that survives for months because both halves look present.
+ * dropped. That emitted-but-unanswered repeat is now the SPECIFIED behaviour, so what follows pins a
+ * requirement rather than recording a gap: declaring a hold flow to "close" it would fail this test.
  *
  * It cost a real bug report. The web simulator invented the missing half — it answered a repeat with the
  * screen's SHORT flow — so holding UP on a setting page carried the operator several settings away from
@@ -754,7 +761,7 @@ void configListPagingTests() {
  * without anyone noticing, and what tells the next person that adding a hold flow changes these answers.
  */
 void heldRepeatScopeTests() {
-  std::printf("\n[a held UP/DOWN navigates nowhere — §3.1 emitted, never answered]\n");
+  std::printf("\n[a held UP/DOWN navigates nowhere — §3.1.1, amended 2026-08-17]\n");
 
   // The premise first, read off the table the firmware actually runs. Every expectation below follows
   // from it, so if this ever changes the rest of the suite should be re-read rather than patched.
@@ -1850,6 +1857,159 @@ void recoveryGestureTests() {
 }
 
 
+/**
+ * The §3.4 root-level entry — the DISCOVERABLE route into the Select Menu.
+ *
+ * Driven through `Device::tap` throughout, so the whole stack runs: button input, matchFlow against
+ * the tail's own flows, the action registry, the navigator's splice and the renderer. That matters
+ * more here than anywhere else in this file, because the entry is a firmware-owned
+ * `ui_exporter::Screen` that is in NO screen table — every API-level assertion about it would pass
+ * against a navigator whose paging never consults the splice at all.
+ */
+void rootEntryTests() {
+  std::printf("\n[the appended Select Menu root entry — §3.4]\n");
+
+  // ── (a) reachable by paging, and leavable in both directions ────────────────────────────────
+  {
+    Device dev;
+    dev.boot();
+    auto& nav = dev.controller.navigator();
+
+    int taps = 0;
+    while (taps < 12 &&
+           std::strcmp(nav.current()->id, ui::kSelectMenuScreenId) != 0) {
+      dev.tap(ButtonInputManager::Button::Down);
+      taps += 1;
+      if (nav.depth() != 0) break;
+    }
+    check(std::strcmp(nav.current()->id, ui::kSelectMenuScreenId) == 0,
+          "paging DOWN from P0 reaches the appended entry");
+    check(taps == 9, "and it takes exactly 9 taps — it is at the END of the level, not in the middle");
+    check(nav.depth() == 0, "paging to it never leaves depth 0");
+    check(nav.current() == &ui::kSelectMenuScreen,
+          "the screen really is the firmware-owned constant, not a look-alike");
+
+    uint8_t ri = 0, rc = 0;
+    // ringIndex is 0-based and the root anchors on the root, so P0 is 0 and the entry is 9 — the
+    // scrollbar reads `L0 9/10`, seven characters, which is the widest nav.position the root can
+    // produce. There is no `10/10`.
+    check(nav.ringPosition(&ri, &rc) && rc == 10 && ri == 9,
+          "it reports index 9 of 10: the last member of a ten-member level");
+
+    dev.tap(ButtonInputManager::Button::Down);
+    check(std::strcmp(nav.current()->id, "info-p0-global-status") == 0,
+          "one more DOWN wraps to P0");
+
+    // THE ASSERTION THE WHOLE ITEM TURNS ON. The tail's f-prev declares NO target, so a paging path
+    // that only acts when `ctx.resolvedTarget` is set moves the UiPage ring and leaves the navigator
+    // exactly where it was — every other wire looking connected while UP off the tail does nothing.
+    dev.tap(ButtonInputManager::Button::Up);
+    check(std::strcmp(nav.current()->id, ui::kSelectMenuScreenId) == 0,
+          "a single UP from P0 lands on the appended entry again");
+    dev.tap(ButtonInputManager::Button::Up);
+    check(std::strcmp(nav.current()->id, "net-mqtt-root") == 0,
+          "UP off the appended entry reaches MQTT — the step the navigator, not the flow, decides");
+  }
+
+  // ── (b) ENTER converges with the recovery gesture, on one flag ──────────────────────────────
+  {
+    Device dev;
+    dev.boot();
+    auto& nav = dev.controller.navigator();
+    for (int i = 0; i < 9; ++i) dev.tap(ButtonInputManager::Button::Down);
+    check(std::strcmp(nav.current()->id, ui::kSelectMenuScreenId) == 0, "standing on the entry");
+
+    dev.tap(ButtonInputManager::Button::Enter);
+    check(dev.selectorOpens == 1,
+          "ENTER-short raises openPackSelector — the same counter the gesture moves");
+    check(!dev.controller.consumePackSelectorRequest(),
+          "and the one-shot was consumed, not left latched");
+    for (int i = 0; i < 10; ++i) dev.tick(50);
+    check(dev.selectorOpens == 1, "it does not re-fire on subsequent passes");
+  }
+  {
+    // The other route, in its own device: both must land on the one flag rather than two paths.
+    Device dev;
+    dev.boot();
+    dev.holdAllThree(3100);
+    check(dev.selectorOpens == 1, "the three-button hold still raises the same flag");
+    dev.releaseAllThree();
+  }
+
+  // ── (c) it paints, and its geometry is sound ────────────────────────────────────────────────
+  //
+  // THE ONLY GATE THE ENTRY'S GEOMETRY WILL EVER HAVE. screen-spec.ts and screen-geometry.ts read
+  // web/mockup/src/data/screens.json, and this screen is deliberately not in it.
+  {
+    Device dev;
+    dev.boot();
+    for (int i = 0; i < 9; ++i) dev.tap(ButtonInputManager::Button::Down);
+    dev.resetFrames();
+    // Past the 1 s telemetry interval, not 100 ms: the entry is a static menu page, so
+    // `context.interactive` is false and the last tap already consumed this screen's
+    // change-driven repaint. A 100 ms tick would record no frame and prove nothing.
+    dev.tick(1100);
+    const std::string& painted = m5stamplc_stub::board().Display.strings;
+    check(painted.find("SELECT MENU") != std::string::npos, "the entry paints its title");
+    check(painted.find("UP/DN pages  ENTER open") != std::string::npos,
+          "and its footer hint, through the ordinary table-driven path");
+    check(painted.find("UI ASSET ERROR") == std::string::npos,
+          "and never falls into drawAssetError, which a screen outside the table could");
+
+    bool geometryOk = true;
+    bool footerBandClear = true;
+    for (std::size_t i = 0; i < ui::kSelectMenuElementCount; ++i) {
+      const auto& element = ui::kSelectMenuElements[i];
+      if (element.x < 0 || element.y < 0) geometryOk = false;
+      if (element.type == ui_exporter::ElementType::Text && element.text && element.text->text) {
+        const int chars = static_cast<int>(std::strlen(element.text->text));
+        if (element.x + chars * 6 > 240) geometryOk = false;
+        if (element.y + 8 > 135) geometryOk = false;
+      }
+      // §2c reserves y=116..134 for the warning banner. The footer hint is the one thing allowed
+      // there, and it is allowed knowing the banner covers it while a warning is live.
+      if (element.y >= 116 && element.y <= 134 && std::strcmp(element.id, "footer-hint") != 0) {
+        footerBandClear = false;
+      }
+    }
+    check(geometryOk, "every element sits on the panel and inside the 40-column row budget");
+    check(footerBandClear, "nothing but the footer hint sits in the banner's y=116..134 band");
+
+    // nav.position is the one string on this screen whose width is not fixed by the source.
+    char buffer[32] = {};
+    const auto& navElement = ui::kSelectMenuElements[1];
+    check(navElement.bindingId && std::strcmp(navElement.bindingId, "nav.position") == 0,
+          "element 1 is the nav.position text, as the width check below assumes");
+    const bool resolved =
+        dev.bindings.resolveText(dev.controller.context(), navElement, buffer, sizeof(buffer));
+    const int width = static_cast<int>(std::strlen(buffer));
+    std::printf("      nav.position on the appended entry: \"%s\" (%d chars)\n", buffer, width);
+    // The EXACT string, not just its width: `ringCount == 0` makes the resolver fall back to a bare
+    // "L0", which would satisfy any width bound while proving nothing about the wide case.
+    check(resolved && std::strcmp(buffer, "L0 9/10") == 0,
+          "nav.position reads L0 9/10 — 0-based index, so the tenth member is 9");
+    check(width <= 8, "which is inside the 8 characters the row has for it");
+    check(navElement.x + width * 6 <= 232,
+          "so it stops short of the level scrollbar at x=232");
+  }
+
+  // ── (d) no pack can shadow or remove it ────────────────────────────────────────────────────
+  {
+    Device dev;
+    dev.boot();
+    bool inDataset = false;
+    for (std::size_t i = 0; i < ui_exporter::kGeneratedScreenCount; ++i) {
+      const auto& screen = ui_exporter::kGeneratedScreens[i];
+      if (screen.id && std::strcmp(screen.id, ui::kSelectMenuScreenId) == 0) inDataset = true;
+    }
+    check(!inDataset, "the entry is in NO dataset row, so no pack declares or omits it");
+    check(dev.router.screenById(ui::kSelectMenuScreenId) == nullptr,
+          "and the router cannot resolve it by name, which is what keeps it unshadowable");
+    check(dev.controller.navigator().rootTail() == &ui::kSelectMenuScreen,
+          "a freshly booted device has it bound with no bindRootTail() call anywhere in boot()");
+  }
+}
+
 void selectorPageTests() {
   std::printf("\n[the firmware-drawn Select Menu page — §3.4]\n");
 
@@ -2321,6 +2481,49 @@ void networkBindingTests() {
   checkStr(render("net.mqtt.state"), "OK", "and connected says OK");
   checkStr(render("net.status"), "WiFi OK  MQTT OK", "the summary tracks both");
 
+  // ── The same four states, as register 561 ──────────────────────────────────────
+  //
+  // 561 was declared read-only, documented in the register wiki as "broker connection state" and
+  // written by NOTHING: `NetRegisterMap::publish` packs the settings and zeroes the rest of its
+  // 233-register block, so a Modbus master polling MQTT state read 0 — "disabled" — on a device
+  // happily publishing telemetry. Giving it a value meant naming the states, and the panel above had
+  // already named them, so both now come from `mqttLinkState`. These checks exist to keep it that
+  // way: two implementations of one decision is how the panel and the bus end up describing
+  // different devices.
+  check(plc::mqttLinkState(false, true, true) == plc::MqttLinkState::Off,
+        "disabled outranks everything — a switched-off client cannot be connected");
+  check(plc::mqttLinkState(true, false, false) == plc::MqttLinkState::Unset, "561 = 1 when unset");
+  check(plc::mqttLinkState(true, true, false) == plc::MqttLinkState::Down, "561 = 2 when down");
+  check(plc::mqttLinkState(true, true, true) == plc::MqttLinkState::Ok, "561 = 3 when connected");
+  // The wire values themselves, because an integrator's template reads the numbers and I2 makes them
+  // append-only. A reordering that kept the names would pass every check above.
+  check(static_cast<uint16_t>(plc::MqttLinkState::Off) == 0 &&
+            static_cast<uint16_t>(plc::MqttLinkState::Unset) == 1 &&
+            static_cast<uint16_t>(plc::MqttLinkState::Down) == 2 &&
+            static_cast<uint16_t>(plc::MqttLinkState::Ok) == 3,
+        "and the four wire values are 0..3, in that order (I2)");
+  // The agreement itself: whatever the panel renders is what `mqttLinkStateText` returns for the
+  // state the register carries. Checked through the live snapshot, not by restating the mapping.
+  checkStr(render("net.mqtt.state"),
+           plc::mqttLinkStateText(plc::mqttLinkState(dev.netStatus.mqttEnabled,
+                                                    dev.netStatus.mqttConfigured,
+                                                    dev.netStatus.mqttConnected)),
+           "the panel renders exactly what the register's state spells");
+
+  // ── R4.4.2d — the command result, on the panel ────────────────────────────────
+  checkStr(render("net.mqtt.lastCommandResult"), "idle",
+           "a device that has had no command says idle, not a success it never had");
+  dev.netStatus.mqttLastCommandResult = static_cast<uint8_t>(plc::MqttCommandResult::RetainedIgnored);
+  dev.tick(10);
+  checkStr(render("net.mqtt.lastCommandResult"), "retained-ignored",
+           "and a retained command that was discarded says so — R4.4.2d's whole point");
+  check(std::strlen(render("net.mqtt.lastCommandResult")) <= 26,
+        "the longest result fits the 26 characters the value column has at x=84");
+  dev.netStatus.mqttLastCommandResult = static_cast<uint8_t>(plc::MqttCommandResult::RateLimited);
+  dev.tick(10);
+  checkStr(render("net.mqtt.lastCommandResult"), "rate-limited",
+           "and a refused repeat reads rate-limited rather than looking like nothing happened");
+
   // ── The AP, and R5.3's deliberate asymmetry ───────────────────────────────────
   dev.netStatus.apIpAddress = (192u << 24) | (168u << 16) | (4u << 8) | 1u;
   std::snprintf(dev.netStatus.apSsid, sizeof(dev.netStatus.apSsid), "%s", "water_flow_meter_309245");
@@ -2357,7 +2560,7 @@ void networkBindingTests() {
     }
   }
   std::printf("      %zu network values declared\n", netValues);
-  check(netValues == 10, "ten network values are declared");
+  check(netValues == 11, "eleven network values are declared");
   check(allResolve, "and every one of them resolves — no declared value renders blank");
 }
 
@@ -2420,9 +2623,10 @@ void commissioningSummaryTests() {
   checkStr(renderBinding(dev, "telemetry.status"), "1 channel not calibrated | 2 warnings",
            "commissioning gap leads, sampling faults follow, neither absorbed into the other");
   checkStr(renderBinding(dev, "legend.warning"), "1 not calibrated, 2 undersampling",
-           "the banner's string reports both too — and trades the channel list for a count to fit");
+           "the banner's string reports both too — and drops the noun \"channels\" to fit its 37");
   check(dev.controller.context().hasWarnings,
-        "hasWarnings still means a SAMPLING fault, so the banner's gate is unchanged");
+        "hasWarnings still means a SAMPLING fault — the banner's gate is now bannerActive(), "
+        "and this field was NOT widened");
 
   // One of each: both singulars at once, which is the case a `%s` on the wrong count would survive.
   dev.undersamplingFlags = 0x10;
@@ -2432,15 +2636,25 @@ void commissioningSummaryTests() {
   checkStr(renderBinding(dev, "legend.warning"), "1 not calibrated, 1 undersampling",
            "and the legend counts them without pluralising a count of one either");
 
-  // ── Sampling only: the original wording, untouched ────────────────────────────
+  // ── Sampling only: a COUNT, not a channel list ────────────────────────────────
+  //
+  // This line used to name the flagged channels, and nothing bounded it: the prefix was 28 characters,
+  // a k-channel list is 3k-2, so it passed the banner's 37 columns at FOUR flagged channels and reached
+  // 50 at eight — silently, because drawWarningBanner has no `~` clipping. The count is 29 at worst.
   dev.configs[0] = calibrated;
-  dev.undersamplingFlags = 0x30;  // back to two, so the list below has two channels to name
+  dev.undersamplingFlags = 0x30;
   dev.tick(10);
   check(dev.controller.context().uncalibratedCount == 0, "nothing uncalibrated now");
   checkStr(renderBinding(dev, "telemetry.status"), "2 warnings",
            "a sampling-only device reads exactly as it did before this change");
-  checkStr(renderBinding(dev, "legend.warning"), "Sampling warning on sensors 5, 6",
-           "and its summary still NAMES the channels, which is only affordable alone");
+  checkStr(renderBinding(dev, "legend.warning"), "Sampling warning on 2 sensors",
+           "and its summary counts them instead — identity stays on the warning-coloured rows");
+
+  // One flagged channel: the same `%s` plural idiom the uncalibrated branch beside it already uses.
+  dev.undersamplingFlags = 0x10;
+  dev.tick(10);
+  checkStr(renderBinding(dev, "legend.warning"), "Sampling warning on 1 sensor",
+           "one flagged channel is singular, like the uncalibrated line above it");
 
   // ── Everything calibrated, nothing flagged: all-ready survives ────────────────
   dev.undersamplingFlags = 0;
@@ -2505,6 +2719,173 @@ void commissioningSummaryTests() {
   std::printf("      worst case: status %zu chars, legend %zu chars\n", statusLen, legendLen);
   check(statusLen <= 40, "the widest telemetry.status fits a 40-column row");
   check(legendLen <= 37, "the widest legend.warning fits the banner's 37 columns from x=16");
+
+  // ── The SAMPLING-ONLY worst case, which no state above had ever reached ────────
+  //
+  // The width guard immediately above sets 0xFF/0xFF with every config WIPED, so it routes to the
+  // COMBINED branch — which means `legendLen <= 37` has never once evaluated the sampling-only line, and
+  // passed for the wrong reason while that line was 50 characters at eight channels. Calibrating all
+  // eight while leaving every flag set is the only state that reaches it.
+  for (std::size_t i = 0; i < plc::kNumSensors; ++i) {
+    dev.configs[i] = calibrated;
+  }
+  dev.tick(10);
+  check(dev.controller.context().uncalibratedCount == 0,
+        "all eight calibrated, so this is provably the sampling-only branch");
+  check(dev.controller.context().warningCount == 8, "and all eight are flagged");
+  checkStr(renderBinding(dev, "legend.warning"), "Sampling warning on 8 sensors",
+           "eight flagged channels report a count, which is the same length at any k");
+  const std::size_t samplingLen = std::strlen(renderBinding(dev, "legend.warning"));
+  std::printf("      sampling-only worst case: legend %zu chars\n", samplingLen);
+  check(samplingLen <= 37, "and it fits the banner's 37 columns, which the channel list did not");
+}
+
+/** True if any fillRect this frame was the banner's band — x=0, y=116, full width, 18 px tall. */
+bool bannerBandPainted() {
+  for (const auto& rect : m5stamplc_stub::board().Display.rects) {
+    if (rect.x == 0 && rect.y == 116 && rect.w == 240 && rect.h == 18) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Where a string landed this frame, or nullptr if it was not painted. */
+const m5stamplc_stub::DisplayRecorder::Placed* placedText(const char* text) {
+  for (const auto& entry : m5stamplc_stub::board().Display.placed) {
+    if (entry.text == text) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
+/**
+ * The banner's PLACEMENT, on the panel — §2c's y=116, its draw order, and its widened gate.
+ *
+ * Every other warning assertion in this file goes through renderBinding(), which calls the binding
+ * resolver directly and never touches UiRenderer at all. So nothing observed the banner's position, the
+ * order it paints in, or what raises it — which is the whole of what this decision changes.
+ */
+void bannerPlacementTests() {
+  std::printf("\n[the warning banner's band, draw order and gate — §2c]\n");
+
+  SensorCharacteristics calibrated{};
+  calibrated.q_max = 150;
+  calibrated.f_multiplier = 10;
+
+  // ── The banner paints AFTER the screen ────────────────────────────────────────
+  //
+  // It used to paint first, which made "the banner replaces the footer row" false rather than untidy:
+  // drawTextElement prints with an OPAQUE background, so the footer-hint Text at y=124 punched a
+  // background-coloured hole straight through a banner drawn beneath it.
+  //
+  // Readable from `strings` because that buffer is APPEND-ORDERED, and unambiguous because no element in
+  // the generated table binds `legend.warning` — the summary text can only have come from the banner.
+  Device dev;
+  dev.boot();
+  for (std::size_t i = 0; i < plc::kNumSensors; ++i) {
+    dev.configs[i] = calibrated;
+  }
+  dev.undersamplingFlags = 0x01;
+  dev.resetFrames();
+  // Past the 1 Hz refresh interval, and the frame count is read FIRST: a 100 ms tick leaves every
+  // recorder empty and each assertion below would fail for having painted nothing rather than the wrong
+  // thing. That is how the P3 paint check first failed.
+  dev.tick(1100);
+  check(dev.frames() > 0, "P0 repainted, so there is a frame to inspect");
+  // The branch is witnessed before the string is: an invalid `calibrated` would silently route the
+  // summary to the combined line and the checks below would fail for the wrong reason.
+  check(dev.controller.context().uncalibratedCount == 0, "all eight calibrated");
+  check(dev.controller.context().warningCount == 1, "so this is the sampling-only branch, at k=1");
+  const std::string& painted = m5stamplc_stub::board().Display.strings;
+  const std::size_t footerAt = painted.find("UP/DN pages   UP+DN off");
+  const std::size_t bannerAt = painted.find("Sampling warning on 1 sensor");
+  check(footerAt != std::string::npos, "P0 painted its own footer hint");
+  check(bannerAt != std::string::npos, "and the banner painted its summary over the same band");
+  check(footerAt < bannerAt,
+        "the SCREEN goes down first and the banner over it — otherwise the footer's opaque text "
+        "background punches a hole through the band");
+
+  // ── The band is y 116..133, not 34..51 ────────────────────────────────────────
+  //
+  // Same single frame. The fill and both setCursor calls are asserted together on purpose: the text y is
+  // derived from bannerY + 4, so a partial edit that moved the rectangle and left the cursors at 38
+  // fails here rather than shipping a banner with its caption outside it.
+  check(bannerBandPainted(), "the banner fills x=0 y=116, 240 x 18 — the footer row, not mid-panel");
+  const auto* summary = placedText("Sampling warning on 1 sensor");
+  const auto* bang = placedText("!");
+  check(summary != nullptr && summary->x == 16 && summary->y == 120,
+        "the summary sits at x=16, y=bannerY+4");
+  check(bang != nullptr && bang->x == 4 && bang->y == 120, "and the ! marker at x=4 on the same line");
+
+  // ── A COMMISSIONING GAP ALONE RAISES IT ───────────────────────────────────────
+  //
+  // Fix 1b. Before this, drawWarningBanner returned early on `!hasWarnings` and a device whose channels
+  // all sat at `SET?` wore no banner at all. Pairing it with the !hasWarnings assertion is what pins the
+  // choice of widening the GATE rather than the field: `telemetry.status` reads that field as "how many
+  // warnings", and a widened one would be true at a count of zero.
+  Device fresh;
+  fresh.boot();
+  fresh.resetFrames();
+  fresh.tick(1100);
+  check(fresh.frames() > 0, "the fresh device repainted");
+  check(fresh.controller.context().uncalibratedCount == 8, "eight in use, none calibrated");
+  check(!fresh.controller.context().hasWarnings, "with no sampling fault, so the FIELD did not widen");
+  check(m5stamplc_stub::board().Display.strings.find("8 channels not calibrated") !=
+            std::string::npos,
+        "and the banner announces the commissioning gap anyway");
+  check(bannerBandPainted(), "in the band, on a screen that carries no warning row of its own");
+
+  // Nothing wrong and nothing unfinished: the widening did not become "always on".
+  for (std::size_t i = 0; i < plc::kNumSensors; ++i) {
+    fresh.configs[i] = calibrated;
+  }
+  fresh.resetFrames();
+  fresh.tick(1100);
+  check(fresh.frames() > 0, "and repainted again once every channel was calibrated");
+  check(!bannerBandPainted(), "no band on a commissioned, unflagged device");
+  check(m5stamplc_stub::board().Display.strings.find("All sensors nominal") == std::string::npos,
+        "and the reassurance is not painted as a warning either");
+
+  // ── SUPPRESSED WHILE AN EDITOR IS OPEN — but only the uncalibrated half ───────
+  //
+  // All thirteen config-*-edit screens carry "UP/DN adjust  ENTER save  hold=cancel" at y=124, the only
+  // place the abort gesture is documented, and that row IS the banner's band. A factory-fresh device has
+  // eight uncalibrated channels, so an unsuppressed banner would hide `hold=cancel` on every editor,
+  // permanently, while the operator is calibrating — the one activity that clears the condition.
+  Device editing;
+  editing.boot();
+  check(walkToModbusSettings(editing), "walked to the first Modbus setting");
+  editing.tap(ButtonInputManager::Button::Enter);
+  check(editing.controller.editor().active, "and descended onto its editor");
+  // AFTER the walk: every tap above repainted, and a band from one of those frames would satisfy the
+  // absence check below by having been cleared rather than never drawn.
+  editing.resetFrames();
+  editing.tick(1100);
+  check(editing.frames() > 0, "the editor screen repainted");
+  check(editing.controller.context().editorActive, "the editor is published onto the render context");
+  check(editing.controller.context().uncalibratedCount == 8,
+        "with eight uncalibrated channels still outstanding");
+  check(!editing.controller.context().hasWarnings, "and no sampling fault");
+  check(!bannerBandPainted(), "so the commissioning banner gets out of the way of `hold=cancel`");
+  check(m5stamplc_stub::board().Display.strings.find("hold=cancel") != std::string::npos,
+        "and the abort gesture is on the panel where the operator can read it");
+
+  // A SAMPLING fault is NOT suppressed: it says a reading is wrong, which is urgent on every screen,
+  // including the one the operator is typing into. Calibrated here so the band can only come from the
+  // flag — the uncalibrated term is false either way with the editor open.
+  for (std::size_t i = 0; i < plc::kNumSensors; ++i) {
+    editing.configs[i] = calibrated;
+  }
+  editing.undersamplingFlags = 0x01;
+  editing.resetFrames();
+  editing.tick(1100);
+  check(editing.frames() > 0, "the editor screen repainted with the flag set");
+  check(editing.controller.editor().active, "the editor is still open");
+  check(editing.controller.context().uncalibratedCount == 0,
+        "and nothing is uncalibrated, so the band can only come from the sampling flag");
+  check(bannerBandPainted(), "a wrong READING outranks the gesture hint even inside an editor");
 }
 
 }  // namespace
@@ -2521,6 +2902,7 @@ int main() {
   resetAcceptanceLedTests();
   spiHandoverRenderTests();
   recoveryGestureTests();
+  rootEntryTests();
   selectorPageTests();
   selectorCommitTests();
   ledI2cTrafficTests();
@@ -2542,6 +2924,7 @@ int main() {
   sessionStartRenderTests();
   networkBindingTests();
   commissioningSummaryTests();
+  bannerPlacementTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

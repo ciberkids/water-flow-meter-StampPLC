@@ -44,6 +44,7 @@ void checkStr(const char* actual, const char* expected, const char* what) {
   }
 }
 
+using plc::MqttCommandResult;
 using plc::MqttClass;
 using plc::MqttPublisher;
 using plc::MqttSnapshot;
@@ -681,8 +682,11 @@ void payloadTests() {
   // opposite explanations for a flow of 0.
   checkStr(lastPayloadFor(sink, "wm/diagnostics/state").c_str(),
            "{\"pollingRateKhz\":4.500,\"baselineKhz\":4.750,\"undersampling\":3,"
-           "\"uncalibrated\":132,\"tempC\":31.5,\"uptimeS\":86400,\"rssi\":-67}",
+           "\"uncalibrated\":132,\"tempC\":31.5,\"uptimeS\":86400,\"rssi\":-67,"
+           "\"lastCmd\":\"idle\"}",
            "and the R2.1.2 pair travels together, so a regression is visible in HA");
+  // `idle` and not `accepted` on a device that has had no command: R4.4.2d's value has to be able to
+  // say "nothing has happened", or a fresh device claims a success nobody asked for.
 
   check(countTopic(sink, "wm/sensor/8/state") == 1, "the eighth sensor publishes when present");
   check(countTopic(sink, "wm/sensor/2/state") == 0,
@@ -949,6 +953,69 @@ void unconfiguredTests() {
   check(sink.calls.empty(), "and nothing reaches the sink");
 }
 
+
+// ── R4.4.2d — the command result reaches a subscriber ────────────────────────────────
+
+void commandResultTests() {
+  std::printf("\n[R4.4.2d — a refusal is published, not merely logged]\n");
+
+  FakeSink sink;
+  MqttPublisher p(sink);
+  p.configure("wm", 10, 0);
+
+  MqttSnapshot snap;
+  snap.sensors[0].present = true;
+  p.tick(0, snap);
+  p.pump();
+  check(lastPayloadFor(sink, "wm/diagnostics/state").find("\"lastCmd\":\"idle\"") !=
+            std::string::npos,
+        "a device that has had no command reports idle");
+
+  // THE TRAP, written down because I walked into it. Change detection does NOT rescue a changed
+  // value inside the rate-limit window: `tick` returns early on `!heartbeat && !rateLimitCleared`,
+  // BEFORE any payload is formatted. So a refusal left to change detection alone is invisible for up
+  // to a full publish period — ten seconds by default, and up to the 60 s heartbeat if the operator
+  // set a longer period. An operator whose button appears to do nothing for ten seconds presses it
+  // again, which is the loop R4.4.2 exists to stop.
+  snap.diagnostics.lastCommandResult = MqttCommandResult::RateLimited;
+  const std::size_t before = countTopic(sink, "wm/diagnostics/state");
+  p.tick(1, snap);  // 1 ms into a 10 s period
+  p.pump();
+  check(countTopic(sink, "wm/diagnostics/state") == before,
+        "a changed result alone publishes NOTHING inside the window — the rate limit gates first");
+
+  // Which is why the adapter arms a full publish on every command it evaluates, accepted or not.
+  p.requestFullPublish();
+  p.tick(2, snap);
+  p.pump();
+  check(countTopic(sink, "wm/diagnostics/state") == before + 1,
+        "armed, the same tick publishes it — R4.4.2d needs the arming, not just the value");
+  check(lastPayloadFor(sink, "wm/diagnostics/state").find("\"lastCmd\":\"rate-limited\"") !=
+            std::string::npos,
+        "and carries the word the panel and register 565 show");
+
+  // Sticky, and therefore quiet: an unchanged result must not republish every tick, or a device with
+  // one refused command becomes a device publishing at the loop rate forever.
+  const std::size_t after = countTopic(sink, "wm/diagnostics/state");
+  p.tick(3, snap);
+  p.pump();
+  check(countTopic(sink, "wm/diagnostics/state") == after,
+        "an unchanged result publishes nothing — the value is sticky, not repeating");
+
+  // R4.4.4 — the acknowledgement IS the telemetry, so an accepted command cannot wait a period.
+  snap.diagnostics.lastCommandResult = MqttCommandResult::Accepted;
+  snap.sensors[0].sessionLiters = 0.0f;
+  p.requestFullPublish();
+  const std::size_t sensorsBefore = countTopic(sink, "wm/sensor/1/state");
+  p.tick(4, snap);
+  p.pump();
+  check(countTopic(sink, "wm/sensor/1/state") == sensorsBefore + 1,
+        "requestFullPublish sends the totals immediately, 4 ms into a 10 s period (R4.4.4)");
+  check(lastPayloadFor(sink, "wm/diagnostics/state").find("\"lastCmd\":\"accepted\"") !=
+            std::string::npos,
+        "with the acceptance alongside it");
+}
+
 }  // namespace
 
 int main() {
@@ -962,6 +1029,7 @@ int main() {
   dropPolicyTests();
   publishFailureTests();
   payloadTests();
+  commandResultTests();
   classTests();
   qosByClassTests();
   packetBoundTests();

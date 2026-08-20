@@ -21,8 +21,13 @@ constexpr int kGlyphWidthValue = 7;
  *
  * Named because the width is now needed in two places (clipping overlong text, and the full-width
  * warning banner), and a second bare `240` is how the two would come to disagree.
+ *
+ * The HEIGHT is named for the same reason, one decision later: the warning banner is now the panel's LAST
+ * band (y=116..133), so "does the band still end on the panel" stopped being arithmetic somebody
+ * re-derives and became a `static_assert` in drawWarningBanner. A bare 135 there would be the second copy.
  */
 constexpr int kPanelWidth = 240;
+constexpr int kPanelHeight = 135;
 constexpr uint16_t kCountdownOverlayColor = 0x39E7;
 
 /**
@@ -178,8 +183,33 @@ void UiRenderer::update(uint32_t nowMs, const UiRenderContext& context) {
   auto& display = M5StamPLC.Display;
   display.startWrite();
   display.fillScreen(backgroundColor_);
-  drawWarningBanner(context);
+  /**
+   * SCREEN, then BANNER, then the countdown overlay. The order is three separate decisions.
+   *
+   * (a) THE BANNER PAINTS AFTER THE SCREEN. It used to paint first, which made "the banner replaces the
+   * footer row" (§2c) false rather than merely untidy: drawTextElement sets an OPAQUE text background
+   * (`bg` below, fed into setTextColor), so the footer-hint Text at y=124 — present on 74 of the 80
+   * generated screens — punched a background-coloured hole straight through a banner drawn beneath it.
+   * Painting the banner last is what makes it actually replace that row instead of being erased by it.
+   *
+   * (b) THE COUNTDOWN OVERLAY STAYS LAST, so a modal's own instruction — "hold ENTER confirms  UP/DN
+   * back" — outranks the banner while the hold is running. That is the abort gesture, and a banner over
+   * it would be the commissioning warning hiding the way out of a destructive action. It costs nothing
+   * to keep it last: every screen that can reach this path (the six confirm-* screens) carries an opaque
+   * full-screen `overlay-bg` Box y=0 h=135, so the banner was invisible there either way.
+   *
+   * (c) BUT THE SWAP IS NOT A NO-OP EVERYWHERE, and must not be described as one. Twelve of the eighty
+   * generated screens carry that full-screen `overlay-bg`, and eleven of them are reachable through the
+   * ORDINARY path above rather than the overlay path: the five toast-* screens (interaction_handler.cpp
+   * replaceCurrent()s a toast, so it becomes the current screen) and all six confirm-* screens while
+   * viewed BEFORE their hold begins (they are descended onto, so they are the current screen too). Their
+   * overlay-bg used to erase the banner; now the banner shows through on the bottom band. The toasts lose
+   * nothing — the generated table gives them no footer-hint at all — and a pre-hold confirm screen loses
+   * its hint, which is the footer row §2c chose to spend. The twelfth, `nyquist-warning`, is in no flow's
+   * targetScreenId and named in no ui_pages.h table, so UiScreenRouter can never resolve it.
+   */
   drawScreen(*screen, context, false);
+  drawWarningBanner(context);
   if (context.countdownActive) {
     if (const auto* overlay = screenRouter_->overlayForCountdown(context.countdownScreenId)) {
       drawScreen(*overlay, context, true);
@@ -459,9 +489,21 @@ uint16_t UiRenderer::colorForText(const ui_exporter::Element& element,
   if (bindingId && std::strcmp(bindingId, "legend.warning") == 0) {
     // Uncalibrated channels colour this row too, because the row now SAYS so: it reports the
     // commissioning gap ahead of any sampling fault, and a sentence about channels nobody has set up,
-    // drawn in the muted legend colour, would read as the reassurance it replaced. `hasWarnings` stays
-    // the banner's own gate and is deliberately not widened — see UiRenderContext.
-    color = (context.hasWarnings || context.uncalibratedCount > 0) ? warningColor_ : legendColor_;
+    // drawn in the muted legend colour, would read as the reassurance it replaced.
+    //
+    // Routed through the SAME predicate the banner uses, `UiRenderContext::bannerActive()`, because the
+    // two print the same string (`warningSummary`) and a row coloured as reassurance beside a banner
+    // shouting the opposite is the drift a second copy of `hasWarnings || uncalibratedCount > 0` would
+    // eventually produce. `hasWarnings` is NOT the banner's gate any more and was not widened.
+    //
+    // One honest caveat about the sharing, and it is stronger than "harmless": bannerActive() carries an
+    // `editorActive` term, which is the BANNER's need — a full-width band must not cover an editor's
+    // `hold=cancel` hint. A legend row has no hint to cover, and `resolveLegendBinding` returns
+    // `warningSummary` unconditionally, so if an element ever binds `legend.warning` on an editor screen
+    // the term would leave the row PRINTING "8 channels not calibrated" in the muted legend colour —
+    // exactly the inversion the paragraph above exists to forbid. Inert today only because nothing in the
+    // generated table binds it. If something does, this is a decision to re-open, not one this line made.
+    color = context.bannerActive() ? warningColor_ : legendColor_;
   }
   return color;
 }
@@ -490,12 +532,24 @@ void UiRenderer::drawAssetError(const UiRenderContext& context) {
 }
 
 void UiRenderer::drawWarningBanner(const UiRenderContext& context) {
-  if (!context.hasWarnings) {
+  if (!context.bannerActive()) {
     return;
   }
   auto& display = M5StamPLC.Display;
-  const int16_t bannerY = 34;
-  const int16_t bannerH = 18;
+  /**
+   * The FOOTER row, not the middle of the panel. 116..133 is where the footer-hint Text sits on 74 of
+   * the 80 generated screens, and it is the band `tools/audit/screen-spec.ts` validates against
+   * (kBannerTop = 116, kBannerBottom = 134). It was 34 until §2c relocated it, which put 18 px of
+   * edge-to-edge overlay across the value and config rows an operator reads.
+   *
+   * constexpr rather than const so the assert below is a constant expression: with the banner as the
+   * panel's last band, "does it still end on the panel" is a build failure rather than arithmetic
+   * somebody re-checks.
+   */
+  constexpr int16_t bannerY = 116;
+  constexpr int16_t bannerH = 18;
+  static_assert(bannerY + bannerH <= kPanelHeight,
+                "the banner is the panel's last band — it must end on the panel");
   display.fillRect(0, bannerY, kPanelWidth, bannerH, warningColor_);
   display.setTextColor(WHITE, warningColor_);
   display.setCursor(4, bannerY + 4);

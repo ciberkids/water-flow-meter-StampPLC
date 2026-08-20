@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
 import { Buffer } from "node:buffer";
 import { fileURLToPath } from "node:url";
 import { DISPLAY_HEIGHT, DISPLAY_WIDTH } from "../../src/utils/layout";
@@ -12,6 +11,16 @@ const fixtureDataset = JSON.parse(
   fs.readFileSync(path.resolve(mockupRoot, "tests", "fixtures", "legacy-screens.json"), "utf-8")
 ) as {
   screens: Array<{ id: string; name: string }>;
+};
+/**
+ * The dataset the workspace actually ships and loads on a cold start. Read from disk rather than
+ * hard-coded, because its screen count is what "loads the shipped dataset" has to compare against and a
+ * literal there is a test that breaks every time the menu grows.
+ */
+const shippedDataset = JSON.parse(
+  fs.readFileSync(path.resolve(mockupRoot, "src", "data", "screens.json"), "utf-8")
+) as {
+  screens: Array<{ id: string; name: string; elements: Array<{ id: string; x: number; y: number; width?: number; height?: number; kind: string }> }>;
 };
 const fixtureDatasetFile = {
   name: "legacy-screens.json",
@@ -135,17 +144,36 @@ test.describe("StampPLC mockup visual regression", () => {
     }
   }
 
-  test("loads with a blank canvas by default", async ({ page }) => {
+  /**
+   * WAS "loads with a blank canvas by default", asserting one screen named Blank Canvas and an empty
+   * element list. The workspace ships `src/data/screens.json` and loads it, so the assertion measured a
+   * product decision that had been reversed - it read 80 where it wanted 1. The count comes from the
+   * shipped dataset rather than a literal, so growing the menu cannot re-break it.
+   */
+  test("loads the shipped dataset by default", async ({ page }) => {
     await normaliseWorkspace(page, 1440, 900, { importFixture: false });
 
-    await expect(page.locator(".screen-selector button")).toHaveCount(1);
-    await expect(page.locator(".screen-selector button").first()).toContainText(/Blank Canvas/i);
+    await expect(page.locator(".screen-selector button")).toHaveCount(shippedDataset.screens.length);
+    await expect(page.locator(".screen-selector button").first()).toContainText(
+      shippedDataset.screens[0].name
+    );
 
     await page.getByRole("button", { name: "Design", exact: true }).click();
-    await expect(page.getByTestId("design-element-list")).toContainText("No elements yet.");
+    await expect(page.getByTestId("design-element-list")).not.toContainText("No elements yet.");
   });
 
-  test("display preview places edge coordinates at the pixel bounds", async ({ page }) => {
+  /**
+   * Checks what the preview is FOR: a coordinate in the dataset lands on the corresponding display pixel,
+   * exactly, at every corner — and a coordinate pushed past the edge clamps so the element's far EDGE
+   * sits on the boundary rather than outside it.
+   *
+   * That last part is J8, and this test is how it was found. It briefly asserted the opposite: the Design
+   * panel clamped x to 240 and y to 135 — the panel's own dimensions — so an element placed there sat
+   * entirely outside the visible area and rendered with `clientWidth` 0, while the IMPORT path corrected
+   * the same geometry to `bound - size`. Two clamps, two answers, and this test pinned the wrong one for
+   * exactly as long as it took to file J8 and decide. Both paths now share `coordinateLimit`.
+   */
+  test("display preview maps element coordinates to display pixels", async ({ page }) => {
     await normaliseWorkspace(page, 1440, 900, { importFixture: false });
 
     // Use 1:1 zoom to simplify comparing DOM positions to display pixels.
@@ -158,20 +186,30 @@ test.describe("StampPLC mockup visual regression", () => {
 
     await page.getByRole("button", { name: "Design", exact: true }).click();
 
-    // Landscape is the default orientation, so width/height swap.
+    // Landscape is the default orientation, so width/height swap. The FAR edges are requested as a
+    // deliberately out-of-range number and read back: the app clamps to `bounds - size`, which puts the
+    // element's far edge exactly on the boundary, and the element's own size is content-derived and not
+    // knowable here. Requesting DISPLAY_WIDTH for x (the old code) asked for the PORTRAIT bound on the
+    // landscape axis - 135 on an axis 240 wide - so two of these corners were never at an edge at all.
     const layoutBounds = { width: DISPLAY_HEIGHT, height: DISPLAY_WIDTH };
-    const maxX = DISPLAY_WIDTH;
-    const maxY = DISPLAY_HEIGHT;
+    const FAR = 9999;
 
     const corners = [
       { label: "TL", x: 0, y: 0 },
-      { label: "BL", x: 0, y: maxY },
-      { label: "TR", x: maxX, y: 0 },
-      { label: "BR", x: maxX, y: maxY }
+      { label: "BL", x: 0, y: FAR },
+      { label: "TR", x: FAR, y: 0 },
+      { label: "BR", x: FAR, y: FAR }
     ] as const;
 
+    const cornerIds = new Map<string, string>();
+    const cornerGeometry = new Map<string, { x: number; y: number; width: number; height: number }>();
+
     for (const corner of corners) {
-      await page.getByTestId("design-add-text").click();
+      // BOXES, not text. A text element's height is font-derived, so its rendered far edge sits a few
+      // pixels off the boundary the layout clamped it to - the BL corner missed by 6.9 px, which is font
+      // metrics, not a mapping error. A box has explicit width and height, so the far edge is exact and
+      // the assertion tests the coordinate mapping instead of the typeface.
+      await page.getByTestId("design-add-box").click();
       const elementRow = page
         .locator('[data-testid="design-element-list"] li')
         .last()
@@ -179,39 +217,72 @@ test.describe("StampPLC mockup visual regression", () => {
         .first();
       const elementId = await elementRow.getAttribute("data-element-id");
       expect(elementId).toBeTruthy();
+      cornerIds.set(corner.label, elementId as string);
 
-      await page.locator(`[data-element-id="${elementId}"] input[type="text"]`).fill(corner.label);
+      // NO CONTENT FILL. The toolbox renders a "Bound value" select instead of a Content box whenever
+      // the element kind has bindable values, so there is no text input to fill and the old fill()
+      // timed out. Elements are located by `data-element-id` in the viewport instead.
       const xInput = page.locator(`input[data-element-id="${elementId}"][data-field="x"]`);
       const yInput = page.locator(`input[data-element-id="${elementId}"][data-field="y"]`);
+      const wInput = page.locator(`input[data-element-id="${elementId}"][data-field="width"]`);
+      const hInput = page.locator(`input[data-element-id="${elementId}"][data-field="height"]`);
+      await wInput.fill("40");
+      await hInput.fill("20");
       await xInput.fill(String(corner.x));
       await yInput.fill(String(corner.y));
-      await expect(xInput).toHaveValue(String(corner.x));
-      await expect(yInput).toHaveValue(String(corner.y));
+    }
+
+    /**
+     * Geometry is read back AFTER all four boxes exist, not as each is placed. Adding a box re-runs the
+     * layout for the whole screen, so a value read during the loop can be stale by the time the preview
+     * renders - which showed up as a corner whose rendered top was exactly one box height from the value
+     * captured earlier. Read the settled state, then assert against it.
+     */
+    for (const corner of corners) {
+      const elementId = cornerIds.get(corner.label) as string;
+      const read = async (field: string) =>
+        Number(await page.locator(`input[data-element-id="${elementId}"][data-field="${field}"]`).inputValue());
+      cornerGeometry.set(corner.label, {
+        x: await read("x"),
+        y: await read("y"),
+        width: await read("width"),
+        height: await read("height")
+      });
     }
 
     await page.getByRole("button", { name: "Simulation", exact: true }).click();
 
     const surface = page.locator(".display-surface");
     await expect(surface).toBeVisible();
-    const surfaceBox = await surface.boundingBox();
-    if (!surfaceBox) {
-      throw new Error("Could not measure display surface");
-    }
+    /**
+     * CONTENT-BOX metrics, via offsetLeft/clientWidth, not `boundingBox()`.
+     *
+     * Both the surface and every element carry a 2 px border, which `boundingBox()` includes. Deriving
+     * the scale from it gave 484/240 = 2.0167 where the real scale is 2, and that 0.8 % error grows with
+     * distance from the origin: the near corners passed and the far corners missed by 2.6 px. Nothing was
+     * wrong with the app - the measurement was.
+     */
+    const surfaceMetrics = await surface.evaluate((element) => ({
+      width: element.clientWidth,
+      height: element.clientHeight
+    }));
 
-    const scaleX = surfaceBox.width / layoutBounds.width;
-    const scaleY = surfaceBox.height / layoutBounds.height;
-    const tolerance = 1; // pixels
+    const scaleX = surfaceMetrics.width / layoutBounds.width;
+    const scaleY = surfaceMetrics.height / layoutBounds.height;
+    const tolerance = 1; // display pixels
 
     for (const corner of corners) {
-      const element = page.locator(".display-element.kind-text", { hasText: corner.label });
+      const element = page.locator(`.display-element[data-element-id="${cornerIds.get(corner.label)}"]`);
       await expect(element).toBeVisible();
-      const box = await element.boundingBox();
-      if (!box) {
-        throw new Error(`Could not measure element ${corner.label}`);
-      }
+      // offsetLeft/offsetTop are relative to the surface (it is the positioned ancestor), and
+      // clientWidth/clientHeight exclude the border - so these are the element's true placement.
+      const box = await element.evaluate((node) => {
+        const el = node as HTMLElement;
+        return { left: el.offsetLeft, top: el.offsetTop, width: el.clientWidth, height: el.clientHeight };
+      });
 
-      const relLeft = box.x - surfaceBox.x;
-      const relTop = box.y - surfaceBox.y;
+      const relLeft = box.left;
+      const relTop = box.top;
       const relRight = relLeft + box.width;
       const relBottom = relTop + box.height;
 
@@ -220,18 +291,25 @@ test.describe("StampPLC mockup visual regression", () => {
       const normRight = relRight / scaleX;
       const normBottom = relBottom / scaleY;
 
-      if (corner.label === "TL") {
-        expect(normLeft).toBeLessThanOrEqual(tolerance);
-        expect(normTop).toBeLessThanOrEqual(tolerance);
-      } else if (corner.label === "TR") {
-        expect(Math.abs(normRight - layoutBounds.width)).toBeLessThanOrEqual(tolerance);
-        expect(normTop).toBeLessThanOrEqual(tolerance);
-      } else if (corner.label === "BL") {
-        expect(normLeft).toBeLessThanOrEqual(tolerance);
-        expect(Math.abs(normBottom - layoutBounds.height)).toBeLessThanOrEqual(tolerance);
-      } else if (corner.label === "BR") {
-        expect(Math.abs(normRight - layoutBounds.width)).toBeLessThanOrEqual(tolerance);
-        expect(Math.abs(normBottom - layoutBounds.height)).toBeLessThanOrEqual(tolerance);
+      const geometry = cornerGeometry.get(corner.label);
+      if (!geometry) {
+        throw new Error(`No geometry captured for ${corner.label}`);
+      }
+
+      // The mapping itself: the element's top-left is on the pixel the dataset names.
+      expect(Math.abs(normLeft - geometry.x)).toBeLessThanOrEqual(tolerance);
+      expect(Math.abs(normTop - geometry.y)).toBeLessThanOrEqual(tolerance);
+
+      // The size maps across at every corner now, because no corner leaves the element off the panel.
+      expect(Math.abs(normRight - (geometry.x + geometry.width))).toBeLessThanOrEqual(tolerance);
+      expect(Math.abs(normBottom - (geometry.y + geometry.height))).toBeLessThanOrEqual(tolerance);
+
+      if (corner.x === FAR) {
+        // J8's rule: the far EDGE is on the boundary, so the element is fully visible.
+        expect(geometry.x + geometry.width).toBe(layoutBounds.width);
+      }
+      if (corner.y === FAR) {
+        expect(geometry.y + geometry.height).toBe(layoutBounds.height);
       }
     }
   });
@@ -266,14 +344,17 @@ test.describe("StampPLC mockup visual regression", () => {
     await expect(latestTrace).toContainText("Enter idle");
   });
 
-  test("transition preview highlights target screen", async ({ page }) => {
-    await page.keyboard.press("ArrowDown");
-    const overlay = page.locator(".transition-overlay");
-    await expect(overlay).toBeVisible();
-    await expect(overlay.locator(".transition-overlay__target")).toHaveText(
-      new RegExp(screenLabel("info-cumulative", "Cumulative Liters"))
-    );
-  });
+  /**
+   * REMOVED: "transition preview highlights target screen".
+   *
+   * The overlay is off by decision, not by accident - `App.tsx` passes `pendingTransition={undefined}`
+   * with six lines explaining why: it faded a miniature of the incoming screen over the panel on every
+   * UP/DOWN, and the firmware draws no such transition, so previewing one made the simulator less
+   * faithful. A test asserting a feature the product deliberately dropped is not a regression detector.
+   *
+   * The residue - the state, the callback, the type, the CSS and the render branch, all still present
+   * behind a hard-coded `undefined` - is tracked as J7, the same shape as J2's animation residue.
+   */
 
   test("design panel preset updates palette and resets", async ({ page }) => {
     await page.getByRole("button", { name: "Design", exact: true }).click();
@@ -435,27 +516,32 @@ test.describe("StampPLC mockup visual regression", () => {
     await page.getByRole("button", { name: "Design", exact: true }).click();
     await page.getByTestId("element-select-sensor-grid-left").check();
     const widthInput = page.locator('[data-element-id="sensor-grid-left"][data-field="width"]');
-    await widthInput.fill("200");
+    // 200 was an overflow when the display was 135 wide. Landscape is 240 (decision D3), so 200 fits,
+    // no clamp button renders, and the assertion was waiting for a button the app was right not to draw.
+    await widthInput.fill("300");
     const clampButton = page.getByTestId("element-clamp-sensor-grid-left");
     await expect(clampButton).toBeVisible();
     await clampButton.click();
-    await expect(widthInput).toHaveValue("135");
+    await expect(widthInput).toHaveValue(String(DISPLAY_HEIGHT));
   });
 
   test("global clamp action fixes all overflowing elements", async ({ page }) => {
     await page.getByRole("button", { name: "Design", exact: true }).click();
     await page.getByTestId("element-select-sensor-grid-right").check();
     const widthInput = page.locator('[data-element-id="sensor-grid-right"][data-field="width"]');
-    await widthInput.fill("200");
+    await widthInput.fill("300");            // > 240, so it genuinely overflows landscape
     const clampAllButton = page.getByTestId("element-clamp-all");
     await expect(clampAllButton).toBeEnabled();
     await clampAllButton.click();
-    await expect(widthInput).toHaveValue("135");
+    await expect(widthInput).toHaveValue(String(DISPLAY_HEIGHT));
   });
 
   test("landscape orientation keeps keyboard arrows intuitive", async ({ page }) => {
-    await page.getByRole("button", { name: "Landscape", exact: true }).click();
     await page.getByRole("button", { name: "Design", exact: true }).click();
+    // There is no orientation TOGGLE any more: decision D3 fixed the panel at 240x135 and the control is
+    // a disabled indicator. Clicking a button by the exact name "Landscape" waited 30 s for a control
+    // that had become text - the same rename that once broke every test through `beforeEach`.
+    await expect(page.getByText("Landscape 240x135")).toBeVisible();
     await page.getByTestId("element-select-title").check();
     const xInput = page.locator('[data-element-id="title"][data-field="x"]');
     const yInput = page.locator('[data-element-id="title"][data-field="y"]');
@@ -477,38 +563,40 @@ test.describe("StampPLC mockup visual regression", () => {
 
   test("event binding panel updates action selection", async ({ page }) => {
     await page.getByRole("button", { name: "Design", exact: true }).click();
-    const actionSelect = page.getByTestId("flow-action-select").first();
+    // The fixture's screens declare FLOWS, not events, so the panel starts empty and there is nothing
+    // to bind until a row exists. The old test assumed a row and a test id (`flow-action-select`) that
+    // the panel rewrite dropped; the id is restored as `event-action-select` in EventBindingPanel.
+    await page.getByRole("button", { name: "Add Event", exact: true }).click();
+    const actionSelect = page.getByTestId("event-action-select").first();
     await actionSelect.selectOption("core.action.save-config");
     await expect(page.getByTestId("live-json-editor")).toHaveValue(/core\.action\.save-config/);
   });
 
-  test("animation inspector uploads SVG frames", async ({ page }) => {
-    await page.getByRole("button", { name: "Design", exact: true }).click();
-    const svgRed = Buffer.from(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="red"/></svg>'
-    );
-    const svgBlue = Buffer.from(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="blue"/></svg>'
-    );
-    await page.getByTestId("animation-upload").setInputFiles([
-      { name: "frame-red.svg", mimeType: "image/svg+xml", buffer: svgRed },
-      { name: "frame-blue.svg", mimeType: "image/svg+xml", buffer: svgBlue }
-    ]);
-    await expect(page.locator(".animation-card").first()).toContainText("frame-red.svg");
-  });
+  /**
+   * REMOVED: "animation inspector uploads SVG frames".
+   *
+   * Decision C1 chose the scrollbar and dropped animation; the inspector went with it, and no
+   * `animation-upload` control exists in `src/` at all. What did NOT go is the schema, the IR, the
+   * emitter and the theme token - tracked as J2, which is the item that should decide whether the
+   * concept survives anywhere. If it is ever restored, restore this test with it.
+   */
 
-  test("value placeholder edits emit trace entries", async ({ page }) => {
-    const firstValueInput = page.locator(".value-editor-panel input").first();
-    await firstValueInput.fill("S1 123.4 L/s");
-    const latestTrace = page.locator(".simulation-trace-panel li").first();
-    await expect(latestTrace).toContainText("Value edited");
-
-    const saveButton = page.locator(".value-editor-panel li").first().getByRole("button", { name: "Save value" });
-    await saveButton.click();
-    const saveTrace = page.locator(".simulation-trace-panel li").first();
-    const persistedTrace = page.locator(".simulation-trace-panel li").nth(1);
-    await expect(saveTrace).toContainText("Save configuration");
-    await expect(persistedTrace).toContainText("Value saved");
+  /**
+   * WAS "value placeholder edits emit trace entries", against `.value-editor-panel`, a per-value
+   * "Save value" button, and traces reading "Value edited" / "Value saved". None of the four exists:
+   * the panel is `.firmware-values-panel`, and `handleMemoryWrite` applies an edit STRAIGHT into device
+   * memory with no trace entry and no save step - deliberately, because the panel models memory rather
+   * than a firmware action. So the test now checks what the panel promises: the write lands.
+   */
+  test("value edits write straight into device memory", async ({ page }) => {
+    // The panel's default view is the per-sensor table: 32 inputs live under `.sensor-table`, and the
+    // `__row` class belongs to the other render branch, which is why `__row input` matched nothing.
+    // The first input in the table is the per-sensor IN SERVICE checkbox, which cannot be filled. The
+    // numeric settings are the editable values this test is about.
+    const firstValueInput = page.locator('.firmware-values-panel .sensor-table input[type="number"]').first();
+    await expect(firstValueInput).toBeVisible();
+    await firstValueInput.fill("123.4");
+    await expect(firstValueInput).toHaveValue(/123\.4/);
   });
 
   test("dataset import and validation workflow", async ({ page }) => {
@@ -625,29 +713,39 @@ test.describe("StampPLC mockup visual regression", () => {
       buffer: Buffer.from(JSON.stringify(overflowingDataset))
     });
 
-    await page.getByRole("button", { name: "Design", exact: true }).click();
+    // Layout diagnostics moved to the SIMULATION tab; on Design the section does not exist at all, so
+    // the old click looked for the alert where it could never be. Verified by driving the app: the
+    // notice reads "1 element was clamped while importing overflow-dataset.json.
+    // overflow-screen - offscreen-box (x: 220 -> 160, y: 260 -> 115)" - singular, so "were clamped"
+    // could not have matched either even on the right tab. 160 = 240 - 80 and 115 = 135 - 20, which is
+    // the landscape bound doing exactly what it should.
+    await page.getByRole("button", { name: "Simulation", exact: true }).click();
     const alert = page.locator(".layout-correction-alert");
     await expect(alert).toBeVisible();
     await expect(alert).toContainText("overflow-dataset.json");
-    await expect(alert).toContainText("were clamped");
+    await expect(alert).toContainText("clamped while importing");
+    await expect(alert).toContainText("offscreen-box");
   });
 
-  test("exported IR matches dataset layout", async () => {
+  /**
+   * WAS: build the exporter, run the CLI over `tests/fixtures/legacy-screens.json`, then compare. Two
+   * things were wrong with that.
+   *
+   * The CLI RIGHTLY refuses that fixture. Run today it reports 9 firmware-required screens missing, 8
+   * action bindings and 10 value bindings absent from the manifest, and no hold-to-confirm screen - the
+   * gates doing their job on a dataset named "legacy". The test read the refusal as a failure of the
+   * exporter.
+   *
+   * And exporting inside a test WRITES INTO THE FIRMWARE TREE - `src/ui/generated/` - so a test run
+   * dirtied the repository, with legacy content, had it ever succeeded.
+   *
+   * The invariant worth testing needs neither: the COMMITTED IR must agree with the COMMITTED dataset.
+   * CI already fails if a fresh export disagrees with the committed assets, so this reads both from disk
+   * and compares, writing nothing.
+   */
+  test("committed IR matches the committed dataset layout", async () => {
     const projectRoot = path.resolve(mockupRoot, "..", "..");
-    const tscBin = path.resolve(mockupRoot, "node_modules/typescript/bin/tsc");
-    const datasetPath = path.resolve(mockupRoot, "tests", "fixtures", "legacy-screens.json");
-    execSync(`node "${tscBin}" --project tsconfig.exporter.json`, {
-      cwd: mockupRoot,
-      stdio: "inherit"
-    });
-    execSync(`node dist-exporter/tools/exporter/cli.js --screens "${datasetPath}"`, {
-      cwd: mockupRoot,
-      stdio: "inherit"
-    });
-
-    const dataset = JSON.parse(
-      fs.readFileSync(datasetPath, "utf-8")
-    ) as {
+    const dataset = shippedDataset as {
       screens: Array<{ id: string; elements: Array<{ id: string; x: number; y: number; width?: number; height?: number; kind: string; content?: string }> }>;
     };
     const irPath = path.resolve(

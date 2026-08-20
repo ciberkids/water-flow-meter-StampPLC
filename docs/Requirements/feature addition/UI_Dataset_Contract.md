@@ -84,6 +84,16 @@ defers every coordinate to them.
 | `bound` | WHY that is the worst case — a physical limit, an enum, or a fixed literal. |
 | `bannerReplaces` | Set on the one element the §2c warning banner is designed to cover: the footer. |
 
+**`bannerReplaces` cannot cross the generator, and that has cost something.** It is in
+`SPEC_ONLY_KEYS` (`tools/skeleton/generate.mjs`), so it appears zero times in `src/data/screens.json` and
+the shipped dataset has no way to declare which element the banner may cover. `tools/audit/screen-spec.ts`
+reads the flag on the 61 proposals in `screens/`; `tools/audit/screen-geometry.ts` — the only audit that
+sees all 80 shipped screens, including the 19 with no spec file — has to allow the footer by ELEMENT ID
+instead. Two allowances for one rule, and the id-based one is the weaker contract: a future screen that
+puts something other than a gesture reminder at y=124 and names it `footer-hint` is excused by its name.
+The consequence is not hypothetical. For as long as `screen-geometry.ts` had no banner check at all, the
+band §2c's whole decision rests on was verified against the proposals and against nothing that ships.
+
 **`worst` must come from a physical bound, never from a format string.** A printf field width is a
 MINIMUM: `%7.2f` of a channel clamped to `q_max = 65535` renders `65535.00`, which is eight characters,
 not seven. Two real defects came from treating a width as a ceiling, and one from declaring `worst` as

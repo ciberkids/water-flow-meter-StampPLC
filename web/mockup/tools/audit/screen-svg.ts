@@ -110,6 +110,9 @@ const TYPICAL: Record<string, string> = {
   "net.ap.ip": "192.168.4.1",
   "net.portal.remaining": "540",
   "net.mqtt.state": "OK",
+  // The LONGEST of the six results, deliberately: the audit measures overflow, so the sample that
+  // matters is the worst case (16 characters at x=84), not the commonest one.
+  "net.mqtt.lastCommandResult": "retained-ignored",
   "net.mqtt.enabled": "On",
   "net.mqtt.host": "broker.plant.local",
   "net.mqtt.port": "1883",

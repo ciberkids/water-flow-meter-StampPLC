@@ -1,7 +1,7 @@
 {
   "id": "net-mqtt-info-3",
   "name": "M.I3 \u2014 MQTT publish",
-  "description": "MQTT information, page 3 of 3 \u2014 publish behaviour. Was B7, B8 and B9.",
+  "description": "MQTT information, page 3 of 3 \u2014 publish behaviour, plus the last command result (R4.4.2d). Was B7, B8 and B9.",
   "elements": [
     {
       "id": "hdr-title",
@@ -81,6 +81,26 @@
       "emphasis": "strong",
       "worst": "1",
       "bound": "options 0 / 1"
+    },
+    {
+      "id": "row3-label",
+      "kind": "text",
+      "x": 2,
+      "y": 80,
+      "content": "Last cmd",
+      "emphasis": "muted",
+      "worst": "Last cmd",
+      "bound": "fixed literal"
+    },
+    {
+      "id": "row3-value",
+      "kind": "text",
+      "x": 84,
+      "y": 80,
+      "binding": "net.mqtt.lastCommandResult",
+      "emphasis": "strong",
+      "worst": "retained-ignored",
+      "bound": "one of the six MqttCommandResult words (R4.4.2d); retained-ignored is the longest at 16"
     },
     {
       "id": "footer-hint",

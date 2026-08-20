@@ -72,7 +72,10 @@ describe("rendering, against the device's own format strings", () => {
   const table = createSensorTable();
   const flowing = table;
   const zeroFlow = setSensor(table, 4, { instantFlowLpm: 0 });
-  const notReady = setSensor(table, 4, { ready: false });
+  // NOT-READY IS REACHED THE WAY THE DEVICE REACHES IT (DF16): by clearing the calibration, not by
+  // clearing a bit. `ready` is derived from `configIsValid` now, so `{ ready: false }` on an otherwise
+  // valid channel is a state neither this table nor the firmware can hold.
+  const notReady = setSensor(table, 4, { qMaxLpm: 0 });
   const disconnected = setSensor(table, 4, { connected: false });
 
   it("prints a metric with the 1-based sensor number and a seven-wide value, no unit", () => {
@@ -295,7 +298,10 @@ describe("advancing a tick", () => {
   it("accumulates nothing for an enabled channel that is not ready or has no multiplier", () => {
     const sensor = sensorAt(createSensorTable(), 1) as SimulatedSensor;
 
-    const waiting = advanceSensorTick({ ...sensor, ready: false }, { pulses: 1200, elapsedMs: 1000 });
+    // `qMaxLpm: 0` rather than `ready: false` — see DF16. This is also exactly the configuration the
+    // engine's own gate refuses (`configIsValid` requires a non-zero q_max), which is what makes the
+    // channel produce nothing.
+    const waiting = advanceSensorTick({ ...sensor, qMaxLpm: 0 }, { pulses: 1200, elapsedMs: 1000 });
     expect(waiting.instantFlowLpm).toBe(0);
     expect(waiting.cumulativeLiters).toBe(sensor.cumulativeLiters);
     expect(waiting.sessionLiters).toBe(sensor.sessionLiters);
@@ -380,9 +386,15 @@ describe("undersampling", () => {
  * tells an operator neither.
  */
 describe("the summary lines report a commissioning gap, and rank it first", () => {
-  /** Uncalibrated in this table means what the ROW means: connected, and not ready. */
+  /**
+   * Uncalibrated in this table means what the ROW means: connected, and not ready.
+   *
+   * Since DF16 that state is reached by clearing the CALIBRATION, because `ready` is derived from
+   * `configIsValid`. `q_max = 0` is the smallest way to say "no valid calibration" and is the same field
+   * the device's own predicate checks first.
+   */
   const uncalibrate = (table: readonly SimulatedSensor[], ...numbers: number[]) =>
-    numbers.reduce((next, number) => setSensor(next, number, { ready: false }), table as SimulatedSensor[]);
+    numbers.reduce((next, number) => setSensor(next, number, { qMaxLpm: 0 }), table as SimulatedSensor[]);
 
   it("counts N uncalibrated in-use channels and says so", () => {
     const table = uncalibrate(createSensorTable(), 2, 4, 7);
@@ -395,7 +407,7 @@ describe("the summary lines report a commissioning gap, and rank it first", () =
     expect(statusSummaryText(one)).toBe("1 channel not calibrated");
     expect(warningSummaryText(one)).toBe("1 channel not calibrated");
 
-    // And the rows agree, which is why the count is taken from `ready` rather than recomputed.
+    // And the rows agree, because both read the same derived `ready` (DF16).
     expect(resolveSensorBinding("sensor.6.status", one, 0)).toBe("SET?");
     expect(resolveSensorBinding("sensor.5.status", one, 0)).toBe("OK");
   });
@@ -420,12 +432,19 @@ describe("the summary lines report a commissioning gap, and rank it first", () =
     expect(statusSummaryText(oneEach)).toBe("1 channel not calibrated | 1 warning");
     expect(warningSummaryText(oneEach)).toBe("1 not calibrated, 1 undersampling");
 
-    // Alone, the sampling case keeps the wording and the channel list it always had.
+    // Alone, the sampling case is a COUNT too. It used to name the channels — "Sampling warning on
+    // sensors 5, 6" — and nothing bounded that: a 28-character prefix plus a 3k-2 list passed the
+    // banner's 37 columns at FOUR flagged channels, silently, because the firmware's banner gets none of
+    // the `~` clipping ordinary text elements receive.
     const samplingOnly = setSensor(setSensor(createSensorTable(), 5, { undersampling: true }), 6, {
       undersampling: true
     });
     expect(statusSummaryText(samplingOnly)).toBe("2 warnings");
-    expect(warningSummaryText(samplingOnly)).toBe("Sampling warning on sensors 5, 6");
+    expect(warningSummaryText(samplingOnly)).toBe("Sampling warning on 2 sensors");
+
+    // One flagged channel: the same plural idiom the uncalibrated branch beside it uses.
+    const oneFlagged = setSensor(createSensorTable(), 5, { undersampling: true });
+    expect(warningSummaryText(oneFlagged)).toBe("Sampling warning on 1 sensor");
   });
 
   it("still says all-ready when every in-use channel is calibrated and unflagged", () => {
@@ -440,14 +459,14 @@ describe("the summary lines report a commissioning gap, and rank it first", () =
     // has to clear `ready`, or a channel could return as calibrated when it is reconnected untouched.
     let table = createSensorTable();
     for (let number = 2; number <= kSensorCount; number += 1) {
-      table = setSensor(table, number, { connected: false, ready: false });
+      table = setSensor(table, number, { connected: false, qMaxLpm: 0 });
     }
     expect(uncalibratedSensorNumbers(table)).toEqual([]);
     expect(statusSummaryText(table)).toBe("All sensors ready");
     expect(resolveSensorBinding("sensor.2.status", table, 0)).toBe("--");
 
     // Now leave the ONE wired channel uncalibrated: one problem reported, not eight.
-    const wiredOnly = setSensor(table, 1, { ready: false });
+    const wiredOnly = setSensor(table, 1, { qMaxLpm: 0 });
     expect(uncalibratedSensorNumbers(wiredOnly)).toEqual([1]);
     expect(statusSummaryText(wiredOnly)).toBe("1 channel not calibrated");
   });
@@ -468,7 +487,7 @@ describe("the summary lines report a commissioning gap, and rank it first", () =
     // Eight of each kind at once: the widest either line can be.
     let table = createSensorTable();
     for (let number = 1; number <= kSensorCount; number += 1) {
-      table = setSensor(table, number, { ready: false, undersampling: true });
+      table = setSensor(table, number, { qMaxLpm: 0, undersampling: true });
     }
     // The noun survives on the 40-column status row and is dropped only on the banner's 37, where
     // "8 channels not calibrated, 8 undersampling" would be 42.
@@ -479,6 +498,21 @@ describe("the summary lines report a commissioning gap, and rank it first", () =
       // Font0 draws a blank cell above 255 and the wrong glyph above 175 — §Font0, no exceptions.
       expect(/^[\x20-\x7E]*$/.test(text)).toBe(true);
     }
+
+    // ── The SAMPLING-ONLY worst case, which the case above does not reach ────────
+    //
+    // `{ qMaxLpm: 0, undersampling: true }` above routes to the COMBINED branch, so the sampling-only
+    // line had never been measured on either side — and it was 50 characters at eight channels while it
+    // named them. `ready` stays true here, which is the only state that reaches the branch at k=8.
+    let flaggedOnly = createSensorTable();
+    for (let number = 1; number <= kSensorCount; number += 1) {
+      flaggedOnly = setSensor(flaggedOnly, number, { undersampling: true });
+    }
+    expect(uncalibratedSensorNumbers(flaggedOnly)).toEqual([]);
+    expect(warningSensorNumbers(flaggedOnly).length).toBe(kSensorCount);
+    expect(warningSummaryText(flaggedOnly)).toBe("Sampling warning on 8 sensors");
+    // 37, not 40: this line is the BANNER's, and the banner starts at x=16.
+    expect(warningSummaryText(flaggedOnly).length).toBeLessThanOrEqual(37);
   });
 });
 

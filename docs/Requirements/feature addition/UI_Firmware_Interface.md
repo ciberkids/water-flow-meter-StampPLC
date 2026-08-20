@@ -52,14 +52,36 @@ Future exporters can evolve schema as long as `UiAssets` remains the boundary. A
   - `sensor.1` … `sensor.8` map to per-channel summaries, respecting the active `UiPage`.
   - `countdown.value`, `countdown.message` render the currently active hold-to-confirm overlay.
 - **Flow triggers (`flows[]`):** each screen can define button/data/time triggers. The exporter emits typed metadata (`FlowTrigger`, `FlowButton`, `FlowGesture`, `timeoutMs`, `actionParams`) that the firmware consumes without hard-coded switch statements.
-- **Action registry:** flows reference firmware actions by string ID (e.g., `ui.action.page.next`). `UiActionRegistry` maps those IDs to real callbacks implemented in `src/ui/core/ui_actions.*`. The default registry currently exposes:
+- **Action registry:** flows reference firmware actions by string ID (e.g., `ui.action.page.next`). `UiActionRegistry` maps those IDs to real callbacks implemented in `src/ui/core/ui_actions.*`. The catalogue below is generated from `src/ui/core/ui_action_catalogue.h`, which `static_assert` already reconciles with the handler table — so an action listed here has a handler, and one with a handler is listed here:
 
-| Action ID | Description |
-| --- | --- |
-| `ui.action.page.next` / `ui.action.page.previous` | Advance or rewind the `UiPage` ring; resets idle timers. |
-| `ui.action.mode.configuration` / `ui.action.mode.info` | Switch between Info and Configuration modes. |
-| `ui.action.mode.idle` | Force the UI into Idle/backlight-off state. |
-| `core.action.save-config` | Persist the current LED configuration to NVS via `LedController::saveToPreferences`. |
+<!-- BEGIN GENERATED ACTION TABLE — node tools/wiki/gen-actions.mjs --write -->
+
+*19 actions, generated from `src/ui/core/ui_action_catalogue.h`. Do not edit by hand:
+CI regenerates this table and fails on any difference.*
+
+| Action ID | Designer label | What it does |
+| --- | --- | --- |
+| `ui.action.page.next` | Next page | Advances to the next UI page |
+| `ui.action.page.previous` | Previous page | Returns to the previous UI page |
+| `ui.action.mode.idle` | Enter idle | Dims the display and enters idle mode |
+| `core.action.save-config` | Save configuration | Persists the current configuration block to NVS and Modbus registers |
+| `core.action.reset-session` | Reset session counters | Issues the Reset Session Modbus command for all ready sensors |
+| `core.action.reset-all-measured` | Reset all measured totals | Issues the Reset All Measured Modbus command |
+| `core.action.reset-max-flow` | Reset peak flow | Issues the Reset Max Flow Modbus command; clears the volatile peak and nothing else |
+| `core.action.reset-calibration` | Reset calibration | Returns the SELECTED channel's calibration to defaults so a replacement meter can be entered; cumulative, session and peak readings are kept |
+| `core.action.factory-reset` | Factory reset | Wipes NVS, clears Modbus config, and reboots |
+| `core.action.reset-portal-login` | Reset portal login | Restores the configuration portal login to admin/admin, leaving totals, calibration and network settings untouched (R8.2a) |
+| `ui.action.nav.descend` | Descend one level | Push the flow's target level onto the navigation stack |
+| `ui.action.nav.back` | Back one level | Pop one level off the navigation stack |
+| `ui.action.nav.escape` | Escape to main screen | Clear the navigation stack back to P0, discarding any uncommitted edit |
+| `config.action.value.increment` | Increment value | Raise the pending value by its step, with hold acceleration |
+| `config.action.value.decrement` | Decrement value | Lower the pending value by its step, with hold acceleration |
+| `config.action.value.commit` | Commit value | Clamp, write the mapped register, validate, then ascend one level |
+| `config.action.value.commit-override` | Save despite Nyquist warning | Forces the pending value past a failed Nyquist check and raises bit n of register 30 (§5.5) |
+| `config.action.value.discard` | Discard edit | Abandon the pending value and ascend one level |
+| `ui.action.pack.select-menu` | Open the Select Menu | Opens the firmware-drawn menu-pack selector. Declared by the firmware-appended root entry (Loadable_UI_Menu_Packs.md §3.4); the same page the UP+DOWN+ENTER 3 s gesture opens |
+
+<!-- END GENERATED ACTION TABLE -->
 
 Adding a new behaviour only requires:
 1. Declare the flow in `screens.json` with the desired trigger + `actionId`.

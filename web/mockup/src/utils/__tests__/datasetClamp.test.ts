@@ -2,12 +2,70 @@ import { describe, expect, it } from "vitest";
 import {
   clampDatasetToDisplay,
   clampElementGeometry,
-  clampCoordinate
+  clampCoordinate,
+  coordinateLimit
 } from "../datasetClamp";
 import { DISPLAY_HEIGHT, DISPLAY_WIDTH } from "../layout";
 import type { ScreenDataset, ScreenElement } from "../../types";
 
 describe("dataset clamp helpers", () => {
+  /**
+   * J8: one clamp rule, shared by the Design panel's inputs and every import path.
+   *
+   * The panel used to clamp a coordinate to the panel DIMENSION, so x = 240 was accepted on a 240-wide
+   * display and the element rendered outside the visible area with zero width, while the import path
+   * corrected the very same geometry to 200. These assertions pin the rule that settled it: the limit is
+   * `bound - size`, so the element's far edge lands ON the boundary and stays visible.
+   */
+  describe("the coordinate limit accounts for the element's own size (J8)", () => {
+    it("puts a 40-wide element's far edge exactly on the right boundary", () => {
+      expect(coordinateLimit("x", 40)).toBe(200);
+      expect(clampCoordinate(9999, "x", undefined, 40)).toBe(200);
+      expect(200 + 40).toBe(240);
+    });
+
+    it("does the same on the y axis, against the landscape height", () => {
+      expect(coordinateLimit("y", 20)).toBe(115);
+      expect(clampCoordinate(9999, "y", undefined, 20)).toBe(115);
+      expect(115 + 20).toBe(135);
+    });
+
+    it("pins an element larger than the display to 0 rather than a negative coordinate", () => {
+      expect(coordinateLimit("x", 400)).toBe(0);
+      expect(clampCoordinate(50, "x", undefined, 400)).toBe(0);
+    });
+
+    it("still accepts a coordinate the element fits at", () => {
+      expect(clampCoordinate(100, "x", undefined, 40)).toBe(100);
+      expect(clampCoordinate(0, "x", undefined, 240)).toBe(0);
+    });
+
+    it("agrees with the import path for the same geometry — the disagreement J8 recorded", () => {
+      const element: ScreenElement = {
+        id: "pushed-right",
+        kind: "box",
+        x: 220,
+        y: 260,
+        width: 80,
+        height: 20,
+        content: ""
+      };
+
+      const imported = clampElementGeometry(element);
+      expect(imported.element.x).toBe(160);
+      expect(imported.element.y).toBe(115);
+
+      // What the panel's own path now produces for the same numbers.
+      expect(clampCoordinate(220, "x", undefined, 80)).toBe(160);
+      expect(clampCoordinate(260, "y", undefined, 20)).toBe(115);
+    });
+
+    it("keeps the size-blind behaviour when no extent is given, so unrelated callers are unchanged", () => {
+      expect(clampCoordinate(240, "x")).toBe(240);
+      expect(clampCoordinate(135, "y")).toBe(135);
+    });
+  });
+
   // The device is landscape-only (decision D3): 240 wide by 135 tall. These assertions
   // previously read 135 x 240 — the panel's native portrait dimensions — which made the
   // suite green while the clamp silently squashed 49 of the 375 real elements.

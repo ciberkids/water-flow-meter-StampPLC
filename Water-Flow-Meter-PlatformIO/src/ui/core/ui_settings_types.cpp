@@ -87,8 +87,16 @@ constexpr SettingDescriptor kSettings[] = {
      */
     {"config.sensor.multiplier", SettingTarget::SensorMultiplier, SettingKind::Numeric,
      1, 32767, 1, nullptr, 0, nullptr, true, kNoRegister, plc::OFF_CFG_F_MULT, "Frequency multiplier F", 0, false},
+    /**
+     * 0..32767, not -32768..32767 (DF14). A negative offset makes `flow = (F - adjust) / f_multiplier`
+     * POSITIVE at zero frequency — a dry pipe reading flow and accumulating volume — so `configIsValid`
+     * refuses it outright, with no §5.5 override. An editor that can reach a value the commit path must
+     * refuse is the defect the multiplier had before its bound moved here: the stepper clamped while
+     * editing and nothing enforced it at the choke point, so the range the integrator's documentation
+     * promised was enforced nowhere.
+     */
     {"config.sensor.adjust", SettingTarget::SensorAdjust, SettingKind::Numeric,
-     -32768, 32767, 1, nullptr, 0, nullptr, true, kNoRegister, plc::OFF_CFG_ADJUST, "Frequency offset Adjust", 0, false},
+     0, 32767, 1, nullptr, 0, nullptr, true, kNoRegister, plc::OFF_CFG_ADJUST, "Frequency offset Adjust", 0, false},
     {"config.sensor.maxFlow", SettingTarget::SensorMaxFlow, SettingKind::Numeric,
      0, 65535, 1, nullptr, 0, "L/min", true, kNoRegister, plc::OFF_CFG_Q_MAX, "Nominal max flow Q", 0, false},
     /**

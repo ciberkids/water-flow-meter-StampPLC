@@ -251,6 +251,155 @@ void aNullClockIsStillHarmless() {
         "and the clock the manager was not given is untouched");
 }
 
+/**
+ * ── THE CLOCK BLOCK AT 50-55 (N-d1) ──────────────────────────────────────────────────────
+ *
+ * `DeviceClock::setTime` had no production caller at all before this block: no register reached it, no
+ * portal page offered it, the panel could not (there is no on-device text editor) and NTP existed only in
+ * a comment. So a field device read `UNSET` unless its RTC happened to hold a date it was allowed to
+ * trust, and the master that is the source of truth for every other setting could not fix it.
+ *
+ * These cases drive the REAL manager against a REAL DeviceClock, so they exercise the staging, the magic,
+ * the plausibility floor and the published read-back the way a master would.
+ */
+void aStagedEpochIsAppliedByTheMagic() {
+  std::printf("\n[50-52: staged halves, then the magic, set the clock as `operator`]\n");
+
+  Device dev;
+  dev.armChannelOne();
+  setMillis(5000);
+  ModbusManager modbus(dev.deps());
+
+  check(!dev.clock.isSet(), "the clock starts unset — no RTC trust, nobody has written one");
+
+  // 2026-08-18T09:00:00Z.
+  constexpr uint32_t kEpoch = 1787043600u;
+  check(modbus.applyHoldingWrite(plc::REG_CLOCK_SET_EPOCH_HI, static_cast<uint16_t>(kEpoch >> 16)),
+        "the high word is accepted");
+  check(modbus.applyHoldingWrite(plc::REG_CLOCK_SET_EPOCH_LO, static_cast<uint16_t>(kEpoch & 0xFFFFu)),
+        "and the low word");
+  check(!dev.clock.isSet(),
+        "and NOTHING has happened yet — staging is not applying, because two registers are not atomic");
+
+  check(modbus.applyHoldingWrite(plc::REG_CLOCK_APPLY, plc::LinkSettingsManager::kApplyMagic),
+        "the magic is accepted");
+  check(dev.clock.isSet(), "and now the clock is set");
+  check(dev.clock.now(5000) == kEpoch, "to exactly the staged epoch");
+  check(dev.clock.source() == plc::ClockSource::Operator,
+        "with source `operator` — a master typed it, and the panel must be able to say so");
+
+  // The read-back a master confirms with.
+  const uint32_t published = (static_cast<uint32_t>(dev.registers.at(plc::REG_CLOCK_NOW_HI)) << 16) |
+                             dev.registers.at(plc::REG_CLOCK_NOW_LO);
+  check(published == kEpoch, "53-54 publish the time back, so a master can confirm its own write");
+  check(dev.registers.at(plc::REG_CLOCK_SOURCE) == static_cast<uint16_t>(plc::ClockSource::Operator),
+        "and 55 says who set it");
+}
+
+void anImplausibleEpochIsRefusedOnTheWire() {
+  std::printf("\n[52: an implausible epoch is refused, and changes nothing]\n");
+
+  Device dev;
+  dev.armChannelOne();
+  setMillis(5000);
+  ModbusManager modbus(dev.deps());
+
+  // 2019-12-31T23:59:59Z — one second under the floor, which is the year a drifted RTC and a mistyped
+  // year both land near.
+  constexpr uint32_t kTooEarly = 1577836799u;
+  modbus.applyHoldingWrite(plc::REG_CLOCK_SET_EPOCH_HI, static_cast<uint16_t>(kTooEarly >> 16));
+  modbus.applyHoldingWrite(plc::REG_CLOCK_SET_EPOCH_LO, static_cast<uint16_t>(kTooEarly & 0xFFFFu));
+  check(!modbus.applyHoldingWrite(plc::REG_CLOCK_APPLY, plc::LinkSettingsManager::kApplyMagic),
+        "the apply is REFUSED — false becomes a Modbus exception, so the master hears about it");
+  check(!dev.clock.isSet(), "and the clock is still unset, not clamped to the floor");
+
+  // One second later is inside the floor, and the staged halves survived the refusal.
+  constexpr uint32_t kJustInside = 1577836800u;
+  modbus.applyHoldingWrite(plc::REG_CLOCK_SET_EPOCH_LO, static_cast<uint16_t>(kJustInside & 0xFFFFu));
+  check(modbus.applyHoldingWrite(plc::REG_CLOCK_APPLY, plc::LinkSettingsManager::kApplyMagic),
+        "correcting ONE half and re-applying works — a refusal does not discard the staging");
+  check(dev.clock.now(5000) == kJustInside, "2020-01-01 exactly, the earliest plausible time");
+}
+
+void theWrongMagicDoesNothing() {
+  std::printf("\n[52: only the magic applies, and the read-only half stays read-only]\n");
+
+  Device dev;
+  dev.armChannelOne();
+  setMillis(5000);
+  ModbusManager modbus(dev.deps());
+  constexpr uint32_t kEpoch = 1787043600u;
+  modbus.applyHoldingWrite(plc::REG_CLOCK_SET_EPOCH_HI, static_cast<uint16_t>(kEpoch >> 16));
+  modbus.applyHoldingWrite(plc::REG_CLOCK_SET_EPOCH_LO, static_cast<uint16_t>(kEpoch & 0xFFFFu));
+
+  check(!modbus.applyHoldingWrite(plc::REG_CLOCK_APPLY, 1),
+        "writing 1 is refused — the same rule the link and network blocks follow");
+  check(!modbus.applyHoldingWrite(plc::REG_CLOCK_APPLY, 0),
+        "and so is 0, which is what a lazy scan writes everywhere");
+  check(!dev.clock.isSet(), "so the clock is untouched");
+
+  // 53-55 are the device's own answer. A master that could write them could make the device disagree
+  // with its own clock, which is the one thing this module exists to prevent.
+  check(!modbus.applyHoldingWrite(plc::REG_CLOCK_NOW_HI, 0x1234), "53 is read-only");
+  check(!modbus.applyHoldingWrite(plc::REG_CLOCK_NOW_LO, 0x1234), "54 is read-only");
+  check(!modbus.applyHoldingWrite(plc::REG_CLOCK_SOURCE, 2), "and so is 55 — nobody may forge the source");
+}
+
+void anUndatedSessionIsFilledInByTheFirstWrite() {
+  std::printf("\n[the reason this write matters: it dates a session that began before the clock did]\n");
+
+  Device dev;
+  dev.armChannelOne();
+  setMillis(1000);
+  ModbusManager modbus(dev.deps());
+
+  // A reset while the clock is unset: the device genuinely cannot say when the session began.
+  check(modbus.applyHoldingWrite(plc::REG_MASTER_RESET_ALL_SESSION, 1), "a session reset is accepted");
+  check(dev.clock.sessionStartEpoch() == 0, "and it has no date, because there was no clock to date it");
+  check(dev.clock.sessionStartAwaitingClock(),
+        "but the clock remembers it is owed one — the state the panel renders differently");
+
+  setMillis(61'000);
+  constexpr uint32_t kEpoch = 1787043600u;
+  modbus.applyHoldingWrite(plc::REG_CLOCK_SET_EPOCH_HI, static_cast<uint16_t>(kEpoch >> 16));
+  modbus.applyHoldingWrite(plc::REG_CLOCK_SET_EPOCH_LO, static_cast<uint16_t>(kEpoch & 0xFFFFu));
+  check(modbus.applyHoldingWrite(plc::REG_CLOCK_APPLY, plc::LinkSettingsManager::kApplyMagic),
+        "then a master sets the clock over RS485");
+
+  /**
+   * BOUNDED, NOT BACKDATED — and I had this wrong first.
+   *
+   * I expected `kEpoch - 60`, reasoning from the millis gap between the reset and the sync.
+   * `device_clock.cpp:107-116` does something more careful: it records the sync epoch itself, because the
+   * session "demonstrably started before this moment, so `now` is the earliest time it could have begun
+   * and is therefore the tightest bound available". Backdating by the millis difference would look more
+   * precise and would be a fabrication — nothing recorded a trustworthy anchor at the moment of the reset,
+   * which is the entire reason the timestamp was owed.
+   */
+  check(dev.clock.sessionStartEpoch() == kEpoch,
+        "and the session start is BOUNDED to the sync moment — the earliest it demonstrably could have been");
+  check(!dev.clock.sessionStartAwaitingClock(), "with nothing left owed");
+  check(dev.clock.sessionDurationSeconds(61'000) == 0,
+        "so the session reads zero seconds old, which is the honest floor rather than a guessed sixty");
+  check(dev.clock.sessionDurationSeconds(121'000) == 60,
+        "and grows from there — P3 can finally say something, and it is never longer than the truth");
+}
+
+void aClocklessManagerRefusesTheApply() {
+  std::printf("\n[52 with no clock injected: refused, not crashed]\n");
+
+  Device dev;
+  dev.armChannelOne();
+  setMillis(5000);
+  ModbusDependencies deps = dev.deps();
+  deps.clock = nullptr;
+  ModbusManager modbus(deps);
+
+  check(modbus.applyHoldingWrite(plc::REG_CLOCK_SET_EPOCH_HI, 0x6A8C), "staging is still accepted");
+  check(!modbus.applyHoldingWrite(plc::REG_CLOCK_APPLY, plc::LinkSettingsManager::kApplyMagic),
+        "and the apply is refused rather than dereferencing a null clock");
+}
+
 }  // namespace
 
 int main() {
@@ -261,6 +410,11 @@ int main() {
   aWriteOfZeroIsNotACommand();
   aResetWithNoClockIsRememberedAsUndated();
   aNullClockIsStillHarmless();
+  aStagedEpochIsAppliedByTheMagic();
+  anImplausibleEpochIsRefusedOnTheWire();
+  theWrongMagicDoesNothing();
+  anUndatedSessionIsFilledInByTheFirstWrite();
+  aClocklessManagerRefusesTheApply();
   if (failures > 0) {
     std::printf("\nFAILURES (%d of %d)\n", failures, checks);
     return 1;

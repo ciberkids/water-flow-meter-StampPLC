@@ -9,6 +9,9 @@ void UiController::begin(uint32_t nowMs) {
   page_ = UiPage::GlobalStatus;
   lastInteractionMs_ = nowMs;
   context_ = UiRenderContext{};
+  // begin() re-establishes the whole boot state; a request left set across a re-begin would open the
+  // Select Menu on the first pass after a reset.
+  packSelectorRequested_ = false;
   context_.mode = mode_;
   context_.page = page_;
 }
@@ -152,6 +155,11 @@ void UiController::update(uint32_t nowMs,
   // The two things that change between telemetry ticks, and so the two things that decide
   // the repaint cadence. See UiRenderContext::interactive.
   context_.interactive = editor_.active || countdown.active;
+  // Published separately from `interactive` above, which is the UNION of the two. The warning banner
+  // needs the editor half ALONE — it suppresses itself over an editor's `hold=cancel` hint but must not
+  // suppress itself under a countdown, whose overlay outranks it by draw order instead. See
+  // UiRenderContext::bannerActive().
+  context_.editorActive = editor_.active;
   context_.currentScreen = navigator_.current();
   context_.selectorActive = selectorActive_;
   context_.selector = selectorActive_ ? &packSelector_ : nullptr;
@@ -170,23 +178,6 @@ void UiController::update(uint32_t nowMs,
 
   // The P0 flow indicator is driven straight from aggregateFlowLpm by
   // UiRenderer::drawFlowDots(); no frame counter is kept here.
-
-  /**
-   * The flagged channels as a list, built into a fixed buffer rather than appended straight onto
-   * `warningSummary`.
-   *
-   * Two reasons. The summary now has to choose between phrasings AFTER both counts are known — a list
-   * appended as the loop went would have to be unpicked when an uncalibrated channel outranks it — and
-   * the buffer replaces the per-channel `std::to_string` this loop used to run on every pass of the
-   * logic loop, so the summary costs one assignment into a string that keeps its capacity.
-   *
-   * 32 bytes holds "1, 2, 3, 4, 5, 6, 7, 8" (22) with room to spare, and the guard below stops short of
-   * the next entry rather than truncating mid-number. It leaves headroom for a two-digit channel too,
-   * which `-Werror=format-truncation` then proves fits inside `summary` below — the first size chosen
-   * here was 40, and the compiler pointed out that 28 characters of prose plus 39 of list does not.
-   */
-  char samplingList[32] = {};
-  std::size_t listUsed = 0;
 
   for (std::size_t i = 0; i < plc::kNumSensors; ++i) {
     auto& dst = context_.sensors[i];
@@ -208,12 +199,6 @@ void UiController::update(uint32_t nowMs,
     }
 
     if ((warningFlags >> i) & 0x01) {
-      if (listUsed + 6 < sizeof(samplingList)) {
-        listUsed += static_cast<std::size_t>(std::snprintf(samplingList + listUsed,
-                                                           sizeof(samplingList) - listUsed,
-                                                           listUsed ? ", %u" : "%u",
-                                                           static_cast<unsigned>(i + 1)));
-      }
       context_.warningCount++;
     }
   }
@@ -229,13 +214,20 @@ void UiController::update(uint32_t nowMs,
    * `evaluateSensorDiagnostics` tests `valid && !meetsNyquistLimit`, so an invalid configuration is
    * skipped by the very check that would have reported it (modbus_manager.cpp).
    *
-   * WHEN BOTH ARE PRESENT THE CHANNEL LIST IS TRADED FOR A COUNT, and so is the word "channels".
-   * Naming both sets needs more than the 37 characters the banner has at x=16 with 6 px glyphs, and
-   * "8 channels not calibrated, 8 undersampling" is 42 — five over, which is why this line is the one
-   * place the noun is dropped. `telemetry.status` keeps it in every state, having 40 columns from x=2
-   * and no channel list to carry. Channel identity is not lost either way: the flagged rows are drawn
-   * in the warning colour from `warningFlags` and an uncalibrated row says `SET?` itself, so the panel
-   * still says WHICH — this row says how many and which kind.
+   * WHEN BOTH ARE PRESENT THE WORD "channels" GOES. Naming both sets needs more than the 37 characters
+   * the banner has at x=16 with 6 px glyphs, and "8 channels not calibrated, 8 undersampling" is 42 —
+   * five over, which is why this line is the one place the noun is dropped. `telemetry.status` keeps it
+   * in every state, having 40 columns from x=2.
+   *
+   * THE SAMPLING-ONLY LINE IS A COUNT TOO, and it used to be the widest of the five by a long way. It
+   * named the channels — "Sampling warning on sensors 1, 2, 3, 4, 5, 6, 7, 8" — and nothing bounded it:
+   * the prefix was 28 characters, a k-channel list is 3k-2, so it passed the banner's 37 at FOUR flagged
+   * channels and reached 50 at eight. It overflowed SILENTLY, because `drawWarningBanner` prints straight
+   * to the panel and gets none of `drawTextElement`'s `~` clipping, and no test had ever reached the
+   * branch above two channels. "Sampling warning on 8 sensors" is 29, so every branch now has slack: the
+   * widest line this function can produce is the combined one at 33. Channel identity is given up here
+   * and carried where it already was — the flagged rows are drawn in the warning colour from
+   * `warningFlags`, and an uncalibrated row says `SET?` itself. This row says how many and which kind.
    *
    * `No channels in use` is not a cosmetic fifth case: the connected bitmap comes out of NVS with a
    * default of 0 (firmware.cpp), so a factory-fresh device has nothing in use at all, and both counts
@@ -243,6 +235,9 @@ void UiController::update(uint32_t nowMs,
    * this change exists to delete — `telemetry.maxFlowLpm` already refuses it with `Max Flow: --`, and
    * `SensorStateEngine` already refuses it for the green LED (`activeSensors == 0` clears allReady).
    */
+  // 64 bytes against a widest branch of 33 characters. Generous on purpose and cheap: it was sized when
+  // this function still composed a channel list, `-Werror=format-truncation` rejected the 40 first
+  // chosen, and there is no reason to re-tighten a stack buffer that lives for four statements.
   char summary[64] = {};
   if (context_.uncalibratedCount > 0 && context_.warningCount > 0) {
     std::snprintf(summary, sizeof(summary), "%u not calibrated, %u undersampling",
@@ -253,7 +248,9 @@ void UiController::update(uint32_t nowMs,
                   static_cast<unsigned>(context_.uncalibratedCount),
                   context_.uncalibratedCount == 1 ? "" : "s");
   } else if (context_.warningCount > 0) {
-    std::snprintf(summary, sizeof(summary), "Sampling warning on sensors %s", samplingList);
+    std::snprintf(summary, sizeof(summary), "Sampling warning on %u sensor%s",
+                  static_cast<unsigned>(context_.warningCount),
+                  context_.warningCount == 1 ? "" : "s");
   } else if (connectedBitmap == 0) {
     std::snprintf(summary, sizeof(summary), "No channels in use");
   } else {

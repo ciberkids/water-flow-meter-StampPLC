@@ -45,6 +45,7 @@ void checkStr(const char* actual, const char* expected, const char* what) {
 using plc::NetField;
 using plc::NetSettings;
 using plc::PortalFieldError;
+using plc::PortalClockWriter;
 using plc::PortalForm;
 using plc::PortalSettingStore;
 using plc::PortalSubmitResult;
@@ -167,7 +168,9 @@ void coverageTests() {
     if (!setting) continue;
     if (setting->perSensor) {
       ++perSensorSeen;
-      for (std::size_t sensor = 0; sensor < plc::kNumSensors; ++sensor) {
+      // ONE-BASED: 1..kNumSensors, because that is what `ui::writeSetting` takes and what the panel
+      // shows (DF10). This loop asserted `@0`..`@7` while the settings API rejects 0 outright.
+      for (std::size_t sensor = 1; sensor <= plc::kNumSensors; ++sensor) {
         const std::string name = std::string("name=\"") + setting->bindingId + "@" +
                                  std::to_string(sensor) + "\"";
         if (!contains(html, name)) {
@@ -198,11 +201,18 @@ void coverageTests() {
         "with a catalogue big enough that the coverage claim means something");
   check(perSensorSeen > 0, "including per-sensor ones, so the @index path is actually exercised");
 
-  // The LAST index is where an off-by-one lives, and the one past it is where an over-run does.
-  check(contains(html, "name=\"config.sensor.multiplier@7\""),
+  // The LAST index is where an off-by-one lives, and the one past it is where an over-run does. Both
+  // moved by one when the portal became one-based (DF10): with kNumSensors = 8 the last row is now
+  // `@8` and the over-run is `@9`. The literals are spelled out rather than computed, because a test
+  // that derives its expectation from the same constant the code uses cannot catch a shifted range.
+  check(contains(html, "name=\"config.sensor.multiplier@8\""),
         "the last sensor's calibration is present (sensorCount = kNumSensors)");
-  check(!contains(html, "name=\"config.sensor.multiplier@8\""),
-        "and one past the end is not");
+  check(contains(html, "name=\"config.sensor.multiplier@1\""),
+        "and so is the first, as @1 — the index ui::writeSetting accepts");
+  check(!contains(html, "name=\"config.sensor.multiplier@0\""),
+        "while @0 is absent: it is the settings API's \"no such slot\" value");
+  check(!contains(html, "name=\"config.sensor.multiplier@9\""),
+        "and one past the end (@9) is not");
 
   // Both portal credential fields exist even though neither is in the catalogue (R7.9a/b).
   check(contains(html, "name=\"config.portal.user\""), "the portal user has a field");
@@ -214,9 +224,13 @@ void coverageTests() {
   StringSink smallSink;
   small.renderSettingsForm(smallSink);
   check(contains(smallSink.text(), "name=\"config.sensor.multiplier@1\""),
-        "with sensorCount = 2 the second sensor is rendered");
-  check(!contains(smallSink.text(), "name=\"config.sensor.multiplier@2\""),
+        "with sensorCount = 2 the FIRST sensor is @1, not @0");
+  check(contains(smallSink.text(), "name=\"config.sensor.multiplier@2\""),
+        "and the second is @2 — the last sensor is sensorCount, not sensorCount - 1");
+  check(!contains(smallSink.text(), "name=\"config.sensor.multiplier@3\""),
         "and the third is not — the loop bound is the parameter, not a constant");
+  check(!contains(smallSink.text(), "name=\"config.sensor.multiplier@0\""),
+        "and @0 is never rendered: 0 is ui::writeSetting's \"no such slot\" marker");
 
   // Every kind has to have produced a control, or a whole class of setting is silently unreachable.
   check(contains(html, "type=\"number\""), "numerics render as number inputs");
@@ -666,6 +680,106 @@ void warningTests() {
 // Breaks if: external writes stop happening, are sent the wrong sensor index, run before
 // validation, or a store refusal is swallowed instead of reported.
 // ────────────────────────────────────────────────────────────────────────────────────
+/**
+ * A stand-in for `DeviceClock` behind the portal's writer interface.
+ *
+ * Records what the page asked for, and refuses the same window the real clock refuses so the page's own
+ * bound and the device's cannot drift apart in this test without one of them noticing.
+ */
+class FakeClock : public PortalClockWriter {
+ public:
+  uint32_t nowEpoch() const override { return now_; }
+  uint8_t sourceValue() const override { return source_; }
+  bool setEpoch(uint32_t epoch) override {
+    ++attempts;
+    if (epoch < 1577836800u || epoch > 4102444800u) {
+      return false;
+    }
+    now_ = epoch;
+    source_ = 2;  // operator
+    lastAccepted = epoch;
+    return true;
+  }
+
+  void preset(uint32_t epoch, uint8_t source) {
+    now_ = epoch;
+    source_ = source;
+  }
+
+  int attempts = 0;
+  uint32_t lastAccepted = 0;
+
+ private:
+  uint32_t now_ = 0;
+  uint8_t source_ = 0;
+};
+
+void clockTests() {
+  std::printf("\n[the clock section — the portal as the SECOND route to the clock (N-d1)]\n");
+
+  NetSettings net;
+  FakeStore store;
+  FakeClock clock;
+  PortalForm form(net, &store, plc::kNumSensors, &clock);
+
+  // ── The page, unset ────────────────────────────────────────────────────────────────────
+  StringSink unsetPage;
+  form.renderSettingsForm(unsetPage);
+  check(contains(unsetPage.text(), "<h2>Clock</h2>"), "the form has a Clock section");
+  check(contains(unsetPage.text(), "not set"),
+        "which says the clock is NOT SET rather than showing a plausible 1970");
+  check(contains(unsetPage.text(), "name=\"config.clock.epoch\""), "and offers the field to set it");
+  check(contains(unsetPage.text(), "Math.floor(Date.now()/1000)"),
+        "with a script that fills the epoch in, so the operator types nothing");
+  check(contains(unsetPage.text(), "with scripting off, type the seconds"),
+        "and a hint for the no-script case, because the field still works then");
+
+  // ── Setting it ─────────────────────────────────────────────────────────────────────────
+  const PortalSubmitResult set = form.submit("config.clock.epoch=1787043600");
+  check(set.ok(), "a submission carrying a plausible epoch is accepted");
+  check(clock.lastAccepted == 1787043600u, "and reaches the clock unchanged");
+  check(set.storedSomething() && set.externalWrites == 1,
+        "counted as a write, so the result page cannot say nothing changed");
+
+  StringSink setPage;
+  form.renderSettingsForm(setPage);
+  check(contains(setPage.text(), "2026-08-18 09:00:00 UTC"),
+        "and the page now shows the time as a human date, in UTC, saying so");
+  check(contains(setPage.text(), "set by an operator"), "with WHO set it — the source, not just the value");
+
+  // ── The bounds, which the page reports before the clock is troubled ────────────────────
+  clock.attempts = 0;
+  const PortalSubmitResult tooEarly = form.submit("config.clock.epoch=1577836799");
+  check(!tooEarly.ok(), "one second before 2020-01-01 is refused");
+  check(tooEarly.errorCount == 1 && tooEarly.errors[0].error == PortalFieldError::OutOfRange,
+        "as OutOfRange, which names the problem better than a flat refusal");
+  check(clock.attempts == 0, "and the clock was never asked — the page checks its own bound first");
+
+  const PortalSubmitResult notANumber = form.submit("config.clock.epoch=yesterday");
+  check(!notANumber.ok() && notANumber.errors[0].error == PortalFieldError::NotANumber,
+        "and a word where a number belongs is NotANumber");
+
+  // ── Blank means leave it alone, exactly like the write-only password ───────────────────
+  const uint32_t before = clock.lastAccepted;
+  clock.attempts = 0;
+  const PortalSubmitResult blank = form.submit("config.clock.epoch=&config.modbusSlaveId=9");
+  check(blank.ok(), "an empty clock field is accepted");
+  check(clock.attempts == 0 && clock.lastAccepted == before,
+        "and changes NOTHING — the page renders every setting on every save, so blank cannot mean 1970");
+
+  // ── A firmware with no clock ───────────────────────────────────────────────────────────
+  NetSettings clocklessNet;
+  PortalForm clockless(clocklessNet, &store, plc::kNumSensors);
+  StringSink clocklessPage;
+  clockless.renderSettingsForm(clocklessPage);
+  check(contains(clocklessPage.text(), "supplied no clock"),
+        "a build with no clock SAYS so rather than hiding the section");
+  check(contains(clocklessPage.text(), "disabled"), "and disables the field instead of accepting writes");
+  const PortalSubmitResult refused = clockless.submit("config.clock.epoch=1787043600");
+  check(!refused.ok() && refused.errors[0].error == PortalFieldError::Refused,
+        "and a submission to it is reported as refused, not silently dropped");
+}
+
 void storeTests() {
   std::printf("\n[the injected store — settings that do not live in NetSettings]\n");
 
@@ -686,6 +800,26 @@ void storeTests() {
   }
   check(sawSlaveId, "the global setting arrived with its value");
   check(sawSensor, "and the per-sensor one with the index from its @suffix, not sensor 0");
+
+  // THE BOUNDARIES OF THE ONE-BASED RANGE (DF10). Each of these three was wrong before the portal was
+  // aligned with `ui::writeSetting`: `@0` was accepted and would have been forwarded as the settings
+  // API's "invalid" marker, and `@kNumSensors` was refused because the bound was `>= sensorCount_`,
+  // which made the LAST sensor unaddressable the moment anything named it directly.
+  store.writes.clear();
+  check(!form.submit("config.sensor.maxFlow@0=120").ok(),
+        "@0 is refused — 0 is not a sensor");
+  check(store.writes.empty(), "and nothing reached the store");
+  const std::string lastSensor =
+      std::string("config.sensor.maxFlow@") + std::to_string(plc::kNumSensors) + "=120";
+  check(form.submit(lastSensor.c_str()).ok(),
+        "the LAST sensor is addressable: @kNumSensors is inside the range");
+  check(!store.writes.empty() && store.writes.back().sensorIndex == plc::kNumSensors,
+        "and arrives with that index unchanged, so an adapter adds nothing");
+  store.writes.clear();
+  const std::string pastLast =
+      std::string("config.sensor.maxFlow@") + std::to_string(plc::kNumSensors + 1) + "=120";
+  check(!form.submit(pastLast.c_str()).ok(), "one past the last is refused");
+  check(store.writes.empty(), "and nothing reached the store for it either");
 
   // What the page SAYS about a store-only submission. NetSettings never committed, so a result that
   // only knew about `committed` reported "nothing changed" over a value it had just written — and
@@ -916,6 +1050,7 @@ int main() {
   authTests();
   warningTests();
   storeTests();
+  clockTests();
   capacityAgreementTests();
   constantTimeTests();
   applyOnlyWhenStagedTests();

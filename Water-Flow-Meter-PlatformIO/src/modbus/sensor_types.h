@@ -3,7 +3,6 @@
 #include <cstdint>
 
 #include <algorithm>
-#include <cstdlib>
 
 /**
  * How a channel's meter is specified — the two forms real datasheets use.
@@ -46,8 +45,8 @@ struct SensorCharacteristics {
  * Modbus as 0.0. Nothing was wrong with the predicate; it was in the wrong place.
  *
  * The rules: q_max must be non-zero, or no frequency maps to a flow at all; the multiplier must be
- * POSITIVE, for the reason below; and the offset may not exceed the frequency the channel can actually
- * reach, or the correction would dominate the measurement.
+ * POSITIVE, for the reason below; and the offset must be non-negative and may not exceed the frequency
+ * the channel can actually reach, or the correction would dominate the measurement.
  */
 inline bool configIsValid(const SensorCharacteristics& cfg) {
   // Common to both forms: without a nominal maximum there is nothing to clamp a reading to, and the
@@ -82,14 +81,35 @@ inline bool configIsValid(const SensorCharacteristics& cfg) {
     return false;
   }
   const int32_t multiplier = static_cast<int32_t>(cfg.f_multiplier);
-  const int32_t limit = static_cast<int32_t>(cfg.q_max) * multiplier * 10;
   const int32_t adjust = static_cast<int32_t>(cfg.adjust);
-  // The 10 is a known looseness, not a considered bound: the comment above says the offset may not
-  // exceed the frequency the channel can reach, which is `q_max * multiplier` — ten times smaller. A
-  // negative offset within this bound still makes zero pulses read as positive flow. Left as it is
-  // deliberately; see docs/active_work/open_decisions.md, "the offset bound is ten times the reachable
-  // frequency", which is a decision about what this predicate should promise rather than a repair.
-  return std::abs(adjust) <= limit;
+  /**
+   * NON-NEGATIVE, and no larger than the reachable frequency. Both halves were decided in DF14 after
+   * this predicate and its own comment had disagreed by a factor of ten for as long as either existed.
+   *
+   * WHY NEGATIVE IS REFUSED, which is the half that repairs something. The engine computes
+   * `flow = (F - adjust) / f_multiplier` (sensor_state_engine.cpp:47) and clamps only a NEGATIVE result
+   * to zero. A negative offset therefore produces a POSITIVE reading at zero frequency, which sails past
+   * that clamp: `m = 10, q_max = 150, adjust = -1400` reads **140 L/min on a dry pipe**, accumulates
+   * volume into the session and lifetime totals every cycle, and reports itself READY with register 30
+   * clear. For a pulse meter the rule is not a matter of taste — zero pulses is zero flow, and a
+   * calibration that says otherwise is describing something the sensor cannot measure.
+   *
+   * There is deliberately NO OVERRIDE. §5.5's write-twice handshake covers candidates that are valid but
+   * outrun the sampler (`meetsNyquistLimit`); `prepareConfigUpdate` clears the override state and returns
+   * early for an invalid one, so this is a hard refusal on every route. A datasheet whose least-squares
+   * intercept really is negative is entered as PULSES PER LITRE, or with the intercept at 0 and the small
+   * low-flow error that implies. The panel's editor is bounded 0..32767 to match, exactly as the
+   * multiplier's is 1..32767 for the same class of reason.
+   *
+   * The upper bound is now what the comment always claimed: `q_max * multiplier`, the frequency the
+   * channel reaches at its nominal maximum. Widest legal product is 65535 * 32767 = 2,147,385,345, which
+   * fits int32 with 98,302 to spare — so no promotion is needed here, but do not widen either field
+   * without revisiting this line.
+   */
+  if (adjust < 0) {
+    return false;
+  }
+  return adjust <= static_cast<int32_t>(cfg.q_max) * multiplier;
 }
 
 /**

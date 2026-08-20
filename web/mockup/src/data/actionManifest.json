@@ -90,6 +90,11 @@
       "id": "config.action.value.discard",
       "label": "Discard edit",
       "description": "Abandon the pending value and ascend one level"
+    },
+    {
+      "id": "ui.action.pack.select-menu",
+      "label": "Open the Select Menu",
+      "description": "Opens the firmware-drawn menu-pack selector. Declared by the firmware-appended root entry (Loadable_UI_Menu_Packs.md §3.4); the same page the UP+DOWN+ENTER 3 s gesture opens"
     }
   ],
   "values": [
@@ -197,7 +202,7 @@
       "id": "config.sensor.adjust",
       "category": "setting",
       "type": "number",
-      "min": -32768,
+      "min": 0,
       "max": 32767,
       "step": 1,
       "perSensor": true,
@@ -990,6 +995,14 @@
       "register": 561,
       "readOnly": true,
       "description": "MQTT broker connection state"
+    },
+    {
+      "id": "net.mqtt.lastCommandResult",
+      "category": "derived",
+      "type": "string",
+      "register": 565,
+      "readOnly": true,
+      "description": "Outcome of the last MQTT command topic (R4.4.2d) — accepted, rate-limited, ..."
     },
     {
       "id": "net.ap.ssid",

@@ -134,25 +134,33 @@ function navigationTree() {
     for (const id of ring) {
       out.push(`        ${nodeId(id)}["${label(id)}"]`);
     }
+    if (ring.includes("info-p0-global-status")) {
+      // Not in the dataset, so this generator has nothing to read — the same hardcoding the FW
+      // subgraph below already needs, and for the same reason. UiNavigator splices it onto the END
+      // of this level (src/ui/core/ui_root_tail.h), which packs cannot undo.
+      out.push('        ui_select_menu["SELECT MENU - appended by the firmware<br/><i>ENTER opens the pack selector</i>"]');
+    }
     out.push("    end");
   });
 
   /**
    * The one screen the dataset cannot describe, declared here because it has to appear somewhere.
    *
-   * The Select Menu is FIRMWARE-DRAWN: `UiRenderer` short-circuits to `drawPackSelector` before every
+   * The SELECTOR is FIRMWARE-DRAWN: `UiRenderer` short-circuits to `drawPackSelector` before every
    * table-driven path, so it exists in no screen table and this generator has nothing to read. Leaving
    * it out was worse than hardcoding it — a reader of a diagram titled "the navigation tree" concluded
    * the pack selector did not exist, which is exactly what happened.
    *
-   * It is drawn detached, with no edge from any level, because that is the truth: it is reachable ONLY
-   * by the three-button gesture, from anywhere, and `Loadable_UI_Menu_Packs.md` §3.4's root-level entry
-   * — the paged, discoverable route — is specified and not built.
+   * There are now TWO routes in, and the diagram draws both. `Loadable_UI_Menu_Packs.md` §3.4's
+   * root-level entry is built: the firmware appends a `SELECT MENU` page to the end of the root ring
+   * (`src/ui/core/ui_root_tail.h`), so the ENTER edge below comes from an actual member of that level
+   * rather than from nowhere. The three-button gesture still reaches the selector from any screen at
+   * any depth, which is the part no edge can express.
    */
   out.push('    subgraph FW["Firmware-drawn, in no screen table"]');
   out.push("        direction TB");
   out.push('        pack_selector["Select Menu (pack selector)<br/><i>UP+DOWN+ENTER held 3 s, from any screen at any depth</i><br/><i>UP/DOWN move - ENTER selects and reboots - held ENTER leaves</i>"]');
-  out.push('        pack_note["NOT reachable by paging.<br/><i>Loadable_UI_Menu_Packs 3.4 specifies a root-level entry; it is not implemented,<br/>so the only route is the gesture and nothing on screen advertises it.</i>"]');
+  out.push('        pack_note["Two routes in.<br/><i>Loadable_UI_Menu_Packs 3.4s root-level entry is built - see SELECT MENU in the root ring -<br/>and the three-button gesture still works when a pack draws nothing.</i>"]');
   out.push("    end");
 
   // Descend edges, drawn after the subgraphs so mermaid places the levels first.
@@ -163,6 +171,8 @@ function navigationTree() {
     if (target.endsWith("-edit")) continue;
     out.push(`    ${nodeId(screen.id)} -- ENTER --> ${nodeId(target)}`);
   }
+  // The appended entry's own ENTER, which no dataset flow declares.
+  out.push("    ui_select_menu -- ENTER --> pack_selector");
 
   return out.join("\n") + "\n";
 }

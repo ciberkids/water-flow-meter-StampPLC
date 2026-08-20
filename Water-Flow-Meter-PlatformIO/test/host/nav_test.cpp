@@ -44,7 +44,12 @@ int main() {
   // §7.1 put WIFI and MQTT at the ROOT level, as siblings of the info pages rather than under
   // Configuration, and §5.1 then RENUMBERED the info pages from nine to seven: cumulative and
   // session each had a litres page and an m3 page, which is one quantity paginated twice, and the
-  // panel shows m3 only. So the ring is nine, and P6 steps to WIFI instead of wrapping.
+  // panel shows m3 only. So the DATASET's own ring is nine, and P6 steps to WIFI instead of wrapping.
+  //
+  // The NAVIGATOR's root level is TEN, because it splices the firmware-owned Select Menu entry
+  // (§3.4, ui/core/ui_root_tail.h) between the last dataset member and the root. This loop uses this
+  // file's own `follow()`, which reads the dataset's flows directly, so it cannot see the appended
+  // entry — walking through the navigator, below, is what proves the splice.
   const char* expect[] = {"info-p1-instant-flow","info-p2-cumulative-m3",
     "info-p3-session-m3","info-p4-max-flow","info-p5-enter-config",
     "info-p6-factory-reset",
@@ -63,8 +68,28 @@ int main() {
   check(nav.depth() == 0, "sibling moves never change depth");
 
   uint8_t ri = 0, rc = 0;
-  check(nav.ringPosition(&ri, &rc) && rc == 9,
-        "info ring reports 9 members (P0-P6 + WIFI + MQTT)");
+  nav.reset(p0);
+  check(nav.ringPosition(&ri, &rc) && rc == 10,
+        "root ring reports 10 members (P0-P6 + WIFI + MQTT + Select Menu)");
+  check(nav.current() == p0 && ri == 0, "and P0 is index 0, because the root anchors on the root");
+
+  // Walking through the navigator, not through `follow()`: this is where the splice is visible.
+  const ui_exporter::Screen* walk = p0;
+  for (int i = 0; i < 8; ++i) walk = nav.nextVisibleSibling(walk);
+  check(std::strcmp(idOf(walk), "net-mqtt-root") == 0, "eight navigator steps reach MQTT");
+  walk = nav.nextVisibleSibling(walk);
+  check(walk == nav.rootTail() && std::strcmp(idOf(walk), "ui-select-menu") == 0,
+        "the ninth step lands on the appended Select Menu, at the END of the level");
+  check(nav.nextVisibleSibling(walk) == p0, "and the tenth wraps to P0");
+  check(nav.previousVisibleSibling(p0) == nav.rootTail(), "UP from P0 reaches the appended entry");
+  check(std::strcmp(idOf(nav.previousVisibleSibling(nav.rootTail())), "net-mqtt-root") == 0,
+        "UP from the appended entry reaches MQTT, not P0");
+
+  // Unbinding it restores the bare dataset ring, which is what proves the ten above came from the
+  // splice and not from a dataset change nobody noticed.
+  nav.bindRootTail(nullptr);
+  check(nav.ringPosition(&ri, &rc) && rc == 9, "unbound, the dataset's own root ring is nine");
+  nav.bindRootTail(&ui::kSelectMenuScreen);
 
   std::printf("\n[descend to the deepest documented path]\n");
   nav.reset(p0);

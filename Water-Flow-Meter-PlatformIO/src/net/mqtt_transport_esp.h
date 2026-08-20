@@ -75,8 +75,14 @@ class EspMqttTransport : public MqttSink {
   /** Called from esp-mqtt's own task with the topic and payload of an inbound message — §4.4.7's
    *  `homeassistant/status` subscription, and §4.4.1's command topics. Neither is
    *  NUL-terminated by the library, hence the explicit lengths. */
+  /**
+   * `retained` is what makes R4.4.2c implementable at all: a retained command message must be discarded
+   * unconditionally, and a callback that cannot see the flag cannot discard it. It was absent until the
+   * command topics were built, because the only subscription was Home Assistant's birth message, where the
+   * flag does not matter.
+   */
   using DataCallback = void (*)(void* context, const char* topic, std::size_t topicLength,
-                               const char* data, std::size_t dataLength);
+                               const char* data, std::size_t dataLength, bool retained);
 
   void setListener(void* context, StateCallback onState, DataCallback onData) {
     context_ = context;
@@ -234,7 +240,7 @@ class EspMqttTransport : public MqttSink {
       case MQTT_EVENT_DATA:
         if (self->onData_ != nullptr && event != nullptr) {
           self->onData_(self->context_, event->topic, static_cast<std::size_t>(event->topic_len),
-                        event->data, static_cast<std::size_t>(event->data_len));
+                        event->data, static_cast<std::size_t>(event->data_len), event->retain != 0);
         }
         break;
       case MQTT_EVENT_ERROR:

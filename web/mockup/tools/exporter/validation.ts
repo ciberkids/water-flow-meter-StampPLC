@@ -121,10 +121,20 @@ const validationChecks: Array<
          * ready"). The §3 redesign dropped that row to give the walking dots their space, so no
          * dataset element surfaces a fault any more and this check found nothing.
          *
-         * The undersampling warning still reaches the operator, but through a path no dataset
-         * element can declare: `drawWarningBanner` paints it edge to edge over the footer row
-         * (§2c), from `context.warningFlags`, on whatever screen is showing. Asked whether the
-         * summary row should come back, the owner's answer was that the banner is enough FOR NOW.
+         * The fault summary still reaches the operator, but through a path no dataset element can
+         * declare: `drawWarningBanner` paints it edge to edge over the footer row (§2c) from
+         * `context.warningSummary` — the composed sentence, not the raw `warningFlags` this comment
+         * used to name — on whatever screen is showing. Asked whether the summary row should come
+         * back, the owner's answer was that the banner is enough FOR NOW.
+         *
+         * §2c HAS SINCE MADE THE BANNER CARRY MORE, which strengthens the ruling rather than
+         * changing it: the gate is now `bannerActive()`, i.e.
+         * `hasWarnings || (uncalibratedCount > 0 && !editorActive)`, so the commissioning gap
+         * ("3 channels not calibrated") reaches the panel too, and not only an undersampling fault.
+         * What has NOT changed is why this check still fires: the gate's two reassurance strings
+         * ("All sensors nominal", "No channels in use") are unreachable through the banner by
+         * construction, and the only ids that carry them — `telemetry.status` and `legend.warning` —
+         * are still bound by no element in the dataset.
          *
          * So this stays as a standing note rather than being deleted: "for now" is not "never", and
          * a check quietly removed is a decision nobody can find again. It does not block the export,
@@ -135,8 +145,8 @@ const validationChecks: Array<
           title: "Diagnostics banner is available",
           status: "warning",
           message:
-            "No dataset element surfaces a fault summary; undersampling reaches the operator only via " +
-            "the firmware-drawn banner over the footer row (§2c).",
+            "No dataset element surfaces a fault summary; an undersampling fault or a commissioning " +
+            "gap reaches the operator only via the firmware-drawn banner over the footer row (§2c).",
           recommendation:
             "Accepted by the owner for now. To put the summary back on the panel, bind a badge to " +
             "telemetry.status — P0 carried it before the §3 redesign."
@@ -367,6 +377,148 @@ export function checkRenderableElementKinds(dataset: ScreenDataset): ValidationC
   };
 }
 
+/**
+ * Blocks export of a dataset whose paging rings do not close (J1).
+ *
+ * WHY THIS IS AN EXPORT GATE AND NOT A RUNTIME CHECK. Paging wraps in the DATASET, not in code:
+ * `UiNavigator` follows each screen's own DOWN flow and resolves the target by linear search of
+ * `kGeneratedScreens`, so a level is a ring only because the authored data says so. There is no modulo
+ * arithmetic to fall back on. A pack whose last member points nowhere, or points back into the middle,
+ * strands the operator on the device with UP and DOWN that no longer return — and nothing on the device
+ * can detect that, because a flow with a target is exactly what a working flow looks like.
+ *
+ * The built-in dataset is closed because `tools/skeleton/generate.mjs` emits it that way. A third-party
+ * `.uipack` has no such guarantee, which is what `Loadable_UI_Menu_Packs.md` assumes and what this
+ * supplies. Same family as N-b: an export-time gate the format's design takes for granted.
+ *
+ * FOUR failure modes, each its own message, because "the ring is broken" is not actionable:
+ *
+ *  1. a DOWN or UP target naming a screen that does not exist;
+ *  2. a walk that never returns to where it started — a dead end, or a jump into another level;
+ *  3. UP that is not the exact inverse of DOWN, which is how a ring loses a member in one direction
+ *     while looking whole in the other;
+ *  4. a screen carrying one direction and not the other, which is a level you can leave and not re-enter.
+ *
+ * What it deliberately does NOT require: that every screen belong to a ring. Twenty of the eighty do not
+ * — editors, `-back` rows and confirm screens are entered by ENTER and left by hold, and demanding a ring
+ * of them would fail the shipped dataset for being correct.
+ */
+export function checkRingClosure(dataset: ScreenDataset): ValidationCheck {
+  const id = "ring-closure";
+  const title = "Every paging ring closes";
+  const known = new Set(dataset.screens.map((screen) => screen.id));
+
+  const next = new Map<string, string | undefined>();
+  const previous = new Map<string, string | undefined>();
+  const problems: string[] = [];
+
+  /**
+   * A PAGING EDGE IS A BUTTON PRESS, not merely the action id.
+   *
+   * This first matched on `actionId` alone and failed the exporter's own fixture, which carries a
+   * `page.next` on a TIMEOUT trigger with no target — a confirm screen advancing itself after a hold, which
+   * is not paging and has no ring to belong to. `UiNavigator` pages when UP or DOWN is pressed, so that is
+   * what the ring is built from.
+   */
+  const isButton = (flow: { trigger?: { type?: string; button?: string } }, button: string) =>
+    flow.trigger?.type === "button" && flow.trigger?.button === button;
+
+  for (const screen of dataset.screens) {
+    for (const flow of screen.flows ?? []) {
+      if (flow.actionId === "ui.action.page.next" && isButton(flow, "down")) {
+        next.set(screen.id, flow.targetScreenId);
+      }
+      if (flow.actionId === "ui.action.page.previous" && isButton(flow, "up")) {
+        previous.set(screen.id, flow.targetScreenId);
+      }
+    }
+  }
+
+  // (1) and (4), per screen: a target that resolves, and both directions present.
+  for (const [screenId, target] of next) {
+    if (!target) {
+      problems.push(`${screenId}: its DOWN flow carries no target screen`);
+    } else if (!known.has(target)) {
+      problems.push(`${screenId}: DOWN points at "${target}", which is not a screen in this dataset`);
+    }
+    if (!previous.has(screenId)) {
+      problems.push(`${screenId}: pages DOWN but has no UP flow — a level it can leave and not re-enter`);
+    }
+  }
+  for (const [screenId, target] of previous) {
+    if (!target) {
+      problems.push(`${screenId}: its UP flow carries no target screen`);
+    } else if (!known.has(target)) {
+      problems.push(`${screenId}: UP points at "${target}", which is not a screen in this dataset`);
+    }
+    if (!next.has(screenId)) {
+      problems.push(`${screenId}: pages UP but has no DOWN flow`);
+    }
+  }
+
+  // (3) UP is the inverse of DOWN. Checked per edge rather than per ring, so the message names the pair
+  // that disagrees instead of the level that contains it.
+  for (const [screenId, target] of next) {
+    if (!target || !known.has(target)) continue;
+    const back = previous.get(target);
+    if (back !== screenId) {
+      problems.push(
+        `${screenId}: DOWN goes to "${target}", but that screen's UP returns to ` +
+          `"${back ?? "(nothing)"}" — UP must be the exact inverse of DOWN`
+      );
+    }
+  }
+
+  // (2) every ring closes, and closes on itself rather than on a member further along.
+  const visited = new Set<string>();
+  let ringsChecked = 0;
+  let membersChecked = 0;
+  for (const start of next.keys()) {
+    if (visited.has(start)) continue;
+    const walk: string[] = [];
+    let cursor: string | undefined = start;
+    while (cursor && next.has(cursor) && !walk.includes(cursor)) {
+      walk.push(cursor);
+      cursor = next.get(cursor);
+    }
+    for (const member of walk) visited.add(member);
+    ringsChecked += 1;
+    membersChecked += walk.length;
+    if (cursor === undefined || !next.has(cursor)) {
+      problems.push(
+        `${start}: paging DOWN reaches "${cursor ?? "(nothing)"}", which pages no further — ` +
+          `the ring is a dead end after ${walk.length} screen(s)`
+      );
+    } else if (cursor !== start) {
+      problems.push(
+        `${start}: paging DOWN returns to "${cursor}" rather than to itself — the ring closes on a ` +
+          `member further along, so the screens before it are unreachable once you leave them`
+      );
+    }
+  }
+
+  if (problems.length > 0) {
+    return {
+      id,
+      title,
+      status: "fail",
+      message:
+        `${problems.length} paging problem(s) across ${ringsChecked} ring(s). On the device this is an ` +
+        `operator pressing UP or DOWN and not coming back.`,
+      recommendation: problems.join("; ")
+    };
+  }
+
+  return {
+    id,
+    title,
+    status: "pass",
+    message:
+      `${ringsChecked} ring(s) covering ${membersChecked} screen(s) close in both directions, and UP is ` +
+      `the inverse of DOWN throughout.`
+  };
+}
+
 export function runExportValidations(
   dataset: ScreenDataset,
   ir: ExportIR,
@@ -375,6 +527,7 @@ export function runExportValidations(
   const checks = [
     ...validationChecks.map((check) => check(dataset, ir)),
     checkRenderableElementKinds(dataset),
+    checkRingClosure(dataset),
     checkManifestScreenCoverage(dataset, manifest),
     checkManifestActionCoverage(dataset, manifest),
     checkManifestValueCoverage(dataset, manifest)

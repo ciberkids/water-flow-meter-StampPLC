@@ -153,7 +153,7 @@ export function HelpPanel({ dataset, selectedScreen, onNavigateToTab }: HelpPane
         <p>
           A dataset is a JSON object with two top-level keys: <code>screens</code> (array) and <code>theme</code>.
           Each screen has a unique <code>id</code>, a <code>name</code>, an <code>elements</code> array, and optional
-          <code>flows</code>, <code>events</code>, <code>assets</code>, <code>animations</code>, and <code>submenus</code>.
+          <code>flows</code>, <code>events</code>, <code>assets</code>, and <code>submenus</code>.
         </p>
         <p>
           <strong>Element kinds:</strong>{" "}

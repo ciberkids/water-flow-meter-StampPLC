@@ -36,7 +36,11 @@ const L = {
   savedValueY: 92,
   footerY: 124,
   padX: 8,
-  scrollbar: { x: 232, y: 14, width: 5, height: 104 }
+  // 100, not 104 (DF19). §2c requires every `level-position` scrollbar to stop clear of the warning
+  // band at y=116: 14 + 104 = 118, two pixels inside it. The six screens that had no spec file to
+  // override this default shipped at 104 while the other 55 came out at 100 from their spec files —
+  // one fact with two homes, and the wrong home was the live one.
+  scrollbar: { x: 232, y: 14, width: 5, height: 100 }
 };
 
 /**
@@ -637,7 +641,11 @@ const MQTT_INFO_PAGES = [
     id: "net-mqtt-info-3", page: "M.I3", title: "MQTT publish", rows: [
       { label: "HA discovery", binding: "config.mqtt.haDiscovery" },
       { label: "Period", binding: "config.mqtt.publishPeriod" },
-      { label: "QoS", binding: "config.mqtt.qos" }
+      { label: "QoS", binding: "config.mqtt.qos" },
+      // R4.4.2d — the panel half of "a refusal must be visible, not merely logged". On M.I3 because
+      // it is the one MQTT page with a free row; a fourth page for one value would add a ring hop
+      // between the operator and everything else, which §2c's paging exists to keep short.
+      { label: "Last cmd", binding: "net.mqtt.lastCommandResult" }
     ]
   }
 ];

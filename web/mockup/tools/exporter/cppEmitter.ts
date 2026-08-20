@@ -47,11 +47,6 @@ enum class FlowGesture : std::uint8_t {
   Hold = 2
 };
 
-enum class AnimationKind : std::uint8_t {
-  FrameSequence = 0,
-  Property = 1
-};
-
 struct KeyValue {
   const char* key;
   const char* value;
@@ -91,23 +86,6 @@ struct Flow {
   std::size_t actionParamCount;
 };
 
-struct AnimationKeyframe {
-  float at;
-  const KeyValue* state;
-  std::size_t stateCount;
-  std::int32_t assetFrameIndex;
-};
-
-struct Animation {
-  const char* id;
-  const char* targetElementId;
-  AnimationKind kind;
-  bool loop;
-  const char* easing;
-  const AnimationKeyframe* frames;
-  std::size_t frameCount;
-};
-
 struct GraphicAsset {
   const char* id;
   const char* type;
@@ -135,8 +113,6 @@ struct Screen {
   std::size_t flowCount;
   const GraphicAsset* assets;
   std::size_t assetCount;
-  const Animation* animations;
-  std::size_t animationCount;
   const Submenu* submenus;
   std::size_t submenuCount;
   /**
@@ -164,7 +140,6 @@ struct Theme {
   std::uint16_t typographyBase;
   std::uint16_t typographyValue;
   std::uint16_t typographyBadge;
-  const char* animationEasing;
 };
 
 struct Metadata {
@@ -333,16 +308,6 @@ function flowDataLiteral(
   return { source: sourceLiteral, condition: conditionLiteral };
 }
 
-function animationKindLiteral(kind: string | undefined): string {
-  switch (kind) {
-    case "frame-sequence":
-      return "ui_exporter::AnimationKind::FrameSequence";
-    case "property":
-    default:
-      return "ui_exporter::AnimationKind::Property";
-  }
-}
-
 function stringLiteralForStateValue(value: number | string | boolean): string {
   if (typeof value === "boolean") {
     return value ? "\"true\"" : "\"false\"";
@@ -382,8 +347,6 @@ export function emitCpp(ir: ExportIR): EmitterOutputs {
     flowCount: string;
     assetArray: string;
     assetCount: string;
-    animationArray: string;
-    animationCount: string;
     submenuArray: string;
     submenuCount: string;
   }> = [];
@@ -532,55 +495,6 @@ export function emitCpp(ir: ExportIR): EmitterOutputs {
       assetCountExpr = `sizeof(${assetArrayName}) / sizeof(${assetArrayName}[0])`;
     }
 
-    let animationArrayName = "nullptr";
-    let animationCountExpr = "0";
-    if (screen.animations.length > 0) {
-      const animationLines: string[] = [];
-      animationArrayName = `k${screenLabel}Animations`;
-      screen.animations.forEach((animation, animationIndex) => {
-        const animationSlug = sanitiseIdentifier(screen.id, animation.id || `animation_${animationIndex}`);
-        const frameArrayName = `k${screenLabel}_${camelCase(animationSlug)}Frames`;
-        const frameLines: string[] = [];
-
-        animation.frames.forEach((frame, frameIndex) => {
-          const stateEntries = Object.entries(frame.state ?? {});
-          let stateArrayName = "nullptr";
-          let stateCountExpr = "0";
-          if (stateEntries.length > 0) {
-            stateArrayName = `k${screenLabel}_${camelCase(animationSlug)}_Frame${frameIndex}State`;
-            const kvLines = stateEntries.map(
-              ([key, value]) => `    { "${escapeStringLiteral(key)}", ${stringLiteralForStateValue(value)} }`
-            );
-            sourceLines.push("");
-            sourceLines.push(`static constexpr ui_exporter::KeyValue ${stateArrayName}[] = {`);
-            sourceLines.push(kvLines.join(",\n"));
-            sourceLines.push("};");
-            stateCountExpr = `sizeof(${stateArrayName}) / sizeof(${stateArrayName}[0])`;
-          }
-          const assetFrameIndex = frame.assetFrameIndex ?? -1;
-          frameLines.push(
-            `    { ${formatFloat(frame.at)}, ${stateArrayName}, ${stateCountExpr}, ${assetFrameIndex} }`
-          );
-        });
-
-        sourceLines.push("");
-        sourceLines.push(`static constexpr ui_exporter::AnimationKeyframe ${frameArrayName}[] = {`);
-        sourceLines.push(frameLines.join(",\n"));
-        sourceLines.push("};");
-
-        const easingLiteral = animation.easing ? `"${escapeStringLiteral(animation.easing)}"` : "nullptr";
-        const loopLiteral = animation.loop ? "true" : "false";
-        animationLines.push(
-          `    { "${escapeStringLiteral(animation.id)}", "${escapeStringLiteral(animation.targetElementId)}", ${animationKindLiteral(animation.kind)}, ${loopLiteral}, ${easingLiteral}, ${frameArrayName}, sizeof(${frameArrayName}) / sizeof(${frameArrayName}[0]) }`
-        );
-      });
-
-      sourceLines.push("");
-      sourceLines.push(`static constexpr ui_exporter::Animation ${animationArrayName}[] = {`);
-      sourceLines.push(animationLines.join(",\n"));
-      sourceLines.push("};");
-      animationCountExpr = `sizeof(${animationArrayName}) / sizeof(${animationArrayName}[0])`;
-    }
 
     sourceLines.push("");
 
@@ -591,8 +505,6 @@ export function emitCpp(ir: ExportIR): EmitterOutputs {
       flowCount: flowCountExpr,
       assetArray: assetArrayName,
       assetCount: assetCountExpr,
-      animationArray: animationArrayName,
-      animationCount: animationCountExpr,
       submenuArray: submenuArrayName,
       submenuCount: submenuCountExpr
     });
@@ -610,8 +522,6 @@ export function emitCpp(ir: ExportIR): EmitterOutputs {
       refs.flowCount,
       refs.assetArray,
       refs.assetCount,
-      refs.animationArray,
-      refs.animationCount,
       refs.submenuArray,
       refs.submenuCount,
       // Screen-level visibility. `nullptr` means unconditional, which is every screen but the three
@@ -640,7 +550,7 @@ export function emitCpp(ir: ExportIR): EmitterOutputs {
   sourceLines.push("");
   sourceLines.push("const ui_exporter::Theme kGeneratedTheme = {");
   sourceLines.push(
-    `    "${escapeStringLiteral(ir.theme.name)}", kThemeColors, sizeof(kThemeColors) / sizeof(kThemeColors[0]), ${ir.theme.typography.base}, ${ir.theme.typography.value}, ${ir.theme.typography.badge}, "${escapeStringLiteral(ir.theme.animation.easing)}"`
+    `    "${escapeStringLiteral(ir.theme.name)}", kThemeColors, sizeof(kThemeColors) / sizeof(kThemeColors[0]), ${ir.theme.typography.base}, ${ir.theme.typography.value}, ${ir.theme.typography.badge}`
   );
   sourceLines.push("};");
   sourceLines.push("");

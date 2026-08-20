@@ -107,6 +107,20 @@ enum class HaEntity : uint8_t {
   PollingRate,           /**< diagnostic, kHz, measurement */
   Undersampling,         /**< diagnostic, no unit, measurement */
   WifiRssi,              /**< diagnostic, dBm, measurement (R4.4.6) */
+  /**
+   * §4.4.1's three command topics, as `button` entities.
+   *
+   * Appended, never inserted: a `unique_id` is built from the object-id suffix, so reordering this
+   * enum would not change any entity's identity — but the wire values of `MqttCommandResult` and the
+   * value catalogue are append-only for real reasons, and one enum in this file that can be shuffled
+   * is a trap for whoever reads the two together.
+   *
+   * They are `button` and not `switch` because a switch implies a state to be in, and there is no
+   * such thing as "currently resetting" (§4.4.1). A button is momentary, which is what a reset is.
+   */
+  ButtonResetSession,
+  ButtonResetTotals,
+  ButtonRepublish,
   Count
 };
 
@@ -116,8 +130,8 @@ struct HaEntityRef {
   uint8_t sensor = 0;
 };
 
-/** Every per-sensor entity for every sensor, plus the per-device ones. */
-inline constexpr std::size_t kHaMaxEntities = kNumSensors * 3 + 4;
+/** Every per-sensor entity for every sensor, plus the per-device ones and §4.4.1's three buttons. */
+inline constexpr std::size_t kHaMaxEntities = kNumSensors * 3 + 4 + 3;
 
 /**
  * The result of building a string into a caller's buffer, with `snprintf` semantics.
@@ -180,6 +194,40 @@ bool haEntityIsPerSensor(HaEntity entity);
 
 /** The `object_id` fragment: `flow`, `lifetime`, `polling_rate`, ... */
 const char* haEntityObjectIdSuffix(HaEntity entity);
+
+/**
+ * True for §4.4.1's command buttons — the entities that WRITE instead of reading.
+ *
+ * The distinction is not cosmetic. A button's discovery payload has no `state_topic`,
+ * `value_template`, `state_class` or `suggested_display_precision`, and Home Assistant rejects a
+ * payload carrying keys the component does not define. The symptom of getting this wrong is R4.4.8's
+ * again: no entity, nothing logged.
+ */
+bool haEntityIsButton(HaEntity entity);
+
+/**
+ * The Home Assistant component the discovery topic addresses — `sensor` or `button`.
+ *
+ * `<prefix>/<component>/<node>/<object>/config`. Both spellings are eight bytes with their slashes,
+ * so `kHaDiscoveryTopicBytes` is unchanged by the buttons; that is arithmetic, not luck, and the
+ * host test measures the real worst case anyway.
+ */
+const char* haEntityComponent(HaEntity entity);
+
+/** The `<base>`-relative command topic a button publishes to, or nullptr for a sensor. */
+const char* haEntityCommandSuffix(HaEntity entity);
+
+/**
+ * The `payload_press` a button sends.
+ *
+ * MUST be emitted. Home Assistant's default is `PRESS`, and the two destructive commands act only on
+ * the exact payload `RESET` (R4.4.1) — so a button discovered without this key is a button that
+ * cannot work, and the operator's evidence is a `bad-payload` result they have to go looking for.
+ * Kept in step with `MqttCommandRouter::kResetPayload` by the host test rather than by a shared
+ * constant, because the two files are the two ends of the contract and a single constant would hide
+ * a disagreement instead of catching it.
+ */
+const char* haEntityPressPayload(HaEntity entity);
 
 /** Why discovery is being published. Reported so a republish storm is visible rather than inferred. */
 enum class HaRepublishReason : uint8_t {
