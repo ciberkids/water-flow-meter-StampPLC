@@ -23,13 +23,14 @@ The closed entries are kept verbatim, with their questions, options and reasonin
 That history is worth keeping — several entries record a decision being *reversed* — but it is
 history, not a work list.
 
-Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiting on something external
+Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiting on something external ·
+🟢 blocks nothing, but costs the next reader time
 
 ---
 
 ## The index — cite the ID, not the heading
 
-**Five open lines, one of them a defect — and it is the only 🔴 on the board.** `N-c` closed on 2026-08-20 and `DF22` opened in the same round —
+**Six open lines, one of them a defect — and it is the only 🔴 on the board.** `N-c` closed on 2026-08-20 and `DF22` opened in the same round —
 it was found by building `N-c`, which is the usual way. What remains is one queued FEATURE, one defect, two
 things that need the board, and one missing gate. Ask for work by ID — "fix DF22", "decide N-b" — and this
 file is the one place that says what an ID means. Rule **I3** below governs them: append-only, never reused,
@@ -49,6 +50,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **DF22** | 🔴 | defect, found 2026-08-20 | Eight of the network block's read-only LIVE registers are written by nothing and `NET_LAST_ERROR` is erased on the next sync, so the wiki's "fully remote path" for provisioning over Modbus cannot be followed: two of its three verification reads always return 0 |
 | **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
 | **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
+| **J9** | 🟢 | residue, found 2026-08-20 | `nyquist-warning` is a screen in the dataset that nothing can navigate to — the earlier design of §5.5's prompt, left behind when the in-place one replaced it |
 
 **DF1–DF21 and J1–J8** are fixed and keep their IDs — moved to
 [`../archive/open_decisions-closed-2026-08-18.md`](../archive/open_decisions-closed-2026-08-18.md), verbatim,
@@ -349,6 +351,40 @@ populated. Settle it empirically: set the time, pull power for a minute, boot, r
 **Blocks.** Any timestamp being trustworthy in the field — **and N-d1 no longer does**: RS485 can set the
 clock as of 2026-08-18. What is left is N-d2, a correction (the assert protecting the VLF probe's position)
 plus a measurement (the power-cut test), and it needs the board.
+
+---
+
+## J9 🟢 `nyquist-warning` is an orphan screen in the dataset — residue of a design that was replaced
+
+Found 2026-08-20 while deciding whether some stale local branches could be deleted. Recorded because
+`ui_renderer.cpp:208` already states it and this file's own preamble says an open item recorded anywhere
+else belongs here.
+
+The dataset carries a screen `nyquist-warning` with two correct-looking flows (UP = back,
+DOWN = `config.action.value.commit-override`) and **nothing navigates to it**: no flow names it as a
+`targetScreenId`, and no `ui_pages.h` table names it, so `UiScreenRouter` can never resolve it.
+
+**This is NOT a broken override path.** §5.5's prompt works, and works better than the screen would:
+`ui_actions.cpp`'s `consumedByPrompt` reinterprets UP and DOWN on the editor screen itself while a prompt
+is pending, and its comment gives the reason — "no new screen id, so the menu-pack completeness rule
+stays satisfied and no dataset change is needed". The orphan screen is the earlier design, left behind
+when the in-place prompt replaced it. Two local worktree branches (`worktree-wf_25ad82c6-ee8-4` and
+`-10`) still hold that earlier implementation; they are superseded, not lost work, and their second
+claim — that register 30 stops clearing — does not apply either, because
+`evaluateSensorDiagnostics` rebuilds `flags` from zero on every call.
+
+**Why it is worth an ID rather than a shrug.** It costs one screen of the eighty in every generated table
+and every `.uipack`, it is the twelfth screen carrying a full-screen `overlay-bg` that the §2c banner
+round had to reason about, and — the real cost — the next person to read the dataset finds a screen with
+plausible flows and no route to it, and has to redo the investigation above to learn it is deliberate.
+
+**Two options, and this one is genuinely a preference.** Delete the screen and let §5.5 live entirely in
+`consumedByPrompt`; or keep it and have the exporter's ring gate (`J1`) grow a *reachability* check that
+would have named it automatically. **Recommendation: delete it**, and note in `consumedByPrompt`'s comment
+that a screen for this once existed and why it does not now — a reachability gate is worth building, but
+for its own sake rather than to justify keeping one orphan.
+
+**Blocks.** Nothing. It is residue.
 
 ---
 
