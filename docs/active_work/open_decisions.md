@@ -29,7 +29,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Five open lines, one of them a defect.** `N-c` closed on 2026-08-20 and `DF22` opened in the same round —
+**Five open lines, one of them a defect — and it is the only 🔴 on the board.** `N-c` closed on 2026-08-20 and `DF22` opened in the same round —
 it was found by building `N-c`, which is the usual way. What remains is one queued FEATURE, one defect, two
 things that need the board, and one missing gate. Ask for work by ID — "fix DF22", "decide N-b" — and this
 file is the one place that says what an ID means. Rule **I3** below governs them: append-only, never reused,
@@ -46,7 +46,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | correction + measurement | Nothing protects the VLF probe's position above `M5StamPLC.begin()`, and whether the RTC survives power loss is unknown |
-| **DF22** | 🟡 | defect, found 2026-08-20 | Eight of the network block's read-only LIVE registers are written by nothing (WiFi state, RSSI, IP, MAC, the AP trio, the portal timer), and `NET_LAST_ERROR` is written then erased on the next sync — so §5.1's refusal report reads as success |
+| **DF22** | 🔴 | defect, found 2026-08-20 | Eight of the network block's read-only LIVE registers are written by nothing and `NET_LAST_ERROR` is erased on the next sync, so the wiki's "fully remote path" for provisioning over Modbus cannot be followed: two of its three verification reads always return 0 |
 | **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
 | **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
 
@@ -59,8 +59,9 @@ that never close.
 repository is green (host **1,970 checks across 24 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
 findings, and a firmware that compiles at RAM 24.6% / Flash 38.1%, measured 2026-08-20). One is a feature
 nobody has started, two need hardware that has never existed for this project, `I2a` is a rule enforced by
-prose, and `DF22` is a real defect that costs a Modbus master eight fields of live status across
-nineteen registers, plus an error report that contradicts itself. That is a
+prose, and `DF22` is a real defect: eight fields of live status across nineteen registers, plus an error
+report that contradicts itself, which together break the documented remote-provisioning procedure. That
+is a
 different condition from "twelve things are broken", which is what this register looked like two days ago.
 
 ---
@@ -142,9 +143,28 @@ refused, and why" reports success a few milliseconds later. A master polling the
 write will usually read 0 and conclude the apply worked.
 
 That makes `kLastError` the sharpest half of this item and the one to fix first: the others withhold
-information, this one contradicts itself. It also needs a different fix — not "publish the live value",
+information, this one contradicts itself. **And the wiki already tells integrators to rely on it** —
+`tools/wiki/pages/WiFi.md:141` documents the provisioning sequence as ending `read kLastError (732) ->
+if the apply was refused`. So the published interface promises a check that reports success whatever
+happened. The page is right about what the register is FOR; the firmware is what needs to catch up, and
+the page should not be softened to match the defect. It also needs a different fix — not "publish the live value",
 but "do not zero this one", i.e. read the current value before the block loop and write it back after, or
 keep it in `firmware.cpp` like 561 and 565. The second is consistent with what N-c already did.
+
+**The published provisioning procedure cannot be followed.** `tools/wiki/pages/WiFi.md:130-141` calls
+the Modbus route "the fully remote path, and currently the reliable one" and ends it with three reads:
+
+```
+read  kRevision   (731)   -> incremented, so the write took          # works
+read  kWifiState  (501)   -> 2 connecting, then 3 connected          # always 0 = disabled
+read  kLastError  (732)   -> if the apply was refused                # always 0 = no error
+```
+
+One of the three works. An integrator following the documented sequence commits credentials, sees state
+`0` — which the register reference spells *disabled* — and `kLastError` `0`, and has no way to tell a
+successful association from a refused apply from a radio that never came up. This is the single best
+argument for the item's priority: it is not a missing convenience, it is the advertised commissioning
+path for a device with no other remote route.
 
 **Why this matters more than a missing value.** `MEMORY.md`'s first principle is that RS485 is the source
 of truth, and the network block is the one place that is flatly untrue: a master can WRITE every network
