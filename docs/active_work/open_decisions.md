@@ -156,6 +156,16 @@ so, including for anyone reading it against older firmware.
 registers 503–508", which is the IP's window and one register too many. It is 505-507. Nothing
 published it at all until now, which is why the wrong span went unnoticed.
 
+**One thing declined on purpose, and written down at the declaration:** the cache is written on the
+logic task and read from whichever task calls `syncGlobalRegisters` — five of those calls are inside
+`applyHoldingWrite`, which runs on the eModbus server task at priority 8 and preempts the logic task.
+So a master's WRITE can read a half-assigned struct. It is unguarded because a master's READ cannot
+race it at all (`handleReadHolding` never syncs), every scalar is word-sized and individually
+consistent, the only field that genuinely tears is an AP string — bounded by its register span, so a
+wrong string and never an overflow — and the next sync a second later repairs it. A double buffer would
+cost more than that. The note says a guard was declined rather than forgotten, so a future field that
+cannot tolerate a mixed read has somewhere to argue from.
+
 **Verified:** 27 new host checks across two suites — the packing (exact register values, both word
 orders, the span boundaries, and that `publishStatus` before `publish` is erased by it) and the
 integration (that the manager calls it, in the right order, and that a second sync does not lose it).
