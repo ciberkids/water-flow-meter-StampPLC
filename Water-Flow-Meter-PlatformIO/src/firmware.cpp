@@ -316,6 +316,16 @@ volatile bool mqttCommandLatched = false;
 char mqttCommandTopic[plc::MqttPublisher::kMaxTopicBytes] = {};
 char mqttCommandPayload[16] = {};
 volatile bool mqttCommandRetained = false;
+/**
+ * The payload did not fit, so what is in the buffer is NOT what arrived.
+ *
+ * Kept separate rather than truncating, because truncation here is the same correctness bug as on the
+ * topic: `RESETXXXXXXXXXXXX` cut to sixteen bytes is not `RESET`, but cut to five it is, and a payload
+ * the operator did not send would perform a destructive command. The command is still evaluated —
+ * dropping it outright was the one refusal R4.4.2d could not report — with a payload that cannot match
+ * the magic, which is the truth about it.
+ */
+volatile bool mqttCommandPayloadOverlong = false;
 
 /** NVS keys for R4.4.2b's persisted guard — the half of the rate limit that survives a reboot. */
 constexpr const char* kPrefCmdEpochSession = "cmd_ep_ses";
@@ -361,11 +371,16 @@ void onMqttData(void*, const char* topic, std::size_t topicLength, const char* d
   // an arbitrary string would arrive as a valid destructive command. §4.4.1 already concedes that
   // anyone who can publish to the broker can zero the totals, so this is not a privilege boundary —
   // it is the difference between a command the operator sent and one they did not.
-  if (topicLength >= sizeof(t) || dataLength >= sizeof(d)) {
+  if (topicLength >= sizeof(t)) {
     return;
   }
   std::memcpy(t, topic, topicLength);
-  std::memcpy(d, data, dataLength);
+  // An over-long PAYLOAD is reported rather than dropped — see `mqttCommandPayloadOverlong`. The
+  // buffer is left empty, so it cannot match the magic and cannot be mistaken for what arrived.
+  const bool payloadOverlong = dataLength >= sizeof(d);
+  if (!payloadOverlong) {
+    std::memcpy(d, data, dataLength);
+  }
   if (haRepublish.onStatusMessage(haDiscovery, t, d) != plc::HaRepublishReason::None) {
     // R4.4.7 — and now the PRIMARY discovery mechanism rather than the backstop, since Home
     // Assistant's own docs prefer birth-triggered republish over relying on retained configs.
@@ -383,6 +398,7 @@ void onMqttData(void*, const char* topic, std::size_t topicLength, const char* d
   std::memcpy(mqttCommandTopic, t, sizeof(mqttCommandTopic));
   std::memcpy(mqttCommandPayload, d, sizeof(mqttCommandPayload));
   mqttCommandRetained = retained;
+  mqttCommandPayloadOverlong = payloadOverlong;
   mqttCommandLatched = true;  // LAST, so the logic task never reads a half-written topic
 }
 
@@ -396,12 +412,16 @@ void serviceMqttCommand(uint32_t now) {
   if (!mqttCommandLatched) {
     return;
   }
-  mqttCommandLatched = false;
+  // COPY, then clear. The other order leaves a window in which esp-mqtt's task can latch a second
+  // command over the buffers being read — worst case a torn topic resolving to `unknown-command`,
+  // which is survivable but is not a thing to leave lying around.
   char topic[sizeof(mqttCommandTopic)] = {};
   char payload[sizeof(mqttCommandPayload)] = {};
   std::memcpy(topic, mqttCommandTopic, sizeof(topic));
   std::memcpy(payload, mqttCommandPayload, sizeof(payload));
   const bool retained = mqttCommandRetained;
+  const bool payloadOverlong = mqttCommandPayloadOverlong;
+  mqttCommandLatched = false;
 
   // R4.4.5, re-checked HERE and not only at subscribe time: "accepted only while MQTT is enabled and
   // connected, and never queued". Between the latch and this line the operator may have disabled MQTT
@@ -427,7 +447,8 @@ void serviceMqttCommand(uint32_t now) {
   // would leave a refusal invisible for up to a full publish period — and an operator whose button
   // appears to do nothing presses it again, which is the loop R4.4.2 exists to stop.
   mqttPublisher.requestFullPublish();
-  Serial.printf("[mqtt] command %s -> %s\n", topic, plc::mqttCommandResultText(result));
+  Serial.printf("[mqtt] command %s -> %s%s\n", topic, plc::mqttCommandResultText(result),
+                payloadOverlong ? " (payload too long to be the magic)" : "");
 
   if (result != plc::MqttCommandResult::Accepted) {
     return;
@@ -1091,6 +1112,12 @@ void logicTaskCode(void * pvParameters) {
     // AFTER both latches: a command that arrived in the same pass as a disconnect is swallowed by the
     // branch above rather than acted on, and one that arrived with a connect is acted on with the
     // subscription already in place.
+    //
+    // AND BEFORE the MQTT snapshot is built further down this same pass. That ordering is what makes
+    // R4.4.4 true — "a command is acknowledged by the resulting telemetry" — because the snapshot is
+    // filled from `sensors[]` AFTER `applyHoldingWrite` has zeroed them, so the publish this arms
+    // carries the post-reset values rather than one pass of stale ones. Moving this call below the
+    // snapshot build would keep every test green and quietly publish the old totals.
     serviceMqttCommand(now);
 
     if (mqttWanted) {

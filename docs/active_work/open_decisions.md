@@ -35,6 +35,11 @@ things that need the board, and one missing gate. Ask for work by ID — "fix DF
 file is the one place that says what an ID means. Rule **I3** below governs them: append-only, never reused,
 so a gap means an item closed, not an item lost.
 
+**`N-c` stays in this file rather than moving to the archive**, because one thing in it is verified by
+reading only: `MQTT_EVENT_DATA`'s retain flag, which R4.4.2c depends on entirely and which no host test
+can reach. Its ⏸️ block carries the one-command bench check and says what a wrong answer costs. That
+makes **three** things waiting on the board, not two.
+
 The **Shape** column is the one that answers *can I just say go ahead?*
 
 | ID | | Shape | What it is |
@@ -45,7 +50,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
 | **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
 
-**DF1–DF21, J1–J8 and N-c** are fixed and keep their IDs — moved to
+**DF1–DF21 and J1–J8** are fixed and keep their IDs — moved to
 [`../archive/open_decisions-closed-2026-08-18.md`](../archive/open_decisions-closed-2026-08-18.md), verbatim,
 because I3 makes them append-only and a retired id must still resolve. **I2** and **I3** are standing rules
 that never close.
@@ -54,7 +59,8 @@ that never close.
 repository is green (host **1,970 checks across 24 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
 findings, and a firmware that compiles at RAM 24.6% / Flash 38.1%, measured 2026-08-20). One is a feature
 nobody has started, two need hardware that has never existed for this project, `I2a` is a rule enforced by
-prose, and `DF22` is a real defect that costs a Modbus master nine registers of live status. That is a
+prose, and `DF22` is a real defect that costs a Modbus master eight fields of live status across
+nineteen registers, plus an error report that contradicts itself. That is a
 different condition from "twelve things are broken", which is what this register looked like two days ago.
 
 ---
@@ -175,7 +181,7 @@ correct, and is presumably how this passed review when §5.1 was implemented.
 
 ---
 
-## ~~N-c~~ ✅ FIXED 2026-08-20 — MQTT accepts commands, with both safeguards
+## ~~N-c~~ ✅ FIXED 2026-08-20 — MQTT accepts commands, with both safeguards (one ⏸️ on hardware)
 
 Recorded because the four-surface question kept being asked as though MQTT were one of the four. It now
 is, for measurements: §4.4.1's three command topics are built, discovered as Home Assistant `button`
@@ -202,6 +208,44 @@ button ships broken, which is the one thing in this slice that was going to be w
    `online`/`offline` will message. A JSON object there would break every entity's availability, so the
    result rides `<base>/diagnostics/state` beside `rssi` and `uptimeS`. Written down in
    `mqtt_publisher.h` because the next reader will check.
+
+**⏸️ ONE THING IS NOT VERIFIED, AND IT IS THE SAFEGUARD THAT MATTERS MOST.**
+
+The retain check (R4.4.2c) rests entirely on `event->retain` being populated for `MQTT_EVENT_DATA` in
+this build, and **nothing that has run touches that field.** `mqtt_transport_esp.h` is not
+host-compiled — which is why the host suite went green the instant the callback grew the parameter — so
+the 1,970 checks cover the router's *decisions* and none of the adapter: the latch, the retain flag, the
+R4.4.5 re-check, the persist-on-accept, the `requestFullPublish` arming and the boot seed are all
+verified by reading only.
+
+**Why this one matters more than the others.** The rate limit does not cover the case R4.4.2c exists
+for. Trace it: a retained `RESET` sits on `<base>/cmd/reset-totals`; the device reboots, so the
+`millis()` guard is clear; the broker redelivers on subscribe; the persisted guard passes because
+`nowEpoch - persistedEpoch >= 60` for any downtime over a minute — **accepted, lifetime totals wiped,
+every single boot.** That is precisely the loop R4.4.2 was designed around, and in this one scenario the
+retain check is the *only* thing standing in it. `mqtt_command_router.h` says the retain check "is no
+longer what the safety rests on"; for a retained message surviving a reboot, it is.
+
+**Evidence so far, short of a board.** The SDK in use — `framework-arduinoespressif32` 3.20017.0,
+`esp32s3` sdk — documents `retain` in `mqtt_client.h` as part of `MQTT_EVENT_DATA`'s context
+(line 57, beside `topic`, `data_len` and `qos`), and declares it `bool retain` on `esp_mqtt_event_t`.
+So it is specified as populated for INCOMING data in this exact version, not only meaningful on publish.
+That is a documentation reading, not a measurement.
+
+**What to do when the board arrives** — one command and a power cycle:
+
+```
+mosquitto_pub -r -t <base>/cmd/reset-totals -m RESET      # leave a retained command on the broker
+# power-cycle the device, let it reconnect, then read M.I3's "Last cmd" row or register 565
+mosquitto_pub -r -t <base>/cmd/reset-totals -m ""         # clear it, or the broker keeps serving it
+```
+
+`retained-ignored` means the chain works. **`accepted` means it does not, and the lifetime totals have
+just been destroyed** — so run it on a device whose totals do not matter. While the board is out, the
+same session should confirm the rest of the adapter: press each button from a Home Assistant dashboard
+(so `payload_press` is exercised as HA sends it), press one twice inside a minute for `rate-limited`,
+publish to `<base>/cmd/nonsense` for `unknown-command`, and check that an accepted reset publishes the
+new totals immediately rather than at the next period.
 
 **One consequence worth restating:** the panel cannot edit text at all (there is no on-device text
 editor), so SSID, broker host and topics are portal-or-Modbus only. That is a decision, not a gap, and

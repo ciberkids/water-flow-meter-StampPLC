@@ -255,7 +255,11 @@ Nothing is blocking. The register's five remaining lines are, in the order that 
    session to the sync moment rather than backdating it, because nothing recorded a trustworthy anchor at
    the reset.
 2. ~~**`N-c`**~~ — **built 2026-08-20**: §4.4.1's command topics, `button` discovery, both safeguards, and
-   register 565 finally reporting something. It found `DF22` on the way out.
+   register 565 finally reporting something. It found `DF22` on the way out. **One ⏸️ in it needs the
+   board:** `MQTT_EVENT_DATA`'s retain flag is verified by reading the SDK header only, and it is the sole
+   guard against a retained `RESET` wiping the totals on every reboot — the rate limit cannot catch that
+   one, because a reboot clears the `millis()` guard and any downtime over a minute clears the persisted
+   one. One `mosquitto_pub -r` and a power cycle settles it; the register entry has the commands.
 3. **`DF22`** — eight read-only LIVE network registers are written by nothing, and `NET_LAST_ERROR` is
    written on a refused apply and erased by the next sync, so §5.1's refusal report reads as success. The
    only 🟡 defect, and the one place "RS485 is the source of truth" is flatly untrue.
