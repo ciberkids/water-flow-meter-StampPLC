@@ -86,9 +86,13 @@ struct ModbusDependencies {
    *
    * Nullable and checked so the host tests can leave it out, but `firmware.cpp` sets it for the
    * device's whole life. That is safe because the snapshot is honest before the radio starts: the
-   * state machine constructs as `Disabled`, there is no address and no AP, and those are the values
-   * a master should read from a device that has not brought its radio up yet. The one field that
-   * would be wrong is the MAC, so the boot pass refreshes the cache before its first sync.
+   * state machine constructs as `Disabled`, there is no address and no AP, and those are the values a
+   * master should read from a device that has not brought its radio up yet. The one field that would
+   * be wrong is the MAC, so `logicTaskCode` refreshes the cache immediately before the boot sync —
+   * which is the FIRST sync of the device's life, because the only earlier call site is
+   * `performFactoryReset`, reachable only from a gesture long after the loop is running.
+   *
+   * See the note on `netStatusCache` in firmware.cpp for why the read is unguarded across tasks.
    */
   const plc::NetStatusSnapshot* netStatus = nullptr;
   uint16_t* connectedBitmap = nullptr;

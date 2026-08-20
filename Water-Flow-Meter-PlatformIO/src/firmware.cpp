@@ -139,14 +139,35 @@ plc::NetSettings netSettings;
 /**
  * The live network status, refreshed once per logic pass and read by two consumers.
  *
- * A cache rather than a value built at each use, because there are now two users a pass and they must
- * not disagree: the panel, which renders it, and `syncGlobalRegisters`, which publishes eight of its
- * fields to registers 501-507, 675-709. Building it twice would let a master and an operator standing
- * at the device describe different states, which is the whole failure the RS485-source-of-truth
- * principle exists to prevent.
+ * A cache rather than a value built at each use, because there are two users a pass and they must not
+ * disagree: the panel, which renders it, and `syncGlobalRegisters`, which publishes eight of its
+ * fields to registers 501-507 and 675-709. Building it twice would let a master and an operator
+ * standing at the device describe different states, which is the failure the RS485-is-the-source-of-
+ * truth principle exists to prevent.
  *
- * Zero-initialised, and `ModbusDependencies::netStatus` is null until the first refresh, so the boot
- * sync does not publish a zeroed snapshot as though it were a reading.
+ * ── IT IS WRITTEN AND READ FROM DIFFERENT TASKS, AND IS NOT GUARDED ──────────────────────
+ *
+ * `refreshNetStatusCache()` runs on the logic task. `publishStatus` reads this struct from whichever
+ * task called `syncGlobalRegisters` — and five of those calls are inside `applyHoldingWrite`, which
+ * runs on the eModbus server task at priority 8 and, as its own comment says, preempts the logic task
+ * on the same core. So a master writing a reset register can enter the read while a ~140-byte struct
+ * assignment is half done.
+ *
+ * That is deliberate, and this is the reasoning rather than an oversight:
+ *
+ *  - A master's READ cannot race it at all. `handleReadHolding` serves the register bank and never
+ *    syncs, so only a master's WRITE reaches this path.
+ *  - Every scalar here is word-sized and individually consistent; a torn read mixes old and new
+ *    FIELDS, each of them a value the device really held, rather than corrupting one.
+ *  - The strings can genuinely tear, because `copyField` memsets then copies. The worst observable is
+ *    one publish carrying a short or mixed `apSsid`/`apPassword`. `putText` stops at the first NUL and
+ *    is bounded by the register span either way, so it is a wrong string, never an overflow.
+ *  - It self-heals within a second, because the next sync republishes the whole block.
+ *
+ * A double buffer or a critical section would cost more than that is worth: this block is republished
+ * wholesale at 1 Hz by design, and the panel — the surface a person is looking at — reads the cache on
+ * the same task that writes it and cannot tear at all. If a future field here is ever load-bearing
+ * enough that a mixed read matters, this is the note that says a guard was declined on purpose.
  */
 plc::NetStatusSnapshot netStatusCache;
 
