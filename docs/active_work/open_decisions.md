@@ -368,10 +368,13 @@ DOWN = `config.action.value.commit-override`) and **nothing navigates to it**: n
 `ui_actions.cpp`'s `consumedByPrompt` reinterprets UP and DOWN on the editor screen itself while a prompt
 is pending, and its comment gives the reason — "no new screen id, so the menu-pack completeness rule
 stays satisfied and no dataset change is needed". The orphan screen is the earlier design, left behind
-when the in-place prompt replaced it. Two local worktree branches (`worktree-wf_25ad82c6-ee8-4` and
-`-10`) still hold that earlier implementation; they are superseded, not lost work, and their second
-claim — that register 30 stops clearing — does not apply either, because
-`evaluateSensorDiagnostics` rebuilds `flags` from zero on every call.
+when the in-place prompt replaced it. Two local worktree branches held that earlier implementation and were
+deleted on 2026-08-20 as superseded — not lost work, and their second claim, that register 30 stops
+clearing, does not apply either, because `evaluateSensorDiagnostics` rebuilds `flags` from zero on every
+call. The tips are `bd8a179` (the screen made reachable) and `fe8a952` (that plus two review commits:
+scoping the latched override to the config it was granted for, and guarding `dialTo` against a closed
+editor). Both are unreachable now and survive only in the reflog, so `git show` them within about ninety
+days if the earlier design is ever worth reading.
 
 **Why it is worth an ID rather than a shrug.** It costs one screen of the eighty in every generated table
 and every `.uipack`, it is the twelfth screen carrying a full-screen `overlay-bg` that the §2c banner
