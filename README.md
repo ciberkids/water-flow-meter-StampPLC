@@ -29,17 +29,18 @@ cd ../../Water-Flow-Meter-PlatformIO && podman build -t stampplc-fw .
 podman run --rm -v "$PWD":/workspace:Z -w /workspace stampplc-fw pio run -e m5stack-stamplc
 ```
 
-Expected, **measured 2026-08-18 on this branch**: host suite exit 0 with **1,870 checks across 23
-suites, 0 failures** and "manifest is up to date"; **213 unit tests in 13 files**; **44 exporter
-tests**; export `ok` with **10/10 gates and no warnings**. Firmware SUCCESS at **RAM 24.6 % /
-Flash 38.0 %** — that one is from the 2026-08-17 `export:firmware` run and was not re-measured
-today, because the podman build also rewrites three `generated/` timestamps.
+Expected, **measured 2026-08-20 on this branch**: host suite exit 0 with **1,970 checks across 24
+suites, 0 failures** and "manifest is up to date"; **220 unit tests in 13 files**; **51 exporter
+tests**; **51 visual tests**; export `ok` with **9 gates passing and 1 warning** (no dataset element
+surfaces a fault summary — the §2c banner is firmware-drawn). Firmware SUCCESS at **RAM 24.6 % /
+Flash 38.1 %**.
 
-**A fifth suite exists and is broken.** `npm run test:visual` (Playwright) fails **32 of its 46
-tests**, pre-existing and unrelated to any recent round — it is **`DF17`** in the register, the only
-🔴 item. It is deliberately not in the list above: it would fail, and `--update-snapshots` is not the
-fix. Until it is repaired, no pixel-level claim about the display is verified by anything that
-renders.
+**The visual suite is green now, and it is the fifth command.** `npm run test:visual` (Playwright)
+passed **51 of 51** on this measurement. It failed 32 of 46 until **`DF17`** was fixed on 2026-08-18,
+and this paragraph said so until 2026-08-20 — two days after the repair, which is the same
+stale-status failure the open register was rewritten to undo. It builds before it renders (`tsc &&
+vite build && playwright test`); running Playwright directly tests a stale `dist/` and has wasted two
+rounds doing exactly that.
 
 The `:Z` on the volume mount is required on SELinux hosts (Fedora, RHEL). Without it the
 container sees an empty workspace.
@@ -193,7 +194,7 @@ not a work list.
 
 ## Nothing has run on hardware
 
-Not once. The firmware compiles on two independent toolchains and passes 1,870 host checks, but the
+Not once. The firmware compiles on two independent toolchains and passes 1,970 host checks, but the
 RS485 pin assignment, the LED behaviour and every gesture and timing are verified only against
 the datasheet, the specifications and those tests.
 

@@ -247,24 +247,34 @@ The gate exists because the table had been advertising two actions that no longe
 
 ### Next, in the order I would take them
 
-Nothing is blocking. The register's six remaining lines are, in the order that unblocks the most:
+Nothing is blocking. The register's five remaining lines are, in the order that unblocks the most (the two struck through are kept because I3 makes an ID append-only):
 
-1. ~~**`N-d1`**~~ — **built 2026-08-18**: registers 50-55, staged epoch plus `0x5AA5`, refusal as a Modbus
-   exception, documented in §4.1.2 and in the generated reference. **The portal page is next** in the owner's
-   ordering, then NTP on `WifiState::Connected`, then MQTT (which needs N-c). The clock corrected me once
-   while I built it: setting the time BOUNDS an undated session to the sync moment rather than backdating it,
-   because nothing recorded a trustworthy anchor at the reset.
-2. **`N-b`** — the catalogue version in the manifest, so growing the settings catalogue stops silently
+1. ~~**`N-d1`**~~ — **built 2026-08-18**, and the whole clock chain with it: registers 50-55 (staged epoch
+   plus `0x5AA5`, refusal as a Modbus exception), the portal page (R7.9d), and NTP (R7.13). All four routes
+   to the clock now exist. The clock corrected me once while I built it: setting the time BOUNDS an undated
+   session to the sync moment rather than backdating it, because nothing recorded a trustworthy anchor at
+   the reset.
+2. ~~**`N-c`**~~ — **built 2026-08-20**: §4.4.1's command topics, `button` discovery, both safeguards, and
+   register 565 finally reporting something. It found `DF22` on the way out.
+3. **`DF22`** — eight read-only LIVE network registers are written by nothing, and `NET_LAST_ERROR` is
+   written on a refused apply and erased by the next sync, so §5.1's refusal report reads as success. The
+   only 🟡 defect, and the one place "RS485 is the source of truth" is flatly untrue.
+4. **`N-b`** — the catalogue version in the manifest, so growing the settings catalogue stops silently
    invalidating authored packs. `J1`'s ring gate and this are the two the pack format assumes.
-3. **`I2a`** — a checked-in `id → meaning` snapshot that CI diffs, which is the only thing that would make
+5. **`I2a`** — a checked-in `id → meaning` snapshot that CI diffs, which is the only thing that would make
    I2's append-only rule more than prose.
-4. **`N-c`** — MQTT's command topics (§4.4.1), which register 565 already reports the results of.
-5. **`G1`** and **`N-d2`** — both need the board, and both have their procedure written down.
+6. **`G1`** and **`N-d2`** — both need the board, and both have their procedure written down.
 
 Two gates that exist but are narrower than they look, worth widening when someone is in the area: CI runs the
 visual suite with `--ignore-snapshots` (pixels are a local gate until baselines are generated in the CI
 image), and the accessibility spec checks names and ids but not contrast or focus order, which needs an `axe`
 dependency decision.
+
+**A third, learned on 2026-08-20:** `MqttPublisher::tick` returns early on `!heartbeat && !rateLimitCleared`
+*before* formatting anything, so its change detection cannot rescue a value that changed inside the
+rate-limit window. Anything that must be visible promptly has to call `requestFullPublish()`. I reasoned the
+opposite, wrote a test that asserted it, and the test failed — which is the only reason this is written down
+rather than shipped.
 
 ## 7. Mistakes to know about
 
