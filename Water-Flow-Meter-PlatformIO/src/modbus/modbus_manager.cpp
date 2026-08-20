@@ -532,9 +532,18 @@ void ModbusManager::syncGlobalRegisters() {
     // convention. That convention having exactly one implementation is the point of NetRegisterMap.
     uint16_t block[plc::net_reg::kEnd - plc::net_reg::kBase] = {};
     plc::NetRegisterMap::publish(*deps_.net, block, sizeof(block) / sizeof(block[0]));
+    // NET_LAST_ERROR is a RECORD, not a reading, and it is the one cell in this block that must
+    // survive the republish. `applyHoldingWrite` writes it when a master's NET_APPLY is refused —
+    // §5.1 requires that, because a block write across the region must succeed rather than except,
+    // so the refusal has nowhere else to go — and `publish` does not know about it, so the loop
+    // below zeroed it a few milliseconds later. A master polling after its own write read 0 and
+    // concluded the apply had worked. Carried across by hand because it belongs to neither side:
+    // it is not a setting `publish` can pack, and not live state a snapshot can supply.
+    const uint16_t lastError = deps_.registers->at(plc::net_reg::kLastError);
     for (uint16_t i = 0; i < sizeof(block) / sizeof(block[0]); ++i) {
       deps_.registers->setUint16(static_cast<uint16_t>(plc::net_reg::kBase + i), block[i]);
     }
+    deps_.registers->setUint16(plc::net_reg::kLastError, lastError);
     // AFTER the block, because the block zeroes them. `publish` packs settings; these two are live state,
     // and a master reading 561 got 0 forever until this line existed.
     if (deps_.mqttStateValue) {

@@ -249,6 +249,23 @@ void blockWriteAcrossTheWholeRegion() {
   check(dev.registers.at(plc::net_reg::kLastError) ==
             static_cast<uint16_t>(plc::NetApplyError::BadMagic),
         "the refusal is reported at NET_LAST_ERROR instead, which is where a master looks");
+
+  // AND IT SURVIVES A SYNC. This is the half the check above cannot see: it reads 732 in the same
+  // breath as the write, and `syncGlobalRegisters` republishes the whole 233-register network block
+  // from `NetRegisterMap::publish`, which knows nothing about NET_LAST_ERROR and therefore used to
+  // zero it. On a device that loop runs continuously, so the refusal was readable for a few
+  // milliseconds and then reported success for as long as anyone cared to poll. A master following
+  // the provisioning sequence in the wiki — write, apply, read 731, read 501, read 732 — could not
+  // tell a refused apply from an accepted one.
+  //
+  // Reading it AFTER the sync is the whole point: an assertion placed before one passes over the
+  // defect, which is presumably how this got through review when §5.1 was implemented.
+  modbus.syncGlobalRegisters();
+  check(dev.registers.at(plc::net_reg::kLastError) ==
+            static_cast<uint16_t>(plc::NetApplyError::BadMagic),
+        "and still reads BadMagic after a sync, instead of being zeroed back to 'no error'");
+  check(static_cast<uint16_t>(plc::NetApplyError::None) == 0,
+        "which matters because 0 IS None — the zeroing did not blank the register, it lied");
 }
 
 void applyIsDeferredToTheEndOfTheBlock() {
