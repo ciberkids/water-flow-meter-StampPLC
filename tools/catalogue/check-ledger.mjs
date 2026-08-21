@@ -124,6 +124,18 @@ for (const action of manifest.actions) {
   additions.actions.push({ id: action.id, sinceAbi: abi });
 }
 
+// A DOWNGRADE, which the bump check below cannot see because it only fires when there are new ids.
+// `ledger.catalogueAbi` was written on every append and read by nothing, so lowering
+// `kUiCatalogueAbi` passed silently — and a lowered ABI makes the firmware accept packs built against
+// a vocabulary it no longer has, which is the failure the whole file exists to prevent.
+if (typeof ledger.catalogueAbi === "number" && abi < ledger.catalogueAbi) {
+  failures.push(
+    `catalogueAbi went BACKWARDS: the manifest says ${abi}, the ledger has already recorded ` +
+    `${ledger.catalogueAbi}. A lower ABI makes the firmware accept packs built against a vocabulary it ` +
+    `no longer offers. If a bump was reverted by accident, restore it in ui_value_catalogue.h.`
+  );
+}
+
 const newCount = additions.values.length + additions.actions.length;
 if (newCount > 0 && ledger.values.length + ledger.actions.length > 0 && abi <= highestSince) {
   failures.push(

@@ -186,6 +186,12 @@ baseline would silently pass R2.1.1 forever.*
 **Until it exists**, G1's comparison target is the 3.3 kHz DESIGN ASSUMPTION and not a measured figure —
 G1's entry now says so rather than pointing at a register that reads zero.
 
+**The published payload docs said `3.400`.** `tools/wiki/pages/MQTT.md`'s diagnostics example carried a
+plausible non-zero baseline — the kind of figure that makes a document harder to trust than a blank
+would be. Corrected 2026-08-21 to `0.000` with a paragraph saying the field is published, documented and
+empty, and pointing here. Same treatment `WiFi.md` got when `DF22` was found: the page states what a
+reader will actually see, and the firmware is what has to catch up.
+
 **Blocks.** R2.1.1's acceptance test, and half of G1's procedure. Nothing on the device: the live rate
 is real and published, on register 0 and in the same payload.
 

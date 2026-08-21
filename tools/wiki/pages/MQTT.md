@@ -61,13 +61,20 @@ tidiness one. Home Assistant reaches each field with a `value_template`.
 //                                                  active channels
 
 // <base>/diagnostics/state
-{"pollingRateKhz":3.310,"baselineKhz":3.400,"undersampling":0,"tempC":41.2,"uptimeS":86400,"rssi":-57}
+{"pollingRateKhz":3.310,"baselineKhz":0.000,"undersampling":0,"uncalibrated":0,"tempC":41.2,"uptimeS":86400,"rssi":-57,"lastCmd":"idle"}
 ```
 
 Two things to note. **Flow is always L/min on the wire**, whatever the panel is set to show — the
 display unit (`REG_DISPLAY_FLOW_UNIT`, register `33`) is a screen preference and never rescales a
 payload. And a non-finite value is emitted as JSON `null`, not `nan`: `nan` is not valid JSON, so Home
 Assistant would drop the whole message and the entity would stop updating with nothing logged.
+
+**`baselineKhz` is `0.000` on every real device, and that is a known gap rather than an example
+value.** R2.1.2 asks the device to record its radio-off rate once, at the first boot after a firmware
+update, and nothing does — so the field is published, documented and empty. It is tracked as `DF23`.
+This example showed `3.400` until 2026-08-21, which is the kind of plausible figure that makes a
+document harder to trust than a blank one. Compare the live rate against the 3.3 kHz design assumption
+until the baseline is real.
 
 `pollingRateKhz` travels with `baselineKhz` deliberately. The live rate alone cannot show a
 regression, and a sampling regression that is only visible in a lab is the failure the whole
