@@ -18,6 +18,9 @@
  * Usage: node tools/skeleton/generate.mjs [--write]
  */
 import fs from "node:fs";
+// §3.0.1's required set and N-b's fail/warn split, shared with the exporter so the exemptions have
+// exactly one home.
+import { classifyCoverage } from "../../../../tools/catalogue/coverage.mjs";
 import path from "node:path";
 import process from "node:process";
 
@@ -56,6 +59,12 @@ const L = {
  * justification, and the banner declaration — and are stripped: the dataset schema does not know them.
  */
 const SPEC_DIR = path.join(ROOT, "..", "..", "docs", "Requirements", "feature addition", "screens");
+// The ledger is the only record of WHEN a catalogue id appeared; the manifest describes the catalogue
+// as it is now and cannot answer a question about history.
+const ledger = JSON.parse(
+  fs.readFileSync(path.join(ROOT, "..", "..", "tools", "catalogue", "ledger.json"), "utf8")
+);
+
 const specs = new Map();
 if (fs.existsSync(SPEC_DIR)) {
   for (const file of fs.readdirSync(SPEC_DIR).filter((f) => f.endsWith(".json"))) {
@@ -217,31 +226,33 @@ const editorId = (settingScreenId) => `${settingScreenId}-edit`;
  */
 function assertCoversEverySetting(deviceList, sensorList) {
   const declared = new Set([...deviceList, ...sensorList].map((d) => d.binding).filter(Boolean));
-  const missing = manifest.values
-    .filter((v) => v.category === "setting")
-    // TEXT SETTINGS ARE EXEMPT. There is no on-device text entry: three buttons and a 97-position
-    // character wheel is not a usable way to type a 63-character WPA2 passphrase, and the owner
-    // ruled it out. Text reaches the device by the three surfaces that were always the real ones —
-    // the configuration web portal (§7.6), the RS485 register block (§5.2), and the SD credential
-    // file (Q2).
-    //
-    // This exemption is the ONLY hole in the completeness rule, and it is safe because it is decided
-    // by KIND rather than by a runtime condition: `type === "string"` is statically knowable, so the
-    // gate still proves every setting an operator can change AT THE PANEL has an editor there.
-    // Guarded editors were rejected for exactly the opposite reason (R7.3) — a guard is not
-    // statically decidable. See §6.3.
-    .filter((v) => v.type !== "string")
-    // NETWORK SETTINGS ARE EXEMPT TOO, by the owner's decision that the panel only READS WiFi and
-    // MQTT configuration. It is the same exemption as the text one widened to its natural edge: the
-    // portal, RS485 and the SD file are where a broker gets configured, and a panel that offers to
-    // edit half a broker's settings is worse than one that offers none.
-    //
-    // Still decided by a STATIC property — the binding's prefix — so the gate keeps proving that
-    // every setting an operator can change at the panel has an editor there. That is what made the
-    // text exemption safe and what disqualified guarded editors (R7.3).
-    .filter((v) => !v.id.startsWith("config.wifi.") && !v.id.startsWith("config.mqtt."))
-    .map((v) => v.id)
-    .filter((id) => !declared.has(id));
+
+  /**
+   * The required set and the fail/warn split both live in `tools/catalogue/coverage.mjs`.
+   *
+   * They were inline here, with the two exemptions — text and network — spelled out in comments this
+   * function owned. They moved because N-b needs the SAME policy at a second call site: a pack stamped
+   * with an older catalogue ABI, where a setting added since is a warning rather than a failure. Two
+   * copies of an exemption list is the "one fact, two homes" failure this codebase keeps finding, so
+   * there is one copy and the reasoning went with it.
+   *
+   * The skeleton is always built against the CURRENT catalogue, so nothing here can predate it and
+   * every gap is a failure — exactly as before. `predating` is asserted empty rather than ignored,
+   * because a non-empty one means the manifest and the ledger disagree about what exists.
+   */
+  const { missing, predating } = classifyCoverage({
+    values: manifest.values,
+    ledger,
+    covered: declared,
+    packAbi: manifest.catalogueAbi
+  });
+  if (predating.length > 0) {
+    throw new Error(
+      `${predating.map((p) => p.id).join(", ")} record a sinceAbi newer than the manifest's ` +
+      `catalogueAbi (${manifest.catalogueAbi}). The ledger and the catalogue disagree about what ` +
+      `exists; run node tools/catalogue/check-ledger.mjs.`
+    );
+  }
 
   /**
    * A GATED setting is still covered, provided its gate is itself reachable.
@@ -1066,6 +1077,21 @@ for (const s of dataset.screens) {
 }
 const generatedIds = new Set(screens.map((s) => s.id));
 const RETIRED = new Set([
+  /**
+   * §5.5's prompt as a SCREEN — the design that lost, retired 2026-08-21 (J9).
+   *
+   * The prompt is real and works; it just does not live on a screen of its own. `ui_actions.cpp`'s
+   * `consumedByPrompt` reinterprets UP and DOWN on the editor screen itself while a commit is parked
+   * awaiting an override, and its comment gives the reason: no new screen id, so the §3.0.1
+   * completeness rule stays satisfied and no dataset change is needed. The `nyquist-warning` ELEMENT
+   * on every sensor-settings screen — bound to `config.sensor.nyquistWarning`, emitted a few hundred
+   * lines above — is that prompt's rendering surface and stays exactly where it is.
+   *
+   * What retires here is only the screen with that id, which no flow named as a `targetScreenId` and
+   * no `ui_pages.h` table named either, so `UiScreenRouter` could never resolve it. It carried
+   * plausible-looking UP/DOWN flows, which is what made it cost the next reader an investigation.
+   */
+  "nyquist-warning",
   // Replaced by confirm screens; enter-config, sensor-save and config-exit are no
   // longer guarded actions at all under the new model.
   "countdown-enter-config", "countdown-reset-session", "countdown-reset-all",
@@ -1293,17 +1319,9 @@ for (const s of kept) {
   }[s.id];
   if (desc) { s.description = desc; descriptionsFixed += 1; }
 
-  // §5.5: UP returns to the editor and DOWN force-saves, both ascending via the
-  // navigation stack. Static targets cannot express "the editor we came from",
-  // because which sensor setting failed is runtime state.
-  if (s.id === "nyquist-warning") {
-    for (const f of s.flows ?? []) {
-      if (f.trigger.type === "button" && (f.trigger.button === "up" || f.trigger.button === "down")) {
-        delete f.targetScreenId;
-        if (f.trigger.button === "up") f.actionId = A.back;
-      }
-    }
-  }
+  // The §5.5 block that used to sit here repaired the flows of a screen that is now RETIRED (J9):
+  // the prompt lives on the editor screen, via ui_actions.cpp's consumedByPrompt, and has no flows
+  // of its own to repair.
   // P7 now wraps to P8 rather than back to P0.
   if (s.id === "info-p5-enter-config" && !hasSpec) {
     for (const f of s.flows) {

@@ -189,6 +189,12 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/mqtt_reconnect_test" \
 g++ "${CXXFLAGS[@]}" -o "$OUT/httpd_task_policy_test" \
   test/host/httpd_task_policy_test.cpp
 
+# N-d2 — the one line in setup() whose POSITION is the requirement. It reads firmware.cpp as TEXT,
+# because the invariant is the order of two lines in a file and no runtime assertion can see it: by the
+# time either has run, the flag register reads clean whichever way round they were.
+g++ "${CXXFLAGS[@]}" -o "$OUT/boot_order_test" \
+  test/host/boot_order_test.cpp
+
 # N5 — the MQTT publish policy: cadence, the drop order, topic construction.
 g++ "${CXXFLAGS[@]}" -o "$OUT/mqtt_publisher_test" \
   test/host/mqtt_publisher_test.cpp \
@@ -283,6 +289,8 @@ echo
 "$OUT/mqtt_reconnect_test"
 echo
 "$OUT/httpd_task_policy_test"
+echo
+"$OUT/boot_order_test"
 echo
 "$OUT/ha_discovery_test"
 echo

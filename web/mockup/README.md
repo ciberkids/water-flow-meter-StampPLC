@@ -17,7 +17,7 @@ npm run dev
 ```
 
 The dev server launches at `http://localhost:5173/`. **You start on the shipped dataset:**
-`src/data/screens.json`, 80 screens plus a `theme` block. It is not a blank canvas — import your own JSON
+`src/data/screens.json`, 79 screens plus a `theme` block. It is not a blank canvas — import your own JSON
 from the Import & Export tab if you want one.
 
 - **Keyboard.** `ArrowUp`, `ArrowDown` and `Enter` are the three device buttons; short, long and hold come

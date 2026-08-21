@@ -29,9 +29,9 @@ cd ../../Water-Flow-Meter-PlatformIO && podman build -t stampplc-fw .
 podman run --rm -v "$PWD":/workspace:Z -w /workspace stampplc-fw pio run -e m5stack-stamplc
 ```
 
-Expected, **measured 2026-08-20 on this branch**: host suite exit 0 with **1,997 checks across 24
+Expected, **measured 2026-08-21 on this branch**: host suite exit 0 with **2,006 checks across 25
 suites, 0 failures** and "manifest is up to date"; **220 unit tests in 13 files**; **51 exporter
-tests**; **51 visual tests**; export `ok` with **9 gates passing and 1 warning** (no dataset element
+tests**; **51 visual tests**; **7 catalogue-policy tests** (`node --test "tools/catalogue/*.test.mjs"`); export `ok` with **9 gates passing and 1 warning** (no dataset element
 surfaces a fault summary — the §2c banner is firmware-drawn). Firmware SUCCESS at **RAM 24.6 % /
 Flash 38.2 %**.
 
@@ -46,7 +46,7 @@ The `:Z` on the volume mount is required on SELinux hosts (Fedora, RHEL). Withou
 container sees an empty workspace.
 
 **Start with command 1.** It runs the device harness — the real navigator, controller,
-interaction handler and action registry against the real **80-screen** table, with only three
+interaction handler and action registry against the real **79-screen** table, with only three
 Arduino headers stubbed. It is the fastest way to find out whether the tree is sound, and it
 needs no toolchain at all.
 
@@ -194,7 +194,7 @@ not a work list.
 
 ## Nothing has run on hardware
 
-Not once. The firmware compiles on two independent toolchains and passes 1,997 host checks, but the
+Not once. The firmware compiles on two independent toolchains and passes 2,006 host checks, but the
 RS485 pin assignment, the LED behaviour and every gesture and timing are verified only against
 the datasheet, the specifications and those tests.
 

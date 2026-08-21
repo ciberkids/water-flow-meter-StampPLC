@@ -30,12 +30,17 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Five open lines, and not one of them is a defect.** `N-c` and `DF22` both closed on 2026-08-20 —
-`DF22` was found by building `N-c`, which is the usual way, and was the only 🔴 the board has had since
-the register was rewritten. What remains is one queued FEATURE, one missing gate, one piece of residue,
-and three things that need the board. Ask for work by ID — "decide N-b", "build I2a" — and this file is
-the one place that says what an ID means. Rule **I3** below governs them: append-only, never reused, so
-a gap means an item closed, not an item lost.
+**Three open lines, one of them a defect.** `J9`, `I2a`, `N-b` and N-d2's correction half all closed on
+2026-08-21; `DF23` opened, found by checking whether `G1`'s procedure could actually be followed, which
+is the usual way. `N-c` and `DF22` closed on 2026-08-20, and `DF22` — found by building `N-c` — was the
+only 🔴 the board has had since the register was rewritten.
+
+**What remains is one software item and three measurements.** `DF23` is software and has a decision in
+it. The three that need hardware are `G1` (the polling rate), `N-d2`'s remaining half (whether the RTC
+survives power loss), and `N-c`'s retain check, which lives in that entry's ⏸️ block rather than on a
+line of its own because the rest of `N-c` is built and tested. Cite an ID when you ask about one — this
+file is the one place that says what an ID means. Rule **I3** governs them: append-only, never reused,
+so a gap means an item closed, not an item lost.
 
 **`N-c` stays in this file rather than moving to the archive**, because one thing in it is verified by
 reading only: `MQTT_EVENT_DATA`'s retain flag, which R4.4.2c depends on entirely and which no host test
@@ -46,11 +51,9 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 
 | ID | | Shape | What it is |
 | --- | --- | --- | --- |
+| **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
-| **N-d2** | ⏸️ | correction + measurement | Nothing protects the VLF probe's position above `M5StamPLC.begin()`, and whether the RTC survives power loss is unknown |
-| **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
-| **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
-| **J9** | 🟢 | residue, found 2026-08-20 | `nyquist-warning` is a screen in the dataset that nothing can navigate to — the earlier design of §5.5's prompt, left behind when the in-place one replaced it |
+| **N-d2** | ⏸️ | measurement | Whether the RTC survives power loss is unknown — the correction half (a gate protecting the VLF probe's position) landed 2026-08-21 |
 
 **DF1–DF22 and J1–J8** are fixed and keep their IDs — `DF1`–`DF21` and `J1`–`J8` moved to
 [`../archive/open_decisions-closed-2026-08-18.md`](../archive/open_decisions-closed-2026-08-18.md), verbatim,
@@ -58,10 +61,10 @@ because I3 makes them append-only and a retired id must still resolve. **I2** an
 that never close.
 
 **What this list is NOT.** Nothing here is blocking a build, a test or an export: every gate in the
-repository is green (host **1,997 checks across 24 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
+repository is green (host **2,006 checks across 25 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
 findings, and a firmware that compiles at RAM 24.7% / Flash 38.2%, measured 2026-08-20). One is a feature
 nobody has started, two need hardware that has never existed for this project, `I2a` is a rule enforced by
-prose, and `J9` is residue. That is a
+prose. That is a
 different condition from "twelve things are broken", which is what this register looked like two days ago.
 
 ---
@@ -76,9 +79,16 @@ Everything is in place to take it: the achieved rate is published in `REG_POLLIN
 (register 0) and on the MQTT diagnostics topic beside the baseline it should be compared against, and
 `REG_UNDERSAMPLING_FLAGS` (register 30) names any channel outrunning the sampler.
 
-**What to do when the board arrives.** Flash, read register 0, compare with `baselineKhz`. If the real
-rate is materially below it, the bulk-read work becomes real and the per-channel `q_max` limits need
-re-checking against what the sampler can actually count.
+**What to do when the board arrives.** Flash, read register 0 — and compare it against **3.3 kHz as a
+design assumption**, not against `baselineKhz`, which is published as `0.000` because nothing records it
+(`DF23`). If the real rate is materially below 3.3 kHz, the bulk-read work becomes real and the
+per-channel `q_max` limits need re-checking against what the sampler can actually count.
+
+That substitution is a downgrade and worth naming: §2.1 intended this measurement to be *self-checking*,
+comparing the live rate against a baseline the device took of itself, which is what R2.1.1's 5 % rule
+needs. Against a written-down assumption it is still a useful measurement — it answers "can this sampler
+count what the datasheet limits assume" — but it cannot answer "did enabling the radio cost us
+anything", which was the other half. `DF23` is what closes that gap.
 
 **Note, 2026-08-17.** `meetsNyquistLimit` now refuses a ceiling of zero or less instead of accepting it,
 and `configIsValid` demands a positive multiplier. Neither touches this: both are about configurations
@@ -90,24 +100,94 @@ mockup's "inside budget" statements inherit the same assumption.
 
 ---
 
-## N-b 🟡 Growing the settings catalogue silently invalidates authored menu packs
+## ~~N-b~~ ✅ FIXED 2026-08-21 — a catalogue addition is distinguishable from a pack's omission
 
 `Loadable_UI_Menu_Packs.md` §3.0.1 requires every menu pack to expose an editor for every
-`category: "setting"` value. The rule is right and it has never survived growth: the WiFi and MQTT
-work took the required editor count from 10 to 24, and this session's Modbus/Display/Sensors
-restructure moved every config screen id.
+`category: "setting"` value. The rule is right; what it could not do was tell two situations apart. A
+pack missing an editor for a setting that existed when it was authored is a BUG in the pack. A pack
+missing an editor for a setting added to the firmware since is not — it is an old pack, and failing it
+would mean every firmware release invalidated every card in the field. From the pack alone the two look
+identical.
 
-**What actually enforces the rule today:** `assertCoversEverySetting()` in
-`web/mockup/tools/skeleton/generate.mjs`, which fires when the default dataset is regenerated. That
-is the cheapest possible place to find out, and it is the only place. Neither the export gate of
-§5.8 nor the load-time patcher of §3.3.11a exists.
+**What makes them distinguishable.** Three things that did not exist before today:
 
-**Recommendation** (Q4 of that document): the manifest carries a catalogue version, and the exporter
-*warns* rather than fails for values added after a pack's version. Until that exists, a catalogue
-addition means regenerating the default menu — which is fine for the built-in pack and offers nothing
-at all to a third-party pack on an SD card.
+1. **The manifest carries `catalogueAbi`**, emitted from `ui::kUiCatalogueAbi` — so the number a pack is
+   stamped with and the number `MenuPack::validate` compares against are one constant. It is a
+   different number from the `version` beside it and the generator says so: `version` is this file's
+   shape, `catalogueAbi` is the vocabulary it lists.
+2. **Every id records the ABI it appeared at**, in `I2a`'s ledger. The manifest describes the catalogue
+   as it is NOW and cannot answer a question about history.
+3. **Additions bump the ABI** (owner's decision, reversing what `kUiCatalogueAbi`'s own comment said).
+   Without that, every id sits at the same ABI and the distinction has nothing to work with.
 
-**Blocks.** Shipping menu packs as a supported extension point. Not the built-in pack.
+**`tools/catalogue/coverage.mjs` is the one home for the policy.** The required set — settings, minus
+text and minus network, both exemptions decided by a STATIC property so the rule still proves that
+every setting an operator can change at the panel has an editor there — moved out of
+`assertCoversEverySetting` because N-b needs the same policy at a second call site. Two copies of an
+exemption list is the failure this codebase keeps finding. Verified by regenerating: the dataset comes
+out byte-for-byte identical, so the policy moved without changing behaviour.
+
+**The pack emitter no longer invents its ABI.** `pack_emit.test.ts` passed a literal `1`, so the
+stamped number and the firmware's constant were unrelated facts that happened to agree; the day someone
+bumped, the fixture would have kept claiming the old vocabulary and the C++ round-trip would have kept
+passing. It reads the manifest now, and asserts the value reaches header offset 8 where `validate`
+looks. Proved by bumping the constant to 7 and watching the fixture's stamp follow, then back.
+
+**WHAT A WARNING DOES NOT MEAN, and this is the honest limit.** It does not mean the firmware covers the
+gap. §3.3.11a specifies a load-time patcher that appends built-in editors for missing settings, and
+**that still does not exist.** So a warning today means precisely: *this pack cannot reach that setting,
+and the operator needs the portal, RS485 or a newer pack.* It is information, not absolution. The module
+says so at the top, because "warns rather than fails" reads like the problem has been handled.
+
+**The warn branch cannot fire against the live catalogue** — every id is at `sinceAbi: 1` and the
+firmware is at ABI 1 — so it is exercised with fixtures in `coverage.test.mjs` rather than left
+unexecuted. Seven cases: the exemptions (including that network is exempt even when it is a NUMBER), a
+gap at the current ABI failing, the same gap on an older pack warning, the `>` versus `>=` boundary, a
+covered setting appearing in neither list, an id absent from the ledger failing STRICTER rather than
+looser, and the live catalogue satisfying the rule so the fixtures cannot drift away from the policy the
+project actually applies.
+
+**Still not built, and still N-b's neighbours rather than N-b:** §5.8's export gate and §3.3.11a's
+load-time patcher. A third-party pack on an SD card is now *diagnosable* — the exporter can say which
+settings it predates — but nothing yet repairs it on the device.
+
+---
+
+## DF23 🟡 The radio-off baseline is published as 0.000, so R2.1.1 and G1 have nothing to compare against
+
+Found 2026-08-21 while checking that G1's procedure could actually be followed. It cannot, quite.
+
+`MqttDiagnosticsTelemetry::baselineRateKhz` is declared, formatted into every
+`<base>/diagnostics/state` payload as `baselineKhz`, and **assigned by nothing** — the only two
+mentions in `src/` are its declaration and the `snprintf` that publishes it. So it goes out as `0.000`
+on every publish, and `mqtt_publisher.h`'s own comment — "Carries the R2.1.2 pair so a polling
+regression is visible in HA" — describes a pair with one half missing.
+
+**The test does not catch it, for a reason worth naming.** `mqtt_publisher_test.cpp` sets
+`snap.diagnostics.baselineRateKhz = 4.75f` by hand and asserts the payload says `4.750`. That is a
+correct test of the FORMATTER, and it passes while production publishes zero, because nothing tests who
+fills the struct. Same shape as DF22's silent registers: a value with a home, a publisher and no author.
+
+**What R2.1.2 actually asks for**, and it is not a constant: *"The device must record the radio-off
+baseline once, at the first boot after a firmware update, and expose both the baseline and the live
+rate."* So it is a MEASUREMENT the device takes of itself, persisted, and compared against later — which
+is what makes R2.1.1's "must not reduce the measured rate by more than 5 % from its radio-off baseline"
+checkable at all, and what §2.1's own note calls "also the answer to open decision G1 — the same
+measurement serves both."
+
+**The decision it needs**, which is why this is recorded rather than fixed in the same round it was
+found: what happens when the first boot after an update has WiFi ENABLED? There is then no radio-off
+rate to record. The tidy answer is to defer — record no baseline until a boot with the radio off, which
+§7 makes the default since WiFi is never enabled automatically — and that is a real choice about whether
+a device that is never booted with WiFi off simply never has a baseline. *Recommendation: defer, and
+publish `0.000` as "not yet measured" with the panel and the wiki saying so, because a fabricated
+baseline would silently pass R2.1.1 forever.*
+
+**Until it exists**, G1's comparison target is the 3.3 kHz DESIGN ASSUMPTION and not a measured figure —
+G1's entry now says so rather than pointing at a register that reads zero.
+
+**Blocks.** R2.1.1's acceptance test, and half of G1's procedure. Nothing on the device: the live rate
+is real and published, on register 0 and in the same payload.
 
 ---
 
@@ -307,18 +387,44 @@ Next is the **Modbus date/time block** — the one that makes every later item s
 page, then NTP on `WifiState::Connected`, with MQTT last because it needed N-c's command topics. All four
 landed, in that order.
 
-**N-d2 ⏸️ Nothing protects the VLF probe's position, and whether the RTC survives power loss is
-unknown.** A second, sharper thing on the same subject, and the half that needs the board.
-`M5StamPLC.begin()` clears the RX8130CE's whole flag register including VLF, and the library exposes
-no reader, so
-`plc::readRtcVoltageLowFlag()` must run **before** `M5StamPLC.begin()`. It is the first statement of
-`setup()` and that is the only moment in the device's life when "did the clock run across the last power
-cut" can be known. **No test or assert protects the ordering** — nothing under `test/` names
-`rtc_boot_probe` or `readRtcVoltageLowFlag` (checked 2026-08-17). Move that line, or add anything
-touching the RTC above it, and a device with a dead clock reports a healthy one and publishes a
-confident year-2000 timestamp to the panel, Modbus and MQTT. Whether the RTC survives power loss at all
-is **unknown** — the chip has a backup-supply pin, and M5Stack does not say whether a cell or supercap is
-populated. Settle it empirically: set the time, pull power for a minute, boot, read VLF.
+**N-d2 ⏸️ — the ordering is protected as of 2026-08-21; the power-cut question still needs the board.**
+
+`M5StamPLC.begin()` clears the RX8130CE's whole flag register including VLF, and the library exposes no
+reader, so `plc::readRtcVoltageLowFlag()` must run **before** it. That single line is the only moment in
+the device's life when "did the clock run across the last power cut" can be known. Move it, or add
+anything touching the RTC above it, and a device with a dead clock reports a healthy one and publishes a
+confident year-2000 timestamp to the panel, Modbus and MQTT.
+
+**✅ The ordering half is done.** `test/host/boot_order_test.cpp`, nine checks in the host suite. A
+runtime assertion cannot express this: the invariant is the order of two LINES IN A FILE, and by the
+time either has run the flag register reads clean whichever way round they were — which is precisely the
+failure. So it reads `firmware.cpp` as text, the technique `gen-actions.mjs` uses on the action
+catalogue. It pins the probe before `begin()`, `readRtcEpoch()` after it (the calendar needs the bus
+up), the probe inside `setup()`, and no `M5StamPLC.` call earlier in `setup()` at all. Negative-tested
+both ways a refactor breaks it: the probe moved below `begin()` (2 failures) and an RTC read inserted
+above it (1).
+
+**Two things that first run corrected, both worth keeping:**
+
+1. **A raw text scan reported the ordering broken on correct code.** The comment above the probe
+   explains that "`M5StamPLC.begin()` clears the RX8130CE's flag register" — so the scan found a
+   `begin()` six lines ABOVE the probe. The prose about an invariant must not be able to violate it, so
+   the test blanks comments and string literals first, preserving byte positions so a failure still
+   names a real line.
+2. **"No `M5StamPLC.` call before the probe" was too strong as first written.** It failed on
+   `M5StamPLC.readPlcInput` at line 817 — the sampler's pin-read helper, DEFINED above `setup()` and
+   CALLED from a task that starts long after `begin()`. File position and execution order are different
+   things, and a gate that confuses them fails on correct code, which is how gates get deleted. The
+   check is scoped to `setup()`.
+
+**What it cannot see, so the coverage is not overclaimed:** it does not parse C++. A probe moved inside
+a conditional, or into a function called from `setup()` after `begin()`, would satisfy every assertion.
+What it catches is the ordinary refactor — a line moved, or an RTC read inserted above it.
+
+**⏸️ The other half needs the board.** Whether the RX8130CE survives power loss at all is **unknown**:
+the chip has a backup-supply pin and M5Stack does not say whether a cell or supercap is populated.
+Settle it empirically — set the time, pull power for a minute, boot, read VLF. No amount of software
+answers this one, and building scaffolding around it would be worse than the honest gap.
 
 **Blocks.** Any timestamp being trustworthy in the field — **and N-d1 no longer does**: RS485 can set the
 clock as of 2026-08-18. What is left is N-d2, a correction (the assert protecting the VLF probe's position)
@@ -326,40 +432,35 @@ plus a measurement (the power-cut test), and it needs the board.
 
 ---
 
-## J9 🟢 `nyquist-warning` is an orphan screen in the dataset — residue of a design that was replaced
+## ~~J9~~ ✅ FIXED 2026-08-21 — the orphan screen is retired, and the prompt that works is annotated
 
-Found 2026-08-20 while deciding whether some stale local branches could be deleted. Recorded because
-`ui_renderer.cpp:208` already states it and this file's own preamble says an open item recorded anywhere
-else belongs here.
+`nyquist-warning` sat in the dataset with plausible UP/DOWN flows and no route to it: no flow named it
+as a `targetScreenId`, no `ui_pages.h` table named it, so `UiScreenRouter` could never resolve it.
+Retired through the mechanism the generator already had for exactly this — the `RETIRED` set, whose own
+comment says "`kept` retains anything the generator no longer emits, without this they would survive as
+orphans". 80 screens to 79.
 
-The dataset carries a screen `nyquist-warning` with two correct-looking flows (UP = back,
-DOWN = `config.action.value.commit-override`) and **nothing navigates to it**: no flow names it as a
-`targetScreenId`, and no `ui_pages.h` table names it, so `UiScreenRouter` can never resolve it.
+**The trap this had, and it is worth remembering.** `nyquist-warning` is BOTH a screen id and an
+element id. Nineteen `nyquist-warning` ELEMENTS live on the sensor-settings screens, bound to
+`config.sensor.nyquistWarning` — and those are the prompt's actual rendering surface, the mechanism that
+WORKS. A grep-and-delete would have removed §5.5's prompt while leaving the thing that could not be
+reached. All nineteen are still there and the count was asserted before and after.
 
-**This is NOT a broken override path.** §5.5's prompt works, and works better than the screen would:
-`ui_actions.cpp`'s `consumedByPrompt` reinterprets UP and DOWN on the editor screen itself while a prompt
-is pending, and its comment gives the reason — "no new screen id, so the menu-pack completeness rule
-stays satisfied and no dataset change is needed". The orphan screen is the earlier design, left behind
-when the in-place prompt replaced it. Two local worktree branches held that earlier implementation and were
-deleted on 2026-08-20 as superseded — not lost work, and their second claim, that register 30 stops
-clearing, does not apply either, because `evaluateSensorDiagnostics` rebuilds `flags` from zero on every
-call. The tips are `bd8a179` (the screen made reachable) and `fe8a952` (that plus two review commits:
-scoping the latched override to the config it was granted for, and guarding `dialTo` against a closed
-editor). Both are unreachable now and survive only in the reflog, so `git show` them within about ninety
-days if the earlier design is ever worth reading.
+**§5.5's prompt is not on a screen and never needed one.** `ui_actions.cpp`'s `consumedByPrompt`
+reinterprets UP and DOWN on the editor screen itself while a commit is parked awaiting an override, and
+its comment gives the reason: no new screen id, so §3.0.1's completeness rule stays satisfied and no
+dataset change is needed. That comment now also records that a screen for this once existed and why it
+does not, so the next reader does not rediscover the question.
 
-**Why it is worth an ID rather than a shrug.** It costs one screen of the eighty in every generated table
-and every `.uipack`, it is the twelfth screen carrying a full-screen `overlay-bg` that the §2c banner
-round had to reason about, and — the real cost — the next person to read the dataset finds a screen with
-plausible flows and no route to it, and has to redo the investigation above to learn it is deliberate.
+**Four counts moved with it**, which is the real cost of residue: `ui_renderer.cpp` said "Twelve of the
+eighty generated screens carry that full-screen overlay-bg, and eleven of them are reachable" — it is
+now eleven of seventy-nine and *every one* is reachable, which is a simpler sentence than the one that
+had to explain an exception. Also `ui_renderer.cpp`'s other "80 generated screens", `README.md`'s
+"80-screen table" and `web/mockup/README.md`'s "80 screens".
 
-**Two options, and this one is genuinely a preference.** Delete the screen and let §5.5 live entirely in
-`consumedByPrompt`; or keep it and have the exporter's ring gate (`J1`) grow a *reachability* check that
-would have named it automatically. **Recommendation: delete it**, and note in `consumedByPrompt`'s comment
-that a screen for this once existed and why it does not now — a reachability gate is worth building, but
-for its own sake rather than to justify keeping one orphan.
-
-**Blocks.** Nothing. It is residue.
+**Verified:** dataset 79 screens, orphan absent, nineteen elements present; geometry audit 79 screens
+0 findings; 220 unit, 51 exporter, 51 visual with NO baseline change — it was unreachable, so nothing
+rendered it; host 1,997 checks; firmware SUCCESS at RAM 24.7 % / Flash 38.1 %.
 
 ---
 
@@ -372,13 +473,34 @@ This is not open and never closes; it is recorded here because it constrains eve
 a rule filed under "archive" is a rule nobody reads. Same class as the wire-encoding rules on
 `WifiState` and `kMqttFlags` bit 2.
 
-**I2a 🟡 Nothing enforces it.** Verified 2026-08-18: no file in the repository contains
-`append-only` or `appendOnly` as a check — grepped across `*.ts`, `*.mjs`, `*.cpp`, `*.h` and `*.json`.
-The rule lives entirely in prose, in a file the person renumbering a catalogue entry has no reason to
-open. What would catch it is a checked-in snapshot of `id → meaning` that CI diffs, the same shape as the
-byte-for-byte `screens.json` diff already in CI: a changed line under an existing id fails, a new line
-appended passes. Filed here rather than as a defect because the rule and its missing enforcement belong
-in one place — but it is real work, and until it exists I2 is honour-system.
+**~~I2a~~ ✅ ENFORCED 2026-08-21.** `tools/catalogue/ledger.json` is the append-only record —
+126 values and 19 actions, each with the ABI it appeared at — and
+`tools/catalogue/check-ledger.mjs` is the gate, run in CI's *Generated docs* job.
+
+**Why it is not the manifest diff that already existed.** `test/host/run.sh` fails if
+`actionManifest.json` differs from a fresh generation, which looks like the same check and is not: it
+enforces FRESHNESS. Rename a catalogue id, regenerate, and the two agree again — the rename passes with
+a green build. A rule about history needs a record of history, which only ever grows.
+
+**What is pinned: `category`, `type`, `unit`, `readOnly`.** Those four are the contract a pack binds
+against. Deliberately NOT pinned — because a gate that cries wolf gets bypassed inside a month —
+`description` (a wording improvement must never fail CI), `min`/`max`/`step` (the firmware owns the
+domain, and this project has already widened one), and `register` (a Modbus concern that
+`gen-registers.mjs` reconciles in both directions). What it CANNOT see is an action keeping its id and
+quietly doing something else; nothing machine-readable captures that, and the script says so rather
+than implying otherwise.
+
+**It also enforces the bump rule the owner decided the same day** (see N-b): a new id whose
+`catalogueAbi` is not higher than every `sinceAbi` already recorded fails, with the fix named. Every id
+existing on 2026-08-21 is recorded at `sinceAbi: 1` — the ABI they were actually authored under.
+Back-dating them across the WiFi/MQTT and N-c rounds was considered and rejected: no pack has ever been
+stamped with anything but 1, so those numbers would have been invented history.
+
+**Negative-tested through the real path** — editing the firmware catalogue and regenerating, not by
+hand-editing the ledger. A renamed id fails as REMOVED *and* names the missing bump; a changed category
+fails as REPURPOSED quoting the before and after; an addition without a bump fails and names the
+constant to raise; the same addition with a bump passes and records `sinceAbi: 2` appended at the end;
+and a reworded description passes, which is the case that decides whether anyone will keep the gate.
 
 ---
 

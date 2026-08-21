@@ -394,6 +394,17 @@ export interface FirmwareScreen {
 
 export interface FirmwareManifest {
   version: string;
+  /**
+   * The CATALOGUE's ABI, which is not `version` above and must not be confused with it: `version`
+   * describes the shape of this file, `catalogueAbi` describes the vocabulary it lists. A menu pack
+   * records the latter in its header and the firmware refuses a pack targeting a newer one
+   * (Loadable_UI_Menu_Packs §4.7b, Q4).
+   *
+   * Optional so a manifest from a firmware build that predates the field still validates — the same
+   * reason `values` is optional. The pack emitter asserts it is present rather than defaulting it,
+   * because a pack stamped from a guess is worse than one that fails to build.
+   */
+  catalogueAbi?: number;
   actions: FirmwareAction[];
   /**
    * Optional so a manifest emitted by a firmware build that only knows about
@@ -490,6 +501,9 @@ const firmwareManifestDefinition = {
   required: ["version", "actions"],
   properties: {
     version: { type: "string", minLength: 1 },
+    // A whole number, and at least 1: the firmware's own constant starts there, and 0 would mean a
+    // pack stamped "no vocabulary" which `MenuPack::validate` would happily accept as older.
+    catalogueAbi: { type: "number", nullable: true, minimum: 1, multipleOf: 1 },
     actions: {
       type: "array",
       minItems: 0,

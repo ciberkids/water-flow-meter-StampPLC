@@ -172,6 +172,20 @@ jobs:
             exit 1
           fi
 
+      # I2 — the value and action catalogue is APPEND-ONLY, and this is what makes that more than
+      # prose. NOT the same check as the manifest freshness gate in the host-tests job: that one
+      # enforces that the committed manifest matches a fresh generation, so a rename plus a regenerate
+      # agrees with itself and sails through. A rule about history needs a record of history.
+      - name: The catalogue ledger accepts only appends
+        run: node tools/catalogue/check-ledger.mjs
+
+      # §3.0.1's completeness policy and N-b's fail/warn split, shared by the skeleton generator and
+      # the exporter. The warn branch cannot fire against the live catalogue — every id is at
+      # sinceAbi 1 and the firmware is at ABI 1 — so it is exercised with fixtures here. A gate whose
+      # interesting branch has never executed is one nobody should trust.
+      - name: The completeness policy behaves for an older pack
+        run: node --test "tools/catalogue/*.test.mjs"
+
       # Diagram VALIDITY, which is a different property from the freshness check above and needs its
       # own gate. Four diagrams shipped in the commit that added the freshness check and not one of
       # them rendered: each carried a bare `%%` separator, which mermaid does not treat as a comment,

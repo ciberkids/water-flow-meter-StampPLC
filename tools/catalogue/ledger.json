@@ -1,0 +1,1104 @@
+{
+  "$comment": [
+    "The append-only record of the firmware's value and action catalogue (project rule I2).",
+    "APPEND ONLY. Nothing here is ever edited, reordered or removed by hand. A changed line is a",
+    "rename or a repurpose and a missing line is a removal, and both break every menu pack that",
+    "binds the id -- silently, because the id still resolves, to something else.",
+    "Maintained by tools/catalogue/check-ledger.mjs --write, which is also the gate. That file",
+    "explains what is pinned and, just as importantly, what is not: description, min/max/step and",
+    "register are deliberately absent, because a gate that fails on a reworded sentence gets bypassed.",
+    "sinceAbi is the catalogue ABI at which the id first appeared. Every id present on 2026-08-21 is",
+    "recorded at 1 -- the ABI they were authored under. Back-dating them across the WiFi/MQTT and N-c",
+    "rounds was rejected: no pack has ever been stamped with anything but 1, so those numbers would be",
+    "invented history. From here, every addition bumps the ABI (owner's decision, 2026-08-21)."
+  ],
+  "catalogueAbi": 1,
+  "values": [
+    {
+      "id": "config.modbusSlaveId",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.baudRate",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.parity",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.stopBits",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.ledPulseVolume",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": "L",
+      "readOnly": null
+    },
+    {
+      "id": "config.ledPulsePeriod",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": "ms",
+      "readOnly": null
+    },
+    {
+      "id": "config.flowUnit",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.sensor.connected",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "boolean",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.sensor.multiplier",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.sensor.adjust",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.sensor.maxFlow",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": null
+    },
+    {
+      "id": "config.sensor.calibrationType",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.sensor.pulsesPerLiter",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": null
+    },
+    {
+      "id": "config.wifi.enabled",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "boolean",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.wifi.ssid",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "string",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.wifi.psk",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "string",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.mqtt.enabled",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "boolean",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.mqtt.host",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "string",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.mqtt.port",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.mqtt.user",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "string",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.mqtt.password",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "string",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.mqtt.baseTopic",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "string",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.mqtt.discoveryPrefix",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "string",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.mqtt.publishPeriod",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": "s",
+      "readOnly": null
+    },
+    {
+      "id": "config.mqtt.haDiscovery",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "boolean",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "config.mqtt.qos",
+      "sinceAbi": 1,
+      "category": "setting",
+      "type": "number",
+      "unit": null,
+      "readOnly": null
+    },
+    {
+      "id": "sensor.1.instantFlow",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.1.status",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "sensor.1.cumulativeLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.1.cumulativeM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.1.sessionLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.1.sessionM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.1.maxFlowSinceReset",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.1.pulsesPerLitre",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.2.instantFlow",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.2.status",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "sensor.2.cumulativeLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.2.cumulativeM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.2.sessionLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.2.sessionM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.2.maxFlowSinceReset",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.2.pulsesPerLitre",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.3.instantFlow",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.3.status",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "sensor.3.cumulativeLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.3.cumulativeM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.3.sessionLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.3.sessionM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.3.maxFlowSinceReset",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.3.pulsesPerLitre",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.4.instantFlow",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.4.status",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "sensor.4.cumulativeLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.4.cumulativeM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.4.sessionLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.4.sessionM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.4.maxFlowSinceReset",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.4.pulsesPerLitre",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.5.instantFlow",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.5.status",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "sensor.5.cumulativeLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.5.cumulativeM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.5.sessionLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.5.sessionM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.5.maxFlowSinceReset",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.5.pulsesPerLitre",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.6.instantFlow",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.6.status",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "sensor.6.cumulativeLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.6.cumulativeM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.6.sessionLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.6.sessionM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.6.maxFlowSinceReset",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.6.pulsesPerLitre",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.7.instantFlow",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.7.status",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "sensor.7.cumulativeLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.7.cumulativeM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.7.sessionLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.7.sessionM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.7.maxFlowSinceReset",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.7.pulsesPerLitre",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.8.instantFlow",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.8.status",
+      "sinceAbi": 1,
+      "category": "reading",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "sensor.8.cumulativeLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.8.cumulativeM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.8.sessionLiters",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.8.sessionM3",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.8.maxFlowSinceReset",
+      "sinceAbi": 1,
+      "category": "accumulated",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "sensor.8.pulsesPerLitre",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "number",
+      "unit": "p/L",
+      "readOnly": true
+    },
+    {
+      "id": "net.status",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "net.wifi.state",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "net.wifi.ssid",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "net.wifi.ip",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "net.wifi.rssi",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "number",
+      "unit": "dBm",
+      "readOnly": true
+    },
+    {
+      "id": "net.mqtt.state",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "net.mqtt.lastCommandResult",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "net.ap.ssid",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "net.ap.password",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "net.ap.ip",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "net.portal.remaining",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "number",
+      "unit": "s",
+      "readOnly": true
+    },
+    {
+      "id": "telemetry.totalFlowLps",
+      "sinceAbi": 1,
+      "category": "system",
+      "type": "number",
+      "unit": "L/s",
+      "readOnly": true
+    },
+    {
+      "id": "telemetry.totalFlowLpm",
+      "sinceAbi": 1,
+      "category": "system",
+      "type": "number",
+      "unit": "L/min",
+      "readOnly": true
+    },
+    {
+      "id": "telemetry.totalVolumeLiters",
+      "sinceAbi": 1,
+      "category": "system",
+      "type": "number",
+      "unit": "L",
+      "readOnly": true
+    },
+    {
+      "id": "telemetry.totalVolumeM3",
+      "sinceAbi": 1,
+      "category": "system",
+      "type": "number",
+      "unit": "m3",
+      "readOnly": true
+    },
+    {
+      "id": "telemetry.maxFlowLpm",
+      "sinceAbi": 1,
+      "category": "system",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "telemetry.sessionStart",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "telemetry.total",
+      "sinceAbi": 1,
+      "category": "system",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "telemetry.status",
+      "sinceAbi": 1,
+      "category": "system",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "diagnostics.pollingRateKhz",
+      "sinceAbi": 1,
+      "category": "system",
+      "type": "number",
+      "unit": "kHz",
+      "readOnly": true
+    },
+    {
+      "id": "diagnostics.undersampling",
+      "sinceAbi": 1,
+      "category": "system",
+      "type": "number",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "legend.led",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "legend.status",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "legend.warning",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "telemetry.flowUnitLabel",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "nav.position",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "page.title",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "countdown.value",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "config.uartFrameSummary",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "config.sensor.nyquistWarning",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "config.selectedSensor",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "number",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "config.sensor.adjustTerm",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "config.sensor.formulaQ",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "config.sensor.undersamplingFlag",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "boolean",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "config.editor.pending",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    },
+    {
+      "id": "config.editor.range",
+      "sinceAbi": 1,
+      "category": "derived",
+      "type": "string",
+      "unit": null,
+      "readOnly": true
+    }
+  ],
+  "actions": [
+    {
+      "id": "ui.action.page.next",
+      "sinceAbi": 1
+    },
+    {
+      "id": "ui.action.page.previous",
+      "sinceAbi": 1
+    },
+    {
+      "id": "ui.action.mode.idle",
+      "sinceAbi": 1
+    },
+    {
+      "id": "core.action.save-config",
+      "sinceAbi": 1
+    },
+    {
+      "id": "core.action.reset-session",
+      "sinceAbi": 1
+    },
+    {
+      "id": "core.action.reset-all-measured",
+      "sinceAbi": 1
+    },
+    {
+      "id": "core.action.reset-max-flow",
+      "sinceAbi": 1
+    },
+    {
+      "id": "core.action.reset-calibration",
+      "sinceAbi": 1
+    },
+    {
+      "id": "core.action.factory-reset",
+      "sinceAbi": 1
+    },
+    {
+      "id": "core.action.reset-portal-login",
+      "sinceAbi": 1
+    },
+    {
+      "id": "ui.action.nav.descend",
+      "sinceAbi": 1
+    },
+    {
+      "id": "ui.action.nav.back",
+      "sinceAbi": 1
+    },
+    {
+      "id": "ui.action.nav.escape",
+      "sinceAbi": 1
+    },
+    {
+      "id": "config.action.value.increment",
+      "sinceAbi": 1
+    },
+    {
+      "id": "config.action.value.decrement",
+      "sinceAbi": 1
+    },
+    {
+      "id": "config.action.value.commit",
+      "sinceAbi": 1
+    },
+    {
+      "id": "config.action.value.commit-override",
+      "sinceAbi": 1
+    },
+    {
+      "id": "config.action.value.discard",
+      "sinceAbi": 1
+    },
+    {
+      "id": "ui.action.pack.select-menu",
+      "sinceAbi": 1
+    }
+  ]
+}
