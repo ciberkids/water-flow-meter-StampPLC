@@ -1,5 +1,6 @@
 {
   "version": "3",
+  "catalogueAbi": 1,
   "actions": [
     {
       "id": "ui.action.page.next",

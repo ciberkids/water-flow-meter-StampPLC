@@ -89,6 +89,15 @@ int main() {
   // file is committed and diffed against a fresh generation, so a timestamp would make
   // every run look like a change. Provenance is git history.
   std::printf("  \"version\": \"3\",\n");
+  // The CATALOGUE's ABI, which is a different number from the manifest format's version above and
+  // must not be confused with it: `version` describes the shape of this file, `catalogueAbi` describes
+  // the vocabulary it lists. A menu pack records the latter in its header, and the firmware refuses a
+  // pack targeting a NEWER one (Loadable_UI_Menu_Packs §4.7b, Q4).
+  //
+  // Emitted from `ui::kUiCatalogueAbi` rather than written here, so the number a pack is stamped with
+  // and the number the firmware compares against are the same constant. It was a literal `1` in the
+  // pack emitter's tests and nowhere else until 2026-08-21, which meant nothing connected the two.
+  std::printf("  \"catalogueAbi\": %u,\n", static_cast<unsigned>(ui::kUiCatalogueAbi));
 
   // ── Actions ──────────────────────────────────────────────────────────────────
   std::printf("  \"actions\": [\n");

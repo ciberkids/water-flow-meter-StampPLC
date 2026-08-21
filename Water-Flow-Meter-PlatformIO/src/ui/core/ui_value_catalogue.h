@@ -33,9 +33,20 @@ namespace ui {
  * editors the firmware can supply itself — and refuses a newer one, which may reference values
  * that do not exist here.
  *
- * **Bump this whenever a value is added, removed or renamed.** An addition alone is backward
- * compatible and does not require it; a removal or a rename does, because a pack built before the
- * change may bind an id that has gone.
+ * **BUMP THIS ON EVERY ADDITION.** Owner's decision, 2026-08-21, reversing what this comment said
+ * before: it used to exempt additions as "backward compatible", and they are — a pack that predates a
+ * new value still loads and still works. The reason to bump anyway is that nothing could otherwise
+ * tell "this pack was built before that setting existed" from "this pack is missing an editor it
+ * should have carried", and those want opposite responses. With a bump per addition, every id records
+ * the ABI it appeared at and the exporter can warn about the first while still failing the second
+ * (`Loadable_UI_Menu_Packs.md` §3.0.1, and N-b in the open register).
+ *
+ * A removal or a rename is forbidden outright — the catalogue is append-only (project rule I2) — and
+ * `tools/catalogue/check-ledger.mjs` refuses both, along with an addition that forgot to bump this.
+ *
+ * The cost, stated: a pack stamped with a NEWER ABI than the firmware is refused, so moving a pack
+ * from a newer device to an older one now fails where an addition-only change used to be tolerated.
+ * That is the trade for being able to tell the two failures apart.
  */
 constexpr uint16_t kUiCatalogueAbi = 1;
 

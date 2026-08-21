@@ -32,8 +32,8 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 **Five open lines, and not one of them is a defect.** `N-c` and `DF22` both closed on 2026-08-20 —
 `DF22` was found by building `N-c`, which is the usual way, and was the only 🔴 the board has had since
-the register was rewritten. What remains is one queued FEATURE, one missing gate, and three
-things that need the board. Ask for work by ID — "decide N-b", "build I2a" — and this file is
+the register was rewritten. What remains is one queued FEATURE and three things that need
+the board. Ask for work by ID — "decide N-b" — and this file is
 the one place that says what an ID means. Rule **I3** below governs them: append-only, never reused, so
 a gap means an item closed, not an item lost.
 
@@ -49,7 +49,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | correction + measurement | Nothing protects the VLF probe's position above `M5StamPLC.begin()`, and whether the RTC survives power loss is unknown |
 | **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
-| **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
 
 **DF1–DF22 and J1–J8** are fixed and keep their IDs — `DF1`–`DF21` and `J1`–`J8` moved to
 [`../archive/open_decisions-closed-2026-08-18.md`](../archive/open_decisions-closed-2026-08-18.md), verbatim,
@@ -366,13 +365,34 @@ This is not open and never closes; it is recorded here because it constrains eve
 a rule filed under "archive" is a rule nobody reads. Same class as the wire-encoding rules on
 `WifiState` and `kMqttFlags` bit 2.
 
-**I2a 🟡 Nothing enforces it.** Verified 2026-08-18: no file in the repository contains
-`append-only` or `appendOnly` as a check — grepped across `*.ts`, `*.mjs`, `*.cpp`, `*.h` and `*.json`.
-The rule lives entirely in prose, in a file the person renumbering a catalogue entry has no reason to
-open. What would catch it is a checked-in snapshot of `id → meaning` that CI diffs, the same shape as the
-byte-for-byte `screens.json` diff already in CI: a changed line under an existing id fails, a new line
-appended passes. Filed here rather than as a defect because the rule and its missing enforcement belong
-in one place — but it is real work, and until it exists I2 is honour-system.
+**~~I2a~~ ✅ ENFORCED 2026-08-21.** `tools/catalogue/ledger.json` is the append-only record —
+126 values and 19 actions, each with the ABI it appeared at — and
+`tools/catalogue/check-ledger.mjs` is the gate, run in CI's *Generated docs* job.
+
+**Why it is not the manifest diff that already existed.** `test/host/run.sh` fails if
+`actionManifest.json` differs from a fresh generation, which looks like the same check and is not: it
+enforces FRESHNESS. Rename a catalogue id, regenerate, and the two agree again — the rename passes with
+a green build. A rule about history needs a record of history, which only ever grows.
+
+**What is pinned: `category`, `type`, `unit`, `readOnly`.** Those four are the contract a pack binds
+against. Deliberately NOT pinned — because a gate that cries wolf gets bypassed inside a month —
+`description` (a wording improvement must never fail CI), `min`/`max`/`step` (the firmware owns the
+domain, and this project has already widened one), and `register` (a Modbus concern that
+`gen-registers.mjs` reconciles in both directions). What it CANNOT see is an action keeping its id and
+quietly doing something else; nothing machine-readable captures that, and the script says so rather
+than implying otherwise.
+
+**It also enforces the bump rule the owner decided the same day** (see N-b): a new id whose
+`catalogueAbi` is not higher than every `sinceAbi` already recorded fails, with the fix named. Every id
+existing on 2026-08-21 is recorded at `sinceAbi: 1` — the ABI they were actually authored under.
+Back-dating them across the WiFi/MQTT and N-c rounds was considered and rejected: no pack has ever been
+stamped with anything but 1, so those numbers would have been invented history.
+
+**Negative-tested through the real path** — editing the firmware catalogue and regenerating, not by
+hand-editing the ledger. A renamed id fails as REMOVED *and* names the missing bump; a changed category
+fails as REPURPOSED quoting the before and after; an addition without a bump fails and names the
+constant to raise; the same addition with a bump passes and records `sinceAbi: 2` appended at the end;
+and a reworded description passes, which is the case that decides whether anyone will keep the gate.
 
 ---
 
