@@ -47,7 +47,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | ID | | Shape | What it is |
 | --- | --- | --- | --- |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
-| **N-d2** | ⏸️ | correction + measurement | Nothing protects the VLF probe's position above `M5StamPLC.begin()`, and whether the RTC survives power loss is unknown |
+| **N-d2** | ⏸️ | measurement | Whether the RTC survives power loss is unknown — the correction half (a gate protecting the VLF probe's position) landed 2026-08-21 |
 
 **DF1–DF22 and J1–J8** are fixed and keep their IDs — `DF1`–`DF21` and `J1`–`J8` moved to
 [`../archive/open_decisions-closed-2026-08-18.md`](../archive/open_decisions-closed-2026-08-18.md), verbatim,
@@ -55,7 +55,7 @@ because I3 makes them append-only and a retired id must still resolve. **I2** an
 that never close.
 
 **What this list is NOT.** Nothing here is blocking a build, a test or an export: every gate in the
-repository is green (host **1,997 checks across 24 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
+repository is green (host **2,006 checks across 25 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
 findings, and a firmware that compiles at RAM 24.7% / Flash 38.2%, measured 2026-08-20). One is a feature
 nobody has started, two need hardware that has never existed for this project, `I2a` is a rule enforced by
 prose. That is a
@@ -336,18 +336,44 @@ Next is the **Modbus date/time block** — the one that makes every later item s
 page, then NTP on `WifiState::Connected`, with MQTT last because it needed N-c's command topics. All four
 landed, in that order.
 
-**N-d2 ⏸️ Nothing protects the VLF probe's position, and whether the RTC survives power loss is
-unknown.** A second, sharper thing on the same subject, and the half that needs the board.
-`M5StamPLC.begin()` clears the RX8130CE's whole flag register including VLF, and the library exposes
-no reader, so
-`plc::readRtcVoltageLowFlag()` must run **before** `M5StamPLC.begin()`. It is the first statement of
-`setup()` and that is the only moment in the device's life when "did the clock run across the last power
-cut" can be known. **No test or assert protects the ordering** — nothing under `test/` names
-`rtc_boot_probe` or `readRtcVoltageLowFlag` (checked 2026-08-17). Move that line, or add anything
-touching the RTC above it, and a device with a dead clock reports a healthy one and publishes a
-confident year-2000 timestamp to the panel, Modbus and MQTT. Whether the RTC survives power loss at all
-is **unknown** — the chip has a backup-supply pin, and M5Stack does not say whether a cell or supercap is
-populated. Settle it empirically: set the time, pull power for a minute, boot, read VLF.
+**N-d2 ⏸️ — the ordering is protected as of 2026-08-21; the power-cut question still needs the board.**
+
+`M5StamPLC.begin()` clears the RX8130CE's whole flag register including VLF, and the library exposes no
+reader, so `plc::readRtcVoltageLowFlag()` must run **before** it. That single line is the only moment in
+the device's life when "did the clock run across the last power cut" can be known. Move it, or add
+anything touching the RTC above it, and a device with a dead clock reports a healthy one and publishes a
+confident year-2000 timestamp to the panel, Modbus and MQTT.
+
+**✅ The ordering half is done.** `test/host/boot_order_test.cpp`, nine checks in the host suite. A
+runtime assertion cannot express this: the invariant is the order of two LINES IN A FILE, and by the
+time either has run the flag register reads clean whichever way round they were — which is precisely the
+failure. So it reads `firmware.cpp` as text, the technique `gen-actions.mjs` uses on the action
+catalogue. It pins the probe before `begin()`, `readRtcEpoch()` after it (the calendar needs the bus
+up), the probe inside `setup()`, and no `M5StamPLC.` call earlier in `setup()` at all. Negative-tested
+both ways a refactor breaks it: the probe moved below `begin()` (2 failures) and an RTC read inserted
+above it (1).
+
+**Two things that first run corrected, both worth keeping:**
+
+1. **A raw text scan reported the ordering broken on correct code.** The comment above the probe
+   explains that "`M5StamPLC.begin()` clears the RX8130CE's flag register" — so the scan found a
+   `begin()` six lines ABOVE the probe. The prose about an invariant must not be able to violate it, so
+   the test blanks comments and string literals first, preserving byte positions so a failure still
+   names a real line.
+2. **"No `M5StamPLC.` call before the probe" was too strong as first written.** It failed on
+   `M5StamPLC.readPlcInput` at line 817 — the sampler's pin-read helper, DEFINED above `setup()` and
+   CALLED from a task that starts long after `begin()`. File position and execution order are different
+   things, and a gate that confuses them fails on correct code, which is how gates get deleted. The
+   check is scoped to `setup()`.
+
+**What it cannot see, so the coverage is not overclaimed:** it does not parse C++. A probe moved inside
+a conditional, or into a function called from `setup()` after `begin()`, would satisfy every assertion.
+What it catches is the ordinary refactor — a line moved, or an RTC read inserted above it.
+
+**⏸️ The other half needs the board.** Whether the RX8130CE survives power loss at all is **unknown**:
+the chip has a backup-supply pin and M5Stack does not say whether a cell or supercap is populated.
+Settle it empirically — set the time, pull power for a minute, boot, read VLF. No amount of software
+answers this one, and building scaffolding around it would be worse than the honest gap.
 
 **Blocks.** Any timestamp being trustworthy in the field — **and N-d1 no longer does**: RS485 can set the
 clock as of 2026-08-18. What is left is N-d2, a correction (the assert protecting the VLF probe's position)
