@@ -198,15 +198,18 @@ void UiRenderer::update(uint32_t nowMs, const UiRenderContext& context) {
    * to keep it last: every screen that can reach this path (the six confirm-* screens) carries an opaque
    * full-screen `overlay-bg` Box y=0 h=135, so the banner was invisible there either way.
    *
-   * (c) BUT THE SWAP IS NOT A NO-OP EVERYWHERE, and must not be described as one. Twelve of the eighty
-   * generated screens carry that full-screen `overlay-bg`, and eleven of them are reachable through the
-   * ORDINARY path above rather than the overlay path: the five toast-* screens (interaction_handler.cpp
-   * replaceCurrent()s a toast, so it becomes the current screen) and all six confirm-* screens while
-   * viewed BEFORE their hold begins (they are descended onto, so they are the current screen too). Their
-   * overlay-bg used to erase the banner; now the banner shows through on the bottom band. The toasts lose
-   * nothing — the generated table gives them no footer-hint at all — and a pre-hold confirm screen loses
-   * its hint, which is the footer row §2c chose to spend. The twelfth, `nyquist-warning`, is in no flow's
-   * targetScreenId and named in no ui_pages.h table, so UiScreenRouter can never resolve it.
+   * (c) BUT THE SWAP IS NOT A NO-OP EVERYWHERE, and must not be described as one. Eleven of the
+   * seventy-nine generated screens carry that full-screen `overlay-bg`, and every one of them is
+   * reachable through the ORDINARY path above rather than the overlay path: the five toast-* screens
+   * (interaction_handler.cpp replaceCurrent()s a toast, so it becomes the current screen) and all six
+   * confirm-* screens while viewed BEFORE their hold begins (they are descended onto, so they are the
+   * current screen too). Their overlay-bg used to erase the banner; now the banner shows through on the
+   * bottom band. The toasts lose nothing — the generated table gives them no footer-hint at all — and a
+   * pre-hold confirm screen loses its hint, which is the footer row §2c chose to spend.
+   *
+   * There was a twelfth, `nyquist-warning`, and this comment used to end by explaining that
+   * `UiScreenRouter` could never resolve it. It was retired on 2026-08-21 (J9) rather than left as a
+   * screen the reader has to be told to ignore.
    */
   drawScreen(*screen, context, false);
   drawWarningBanner(context);
@@ -538,7 +541,7 @@ void UiRenderer::drawWarningBanner(const UiRenderContext& context) {
   auto& display = M5StamPLC.Display;
   /**
    * The FOOTER row, not the middle of the panel. 116..133 is where the footer-hint Text sits on 74 of
-   * the 80 generated screens, and it is the band `tools/audit/screen-spec.ts` validates against
+   * the 79 generated screens, and it is the band `tools/audit/screen-spec.ts` validates against
    * (kBannerTop = 116, kBannerBottom = 134). It was 34 until §2c relocated it, which put 18 px of
    * edge-to-edge overlay across the value and config rows an operator reads.
    *

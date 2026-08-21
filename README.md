@@ -46,7 +46,7 @@ The `:Z` on the volume mount is required on SELinux hosts (Fedora, RHEL). Withou
 container sees an empty workspace.
 
 **Start with command 1.** It runs the device harness — the real navigator, controller,
-interaction handler and action registry against the real **80-screen** table, with only three
+interaction handler and action registry against the real **79-screen** table, with only three
 Arduino headers stubbed. It is the fastest way to find out whether the tree is sound, and it
 needs no toolchain at all.
 

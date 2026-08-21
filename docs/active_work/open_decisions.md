@@ -32,8 +32,8 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 **Five open lines, and not one of them is a defect.** `N-c` and `DF22` both closed on 2026-08-20 —
 `DF22` was found by building `N-c`, which is the usual way, and was the only 🔴 the board has had since
-the register was rewritten. What remains is one queued FEATURE, one missing gate, one piece of residue,
-and three things that need the board. Ask for work by ID — "decide N-b", "build I2a" — and this file is
+the register was rewritten. What remains is one queued FEATURE, one missing gate, and three
+things that need the board. Ask for work by ID — "decide N-b", "build I2a" — and this file is
 the one place that says what an ID means. Rule **I3** below governs them: append-only, never reused, so
 a gap means an item closed, not an item lost.
 
@@ -50,7 +50,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **N-d2** | ⏸️ | correction + measurement | Nothing protects the VLF probe's position above `M5StamPLC.begin()`, and whether the RTC survives power loss is unknown |
 | **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
 | **I2a** | 🟡 | gate, unbuilt | Nothing enforces I2's append-only catalogue rule; it is honour-system prose |
-| **J9** | 🟢 | residue, found 2026-08-20 | `nyquist-warning` is a screen in the dataset that nothing can navigate to — the earlier design of §5.5's prompt, left behind when the in-place one replaced it |
 
 **DF1–DF22 and J1–J8** are fixed and keep their IDs — `DF1`–`DF21` and `J1`–`J8` moved to
 [`../archive/open_decisions-closed-2026-08-18.md`](../archive/open_decisions-closed-2026-08-18.md), verbatim,
@@ -61,7 +60,7 @@ that never close.
 repository is green (host **1,997 checks across 24 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
 findings, and a firmware that compiles at RAM 24.7% / Flash 38.2%, measured 2026-08-20). One is a feature
 nobody has started, two need hardware that has never existed for this project, `I2a` is a rule enforced by
-prose, and `J9` is residue. That is a
+prose. That is a
 different condition from "twelve things are broken", which is what this register looked like two days ago.
 
 ---
@@ -326,40 +325,35 @@ plus a measurement (the power-cut test), and it needs the board.
 
 ---
 
-## J9 🟢 `nyquist-warning` is an orphan screen in the dataset — residue of a design that was replaced
+## ~~J9~~ ✅ FIXED 2026-08-21 — the orphan screen is retired, and the prompt that works is annotated
 
-Found 2026-08-20 while deciding whether some stale local branches could be deleted. Recorded because
-`ui_renderer.cpp:208` already states it and this file's own preamble says an open item recorded anywhere
-else belongs here.
+`nyquist-warning` sat in the dataset with plausible UP/DOWN flows and no route to it: no flow named it
+as a `targetScreenId`, no `ui_pages.h` table named it, so `UiScreenRouter` could never resolve it.
+Retired through the mechanism the generator already had for exactly this — the `RETIRED` set, whose own
+comment says "`kept` retains anything the generator no longer emits, without this they would survive as
+orphans". 80 screens to 79.
 
-The dataset carries a screen `nyquist-warning` with two correct-looking flows (UP = back,
-DOWN = `config.action.value.commit-override`) and **nothing navigates to it**: no flow names it as a
-`targetScreenId`, and no `ui_pages.h` table names it, so `UiScreenRouter` can never resolve it.
+**The trap this had, and it is worth remembering.** `nyquist-warning` is BOTH a screen id and an
+element id. Nineteen `nyquist-warning` ELEMENTS live on the sensor-settings screens, bound to
+`config.sensor.nyquistWarning` — and those are the prompt's actual rendering surface, the mechanism that
+WORKS. A grep-and-delete would have removed §5.5's prompt while leaving the thing that could not be
+reached. All nineteen are still there and the count was asserted before and after.
 
-**This is NOT a broken override path.** §5.5's prompt works, and works better than the screen would:
-`ui_actions.cpp`'s `consumedByPrompt` reinterprets UP and DOWN on the editor screen itself while a prompt
-is pending, and its comment gives the reason — "no new screen id, so the menu-pack completeness rule
-stays satisfied and no dataset change is needed". The orphan screen is the earlier design, left behind
-when the in-place prompt replaced it. Two local worktree branches held that earlier implementation and were
-deleted on 2026-08-20 as superseded — not lost work, and their second claim, that register 30 stops
-clearing, does not apply either, because `evaluateSensorDiagnostics` rebuilds `flags` from zero on every
-call. The tips are `bd8a179` (the screen made reachable) and `fe8a952` (that plus two review commits:
-scoping the latched override to the config it was granted for, and guarding `dialTo` against a closed
-editor). Both are unreachable now and survive only in the reflog, so `git show` them within about ninety
-days if the earlier design is ever worth reading.
+**§5.5's prompt is not on a screen and never needed one.** `ui_actions.cpp`'s `consumedByPrompt`
+reinterprets UP and DOWN on the editor screen itself while a commit is parked awaiting an override, and
+its comment gives the reason: no new screen id, so §3.0.1's completeness rule stays satisfied and no
+dataset change is needed. That comment now also records that a screen for this once existed and why it
+does not, so the next reader does not rediscover the question.
 
-**Why it is worth an ID rather than a shrug.** It costs one screen of the eighty in every generated table
-and every `.uipack`, it is the twelfth screen carrying a full-screen `overlay-bg` that the §2c banner
-round had to reason about, and — the real cost — the next person to read the dataset finds a screen with
-plausible flows and no route to it, and has to redo the investigation above to learn it is deliberate.
+**Four counts moved with it**, which is the real cost of residue: `ui_renderer.cpp` said "Twelve of the
+eighty generated screens carry that full-screen overlay-bg, and eleven of them are reachable" — it is
+now eleven of seventy-nine and *every one* is reachable, which is a simpler sentence than the one that
+had to explain an exception. Also `ui_renderer.cpp`'s other "80 generated screens", `README.md`'s
+"80-screen table" and `web/mockup/README.md`'s "80 screens".
 
-**Two options, and this one is genuinely a preference.** Delete the screen and let §5.5 live entirely in
-`consumedByPrompt`; or keep it and have the exporter's ring gate (`J1`) grow a *reachability* check that
-would have named it automatically. **Recommendation: delete it**, and note in `consumedByPrompt`'s comment
-that a screen for this once existed and why it does not now — a reachability gate is worth building, but
-for its own sake rather than to justify keeping one orphan.
-
-**Blocks.** Nothing. It is residue.
+**Verified:** dataset 79 screens, orphan absent, nineteen elements present; geometry audit 79 screens
+0 findings; 220 unit, 51 exporter, 51 visual with NO baseline change — it was unreachable, so nothing
+rendered it; host 1,997 checks; firmware SUCCESS at RAM 24.7 % / Flash 38.1 %.
 
 ---
 

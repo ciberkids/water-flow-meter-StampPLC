@@ -288,6 +288,12 @@ void handleValueCommitOverride(const UiActionContext& ctx, const ui_exporter::Fl
  * not do. Reinterpreting them here keeps it to one screen — no new screen id, so the menu-pack
  * completeness rule stays satisfied and no dataset change is needed.
  *
+ * A SCREEN for this once existed. `nyquist-warning` sat in the dataset with plausible UP/DOWN flows
+ * and no route to it — no flow named it as a target, no `ui_pages.h` table named it, so
+ * `UiScreenRouter` could never resolve it — and it was retired on 2026-08-21 (J9) once it was clear
+ * this function had replaced it rather than complemented it. The `nyquist-warning` ELEMENT on each
+ * sensor-settings screen is a different thing and is what actually draws the prompt.
+ *
  * Returns true when the press was consumed by the prompt.
  */
 bool consumedByPrompt(const UiActionContext& ctx, bool isUp) {

@@ -251,31 +251,6 @@ static constexpr ui_exporter::Flow kInfoP5EnterConfigFlows[] = {
     { "f-enter", "Open", "config-modbus", ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Enter, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.descend", nullptr, 0 }
 };
 
-static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningTitle_Text = { "! Sampling too slow", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningDetail1_Text = { "f_theoretical exceeds", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningDetail2_Text = { "Nyquist limit", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningNyquistValue_Text = { "-", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Normal };
-static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningOptionUp_Text = { "UP = Edit values", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Strong };
-static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningOptionDown_Text = { "DOWN = Save anyway", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-static constexpr ui_exporter::TextPayload kNyquistWarning_NyquistWarningFooterHint_Text = { "Choose UP or DOWN", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
-
-static constexpr ui_exporter::Element kNyquistWarningElements[] = {
-    { "overlay-bg", ui_exporter::ElementType::Box, 0, 0, 240, 135, nullptr, nullptr, nullptr },
-    { "title", ui_exporter::ElementType::Text, 5, 40, 0, 0, &kNyquistWarning_NyquistWarningTitle_Text, nullptr, nullptr },
-    { "detail-1", ui_exporter::ElementType::Text, 5, 56, 0, 0, &kNyquistWarning_NyquistWarningDetail1_Text, nullptr, nullptr },
-    { "detail-2", ui_exporter::ElementType::Text, 5, 68, 0, 0, &kNyquistWarning_NyquistWarningDetail2_Text, nullptr, nullptr },
-    { "nyquist-value", ui_exporter::ElementType::Value, 5, 80, 0, 0, &kNyquistWarning_NyquistWarningNyquistValue_Text, nullptr, "config.sensor.nyquistWarning" },
-    { "option-up", ui_exporter::ElementType::Text, 5, 92, 0, 0, &kNyquistWarning_NyquistWarningOptionUp_Text, nullptr, nullptr },
-    { "option-down", ui_exporter::ElementType::Text, 5, 104, 0, 0, &kNyquistWarning_NyquistWarningOptionDown_Text, nullptr, nullptr },
-    { "footer-hint", ui_exporter::ElementType::Text, 5, 124, 0, 0, &kNyquistWarning_NyquistWarningFooterHint_Text, nullptr, nullptr }
-};
-
-
-static constexpr ui_exporter::Flow kNyquistWarningFlows[] = {
-    { "f-edit", "Return to edit", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Up, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "ui.action.nav.back", nullptr, 0 },
-    { "f-force-save", "Force save (ignore warning)", nullptr, ui_exporter::FlowTrigger::Button, ui_exporter::FlowButton::Down, ui_exporter::FlowGesture::Short, 0, nullptr, nullptr, nullptr, "config.action.value.commit-override", nullptr, 0 }
-};
-
 static constexpr ui_exporter::TextPayload kStateIdle_StateIdleIdlePlaceholder_Text = { "- Display off -", ui_exporter::TextAlign::Left, ui_exporter::TextEmphasis::Muted };
 
 static constexpr ui_exporter::Element kStateIdleElements[] = {
@@ -2145,7 +2120,6 @@ const ui_exporter::Screen kGeneratedScreens[] = {
     { "info-p3-session-m3", "P3 — Session Volume", kInfoP3SessionM3Elements, sizeof(kInfoP3SessionM3Elements) / sizeof(kInfoP3SessionM3Elements[0]), kInfoP3SessionM3Flows, sizeof(kInfoP3SessionM3Flows) / sizeof(kInfoP3SessionM3Flows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "info-p4-max-flow", "P4 — Max Flow Since Reset", kInfoP4MaxFlowElements, sizeof(kInfoP4MaxFlowElements) / sizeof(kInfoP4MaxFlowElements[0]), kInfoP4MaxFlowFlows, sizeof(kInfoP4MaxFlowFlows) / sizeof(kInfoP4MaxFlowFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "info-p5-enter-config", "P5 — Enter Configuration", kInfoP5EnterConfigElements, sizeof(kInfoP5EnterConfigElements) / sizeof(kInfoP5EnterConfigElements[0]), kInfoP5EnterConfigFlows, sizeof(kInfoP5EnterConfigFlows) / sizeof(kInfoP5EnterConfigFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
-    { "nyquist-warning", "Nyquist Validation Warning", kNyquistWarningElements, sizeof(kNyquistWarningElements) / sizeof(kNyquistWarningElements[0]), kNyquistWarningFlows, sizeof(kNyquistWarningFlows) / sizeof(kNyquistWarningFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "state-idle", "Idle (display off)", kStateIdleElements, sizeof(kStateIdleElements) / sizeof(kStateIdleElements[0]), kStateIdleFlows, sizeof(kStateIdleFlows) / sizeof(kStateIdleFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-modbus", "CFG.M — Modbus", kConfigModbusElements, sizeof(kConfigModbusElements) / sizeof(kConfigModbusElements[0]), kConfigModbusFlows, sizeof(kConfigModbusFlows) / sizeof(kConfigModbusFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
     { "config-display", "CFG.D — Display", kConfigDisplayElements, sizeof(kConfigDisplayElements) / sizeof(kConfigDisplayElements[0]), kConfigDisplayFlows, sizeof(kConfigDisplayFlows) / sizeof(kConfigDisplayFlows[0]), nullptr, 0, nullptr, 0, nullptr, 0 },
@@ -2242,7 +2216,7 @@ const ui_exporter::Theme kGeneratedTheme = {
 };
 
 const ui_exporter::Metadata kGeneratedMetadata = {
-    "2026-08-20T07:30:08.631Z", 80, 668
+    "2026-08-21T07:10:38.815Z", 79, 660
 };
 
 }  // namespace ui_exporter

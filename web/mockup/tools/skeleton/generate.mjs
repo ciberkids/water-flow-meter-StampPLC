@@ -1066,6 +1066,21 @@ for (const s of dataset.screens) {
 }
 const generatedIds = new Set(screens.map((s) => s.id));
 const RETIRED = new Set([
+  /**
+   * §5.5's prompt as a SCREEN — the design that lost, retired 2026-08-21 (J9).
+   *
+   * The prompt is real and works; it just does not live on a screen of its own. `ui_actions.cpp`'s
+   * `consumedByPrompt` reinterprets UP and DOWN on the editor screen itself while a commit is parked
+   * awaiting an override, and its comment gives the reason: no new screen id, so the §3.0.1
+   * completeness rule stays satisfied and no dataset change is needed. The `nyquist-warning` ELEMENT
+   * on every sensor-settings screen — bound to `config.sensor.nyquistWarning`, emitted a few hundred
+   * lines above — is that prompt's rendering surface and stays exactly where it is.
+   *
+   * What retires here is only the screen with that id, which no flow named as a `targetScreenId` and
+   * no `ui_pages.h` table named either, so `UiScreenRouter` could never resolve it. It carried
+   * plausible-looking UP/DOWN flows, which is what made it cost the next reader an investigation.
+   */
+  "nyquist-warning",
   // Replaced by confirm screens; enter-config, sensor-save and config-exit are no
   // longer guarded actions at all under the new model.
   "countdown-enter-config", "countdown-reset-session", "countdown-reset-all",
@@ -1293,17 +1308,9 @@ for (const s of kept) {
   }[s.id];
   if (desc) { s.description = desc; descriptionsFixed += 1; }
 
-  // §5.5: UP returns to the editor and DOWN force-saves, both ascending via the
-  // navigation stack. Static targets cannot express "the editor we came from",
-  // because which sensor setting failed is runtime state.
-  if (s.id === "nyquist-warning") {
-    for (const f of s.flows ?? []) {
-      if (f.trigger.type === "button" && (f.trigger.button === "up" || f.trigger.button === "down")) {
-        delete f.targetScreenId;
-        if (f.trigger.button === "up") f.actionId = A.back;
-      }
-    }
-  }
+  // The §5.5 block that used to sit here repaired the flows of a screen that is now RETIRED (J9):
+  // the prompt lives on the editor screen, via ui_actions.cpp's consumedByPrompt, and has no flows
+  // of its own to repair.
   // P7 now wraps to P8 rather than back to P0.
   if (s.id === "info-p5-enter-config" && !hasSpec) {
     for (const f of s.flows) {
