@@ -32,8 +32,8 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 **Five open lines, and not one of them is a defect.** `N-c` and `DF22` both closed on 2026-08-20 —
 `DF22` was found by building `N-c`, which is the usual way, and was the only 🔴 the board has had since
-the register was rewritten. What remains is one queued FEATURE and three things that need
-the board. Ask for work by ID — "decide N-b" — and this file is
+the register was rewritten. What remains is three things that need the board, and nothing
+else. Cite an ID when you ask about one — and this file is
 the one place that says what an ID means. Rule **I3** below governs them: append-only, never reused, so
 a gap means an item closed, not an item lost.
 
@@ -48,7 +48,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | correction + measurement | Nothing protects the VLF probe's position above `M5StamPLC.begin()`, and whether the RTC survives power loss is unknown |
-| **N-b** | 🟡 | feature, queued | Growing the settings catalogue silently invalidates authored menu packs; only the generator notices |
 
 **DF1–DF22 and J1–J8** are fixed and keep their IDs — `DF1`–`DF21` and `J1`–`J8` moved to
 [`../archive/open_decisions-closed-2026-08-18.md`](../archive/open_decisions-closed-2026-08-18.md), verbatim,
@@ -88,24 +87,56 @@ mockup's "inside budget" statements inherit the same assumption.
 
 ---
 
-## N-b 🟡 Growing the settings catalogue silently invalidates authored menu packs
+## ~~N-b~~ ✅ FIXED 2026-08-21 — a catalogue addition is distinguishable from a pack's omission
 
 `Loadable_UI_Menu_Packs.md` §3.0.1 requires every menu pack to expose an editor for every
-`category: "setting"` value. The rule is right and it has never survived growth: the WiFi and MQTT
-work took the required editor count from 10 to 24, and this session's Modbus/Display/Sensors
-restructure moved every config screen id.
+`category: "setting"` value. The rule is right; what it could not do was tell two situations apart. A
+pack missing an editor for a setting that existed when it was authored is a BUG in the pack. A pack
+missing an editor for a setting added to the firmware since is not — it is an old pack, and failing it
+would mean every firmware release invalidated every card in the field. From the pack alone the two look
+identical.
 
-**What actually enforces the rule today:** `assertCoversEverySetting()` in
-`web/mockup/tools/skeleton/generate.mjs`, which fires when the default dataset is regenerated. That
-is the cheapest possible place to find out, and it is the only place. Neither the export gate of
-§5.8 nor the load-time patcher of §3.3.11a exists.
+**What makes them distinguishable.** Three things that did not exist before today:
 
-**Recommendation** (Q4 of that document): the manifest carries a catalogue version, and the exporter
-*warns* rather than fails for values added after a pack's version. Until that exists, a catalogue
-addition means regenerating the default menu — which is fine for the built-in pack and offers nothing
-at all to a third-party pack on an SD card.
+1. **The manifest carries `catalogueAbi`**, emitted from `ui::kUiCatalogueAbi` — so the number a pack is
+   stamped with and the number `MenuPack::validate` compares against are one constant. It is a
+   different number from the `version` beside it and the generator says so: `version` is this file's
+   shape, `catalogueAbi` is the vocabulary it lists.
+2. **Every id records the ABI it appeared at**, in `I2a`'s ledger. The manifest describes the catalogue
+   as it is NOW and cannot answer a question about history.
+3. **Additions bump the ABI** (owner's decision, reversing what `kUiCatalogueAbi`'s own comment said).
+   Without that, every id sits at the same ABI and the distinction has nothing to work with.
 
-**Blocks.** Shipping menu packs as a supported extension point. Not the built-in pack.
+**`tools/catalogue/coverage.mjs` is the one home for the policy.** The required set — settings, minus
+text and minus network, both exemptions decided by a STATIC property so the rule still proves that
+every setting an operator can change at the panel has an editor there — moved out of
+`assertCoversEverySetting` because N-b needs the same policy at a second call site. Two copies of an
+exemption list is the failure this codebase keeps finding. Verified by regenerating: the dataset comes
+out byte-for-byte identical, so the policy moved without changing behaviour.
+
+**The pack emitter no longer invents its ABI.** `pack_emit.test.ts` passed a literal `1`, so the
+stamped number and the firmware's constant were unrelated facts that happened to agree; the day someone
+bumped, the fixture would have kept claiming the old vocabulary and the C++ round-trip would have kept
+passing. It reads the manifest now, and asserts the value reaches header offset 8 where `validate`
+looks. Proved by bumping the constant to 7 and watching the fixture's stamp follow, then back.
+
+**WHAT A WARNING DOES NOT MEAN, and this is the honest limit.** It does not mean the firmware covers the
+gap. §3.3.11a specifies a load-time patcher that appends built-in editors for missing settings, and
+**that still does not exist.** So a warning today means precisely: *this pack cannot reach that setting,
+and the operator needs the portal, RS485 or a newer pack.* It is information, not absolution. The module
+says so at the top, because "warns rather than fails" reads like the problem has been handled.
+
+**The warn branch cannot fire against the live catalogue** — every id is at `sinceAbi: 1` and the
+firmware is at ABI 1 — so it is exercised with fixtures in `coverage.test.mjs` rather than left
+unexecuted. Seven cases: the exemptions (including that network is exempt even when it is a NUMBER), a
+gap at the current ABI failing, the same gap on an older pack warning, the `>` versus `>=` boundary, a
+covered setting appearing in neither list, an id absent from the ledger failing STRICTER rather than
+looser, and the live catalogue satisfying the rule so the fixtures cannot drift away from the policy the
+project actually applies.
+
+**Still not built, and still N-b's neighbours rather than N-b:** §5.8's export gate and §3.3.11a's
+load-time patcher. A third-party pack on an SD card is now *diagnosable* — the exporter can say which
+settings it predates — but nothing yet repairs it on the device.
 
 ---
 

@@ -13,7 +13,18 @@ test("emits a pack for the shipped dataset", () => {
   const dataset = JSON.parse(
     fs.readFileSync(path.join(projectRoot, "src", "data", "screens.json"), "utf-8")
   ) as ScreenDataset;
-  const result = emitPack(dataset, { label: "Default", catalogueAbi: 1 });
+  // The ABI comes from the MANIFEST, which the firmware generates from `ui::kUiCatalogueAbi` — not
+  // from a literal here. It was a hard-coded `1` until 2026-08-21, which meant the number a pack was
+  // stamped with and the number the firmware compares it against were two unrelated facts that
+  // happened to agree; the day someone bumped the constant, this fixture would have gone on claiming
+  // the old vocabulary and the C++ round-trip would have kept passing.
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(projectRoot, "src", "data", "actionManifest.json"), "utf-8")
+  ) as { catalogueAbi: number };
+  assert.equal(typeof manifest.catalogueAbi, "number", "the manifest carries the firmware's ABI");
+  const result = emitPack(dataset, { label: "Default", catalogueAbi: manifest.catalogueAbi });
+  assert.equal(result.bytes.readUInt16LE(8), manifest.catalogueAbi,
+               "and it reaches the header at offset 8, where MenuPack::validate reads it");
   assert.equal(result.bytes.subarray(0, 5).toString("latin1"), "WFMUI");
   assert.equal(result.screenCount, dataset.screens.length);
   assert.ok(result.bytes.length > 64, "has a payload");
