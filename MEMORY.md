@@ -247,7 +247,7 @@ The gate exists because the table had been advertising two actions that no longe
 
 ### Next, in the order I would take them
 
-Nothing is blocking. The register's five remaining lines are, in the order that unblocks the most (the two struck through are kept because I3 makes an ID append-only):
+Nothing is blocking. Three lines remain open — `DF23`, `G1` and `N-d2` — and `N-c` carries one ⏸️ of its own. Listed in the order that unblocks the most; the struck-through ones are kept because I3 makes an ID append-only:
 
 1. ~~**`N-d1`**~~ — **built 2026-08-18**, and the whole clock chain with it: registers 50-55 (staged epoch
    plus `0x5AA5`, refusal as a Modbus exception), the portal page (R7.9d), and NTP (R7.13). All four routes
@@ -265,11 +265,18 @@ Nothing is blocking. The register's five remaining lines are, in the order that 
    feeds both the panel and the bus, so they cannot describe different states. It also corrected a claim
    I had written in the entry: the sync runs at 1 Hz, from `sensorStateEngine.update`, not on every
    logic pass — which is what decided the fix's shape.
-4. **`N-b`** — the catalogue version in the manifest, so growing the settings catalogue stops silently
-   invalidating authored packs. `J1`'s ring gate and this are the two the pack format assumes.
-5. **`I2a`** — a checked-in `id → meaning` snapshot that CI diffs, which is the only thing that would make
-   I2's append-only rule more than prose.
-6. **`G1`** and **`N-d2`** — both need the board, and both have their procedure written down.
+4. ~~**`N-b`**~~ and ~~**`I2a`**~~ — **both built 2026-08-21**, and they turned out to be one artefact:
+   `tools/catalogue/ledger.json` is the append-only record that makes I2 enforceable, and its `sinceAbi`
+   column is exactly what N-b needed to tell "this pack predates that setting" from "this pack is
+   missing an editor". The ledger also enforces the rule the owner decided that day — every catalogue
+   ADDITION bumps `kUiCatalogueAbi`, reversing what the constant's own comment used to say.
+5. ~~**`J9`**~~ — **retired 2026-08-21.** Watch the trap if anything like it recurs: `nyquist-warning`
+   was both a screen id and an element id, and the elements are the mechanism that WORKS.
+6. **`DF23`** — `baselineKhz` is published as `0.000`; R2.1.2's radio-off baseline is recorded by
+   nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference. Has a decision in it.
+7. **`G1`**, **`N-d2`**'s remaining half, and **`N-c`**'s retain check — all three need the board, and
+   all three have their procedure written down. N-d2's *correction* half is done: a host test now pins
+   the VLF probe above `M5StamPLC.begin()`.
 
 Two gates that exist but are narrower than they look, worth widening when someone is in the area: CI runs the
 visual suite with `--ignore-snapshots` (pixels are a local gate until baselines are generated in the CI

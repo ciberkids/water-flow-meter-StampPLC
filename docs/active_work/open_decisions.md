@@ -30,12 +30,17 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Five open lines, and not one of them is a defect.** `N-c` and `DF22` both closed on 2026-08-20 —
-`DF22` was found by building `N-c`, which is the usual way, and was the only 🔴 the board has had since
-the register was rewritten. What remains is three things that need the board, and nothing
-else. Cite an ID when you ask about one — and this file is
-the one place that says what an ID means. Rule **I3** below governs them: append-only, never reused, so
-a gap means an item closed, not an item lost.
+**Three open lines, one of them a defect.** `J9`, `I2a`, `N-b` and N-d2's correction half all closed on
+2026-08-21; `DF23` opened, found by checking whether `G1`'s procedure could actually be followed, which
+is the usual way. `N-c` and `DF22` closed on 2026-08-20, and `DF22` — found by building `N-c` — was the
+only 🔴 the board has had since the register was rewritten.
+
+**What remains is one software item and three measurements.** `DF23` is software and has a decision in
+it. The three that need hardware are `G1` (the polling rate), `N-d2`'s remaining half (whether the RTC
+survives power loss), and `N-c`'s retain check, which lives in that entry's ⏸️ block rather than on a
+line of its own because the rest of `N-c` is built and tested. Cite an ID when you ask about one — this
+file is the one place that says what an ID means. Rule **I3** governs them: append-only, never reused,
+so a gap means an item closed, not an item lost.
 
 **`N-c` stays in this file rather than moving to the archive**, because one thing in it is verified by
 reading only: `MQTT_EVENT_DATA`'s retain flag, which R4.4.2c depends on entirely and which no host test
@@ -46,6 +51,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 
 | ID | | Shape | What it is |
 | --- | --- | --- | --- |
+| **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | measurement | Whether the RTC survives power loss is unknown — the correction half (a gate protecting the VLF probe's position) landed 2026-08-21 |
 
@@ -73,9 +79,16 @@ Everything is in place to take it: the achieved rate is published in `REG_POLLIN
 (register 0) and on the MQTT diagnostics topic beside the baseline it should be compared against, and
 `REG_UNDERSAMPLING_FLAGS` (register 30) names any channel outrunning the sampler.
 
-**What to do when the board arrives.** Flash, read register 0, compare with `baselineKhz`. If the real
-rate is materially below it, the bulk-read work becomes real and the per-channel `q_max` limits need
-re-checking against what the sampler can actually count.
+**What to do when the board arrives.** Flash, read register 0 — and compare it against **3.3 kHz as a
+design assumption**, not against `baselineKhz`, which is published as `0.000` because nothing records it
+(`DF23`). If the real rate is materially below 3.3 kHz, the bulk-read work becomes real and the
+per-channel `q_max` limits need re-checking against what the sampler can actually count.
+
+That substitution is a downgrade and worth naming: §2.1 intended this measurement to be *self-checking*,
+comparing the live rate against a baseline the device took of itself, which is what R2.1.1's 5 % rule
+needs. Against a written-down assumption it is still a useful measurement — it answers "can this sampler
+count what the datasheet limits assume" — but it cannot answer "did enabling the radio cost us
+anything", which was the other half. `DF23` is what closes that gap.
 
 **Note, 2026-08-17.** `meetsNyquistLimit` now refuses a ceiling of zero or less instead of accepting it,
 and `configIsValid` demands a positive multiplier. Neither touches this: both are about configurations
@@ -137,6 +150,44 @@ project actually applies.
 **Still not built, and still N-b's neighbours rather than N-b:** §5.8's export gate and §3.3.11a's
 load-time patcher. A third-party pack on an SD card is now *diagnosable* — the exporter can say which
 settings it predates — but nothing yet repairs it on the device.
+
+---
+
+## DF23 🟡 The radio-off baseline is published as 0.000, so R2.1.1 and G1 have nothing to compare against
+
+Found 2026-08-21 while checking that G1's procedure could actually be followed. It cannot, quite.
+
+`MqttDiagnosticsTelemetry::baselineRateKhz` is declared, formatted into every
+`<base>/diagnostics/state` payload as `baselineKhz`, and **assigned by nothing** — the only two
+mentions in `src/` are its declaration and the `snprintf` that publishes it. So it goes out as `0.000`
+on every publish, and `mqtt_publisher.h`'s own comment — "Carries the R2.1.2 pair so a polling
+regression is visible in HA" — describes a pair with one half missing.
+
+**The test does not catch it, for a reason worth naming.** `mqtt_publisher_test.cpp` sets
+`snap.diagnostics.baselineRateKhz = 4.75f` by hand and asserts the payload says `4.750`. That is a
+correct test of the FORMATTER, and it passes while production publishes zero, because nothing tests who
+fills the struct. Same shape as DF22's silent registers: a value with a home, a publisher and no author.
+
+**What R2.1.2 actually asks for**, and it is not a constant: *"The device must record the radio-off
+baseline once, at the first boot after a firmware update, and expose both the baseline and the live
+rate."* So it is a MEASUREMENT the device takes of itself, persisted, and compared against later — which
+is what makes R2.1.1's "must not reduce the measured rate by more than 5 % from its radio-off baseline"
+checkable at all, and what §2.1's own note calls "also the answer to open decision G1 — the same
+measurement serves both."
+
+**The decision it needs**, which is why this is recorded rather than fixed in the same round it was
+found: what happens when the first boot after an update has WiFi ENABLED? There is then no radio-off
+rate to record. The tidy answer is to defer — record no baseline until a boot with the radio off, which
+§7 makes the default since WiFi is never enabled automatically — and that is a real choice about whether
+a device that is never booted with WiFi off simply never has a baseline. *Recommendation: defer, and
+publish `0.000` as "not yet measured" with the panel and the wiki saying so, because a fabricated
+baseline would silently pass R2.1.1 forever.*
+
+**Until it exists**, G1's comparison target is the 3.3 kHz DESIGN ASSUMPTION and not a measured figure —
+G1's entry now says so rather than pointing at a register that reads zero.
+
+**Blocks.** R2.1.1's acceptance test, and half of G1's procedure. Nothing on the device: the live rate
+is real and published, on register 0 and in the same payload.
 
 ---
 
