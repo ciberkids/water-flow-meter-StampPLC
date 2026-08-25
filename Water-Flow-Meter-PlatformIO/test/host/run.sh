@@ -189,6 +189,15 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/mqtt_reconnect_test" \
 g++ "${CXXFLAGS[@]}" -o "$OUT/httpd_task_policy_test" \
   test/host/httpd_task_policy_test.cpp
 
+# The exhaustive sweep over the generated table: reachability, dangling edges, ambiguous button
+# bindings, dead ends, gate satisfiability. Table-only, so the link set is three files rather than the
+# twenty interaction_test needs — which is the point: a coverage gate should not be able to fail for a
+# reason unrelated to coverage.
+g++ "${CXXFLAGS[@]}" -o "$OUT/ui_walk_test" \
+  test/host/ui_walk_test.cpp \
+  src/ui/generated/GeneratedUi.cpp \
+  src/ui/core/ui_settings_types.cpp
+
 # N-d2 — the one line in setup() whose POSITION is the requirement. It reads firmware.cpp as TEXT,
 # because the invariant is the order of two lines in a file and no runtime assertion can see it: by the
 # time either has run, the flag register reads clean whichever way round they were.
@@ -291,6 +300,8 @@ echo
 "$OUT/httpd_task_policy_test"
 echo
 "$OUT/boot_order_test"
+echo
+"$OUT/ui_walk_test"
 echo
 "$OUT/ha_discovery_test"
 echo

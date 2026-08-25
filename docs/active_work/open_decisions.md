@@ -61,7 +61,7 @@ because I3 makes them append-only and a retired id must still resolve. **I2** an
 that never close.
 
 **What this list is NOT.** Nothing here is blocking a build, a test or an export: every gate in the
-repository is green (host **2,006 checks across 25 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
+repository is green (host **2,035 checks across 26 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
 findings, and a firmware that compiles at RAM 24.7% / Flash 38.2%, measured 2026-08-20). One is a feature
 nobody has started, two need hardware that has never existed for this project, `I2a` is a rule enforced by
 prose. That is a
@@ -467,6 +467,23 @@ had to explain an exception. Also `ui_renderer.cpp`'s other "80 generated screen
 **Verified:** dataset 79 screens, orphan absent, nineteen elements present; geometry audit 79 screens
 0 findings; 220 unit, 51 exporter, 51 visual with NO baseline change — it was unreachable, so nothing
 rendered it; host 1,997 checks; firmware SUCCESS at RAM 24.7 % / Flash 38.1 %.
+
+**✅ GENERALISED 2026-08-25 — `test/host/ui_walk_test.cpp`.** J9 was found by hand, which is the wrong
+way to find an unreachable screen. The walk now BFSs the real generated table from `kRequiredScreens` —
+the firmware's own list of screens it resolves by name — over flow targets and submenu entries,
+honouring gate satisfiability, and fails on any screen it cannot reach. It also refuses a dangling flow
+target, an action id the catalogue does not advertise, the same button and gesture bound twice on one
+screen, a dead end, and a gate naming a value its setting cannot take.
+
+**Its first run found a second one, and it was NOT a defect** — which is the more useful outcome.
+`state-idle` is unreachable and stays: idle is a MODE, `UiRenderer::update` blanks the panel and returns
+so none of its elements is ever drawn, and it is kept because the MOCKUP reads its wake flows as a spec
+(`App.tsx`) and deliberately refuses to draw its `- Display off -` label, which
+`DisplayViewport.tsx` calls "the dataset being unfaithful". `tools/audit/screen-geometry.ts` exempts it
+from the banner rule for the same reason. **That fact lived in three prose comments in three files and
+was asserted nowhere.** It is now one exemption entry with its reason, checked in BOTH directions: an
+unexplained unreachable screen fails, and an exemption that has become reachable — or that names a
+screen which no longer exists — fails as stale. Negative-tested both ways.
 
 ---
 
