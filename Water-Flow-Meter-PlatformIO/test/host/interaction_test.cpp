@@ -2565,6 +2565,157 @@ void networkBindingTests() {
 }
 
 /**
+ * EVERY element binding on EVERY screen of the real table, resolved through the real resolver.
+ *
+ * This closes the highest-consequence hole in the UI pipeline. A catalogue entry with no
+ * `ui_bindings.cpp` arm only WARNS in the exporter — `firmware-manifest-resolvable` emits
+ * `status: "warning"` on purpose, because a dataset may legitimately be authored ahead of the firmware
+ * — so it compiles, ships, and renders BLANK on hardware while looking perfect in the mockup, which
+ * has its own sample values. Nothing downstream of that warning failed. Now something does.
+ *
+ * `networkBindingTests` above sweeps the eleven `ValueSource::Network` catalogue entries. This sweeps
+ * the 255 bound ELEMENTS actually placed on screens, which is the set an operator can see.
+ *
+ * ── TWO KINDS OF NOT-A-STRING, AND ONLY ONE IS A BUG ─────────────────────────────────────
+ *
+ * `resolveText` returning FALSE means no arm claimed the binding: the element draws nothing, ever.
+ * That is always a bug — except for bindings whose value only EXISTS in a particular state, and there
+ * are exactly two of those. They are listed with reasons, the list is asserted to be exact in both
+ * directions, and each is then proved to resolve once its state exists — otherwise "state-dependent"
+ * would be an excuse rather than an explanation.
+ *
+ * Returning TRUE with an empty string is different: the arm exists and deliberately renders nothing.
+ * Two bindings do that, also listed, for the same reason and with the same exactness check.
+ */
+void everyScreenBindingResolvesTests() {
+  std::printf("\n[every binding on every screen resolves — the blank-on-hardware hole]\n");
+
+  struct Exempt { const char* binding; const char* why; };
+
+  // Resolve to FALSE on a cold device because their value does not exist yet.
+  static constexpr Exempt kStateDependent[] = {
+      {"config.editor.pending",
+       "there is no pending value until an editor is open; proved below by opening one"},
+      {"countdown.value",
+       "there is no countdown until ENTER is held on a confirm screen; proved below by holding it"}};
+
+  // Resolve to TRUE and render nothing, deliberately.
+  static constexpr Exempt kLegitimatelyEmpty[] = {
+      {"config.editor.range",
+       "a reading page shows no domain; ui_bindings resolves it per-SCREEN and draws nothing off an "
+       "editor, which is why it is empty here rather than absent"},
+      {"config.sensor.nyquistWarning",
+       "§5.5's prompt text, empty unless a commit is parked awaiting an override — the element keeps "
+       "whatever static text it was authored with"}};
+
+  const auto isExempt = [](const Exempt* list, std::size_t count, const char* binding) {
+    for (std::size_t i = 0; i < count; ++i) {
+      if (std::strcmp(list[i].binding, binding) == 0) return true;
+    }
+    return false;
+  };
+
+  Device dev;
+  dev.boot();
+  dev.tick(10);
+
+  std::size_t bound = 0;
+  bool everyFailureIsExempt = true;
+  bool everyEmptyIsExempt = true;
+  std::vector<std::string> failedCold;   // distinct bindings that resolved false
+  std::vector<std::string> emptyCold;    // distinct bindings that resolved to ""
+  const auto note = [](std::vector<std::string>& into, const char* id) {
+    for (const auto& x : into) if (x == id) return;
+    into.push_back(id);
+  };
+
+  for (std::size_t i = 0; i < ui_exporter::kGeneratedScreenCount; ++i) {
+    const auto& screen = ui_exporter::kGeneratedScreens[i];
+    for (std::size_t e = 0; e < screen.elementCount; ++e) {
+      const auto& element = screen.elements[e];
+      if (!element.bindingId) continue;
+      ++bound;
+      char out[96] = {};
+      if (!dev.bindings.resolveText(dev.controller.context(), element, out, sizeof(out))) {
+        note(failedCold, element.bindingId);
+        if (!isExempt(kStateDependent, sizeof(kStateDependent) / sizeof(kStateDependent[0]),
+                      element.bindingId)) {
+          std::printf("      UNRESOLVED %s on %s — nothing will ever draw here\n", element.bindingId,
+                      screen.id);
+          everyFailureIsExempt = false;
+        }
+      } else if (out[0] == '\0') {
+        note(emptyCold, element.bindingId);
+        if (!isExempt(kLegitimatelyEmpty,
+                      sizeof(kLegitimatelyEmpty) / sizeof(kLegitimatelyEmpty[0]),
+                      element.bindingId)) {
+          std::printf("      EMPTY %s on %s — resolves, renders nothing\n", element.bindingId,
+                      screen.id);
+          everyEmptyIsExempt = false;
+        }
+      }
+    }
+  }
+
+  std::printf("      %zu bound elements swept across %zu screens\n", bound,
+              ui_exporter::kGeneratedScreenCount);
+  check(bound > 200, "the sweep really covered the table rather than an empty subset");
+  check(everyFailureIsExempt,
+        "every binding that resolves to nothing is one of the two the list explains");
+  check(everyEmptyIsExempt, "and every binding that renders empty is one of the two allowed to");
+
+  // ── The exemption lists are EXACT, so neither can rot into a blanket excuse ──────────
+  for (const auto& entry : kStateDependent) {
+    bool actuallyFailed = false;
+    for (const auto& id : failedCold) if (id == entry.binding) { actuallyFailed = true; break; }
+    check(actuallyFailed,
+          "a state-dependent exemption still describes a binding that really does fail cold");
+  }
+  for (const auto& entry : kLegitimatelyEmpty) {
+    bool actuallyEmpty = false;
+    for (const auto& id : emptyCold) if (id == entry.binding) { actuallyEmpty = true; break; }
+    check(actuallyEmpty, "an empty-allowed exemption still describes a binding that really is empty");
+  }
+
+  // ── And the state-dependent two DO resolve once their state exists ───────────────────
+  //
+  // Without these, "state-dependent" would be indistinguishable from "has no resolver arm" — which is
+  // exactly the failure this whole function exists to catch.
+  {
+    Device editing;
+    editing.boot();
+    check(descendToAnEditor(editing), "an editor opens, so config.editor.pending has a value to show");
+    ui_exporter::Element probe{};
+    probe.id = "probe";
+    probe.type = ui_exporter::ElementType::Value;
+    probe.bindingId = "config.editor.pending";
+    char out[96] = {};
+    const bool resolved =
+        editing.bindings.resolveText(editing.controller.context(), probe, out, sizeof(out));
+    check(resolved && out[0] != '\0',
+          "config.editor.pending resolves to a real string once an editor is open");
+  }
+  {
+    Device counting;
+    counting.boot();
+    check(walkToInfoPage(counting, UiPage::CumulativeCubicMeters), "paged to P2");
+    counting.tap(ButtonInputManager::Button::Enter);
+    counting.press(ButtonInputManager::Button::Enter, true);
+    for (int i = 0; i < 6; ++i) counting.tick(50);
+    check(counting.controller.context().countdownActive, "a countdown is running");
+    ui_exporter::Element probe{};
+    probe.id = "probe";
+    probe.type = ui_exporter::ElementType::Value;
+    probe.bindingId = "countdown.value";
+    char out[96] = {};
+    const bool resolved =
+        counting.bindings.resolveText(counting.controller.context(), probe, out, sizeof(out));
+    check(resolved && out[0] != '\0',
+          "countdown.value resolves to a real string once a countdown is running");
+  }
+}
+
+/**
  * A channel nobody has calibrated is a COMMISSIONING GAP, and the summary must say so.
  *
  * The gap these pin: `warningCount` came from `REG_UNDERSAMPLING_FLAGS` alone, and
@@ -2923,6 +3074,7 @@ int main() {
   portalLoginResetMenuTests();
   sessionStartRenderTests();
   networkBindingTests();
+  everyScreenBindingResolvesTests();
   commissioningSummaryTests();
   bannerPlacementTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
