@@ -33,7 +33,9 @@ Expected, **measured 2026-08-25 on this branch**: host suite exit 0 with **2,035
 suites, 0 failures** and "manifest is up to date"; **220 unit tests in 13 files**; **51 exporter
 tests**; **51 visual tests**; **7 catalogue-policy tests** (`node --test "tools/catalogue/*.test.mjs"`); export `ok` with **9 gates passing and 1 warning** (no dataset element
 surfaces a fault summary — the §2c banner is firmware-drawn). Firmware SUCCESS at **RAM 24.6 % /
-Flash 38.2 %**.
+Flash 39.0 %**.
+
+**Firmware size figures changed on 2026-08-26 without a source change**, from Flash 38.2% to 39.0%. The cause is recorded in `platformio.ini`: two dependencies were bare git URLs and two more floated on a caret range, so the podman container and CI had been resolving DIFFERENT versions — the container cached M5StamPLC 1.1.0 and M5GFX 0.2.17 while CI took 1.2.0 and 0.2.28. All four are pinned now and 39.0% is what a fresh clone actually builds.
 
 **The visual suite is green now, and it is the fifth command.** `npm run test:visual` (Playwright)
 passed **51 of 51** on this measurement. It failed 32 of 46 until **`DF17`** was fixed on 2026-08-18,

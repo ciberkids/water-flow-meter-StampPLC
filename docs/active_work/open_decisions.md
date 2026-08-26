@@ -62,7 +62,8 @@ that never close.
 
 **What this list is NOT.** Nothing here is blocking a build, a test or an export: every gate in the
 repository is green (host **2,035 checks across 26 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
-findings, and a firmware that compiles at RAM 24.7% / Flash 38.2%, measured 2026-08-20). One is a feature
+findings, and a firmware that compiles at RAM 24.7% / Flash 39.0%, measured 2026-08-26 from a CLEAN
+dependency cache — the earlier 38.2% came from a stale container, see `platformio.ini`). One is a feature
 nobody has started, two need hardware that has never existed for this project, `I2a` is a rule enforced by
 prose. That is a
 different condition from "twelve things are broken", which is what this register looked like two days ago.
