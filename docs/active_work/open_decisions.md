@@ -51,7 +51,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 
 | ID | | Shape | What it is |
 | --- | --- | --- | --- |
-| **N-e** | 🟡 | feature, specified | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Four decisions taken, six questions open, not started |
+| **N-e** | 🟡 | feature, specified | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, five questions open, not started |
 | **DF24** | 🟡 | defect, found 2026-08-26 | `<base>/total/state` publishes `"total":0.000000,"sensors":0` — two of `MqttTotalTelemetry`'s four fields are assigned nowhere, and the assembly lives in the one file no host test links |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
