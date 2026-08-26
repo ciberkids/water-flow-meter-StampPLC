@@ -210,6 +210,13 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/mqtt_publisher_test" \
   src/net/mqtt_publisher.cpp \
   src/net/mqtt_command_router.cpp
 
+# DF24 — the MQTT snapshot ASSEMBLY, which lived in firmware.cpp and so was covered by nothing. The
+# serializer next door was correctly tested throughout while two of the aggregate's four fields were
+# assigned nowhere; moving the code here is what makes it testable at all.
+g++ "${CXXFLAGS[@]}" -o "$OUT/mqtt_snapshot_test" \
+  test/host/mqtt_snapshot_test.cpp \
+  src/net/mqtt_command_router.cpp
+
 # N6 — Home Assistant discovery payloads, including the R4.4.8 worst-case buffer bound.
 g++ "${CXXFLAGS[@]}" -o "$OUT/ha_discovery_test" \
   test/host/ha_discovery_test.cpp \
@@ -294,6 +301,8 @@ echo
 "$OUT/wifi_manager_test"
 echo
 "$OUT/mqtt_publisher_test"
+echo
+"$OUT/mqtt_snapshot_test"
 echo
 "$OUT/mqtt_reconnect_test"
 echo

@@ -30,7 +30,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Five open lines: one specified feature, two defects and two measurements.** `J9`, `I2a`, `N-b` and N-d2's correction half all closed on
+**Four open lines: one specified feature, one defect and two measurements.** `J9`, `I2a`, `N-b` and N-d2's correction half all closed on
 2026-08-21; `DF23` opened, found by checking whether `G1`'s procedure could actually be followed, which
 is the usual way. `N-c` and `DF22` closed on 2026-08-20, and `DF22` — found by building `N-c` — was the
 only 🔴 the board has had since the register was rewritten.
@@ -52,7 +52,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | ID | | Shape | What it is |
 | --- | --- | --- | --- |
 | **N-e** | 🟡 | feature, specified | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, five questions open, not started |
-| **DF24** | 🟡 | defect, found 2026-08-26 | `<base>/total/state` publishes `"total":0.000000,"sensors":0` — two of `MqttTotalTelemetry`'s four fields are assigned nowhere, and the assembly lives in the one file no host test links |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | measurement | Whether the RTC survives power loss is unknown — the correction half (a gate protecting the VLF probe's position) landed 2026-08-21 |
@@ -63,7 +62,7 @@ because I3 makes them append-only and a retired id must still resolve. **I2** an
 that never close.
 
 **What this list is NOT.** Nothing here is blocking a build, a test or an export: every gate in the
-repository is green (host **2,035 checks across 26 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
+repository is green (host **2,058 checks across 27 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
 findings, and a firmware that compiles at RAM 24.7% / Flash 39.0%, measured 2026-08-26 from a CLEAN
 dependency cache — the earlier 38.2% came from a stale container, see `platformio.ini`). One is a feature
 nobody has started, two need hardware that has never existed for this project, `I2a` is a rule enforced by
@@ -219,10 +218,10 @@ described as needing the setting on the panel, Modbus, HTTP and MQTT; MQTT is re
 out. Both stay open as their own decisions. Recording it here because a narrowing the owner chose
 should not later read as one nobody noticed.
 
-**Blocked on `DF24`**, and not incidentally: the cascade's aggregate was about to be built on
-`<base>/total/state`, whose two dead fields prove that the snapshot assembly in `firmware.cpp` is
-reachable by no test. Slice **T0** is to fix that and move the assembly somewhere host-linkable
-BEFORE any cascade arithmetic goes near it.
+**~~Blocked on `DF24`~~ — T0 is DONE, 2026-08-26.** The cascade's aggregate was about to be built on
+`<base>/total/state`, whose two dead fields proved the snapshot assembly in `firmware.cpp` was
+reachable by no test. That assembly now lives in `net/mqtt_snapshot.h` with 23 host checks, so the
+cascade's own aggregation has somewhere testable to land. Slice **T1** — the topology module — is next.
 
 **Blocks.** Nothing today — a parallel installation is correctly served by the current firmware, and
 the spec's `R2.2` requires the new arithmetic to reduce to it bit-identically. This is a feature, not
@@ -230,46 +229,49 @@ a repair.
 
 ---
 
-## DF24 🟡 `<base>/total/state` has always published a zero total and zero sensor count
+## ~~DF24~~ ✅ FIXED 2026-08-26 — the aggregate topic carries real numbers, and the assembly is testable
 
-Found 2026-08-26 by the survey for the cascade feature, and verified directly: `snapshot.total` has four
-fields and `firmware.cpp` assigns two.
+`<base>/total/state` published `"total":0.000000,"sensors":0` for the life of the topic:
+`MqttTotalTelemetry` has four fields and `firmware.cpp` assigned two.
 
-```
-src/net/mqtt_publisher.h:133-138   flowLPerMin, sessionLiters, totalCubicMeters, activeSensors
-src/firmware.cpp:1307              snapshot.total.flowLPerMin   = aggregateFlowLpmCache;
-src/firmware.cpp:1308              snapshot.total.sessionLiters = totalSessionLitersCache;
-```
+**The fix is a MOVE, not an assignment.** `net/mqtt_snapshot.h` now owns the whole assembly — the
+per-sensor loop, `uncalibratedFlags`, the aggregates and the diagnostics — and `firmware.cpp` is
+reduced to filling an inputs struct and calling `fillMqttSnapshot`. That is what
+`verification-blind-spots.md` prescribes for this shape and the second time it has been followed:
+`modbus/sensor_config_nvs.h` was the first, extracted after the NVS serializer silently dropped two of
+five calibration fields. Assigning the two fields in place would have fixed the symptom and left the
+next one unreachable.
 
-`totalCubicMeters` and `activeSensors` are assigned nowhere in `src/`. So every aggregate publish since
-the topic existed has carried `"total":0.000000,"sensors":0` — a cubic-metre total of zero on a device
-metering water, and a sensor count of zero on a device with channels in use.
+**One new semantic decision, and it is a decision rather than a transcription.** Nothing had ever
+computed an aggregate LIFETIME volume, so `totalCubicMeters` had no precedent to copy. It is the sum
+over IN-SERVICE channels, matching `sessionLiters` beside it and the engine's own `if (sensor.inUse)`
+gate, so a subscriber comparing `total` against the per-sensor topics it receives gets an answer that
+agrees. It can be argued the other way — an out-of-service meter's litres are still litres that
+flowed — and the choice is stated at the site because changing it later is wire-visible.
 
-**Why no gate caught it, which is the part worth keeping.** `mqtt_publisher_test.cpp` sets all four
-fields by hand and asserts the JSON contains them, so the SERIALIZER is correctly tested and green. The
-ASSEMBLY lives in `firmware.cpp`, which is in no host link set (`test/host/run.sh`) — the structural
-blind spot already recorded for the NVS sensor serializer, which had the same shape and was fixed by
-MOVING the code into a testable unit rather than asserting around it. This is the third instance of
-"a value with a home, a publisher and no author" in a month: `DF22`'s eight silent registers, `DF23`'s
-`baselineKhz`, and now this.
+Summed as LITRES and converted once, not as eight already-divided values: the test asserts the two
+orders give different doubles here (`0.00266666666666666658` against `...701`), so the check
+discriminates rather than passing on rounding.
 
-**Two decisions it needs, both small:**
+**`activeSensors` is the count of in-service channels** — the same predicate as `present`, so it can
+never disagree with the number of per-sensor topics a subscriber actually receives. That invariant is
+the whole value of the field and it is asserted directly. When `N-e` lands, "how many meters feed the
+total" stops being the same question, and it will want its own field rather than a redefinition.
 
-1. **What is `activeSensors`?** The count of in-use channels, or — once the cascade lands — the count of
-   roots. They differ on a cascaded device, and the field is published where an integrator will read it
-   as "how many meters are contributing to this number".
-2. **Is the fix worth doing before the cascade, or as part of it?** The cascade rewrites this payload
-   anyway. Fixing it first is two lines and makes the cascade's own aggregate testable against a
-   payload that works; folding it in risks shipping the new field beside a dead one.
+**`DF23` was deliberately NOT fixed here**, and the test asserts `baselineKhz == 0` to say so. R2.1.2
+wants a measured radio-off baseline recorded once per firmware update, which carries an unanswered
+decision about a first boot with WiFi already enabled; folding it into a refactor would bury that.
 
-**Recommendation: fix it first, as its own change, and move the snapshot assembly out of `firmware.cpp`
-while doing so** — the `sensor_config_nvs.h` precedent. Otherwise the cascade's aggregation lands in the
-one file no test can reach, which is how this defect happened.
+**Verified:** 23 new host checks in `mqtt_snapshot_test.cpp`, wired into both the build and the run
+list. Mutation-tested on exit codes: restoring the DF24 state (leaving `totalCubicMeters` unassigned)
+fails 3 assertions, and counting every channel instead of the in-service ones fails 4. Host 2,058
+checks across 27 suites; firmware SUCCESS at RAM 24.7 % / Flash 39.0 %.
 
-**Blocks.** Nothing on the device or the panel: the aggregate the PANEL shows comes from the caches
-directly and is correct. It is only the MQTT aggregate topic, which no Home Assistant entity subscribes
-to — so the blast radius is an integrator reading the topic, and the cascade feature that was about to
-build on it.
+**One process note worth keeping.** The first mutation run reported no failures at all, and I nearly
+believed it: the grep filtered out `error:` and `head` truncated the pipeline before the assertions
+printed. Third time this session that a piped grep has swallowed a signal. Mutations were re-run
+capturing `$?` and counting both `FAIL$` and `error:` separately, which is the only form worth
+trusting.
 
 ---
 
