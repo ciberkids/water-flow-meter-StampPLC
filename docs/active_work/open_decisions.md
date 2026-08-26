@@ -30,7 +30,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Three open lines, one of them a defect.** `J9`, `I2a`, `N-b` and N-d2's correction half all closed on
+**Four open lines, two of them defects.** `J9`, `I2a`, `N-b` and N-d2's correction half all closed on
 2026-08-21; `DF23` opened, found by checking whether `G1`'s procedure could actually be followed, which
 is the usual way. `N-c` and `DF22` closed on 2026-08-20, and `DF22` — found by building `N-c` — was the
 only 🔴 the board has had since the register was rewritten.
@@ -51,6 +51,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 
 | ID | | Shape | What it is |
 | --- | --- | --- | --- |
+| **DF24** | 🟡 | defect, found 2026-08-26 | `<base>/total/state` publishes `"total":0.000000,"sensors":0` — two of `MqttTotalTelemetry`'s four fields are assigned nowhere, and the assembly lives in the one file no host test links |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | measurement | Whether the RTC survives power loss is unknown — the correction half (a gate protecting the VLF probe's position) landed 2026-08-21 |
@@ -150,6 +151,49 @@ project actually applies.
 **Still not built, and still N-b's neighbours rather than N-b:** §5.8's export gate and §3.3.11a's
 load-time patcher. A third-party pack on an SD card is now *diagnosable* — the exporter can say which
 settings it predates — but nothing yet repairs it on the device.
+
+---
+
+## DF24 🟡 `<base>/total/state` has always published a zero total and zero sensor count
+
+Found 2026-08-26 by the survey for the cascade feature, and verified directly: `snapshot.total` has four
+fields and `firmware.cpp` assigns two.
+
+```
+src/net/mqtt_publisher.h:133-138   flowLPerMin, sessionLiters, totalCubicMeters, activeSensors
+src/firmware.cpp:1307              snapshot.total.flowLPerMin   = aggregateFlowLpmCache;
+src/firmware.cpp:1308              snapshot.total.sessionLiters = totalSessionLitersCache;
+```
+
+`totalCubicMeters` and `activeSensors` are assigned nowhere in `src/`. So every aggregate publish since
+the topic existed has carried `"total":0.000000,"sensors":0` — a cubic-metre total of zero on a device
+metering water, and a sensor count of zero on a device with channels in use.
+
+**Why no gate caught it, which is the part worth keeping.** `mqtt_publisher_test.cpp` sets all four
+fields by hand and asserts the JSON contains them, so the SERIALIZER is correctly tested and green. The
+ASSEMBLY lives in `firmware.cpp`, which is in no host link set (`test/host/run.sh`) — the structural
+blind spot already recorded for the NVS sensor serializer, which had the same shape and was fixed by
+MOVING the code into a testable unit rather than asserting around it. This is the third instance of
+"a value with a home, a publisher and no author" in a month: `DF22`'s eight silent registers, `DF23`'s
+`baselineKhz`, and now this.
+
+**Two decisions it needs, both small:**
+
+1. **What is `activeSensors`?** The count of in-use channels, or — once the cascade lands — the count of
+   roots. They differ on a cascaded device, and the field is published where an integrator will read it
+   as "how many meters are contributing to this number".
+2. **Is the fix worth doing before the cascade, or as part of it?** The cascade rewrites this payload
+   anyway. Fixing it first is two lines and makes the cascade's own aggregate testable against a
+   payload that works; folding it in risks shipping the new field beside a dead one.
+
+**Recommendation: fix it first, as its own change, and move the snapshot assembly out of `firmware.cpp`
+while doing so** — the `sensor_config_nvs.h` precedent. Otherwise the cascade's aggregation lands in the
+one file no test can reach, which is how this defect happened.
+
+**Blocks.** Nothing on the device or the panel: the aggregate the PANEL shows comes from the caches
+directly and is correct. It is only the MQTT aggregate topic, which no Home Assistant entity subscribes
+to — so the blast radius is an integrator reading the topic, and the cascade feature that was about to
+build on it.
 
 ---
 
