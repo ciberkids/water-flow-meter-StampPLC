@@ -3,9 +3,10 @@
 **Version:** 0.2 (proposal — five open questions in §7 need answers before implementation)
 **Date:** 2026-08-26
 
-> **0.2** — Q1 decided: an uncalibrated root publishes its branch as UNKNOWN rather than promoting
-> its children, which forces the new R2.5 (the total must be able to say "unknown" at all) and opens
-> Q1a. **0.1** — first draft. Four decisions were taken by the owner on 2026-08-26 and are normative
+> **0.2** — Q1 and Q2 decided. An uncalibrated root publishes its branch as UNKNOWN rather than
+> promoting its children, which forces the new R2.5 (the total must be able to say "unknown" at all)
+> and opens Q1a. The HTTP portal is out of v1, so two of the four surfaces originally asked for are
+> deliberately deferred — see the note under §2. **0.1** — first draft. Four decisions were taken by the owner on 2026-08-26 and are normative
 > here: the total is the sum of roots, red fires on departure from a commissioned baseline, an
 > orphan re-parents to its nearest in-service ancestor, and MQTT stays read-only for topology.
 > §5 records the four findings that shaped them, because three of the four reverse what the
@@ -49,7 +50,14 @@ Four decisions, taken 2026-08-26. Each was a genuine fork; §5 says why each wen
 | 1 | **The upstream meter is authoritative.** The delivered total is the sum of ROOT channels. All skew is booked as unmetered loss inside the branch. |
 | 2 | **Red fires on departure from a commissioned baseline**, not on an absolute skew ratio. |
 | 3 | **An orphan re-parents to its nearest in-service ancestor**, never to root. |
-| 4 | **MQTT is read-only for topology.** It carries the skew, the state and the warning; the parent setting is written only from the panel, RS485 or the portal. |
+| 4 | **MQTT is read-only for topology.** It carries the skew, the state and the warning; the parent setting is written only from the panel or RS485. |
+
+**Two of the four surfaces originally asked for are deliberately not in v1, and that is a narrowing the
+owner chose after seeing the consequences rather than one this document imposed.** The feature was
+described as needing the setting "on the device, on the modbus, http and mqtt". MQTT is read-only by
+decision 4 — §4.4.1's security position is not reopened for a pointer that makes every total wrong —
+and the portal is deferred by R5.3, because reaching it turns on calibration editing over HTTP as a
+side effect. Both remain open as their own decisions; neither is closed here.
 
 ---
 
@@ -222,9 +230,11 @@ mean parallel branches, which is the general case and today's default.
 > because it depends on which channel the navigation level selected, and recording one is untrue.
 > The verification results are read-only registers.
 
-> **R5.3 — HTTP portal.** See §7 Q2. Serving this setting from the portal means injecting a settings
-> store into `PortalForm`, which turns on every per-sensor setting at once — calibration included.
-> That is a scope decision, not a detail.
+> **R5.3 — HTTP portal: NOT in v1.** Decided 2026-08-26. Serving this setting from the portal means
+> injecting a settings store into `PortalForm`, which turns on every per-sensor setting at once —
+> calibration included. Whether the portal should be able to edit a calibration is a security decision
+> in its own right and deserves to be chosen rather than inherited from a topology feature. The portal
+> stays network-only until it is.
 
 > **R5.4 — MQTT.** Read-only, per decision 4. The diagnostics payload gains the per-channel skew,
 > the litre difference, the peak and the state; the topology itself is not writable. §4.4.1's
@@ -319,7 +329,7 @@ No candidate root predicate considered calibration quality. Hence R3.8 and §7 Q
 | --- | --- | --- |
 | ~~1~~ | ~~An in-service root with no valid calibration (R3.8)~~ | **DECIDED: publish the branch as unknown** |
 | 1a | Is a PARTIAL sum also published for the known branches? | Yes, on its own register, never in place of the total |
-| 2 | Should the portal serve non-network settings generally? | Panel + RS485 only for v1 |
+| ~~2~~ | ~~Should the portal serve non-network settings generally?~~ | **DECIDED: panel + RS485 only for v1** |
 | 3 | Does a skew breach latch or self-clear? | Latch, cleared by a named command |
 | 4 | Does a per-channel session reset reset its subtree? | Channel only, plus a separate verification reset |
 | 5 | Does the LIFETIME total need a netted counterpart? | Yes, before anyone bills from it |
@@ -337,11 +347,12 @@ No candidate root predicate considered calibration quality. Hence R3.8 and §7 Q
    and never as the value the panel shows for "total". The failure to avoid is a partial sum being read
    as a complete one, which is why it gets its own address rather than a flag beside the real total.*
 
-2. **Should the HTTP portal serve non-network settings generally?** `PortalForm` is network-only
-   today. Injecting a settings store to reach the parent turns on every per-sensor setting including
-   calibration; a parent-only store would be a second settings path, which is its own defect shape.
-   *Recommendation: panel and RS485 for v1. Revisit the portal as its own decision, because "the
-   portal can now edit calibration" deserves to be chosen rather than inherited.*
+2. ~~**Should the HTTP portal serve non-network settings generally?**~~ **DECIDED 2026-08-26: panel and
+   RS485 only for v1.** `PortalForm` is network-only today, and injecting a settings store to reach the
+   parent would turn on every per-sensor setting including calibration. A parent-only store would be a
+   second settings path, which is its own defect shape. The portal is revisited as its own decision,
+   because "the portal can now edit calibration" should be chosen rather than inherited from this
+   feature.
 
 3. **Latch or self-clear?** A self-clearing breach is invisible the morning after — §5.2's decaying
    ratio makes this concrete. *Recommendation: latch, with an explicit clear command, and keep the
