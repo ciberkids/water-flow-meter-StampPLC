@@ -30,7 +30,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Four open lines, two of them defects.** `J9`, `I2a`, `N-b` and N-d2's correction half all closed on
+**Five open lines: one specified feature, two defects and two measurements.** `J9`, `I2a`, `N-b` and N-d2's correction half all closed on
 2026-08-21; `DF23` opened, found by checking whether `G1`'s procedure could actually be followed, which
 is the usual way. `N-c` and `DF22` closed on 2026-08-20, and `DF22` — found by building `N-c` — was the
 only 🔴 the board has had since the register was rewritten.
@@ -51,6 +51,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 
 | ID | | Shape | What it is |
 | --- | --- | --- | --- |
+| **N-e** | 🟡 | feature, specified | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Four decisions taken, six questions open, not started |
 | **DF24** | 🟡 | defect, found 2026-08-26 | `<base>/total/state` publishes `"total":0.000000,"sensors":0` — two of `MqttTotalTelemetry`'s four fields are assigned nowhere, and the assembly lives in the one file no host test links |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
@@ -152,6 +153,80 @@ project actually applies.
 **Still not built, and still N-b's neighbours rather than N-b:** §5.8's export gate and §3.3.11a's
 load-time patcher. A third-party pack on an SD card is now *diagnosable* — the exporter can say which
 settings it predates — but nothing yet repairs it on the device.
+
+---
+
+## N-e 🟡 Sensor cascade topology — specified 2026-08-26, six questions open, not started
+
+The owner's feature: channels may be wired in CASCADE (a main meter with others downstream) rather
+than only in parallel. That makes the present total wrong — a downstream channel's water was already
+measured by its parent, so summing double-counts — and it makes VERIFICATION possible, because a
+parent's reading should equal the sum of its children's and the difference is evidence.
+
+**Specified in full:** [`../Requirements/feature addition/Sensor_Cascade_Topology.md`](../Requirements/feature%20addition/Sensor_Cascade_Topology.md).
+Nine sections, numbered requirements, six open questions with recommendations, and eight slices. Cite
+requirement ids from there (`R2.2`, `R3.5`, …) rather than quoting this summary.
+
+**Four decisions taken 2026-08-26**, each a real fork:
+
+| # | Decision |
+| --- | --- |
+| 1 | The UPSTREAM meter is authoritative — the total is the sum of roots, and skew is booked as unmetered loss in the branch |
+| 2 | Red fires on departure from a COMMISSIONED BASELINE, not on an absolute skew ratio |
+| 3 | An orphan re-parents to its nearest IN-SERVICE ancestor, never to root |
+| 4 | MQTT stays READ-ONLY for topology — §4.4.1's security position is not reopened |
+
+**Three of those four reverse how the feature was first described, and the reasoning is the valuable
+part** (§5 of the spec):
+
+- **The Home Assistant fear was misplaced.** Netting cannot corrupt HA history: the
+  `total_increasing` entity is per-CHANNEL, fed from raw `cumulativeLiters`, and no HA entity
+  subscribes to the aggregate topic at all. There is also no aggregate Modbus register. The hazard
+  only exists if somebody later adds an aggregate `total_increasing` entity — which is a reason not
+  to.
+- **An absolute percentage threshold measures the plumbing, not a leak.** Meter tolerance suggests
+  5-10 %; the dominant term in a real install is the UNMETERED FRACTION — one outside tap can exceed
+  10 % of consumption, and accumulated skew converges on that ratio rather than decaying. So 10 %
+  would sit red from commissioning day, correctly and uselessly. Worse, the same arithmetic HIDES a
+  bounded overnight leak: fixed litres in the numerator, growing consumption in the denominator, so
+  the ratio decays under any threshold by morning. Hence the baseline, and hence publishing the litre
+  difference and the peak rather than only a ratio.
+- **Three consumers want the GROSS total**, so it must not be repurposed: the red LED's litre step,
+  the blue LED's liveness, and P0's flow dots. The last two are the sharp ones — under a netted
+  aggregate, a root reading zero while a child meters real flow gives zero, so the panel and the LED
+  both report "no water" during exactly the condition being detected.
+
+**And one defect-shaped finding, verified:** an in-service root with no valid calibration contributes
+a FROZEN volume and zero flow — `sessionLiters` and `cumulativeLiters` are assigned only inside
+`if (configIsValid(config))` and the else-arm zeroes only the flow
+(`sensor_state_engine.cpp:60-71`), while line 72 adds the frozen value regardless. As a root it
+silently zeroes its whole branch. A meter swap triggers it. That is Q1 of the six.
+
+**Two more decisions taken 2026-08-26**, both narrowing v1 deliberately:
+
+- **An uncalibrated root publishes its branch as UNKNOWN**, against my recommendation to promote its
+  children. The owner's reasoning is the stronger one: a device should refuse to state a total it
+  cannot support rather than state a smaller one, because a wrong number is harder to notice than a
+  missing one. It forces a new requirement — the total must be able to SAY "unknown" (NaN plus a
+  bitmap of unknown branches), since zero is a legal reading and blanking would be indistinguishable
+  from no flow.
+- **The HTTP portal is out of v1.** Reaching the parent setting there means injecting a settings store,
+  which turns on every per-sensor setting including calibration — a security decision that deserves to
+  be chosen rather than inherited from a topology feature.
+
+**So two of the four surfaces originally asked for are deliberately deferred.** The feature was
+described as needing the setting on the panel, Modbus, HTTP and MQTT; MQTT is read-only and HTTP is
+out. Both stay open as their own decisions. Recording it here because a narrowing the owner chose
+should not later read as one nobody noticed.
+
+**Blocked on `DF24`**, and not incidentally: the cascade's aggregate was about to be built on
+`<base>/total/state`, whose two dead fields prove that the snapshot assembly in `firmware.cpp` is
+reachable by no test. Slice **T0** is to fix that and move the assembly somewhere host-linkable
+BEFORE any cascade arithmetic goes near it.
+
+**Blocks.** Nothing today — a parallel installation is correctly served by the current firmware, and
+the spec's `R2.2` requires the new arithmetic to reduce to it bit-identically. This is a feature, not
+a repair.
 
 ---
 
