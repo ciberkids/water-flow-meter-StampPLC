@@ -1,9 +1,10 @@
 # Requirement: Sensor Cascade Topology
 
-**Version:** 0.2 (proposal — five open questions in §7 need answers before implementation)
+**Version:** 0.3 (proposal — four open questions in §7 need answers before implementation)
 **Date:** 2026-08-26
 
-> **0.2** — Q1 and Q2 decided. An uncalibrated root publishes its branch as UNKNOWN rather than
+> **0.3** — Q3 decided: a breach self-clears rather than latching, which makes R3.4's peak and litre
+> difference load-bearing rather than optional — see R3.5a. **0.2** — Q1 and Q2 decided. An uncalibrated root publishes its branch as UNKNOWN rather than
 > promoting its children, which forces the new R2.5 (the total must be able to say "unknown" at all)
 > and opens Q1a. The HTTP portal is out of v1, so two of the four surfaces originally asked for are
 > deliberately deferred — see the note under §2. **0.1** — first draft. Four decisions were taken by the owner on 2026-08-26 and are normative
@@ -155,6 +156,12 @@ mean parallel branches, which is the general case and today's default.
 > unmetered fraction, not meter tolerance. One outside tap can exceed 10 % of household consumption,
 > and accumulated skew *converges* on that ratio rather than decaying. An absolute threshold
 > therefore measures the plumbing and would sit red from commissioning day, correctly and uselessly.
+
+> **R3.5a** — A breach **self-clears** when the ratio returns within the margin. Decided 2026-08-26.
+> The evidence survives because R3.4 publishes the peak and the litre difference, not merely the live
+> ratio — which is what makes a self-clearing breach honest rather than forgetful. The peak is bounded
+> by the same window as the comparison basis (R3.7), so it does not become a lifetime high-water mark
+> that never falls.
 
 > **R3.6** — Until a baseline is recorded, verification **reports but does not judge**: the skew,
 > the litre difference and the peak are all published, and nothing is marked red. A device that has
@@ -330,7 +337,7 @@ No candidate root predicate considered calibration quality. Hence R3.8 and §7 Q
 | ~~1~~ | ~~An in-service root with no valid calibration (R3.8)~~ | **DECIDED: publish the branch as unknown** |
 | 1a | Is a PARTIAL sum also published for the known branches? | Yes, on its own register, never in place of the total |
 | ~~2~~ | ~~Should the portal serve non-network settings generally?~~ | **DECIDED: panel + RS485 only for v1** |
-| 3 | Does a skew breach latch or self-clear? | Latch, cleared by a named command |
+| ~~3~~ | ~~Does a skew breach latch or self-clear?~~ | **DECIDED: self-clear** |
 | 4 | Does a per-channel session reset reset its subtree? | Channel only, plus a separate verification reset |
 | 5 | Does the LIFETIME total need a netted counterpart? | Yes, before anyone bills from it |
 | 6 | Should a downstream channel be marked for legacy masters? | Yes — a free status bit |
@@ -354,9 +361,17 @@ No candidate root predicate considered calibration quality. Hence R3.8 and §7 Q
    because "the portal can now edit calibration" should be chosen rather than inherited from this
    feature.
 
-3. **Latch or self-clear?** A self-clearing breach is invisible the morning after — §5.2's decaying
-   ratio makes this concrete. *Recommendation: latch, with an explicit clear command, and keep the
-   peak alongside so the trace survives even after clearing.*
+3. ~~**Latch or self-clear?**~~ **DECIDED 2026-08-26: self-clear**, against my recommendation to latch.
+   It works, and specifically because R3.4 already exists: the PEAK ratio and the absolute litre
+   difference are published alongside the live ratio, so a breach that clears itself still leaves a
+   trace. **That makes R3.4 load-bearing rather than a nicety** — without the peak, §5.2's decaying
+   ratio would erase an overnight leak entirely by morning and a self-clearing breach would be
+   indistinguishable from one that never happened. Anyone tempted to drop the peak as redundant should
+   read this decision first.
+   
+   The remaining consequence to specify at implementation time: the peak needs a defined window, or it
+   becomes a lifetime high-water mark that never falls and stops meaning anything. R3.7's basis
+   invalidation is the natural boundary.
 
 4. **Does a per-channel session reset reset the subtree?** Resetting a parent without its children
    leaves a window whose two halves cover different periods, which is a guaranteed false skew.
@@ -395,7 +410,7 @@ Ordered so each is verifiable when it lands.
 
 | Slice | Content | State |
 | --- | --- | --- |
-| **T0** | **Precursor: fix `DF24` and move the MQTT snapshot assembly out of `firmware.cpp`** into a host-linkable unit. The cascade's aggregation must not land where no test can reach it. | ⛔ do first |
+| ~~**T0**~~ | ~~Precursor: fix `DF24` and move the MQTT snapshot assembly out of `firmware.cpp`~~ | ✅ 2026-08-26, `net/mqtt_snapshot.h`, 23 host checks |
 | **T1** | The topology module: parent storage, effective-parent resolution, depth, cycle detection, forest validation. Arduino-free, own host binary. | |
 | **T2** | The netted aggregation beside the gross one, with R2.2's bit-identity assertion and R2.4's liveness repointing. | |
 | **T3** | The skew arithmetic: window, floor, sign, baseline, peak, litre difference, and the states. Same module as T1. | |

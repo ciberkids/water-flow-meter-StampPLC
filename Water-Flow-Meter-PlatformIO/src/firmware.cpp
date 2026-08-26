@@ -42,6 +42,7 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "net/net_settings_nvs.h"
 #include "net/ha_discovery.h"
 #include "net/mqtt_publisher.h"
+#include "net/mqtt_snapshot.h"
 #include "net/mqtt_reconnect.h"
 #include "net/mqtt_command_router.h"
 #include "net/mqtt_transport_esp.h"
@@ -1282,38 +1283,24 @@ void logicTaskCode(void * pvParameters) {
 
       // Telemetry. tick() owns the cadence — publish-on-change rate-limited to publishPeriod, plus
       // §4.3.2's full set at least every 60 s — so this hands it the state and lets it decide.
-      plc::MqttSnapshot snapshot;
-      uint16_t uncalibratedFlags = 0;
-      for (std::size_t i = 0; i < kNumSensors; ++i) {
-        auto& out = snapshot.sensors[i];
-        out.present = sensors[i].inUse;
-        if (!out.present) {
-          continue;  // a disconnected sensor publishes nothing at all — see task #1
-        }
-        // Built in THIS loop rather than in a pass of its own, so "in use" can only ever mean what the
-        // line above means. An uncalibrated channel still publishes its topic — the totals it measured
-        // before its meter was swapped out are real — and every reading in it is zero, which this bit is
-        // what explains.
-        if (!configIsValid(configs[i])) {
-          uncalibratedFlags |= static_cast<uint16_t>(1u << i);
-        }
-        // §2a: storage IS L/min now, so the ×60 this used to carry is gone.
-        out.flowLPerMin = sensors[i].instantFlow_L_min;
-        out.sessionLiters = sensors[i].sessionLiters;
-        out.totalCubicMeters = units::litresToCubicMeters(sensors[i].cumulativeLiters);
-        out.maxFlowLPerMin = sensors[i].maxFlowSinceReset;
-        out.pulses = sensors[i].pulseCount;
-      }
-      snapshot.total.flowLPerMin = static_cast<float>(aggregateFlowLpmCache);
-      snapshot.total.sessionLiters = static_cast<float>(totalSessionLitersCache);
-      snapshot.diagnostics.pollingRateKhz = pollingRate_kHz;
-      snapshot.diagnostics.undersamplingFlags = undersamplingFlags;
-      snapshot.diagnostics.uncalibratedFlags = uncalibratedFlags;
-      snapshot.diagnostics.uptimeSeconds = now / 1000;
-      snapshot.diagnostics.wifiRssiDbm = static_cast<int8_t>(wifiManager.rssiDbm());
-      // R4.4.2d's remote half. Sticky, so it describes the last command rather than the last tick.
-      snapshot.diagnostics.lastCommandResult =
+      // The assembly lives in net/mqtt_snapshot.h, not here. It used to be this loop, in this file,
+      // which is in no host link set — and that is exactly how DF24 shipped: two of
+      // MqttTotalTelemetry's four fields were never assigned and the aggregate topic published
+      // "total":0.000000,"sensors":0 for the life of the topic, while the serializer's own test passed
+      // because it set all four by hand. Moved rather than asserted around, per the precedent
+      // modbus/sensor_config_nvs.h set for the same failure.
+      plc::MqttSnapshotInputs snapshotInputs;
+      snapshotInputs.aggregateFlowLpm = aggregateFlowLpmCache;
+      snapshotInputs.totalSessionLiters = totalSessionLitersCache;
+      snapshotInputs.pollingRateKhz = pollingRate_kHz;
+      snapshotInputs.undersamplingFlags = undersamplingFlags;
+      snapshotInputs.uptimeSeconds = now / 1000;
+      snapshotInputs.wifiRssiDbm = static_cast<int8_t>(wifiManager.rssiDbm());
+      snapshotInputs.lastCommandResult =
           static_cast<plc::MqttCommandResult>(mqttLastCommandResultValue);
+
+      plc::MqttSnapshot snapshot;
+      plc::fillMqttSnapshot(snapshot, sensors, configs, kNumSensors, snapshotInputs);
       mqttPublisher.tick(now, snapshot);
 
       // Drain a bounded number per pass. Unbounded would let a full queue monopolise a logic pass
