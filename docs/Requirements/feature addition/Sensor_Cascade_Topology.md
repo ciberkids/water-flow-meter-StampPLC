@@ -1,9 +1,11 @@
 # Requirement: Sensor Cascade Topology
 
-**Version:** 0.1 (proposal — the six open questions in §7 need answers before implementation)
+**Version:** 0.2 (proposal — five open questions in §7 need answers before implementation)
 **Date:** 2026-08-26
 
-> **0.1** — first draft. Four decisions were taken by the owner on 2026-08-26 and are normative
+> **0.2** — Q1 decided: an uncalibrated root publishes its branch as UNKNOWN rather than promoting
+> its children, which forces the new R2.5 (the total must be able to say "unknown" at all) and opens
+> Q1a. **0.1** — first draft. Four decisions were taken by the owner on 2026-08-26 and are normative
 > here: the total is the sum of roots, red fires on departure from a commissioned baseline, an
 > orphan re-parents to its nearest in-service ancestor, and MQTT stays read-only for topology.
 > §5 records the four findings that shaped them, because three of the four reverse what the
@@ -91,6 +93,21 @@ mean parallel branches, which is the general case and today's default.
 > and sits beside them. The reason is in §5.3: three consumers want gross and would misbehave on a
 > netted value.
 
+> **R2.5** — The delivered total must be able to say **"unknown"**, because R3.8's decision makes that
+> a reachable state: one uncalibrated root means one branch whose volume nobody knows, and the sum of
+> roots is then not a figure the device can stand behind.
+>
+> A float register cannot hold "unknown" by omission — zero is a legal reading and blanking it would
+> be indistinguishable from no flow, which is precisely the confusion the `--`-never-means-not-detected
+> rule exists to prevent. So the total is published as **NaN** while any branch is unknown, alongside
+> a **bitmap naming the unknown branches**. NaN is decodable by any master as "not a number", and it
+> propagates: a master that ignores the bitmap and sums it gets NaN rather than a plausible wrong
+> figure. The panel shows its own token for the same state, and MQTT omits the key rather than
+> publishing `null` into a payload consumers parse as numbers.
+>
+> See §7 Q1a for the one sub-decision this leaves: whether a partial sum is ALSO published for the
+> branches that are known.
+
 > **R2.4** — Liveness must not be derived from a netted value. The blue LED channel
 > (`led_controller.cpp:100-101`) and P0's flow-dot animation (`ui_renderer.cpp:425`, `aggregateFlowLpm
 > > 0.01`) must read "any in-service channel is flowing", not the netted aggregate — otherwise a dead
@@ -150,9 +167,13 @@ mean parallel branches, which is the general case and today's default.
 > calibrated children meter real water. The trigger is ordinary — a meter swap clears the
 > calibration.
 >
-> **This case must be handled explicitly, not left to fall out of the predicate.** See §7 Q1: the
-> choice is between promoting the children to roots (the total never silently shrinks) and publishing
-> the branch as unknown (the total never silently lies).
+> **DECIDED 2026-08-26: the branch is published as UNKNOWN.** Its children are NOT promoted to roots.
+> The owner's reasoning, and it is the stronger one: a total that silently shrinks is a total that
+> lies, and a metering device should refuse to state a figure it cannot support rather than state a
+> smaller one. Promotion would have kept a number on the screen at the cost of that number being
+> wrong by the whole branch.
+>
+> This has a consequence that has to be specified rather than discovered — see R2.5.
 
 > **R3.9** — A channel that is undersampling (`REG_UNDERSAMPLING_FLAGS`) is reading LOW by
 > definition, so any skew computed from it is not evidence of anything. Verification involving such a
@@ -296,18 +317,25 @@ No candidate root predicate considered calibration quality. Hence R3.8 and §7 Q
 
 | Q | Question | Recommendation |
 | --- | --- | --- |
-| 1 | An in-service root with no valid calibration (R3.8) | Promote its children to roots |
+| ~~1~~ | ~~An in-service root with no valid calibration (R3.8)~~ | **DECIDED: publish the branch as unknown** |
+| 1a | Is a PARTIAL sum also published for the known branches? | Yes, on its own register, never in place of the total |
 | 2 | Should the portal serve non-network settings generally? | Panel + RS485 only for v1 |
 | 3 | Does a skew breach latch or self-clear? | Latch, cleared by a named command |
 | 4 | Does a per-channel session reset reset its subtree? | Channel only, plus a separate verification reset |
 | 5 | Does the LIFETIME total need a netted counterpart? | Yes, before anyone bills from it |
 | 6 | Should a downstream channel be marked for legacy masters? | Yes — a free status bit |
 
-1. **An in-service root with no valid calibration.** R3.8 makes this branch read zero. Promoting its
-   children to roots keeps the delivered total honest and never shrinks it silently; publishing the
-   branch as "unknown" never states a total the device cannot support. *Recommendation: promote, and
-   raise the existing commissioning warning — the operator's action is the same either way, and a
-   total that silently shrinks is the harder fault to notice.*
+1. ~~**An in-service root with no valid calibration.**~~ **DECIDED 2026-08-26: publish the branch as
+   unknown**, against my recommendation to promote the children. The owner's reasoning is the stronger
+   one and is now R3.8: a device should refuse to state a total it cannot support rather than state a
+   smaller one. Promotion keeps a number on the screen at the cost of that number being wrong by a
+   whole branch, and a wrong number is harder to notice than a missing one.
+
+1a. **Is a partial sum also published?** R2.5 makes the total NaN while any branch is unknown. An
+   integrator with seven good branches and one uncalibrated root still has a use for the seven.
+   *Recommendation: yes, on its own clearly-named register and MQTT key — never in place of the total,
+   and never as the value the panel shows for "total". The failure to avoid is a partial sum being read
+   as a complete one, which is why it gets its own address rather than a flag beside the real total.*
 
 2. **Should the HTTP portal serve non-network settings generally?** `PortalForm` is network-only
    today. Injecting a settings store to reach the parent turns on every per-sensor setting including
@@ -345,6 +373,7 @@ No candidate root predicate considered calibration quality. Hence R3.8 and §7 Q
 | A cycle stored over Modbus makes the total quietly wrong. | R4.3 validates the stored topology, and R4.4 commits atomically. Tested by forcing the array, not only through the validator. |
 | The catalogue ABI bump makes new packs unloadable on older firmware. | Accepted, and inherent to any catalogue addition since 2026-08-21. `check-ledger.mjs` enforces the bump. |
 | The aggregation lands in `firmware.cpp` and is untestable, repeating `DF24`. | §6.4 and §9's precursor slice. |
+| One uncalibrated root makes the headline total unavailable (R2.5), and an operator reads that as the device being broken. | The commissioning warning already names the channel, and §2c's banner already carries this class. The panel must say WHICH branch is unknown, not merely that the total is. |
 | Home Assistant keeps double-counting anyway because all eight per-channel entities are configured as water sources on the dashboard. | Out of the firmware's control. Worth telling the operator plainly in the wiki: netting fixes the device's total, not a dashboard that adds sub-meters to their parent. |
 
 ---

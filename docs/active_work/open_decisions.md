@@ -202,6 +202,23 @@ a FROZEN volume and zero flow — `sessionLiters` and `cumulativeLiters` are ass
 (`sensor_state_engine.cpp:60-71`), while line 72 adds the frozen value regardless. As a root it
 silently zeroes its whole branch. A meter swap triggers it. That is Q1 of the six.
 
+**Two more decisions taken 2026-08-26**, both narrowing v1 deliberately:
+
+- **An uncalibrated root publishes its branch as UNKNOWN**, against my recommendation to promote its
+  children. The owner's reasoning is the stronger one: a device should refuse to state a total it
+  cannot support rather than state a smaller one, because a wrong number is harder to notice than a
+  missing one. It forces a new requirement — the total must be able to SAY "unknown" (NaN plus a
+  bitmap of unknown branches), since zero is a legal reading and blanking would be indistinguishable
+  from no flow.
+- **The HTTP portal is out of v1.** Reaching the parent setting there means injecting a settings store,
+  which turns on every per-sensor setting including calibration — a security decision that deserves to
+  be chosen rather than inherited from a topology feature.
+
+**So two of the four surfaces originally asked for are deliberately deferred.** The feature was
+described as needing the setting on the panel, Modbus, HTTP and MQTT; MQTT is read-only and HTTP is
+out. Both stay open as their own decisions. Recording it here because a narrowing the owner chose
+should not later read as one nobody noticed.
+
 **Blocked on `DF24`**, and not incidentally: the cascade's aggregate was about to be built on
 `<base>/total/state`, whose two dead fields prove that the snapshot assembly in `firmware.cpp` is
 reachable by no test. Slice **T0** is to fix that and move the assembly somewhere host-linkable
