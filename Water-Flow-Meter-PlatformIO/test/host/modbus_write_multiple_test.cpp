@@ -502,7 +502,14 @@ void theStorageFaultCodeIsPublished() {
   ModbusManager noHealth(headless);
   noHealth.noteNvsResult(plc::StorageFault::CumulativeLitres, false);
   noHealth.syncGlobalRegisters();
-  check(true, "a manager with no health object records nothing and publishes nothing, without crashing");
+  // Asserted rather than assumed. This was a literal `true` whose only failure mode was a crash — which
+  // review correctly called a vacuous check: it would have passed a null-health manager that wrote a 0
+  // over the bank, and it would have passed one that recorded into the shared object anyway.
+  check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) ==
+            static_cast<uint16_t>(plc::StorageFault::LedSettings),
+        "a manager with no health object publishes NOTHING — the bank keeps the value it held");
+  check(h.nvsHealth.consecutiveFailures(plc::StorageFault::CumulativeLitres) == 0,
+        "and records nothing either, rather than reaching into the shared object");
 }
 
 

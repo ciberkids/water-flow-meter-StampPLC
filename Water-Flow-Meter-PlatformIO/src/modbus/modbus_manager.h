@@ -190,7 +190,13 @@ class ModbusManager {
   uint16_t stagedClockLo_ = 0;
   bool meetsNyquistLimit(const SensorCharacteristics& cfg) const;
   void resetRuntimeCaches();
-  void saveCumulativeToNvs(std::size_t index);
+  /**
+   * Persists one channel's lifetime volume; returns whether the write landed (`DF25`).
+   *
+   * Returns rather than records, so a caller looping over channels can OR the failures and report the
+   * group once. Recording per channel let a later channel's success erase an earlier channel's failure.
+   */
+  bool saveCumulativeToNvs(std::size_t index);
   bool prepareConfigUpdate(std::size_t index, const SensorCharacteristics& candidate, bool* acceptedOverride);
 
   ModbusDependencies deps_;

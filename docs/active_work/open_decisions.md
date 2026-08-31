@@ -72,10 +72,10 @@ because I3 makes them append-only and a retired id must still resolve. **I2** an
 that never close.
 
 **What this list is NOT.** Nothing here is blocking a build, a test or an export. Measured 2026-08-30
-after `DF25a`: host **2,156 checks across 29 suites**, 0 failures, the register-reference gate green
+after `DF25a` and its review: host **2,165 checks across 29 suites**, 0 failures, the register-reference gate green
 (and shown to fail on a removed code description), and a firmware that compiles in the container at RAM
-24.7% / Flash 39.0% — 81,032 and 1,302,845 bytes against T1's 81,008 and 1,301,925, so DF25a's cost is
-**24 bytes of RAM and 920 of flash**. NOT re-run on 2026-08-30 and therefore quoted as the 2026-08-26
+24.7% / Flash 39.0% — 81,032 and 1,303,305 bytes against T1's 81,008 and 1,301,925, so DF25a with its
+review fixes costs **24 bytes of RAM and 1,380 of flash**. NOT re-run on 2026-08-30 and therefore quoted as the 2026-08-26
 figures: 220 unit, 51 exporter, 51 visual, 0 audit findings. (Both compile figures come from a CLEAN dependency
 cache; the earlier 38.2% came from a stale container, see `platformio.ini`.) Of the six open lines one
 feature is under way, one has not started, two defects have decisions in them and two need hardware that
@@ -438,6 +438,57 @@ question 2 (the retry is the next pass), question 3 (one code space for every wr
 (RAM only — a store that cannot be written cannot record its own failure). They are asked properly in
 the same round this landed.
 
+**REVIEWED THE SAME DAY, and the review found twelve real things — four of which changed behaviour.**
+Five independent lenses over the commit, each finding then verified by an adversary told to refute it:
+twelve confirmed, eight refuted. Recorded in full because the two worst were the same defect this entry
+is about, wearing a different coat.
+
+1. **The network settings had the identical shadow-advance bug.** `netSettingsSavedRevision` advanced
+   immediately after a write nobody had checked, so a failed apply was never re-attempted, the counter
+   parked at 1, and the device came back after a power cycle on a MIXTURE of old and new credentials with
+   register 34 reading 0. I had fixed exactly this in the litre pass and not looked for it anywhere else.
+   The shadow now advances only on success, and the retry is RATE-LIMITED to once a minute — the naive
+   fix would have written flash every tick, because that block runs on the logic loop rather than in the
+   once-a-minute pass, and every write stalls the pulse sampler (§2.1.3).
+2. **N = 3 was applied to writers that nothing retries.** An operator sets a baud rate once; a master
+   writes the flow unit once. For those there is no next pass, so a single failed write parked a count of
+   1 that could never be published — the failure was recorded and unreportable, which is this entry's own
+   shape. **The cadence is now a property of the group**, in `storageFaultIsPeriodic`, beside the policy
+   it changes rather than at twelve call sites: the four groups the once-a-minute pass re-attempts count
+   to three, and the one-shot writers raise on the FIRST failure. The cost is stated in the header — a
+   transient failure on a one-shot write shows the fault until the next successful write of that group,
+   and a per-group retry queue would distinguish the two. That is the richer answer and it is not built.
+3. **A partial failure across eight channels was recorded as a clean success.** `saveCumulativeToNvs`
+   reported per channel, so channel 5's success zeroed the run channels 0-4's failures had built — and
+   because `syncGlobalRegisters` runs after the loop, the alarm never reached register 34 in any frame.
+   It now returns its outcome and the three reset loops OR the failures and report once.
+4. **A factory reset that could not erase rebooted away its own evidence**, one second later, with the
+   fault code held only in RAM. The restart is now held when code 12 is up, with a line on the serial
+   console saying why. Rebooting a device whose reset did not happen accomplishes nothing.
+
+And four things that were true of the documentation rather than the code, which in this repository is the
+same class of defect:
+
+5. **The "cannot drift" gate could drift.** The enum parser matched only `Name = N,` — so an enumerator
+   with an implicit value, a hex value, or (the likeliest edit) no trailing comma on the last line was
+   skipped in silence, producing a green build with the code missing from the operator's table. Hex and
+   the optional comma are handled now, and anything still unparsed is named as a problem. Proven by
+   appending a code in the demonstrated form and watching the generator fail.
+6. **The generated page told operators the panel shows the code beside a warning triangle.** It does not;
+   that is DF25's unbuilt second half. The page now says so, and states the per-group threshold honestly
+   instead of claiming a flat three failures.
+7. **`MQTT.md`'s diagnostics example did not carry the new key**, so the only integrator-facing
+   description of the payload gave an integrator no key to alarm on while the register page told them to
+   alarm. Added, with the sentence that matters: every other figure keeps arriving correctly from RAM
+   while the writes fail, so this is the only remote warning.
+8. **A `check(true, …)`** whose only failure mode was a crash, correctly called vacuous. Replaced with
+   the two claims its own label made.
+
+Verified after the fixes: host **2,165 checks across 29 suites**, 0 failures; firmware SUCCESS in the
+container at RAM 24.7 % / Flash 39.0 % (81,032 and 1,303,305 bytes — the review's fixes cost 460 bytes of
+flash and no RAM); the register-reference gate green and shown to fail on both a removed description and
+an unparsable enumerator.
+
 ---
 
 **Split in two, deliberately, and the second half rides with `N-e`'s T5.** The detection half is cheap
@@ -478,6 +529,27 @@ a `hold=cancel` prompt, and the existing comment's asymmetry argument is where t
 
 **Blocks.** Nothing that a test can see, which is the argument for filing it rather than waiting for a
 bench. It is recorded now because `N-f` would otherwise be built on top of it.
+
+---
+
+## ~~DF26~~ ✅ FIXED 2026-08-30 — register 0 was documented as a `uint16` and is published as a `float32`
+
+Found by the `DF25a` review while checking whether register 34 was genuinely free. It was — but the
+sweep turned up that `REG_POLLING_RATE_KHZ` is written with `setFloat`, which occupies **registers 0 AND
+1**, while the generated register reference described it as a one-register `uint16`.
+
+**Why this is worth an ID for a one-word fix.** An integrator decodes real hardware against that table.
+Reading register 0 alone as a `uint16` returns the high half of an IEEE-754 float — a plausible number
+(16467 for 3.31 kHz) that moves in the right direction when the real rate changes, so it looks like a
+working integration and is wrong by orders of magnitude. That is precisely the failure the register
+reference is generated to prevent, and it survived because the reconciliation gate matches constant
+NAMES and cannot see a multi-register SPAN.
+
+Fixed by declaring the row `f32`, which makes the page state "2 registers, IEEE-754, high word first"
+and correctly claims 0 and 1. **The span blindness itself is not fixed** — the `ENCODING` table already
+carries a `regs` width, so the gate could walk the globals in address order and fail when one register's
+span reaches the next one's address. Recorded here rather than built, because it is a gate change that
+wants its own round and its own test.
 
 ---
 

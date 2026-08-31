@@ -119,13 +119,15 @@ void thresholdTests() {
   check(!health.alarmRaised(), "one success clears that key's run and lowers the alarm");
   check(health.consecutiveFailures(StorageFault::CumulativeLitres) == 0, "the count is back to zero");
 
-  // Saturation: 256 failures must not read as zero.
+  // Saturation: 256 failures must not read as zero. On a PERIODIC group — a one-shot group pins at the
+  // threshold through raiseNow on its first failure and never counts past it, which the cadence group
+  // below asserts.
   for (int i = 0; i < 300; ++i) {
-    health.noteResult(StorageFault::Topology, false);
+    health.noteResult(StorageFault::CumulativeLitres, false);
   }
-  check(health.consecutiveFailures(StorageFault::Topology) == 255,
+  check(health.consecutiveFailures(StorageFault::CumulativeLitres) == 255,
         "the counter saturates rather than wrapping — 256 failures must never read as healthy");
-  check(health.inAlarm(StorageFault::Topology), "and it is still in alarm at 300");
+  check(health.inAlarm(StorageFault::CumulativeLitres), "and it is still in alarm at 300");
 }
 
 void perKeyIndependenceTests() {
@@ -193,6 +195,56 @@ void wireContractTests() {
         "thirteen codes in a band of thirty-two, so the next subsystem cannot renumber these");
 }
 
+
+void writerCadenceTests() {
+  std::printf("\nN=3 counts only where something will retry — the cadence table\n");
+
+  check(plc::storageFaultIsPeriodic(StorageFault::CumulativeLitres) &&
+            plc::storageFaultIsPeriodic(StorageFault::SensorCalibration) &&
+            plc::storageFaultIsPeriodic(StorageFault::ConnectedBitmap) &&
+            plc::storageFaultIsPeriodic(StorageFault::NetworkSettings),
+        "the four groups the once-a-minute pass re-attempts are periodic");
+  check(!plc::storageFaultIsPeriodic(StorageFault::LinkSettings) &&
+            !plc::storageFaultIsPeriodic(StorageFault::FlowUnit) &&
+            !plc::storageFaultIsPeriodic(StorageFault::LedSettings) &&
+            !plc::storageFaultIsPeriodic(StorageFault::CommandEpoch) &&
+            !plc::storageFaultIsPeriodic(StorageFault::Topology) &&
+            !plc::storageFaultIsPeriodic(StorageFault::PackAttemptCounter),
+        "and the one-shot writers are not — nothing comes back to retry an operator's apply");
+
+  // The hole review found: a one-shot group counted to 1 and stopped, so the failure was recorded and
+  // could never be published.
+  NvsWriteHealth oneShot;
+  oneShot.noteResult(StorageFault::LinkSettings, false);
+  check(oneShot.faultCode() == StorageFault::LinkSettings,
+        "a one-shot write raises on the FIRST failure — §4.1.1's unattended rollback gets no second try");
+  check(oneShot.consecutiveFailures(StorageFault::LinkSettings) ==
+            NvsWriteHealth::kConsecutiveFailuresBeforeAlarm,
+        "and it is recorded at the threshold rather than as a count of one");
+
+  for (int i = 0; i < 50; ++i) {
+    oneShot.noteResult(StorageFault::LinkSettings, false);
+  }
+  check(oneShot.consecutiveFailures(StorageFault::LinkSettings) ==
+            NvsWriteHealth::kConsecutiveFailuresBeforeAlarm,
+        "repeated one-shot failures pin at the threshold rather than climbing to 255");
+
+  oneShot.noteResult(StorageFault::LinkSettings, true);
+  check(oneShot.faultCode() == StorageFault::None,
+        "a later successful write of the same group clears it, so a transient failure is recoverable");
+
+  NvsWriteHealth periodic;
+  periodic.noteResult(StorageFault::CumulativeLitres, false);
+  check(periodic.faultCode() == StorageFault::None,
+        "while a PERIODIC group still takes three — one refused litre write is not news");
+
+  // The two conditions nothing retries at all keep raising immediately, through raiseNow.
+  NvsWriteHealth erase;
+  erase.raiseNow(StorageFault::FactoryResetErase);
+  check(erase.faultCode() == StorageFault::FactoryResetErase,
+        "and a factory reset that could not erase raises at once, as it always did");
+}
+
 void serializerIntegrationTests() {
   std::printf("\nThe serializers report what failed, and the counter turns it into an alarm\n");
 
@@ -238,6 +290,7 @@ int main() {
   perKeyIndependenceTests();
   faultCodeStabilityTests();
   wireContractTests();
+  writerCadenceTests();
   serializerIntegrationTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);

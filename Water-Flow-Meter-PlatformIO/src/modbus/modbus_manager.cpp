@@ -99,6 +99,10 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
 
   if (address == REG_CONNECTED_SENSORS_BITMAP) {
     *deps_.connectedBitmap = value;
+    // DF25: OR'd across the loop and reported once. Per-channel reporting let channel 5's success erase
+    // the run channels 0-4's failures had built.
+    bool litreWriteAttempted = false;
+    bool litreWriteFailed = false;
     for (std::size_t i = 0; i < deps_.sensorCount; ++i) {
       const bool shouldEnable = (value >> i) & 0x01;
       if (shouldEnable && !deps_.sensors[i].inUse) {
@@ -111,16 +115,21 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
         overridePending_[i] = false;
         overrideActive_[i] = false;
         pendingOverrides_[i] = SensorCharacteristics{};
-        saveCumulativeToNvs(i);
+        litreWriteAttempted = true;
+        litreWriteFailed |= !saveCumulativeToNvs(i);
       } else if (!shouldEnable && deps_.sensors[i].inUse) {
         deps_.sensors[i] = SensorData{};
         deps_.configs[i] = SensorCharacteristics{};
         overridePending_[i] = false;
         overrideActive_[i] = false;
         pendingOverrides_[i] = SensorCharacteristics{};
-        saveCumulativeToNvs(i);
+        litreWriteAttempted = true;
+        litreWriteFailed |= !saveCumulativeToNvs(i);
       }
       syncSensorToHolding(i);
+    }
+    if (litreWriteAttempted) {
+      noteNvsResult(plc::StorageFault::CumulativeLitres, !litreWriteFailed);
     }
     evaluateSensorDiagnostics();
     syncGlobalRegisters();
@@ -184,6 +193,8 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
 
   if (address == REG_MASTER_RESET_ALL_SENSORS) {
     if (value == 1) {
+      bool litreWriteAttempted = false;  // DF25: OR'd across the loop, reported once
+      bool litreWriteFailed = false;
       for (std::size_t i = 0; i < deps_.sensorCount; ++i) {
         if (deps_.sensors[i].inUse) {
           bool wasInUse = deps_.sensors[i].inUse;
@@ -194,8 +205,12 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
           overridePending_[i] = false;
           overrideActive_[i] = false;
           pendingOverrides_[i] = SensorCharacteristics{};
-          saveCumulativeToNvs(i);
+          litreWriteAttempted = true;
+          litreWriteFailed |= !saveCumulativeToNvs(i);
         }
+      }
+      if (litreWriteAttempted) {
+        noteNvsResult(plc::StorageFault::CumulativeLitres, !litreWriteFailed);
       }
       deps_.ledController->resetToDefaults();
       noteNvsResult(plc::StorageFault::LedSettings,
@@ -216,17 +231,23 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
       if (deps_.clock) {
         deps_.clock->noteSessionStart(millis());
       }
+      bool litreWriteAttempted = false;  // DF25: OR'd across the loop, reported once
+      bool litreWriteFailed = false;
       for (std::size_t i = 0; i < deps_.sensorCount; ++i) {
         if (deps_.sensors[i].inUse) {
           deps_.sensors[i].sessionLiters = 0.0f;
           deps_.sensors[i].cumulativeLiters = 0.0;
           deps_.sensors[i].maxFlowSinceReset = 0.0f;
           syncSensorToHolding(i);
-          saveCumulativeToNvs(i);
+          litreWriteAttempted = true;
+          litreWriteFailed |= !saveCumulativeToNvs(i);
           overridePending_[i] = false;
           overrideActive_[i] = false;
           pendingOverrides_[i] = SensorCharacteristics{};
         }
+      }
+      if (litreWriteAttempted) {
+        noteNvsResult(plc::StorageFault::CumulativeLitres, !litreWriteFailed);
       }
       deps_.ledController->markSessionsCleared();
       resetRuntimeCaches();
@@ -341,7 +362,7 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
       syncSensorToHolding(sensorIndex);
       deps_.registers->setUint16(address, 0);
       evaluateSensorDiagnostics();
-      saveCumulativeToNvs(sensorIndex);
+      noteNvsResult(plc::StorageFault::CumulativeLitres, saveCumulativeToNvs(sensorIndex));
       return true;
     case OFF_CMD_RESET_CONFIG:
       if (value == 1) {
@@ -366,7 +387,7 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
         overridePending_[sensorIndex] = false;
         overrideActive_[sensorIndex] = false;
         pendingOverrides_[sensorIndex] = SensorCharacteristics{};
-        saveCumulativeToNvs(sensorIndex);
+        noteNvsResult(plc::StorageFault::CumulativeLitres, saveCumulativeToNvs(sensorIndex));
       }
       syncSensorToHolding(sensorIndex);
       deps_.registers->setUint16(address, 0);
@@ -941,15 +962,20 @@ void ModbusManager::resetRuntimeCaches() {
   }
 }
 
-void ModbusManager::saveCumulativeToNvs(std::size_t index) {
+bool ModbusManager::saveCumulativeToNvs(std::size_t index) {
   if (!deps_.preferences) {
-    return;
+    return false;
   }
   char key[8];
   std::snprintf(key, sizeof(key), "cml_%u", static_cast<unsigned>(index));
   // The OTHER litre writer. firmware.cpp's once-a-minute pass is the one DF25's headline scenario turns
   // on, but a master's reset lands here, and a reset that fails to persist comes back at the next boot.
-  noteNvsResult(plc::StorageFault::CumulativeLitres,
-                plc::nvsPutOk(deps_.preferences->putDouble(key, deps_.sensors[index].cumulativeLiters),
-                              sizeof(double)));
+  //
+  // RETURNS the outcome rather than recording it, found by review 2026-08-30: a loop over eight channels
+  // that recorded per channel let channel 5's success zero the run that channels 0-4's failures had
+  // built, so a partial failure across eight writes was recorded as a clean success — and because
+  // `syncGlobalRegisters` runs after the loop, the alarm never reached register 34 in any frame. The
+  // loops OR the failures and report once, which is the shape firmware.cpp's once-a-minute pass uses.
+  return plc::nvsPutOk(deps_.preferences->putDouble(key, deps_.sensors[index].cumulativeLiters),
+                       sizeof(double));
 }

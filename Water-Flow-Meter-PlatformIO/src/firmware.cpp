@@ -268,6 +268,8 @@ plc::WifiManager wifiManager(netSettings, wifiRadio);
  * operator decision instead of once per millisecond.
  */
 uint16_t netSettingsSavedRevision = 0;
+/** DF25: a failed network save waits a minute before retrying, rather than writing flash every tick. */
+uint32_t netSettingsRetryAtMs = 0;
 
 // ── MQTT (N5) ────────────────────────────────────────────────────────────────────────
 /**
@@ -1441,16 +1443,41 @@ void logicTaskCode(void * pvParameters) {
     // successful apply, so this is once per operator decision — not once per pass. That matters more
     // than it looks: a flash write suspends the other core's scheduler with cache disabled (§2.1.3),
     // which stops the pulse sampler outright, so every avoidable write is avoidable sampler downtime.
-    if (netSettings.revision() != netSettingsSavedRevision) {
-      nvsHealth.noteResult(plc::StorageFault::NetworkSettings,
-                           plc::saveNetSettings(preferences, netSettings) == 0);
-      netSettingsSavedRevision = netSettings.revision();
+    //
+    // THE SHADOW ADVANCES ONLY ON SUCCESS — found by review 2026-08-30, and it was the same defect as
+    // the litre pass's: `netSettingsSavedRevision` used to advance immediately after a write nobody had
+    // checked, so a failed apply was never re-attempted, the counter parked at 1, and the device came
+    // back after a power cycle on a MIXTURE of old and new credentials with register 34 reading 0.
+    //
+    // The retry is RATE-LIMITED rather than left to the loop, and that is the constraint the naive fix
+    // breaks: this block runs on every logic pass, not in the once-a-minute pass, so leaving the shadow
+    // behind on its own would turn one failed apply into a flash write per tick — and per the note
+    // above, every write stalls the pulse sampler. So a failure schedules the next attempt a minute
+    // out, which is the same one-attempt-per-minute cadence the litre keys get and what makes N = 3
+    // mean three minutes here too.
+    if (netSettings.revision() != netSettingsSavedRevision && now >= netSettingsRetryAtMs) {
+      const std::size_t netWritesFailed = plc::saveNetSettings(preferences, netSettings);
+      nvsHealth.noteResult(plc::StorageFault::NetworkSettings, netWritesFailed == 0);
+      if (netWritesFailed == 0) {
+        netSettingsSavedRevision = netSettings.revision();
+      } else {
+        netSettingsRetryAtMs = now + 60000;
+      }
       // Tell the radio the credentials moved. It self-guards on a credential fingerprint, so calling
       // it after an unrelated apply (an MQTT port, say) costs a comparison and does not bounce a
-      // working link.
+      // working link. Called on the first attempt whether or not the write landed: the LIVE settings
+      // did change, and the radio's job does not depend on flash.
       wifiManager.noteProvisioningComplete(now);
-      Serial.printf("[net] settings saved (revision %u)\n",
-                    static_cast<unsigned>(netSettings.revision()));
+      // The log says what happened rather than asserting success — it used to print "settings saved"
+      // beside a write that had just failed.
+      if (netWritesFailed == 0) {
+        Serial.printf("[net] settings saved (revision %u)\n",
+                      static_cast<unsigned>(netSettings.revision()));
+      } else {
+        Serial.printf("[net] settings NOT saved (revision %u): %u writes failed, retrying in 60s\n",
+                      static_cast<unsigned>(netSettings.revision()),
+                      static_cast<unsigned>(netWritesFailed));
+      }
     }
 
     uiRenderer.update(now, uiController.context());
@@ -1547,7 +1574,16 @@ void logicTaskCode(void * pvParameters) {
     }
 
     if (interactions.restartScheduled && now >= interactions.restartAtMs) {
-      esp_restart();
+      // DF25, found by review: a factory reset whose `clear()` failed did not happen, and rebooting
+      // accomplishes nothing except destroying the only evidence — the fault code lives in RAM. So the
+      // device stays up with code 12 on register 34 and on the diagnostics topic, where an operator or
+      // a master can actually see it. Every other scheduled restart is unaffected.
+      if (nvsHealth.inAlarm(plc::StorageFault::FactoryResetErase)) {
+        Serial.println("[storage] factory reset did NOT erase the store; holding the restart so the "
+                       "fault stays reportable (register 34 = 12)");
+      } else {
+        esp_restart();
+      }
     }
 
     vTaskDelay(1); // Yield to other tasks

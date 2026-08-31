@@ -61,11 +61,28 @@ function readEnum(file, enumName) {
   const close = source.indexOf("};", open);
   const body = source.slice(open, close);
   const out = new Map();
-  for (const match of body.matchAll(/^\s*(\w+)\s*=\s*(\d+)\s*,/gm)) {
+  for (const match of body.matchAll(/^\s*(\w+)\s*=\s*(0x[0-9a-fA-F]+|\d+)\s*,?\s*$/gm)) {
     out.set(match[1], Number(match[2]));
+  }
+  // AN UNPARSED ENUMERATOR IS LOUD, because a silent one defeats the whole point of generating this.
+  // Review demonstrated three legal C++ forms the first pattern skipped without a word — an implicit
+  // value, a hex value, and the LIKELIEST one, an explicit value with no trailing comma on the final
+  // enumerator — each of which produced a green build with the code missing from the operator's table.
+  // Hex and the optional trailing comma are now handled; anything still unmatched is named here.
+  for (const line of body.split("\n")) {
+    const candidate = line.match(/^\s*([A-Z]\w*)\s*(=|,|$)/);
+    if (candidate && !out.has(candidate[1])) {
+      problems.push(
+        `${enumName}::${candidate[1]} could not be parsed out of the header — give it an explicit ` +
+          `decimal or hex value so this table cannot silently omit it`
+      );
+    }
   }
   return out;
 }
+
+/** Collected and reported together at the end, so one run names every disagreement. */
+const problems = [];
 
 const core = readConstants(CORE_HEADER);
 const net = readConstants(NET_HEADER);
@@ -122,7 +139,7 @@ const STORAGE_FAULTS = {
 
 /* ── The global block ─────────────────────────────────────────────────────────────────────────── */
 const GLOBAL = [
-  ["REG_POLLING_RATE_KHZ", "r", "u16", "kHz", "Live pulse-sampling rate. Compare against the baseline in the MQTT diagnostics payload; a fall here is an under-sampling regression (§2.1.2)."],
+  ["REG_POLLING_RATE_KHZ", "r", "f32", "kHz", "Live pulse-sampling rate. Compare against the baseline in the MQTT diagnostics payload; a fall here is an under-sampling regression (§2.1.2)."],
   ["REG_CONNECTED_SENSORS_BITMAP", "r", "u16", "—", "Bit *n* set = sensor *n+1* is in use. The persisted companion to each channel's own status flag."],
   ["REG_MASTER_RESET_ALL_SENSORS", "w", "u16", "—", "Write `1` to clear every channel's totals, session and peak. Any other value is ignored."],
   ["REG_MASTER_RESET_ALL_MEASURED", "w", "u16", "—", "Write `1` to clear every channel's measured values but keep its calibration."],
@@ -215,8 +232,6 @@ const NETWORK = [
 ];
 
 /* ── Reconciliation: the two halves must describe the same set ─────────────────────────────────── */
-const problems = [];
-
 function reconcile(label, declared, described) {
   for (const name of declared) {
     if (!described.has(name)) {
@@ -302,10 +317,20 @@ w();
 w("## Storage fault codes");
 w();
 w("`REG_STORAGE_FAULT_CODE` reads `0` on a healthy device. Any other value means one group of settings");
-w("or readings has failed to reach flash **three consecutive times** — one refused write is not");
-w("reported, because a single failure often succeeds on the next attempt once the store compacts. The");
-w("same number is published as `storageFault` on the MQTT diagnostics topic, and the panel shows it");
-w("beside a warning triangle.");
+w("or readings has stopped reaching flash. The same number is published as `storageFault` on the MQTT");
+w("diagnostics topic. **The panel does not show it yet** — the on-device warning triangle is the second");
+w("half of this work and is not built.");
+w();
+w("How many failures it takes depends on whether anything retries the write, which is a property of the");
+w("group and not a global rule:");
+w();
+w("- the groups written by the once-a-minute pass — the lifetime litres, the calibration, the in-service");
+w("  bitmap and the network settings — are re-attempted every minute, and the code appears after **three");
+w("  consecutive failures**, so roughly three minutes. One refused write is not reported, because a");
+w("  single failure often succeeds on the next attempt once the store compacts.");
+w("- everything else is written once, when an operator or a master does something. Nothing comes back to");
+w("  retry it, so those codes appear on the **first** failure — waiting for three would mean waiting for");
+w("  events that cannot happen. A later successful write of the same group clears the code.");
 w();
 w("Two things this code cannot tell you, stated so nobody plans around them. It says WHICH GROUP of");
 w("keys stopped persisting, never WHY: the underlying error is logged and dropped inside the Arduino");
