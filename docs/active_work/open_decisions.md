@@ -13,8 +13,12 @@ implementation now* or 🟡 *blocks a later slice*, because the emoji was a seco
 lived in the Decision line and nobody moved it. A register that says forty things are blocking when
 one is does not get read, which is the failure this rewrite is undoing.
 
-**This file is 287 lines and holds six items.** It was 1,370 the day before, because twenty-nine closed
-defects had accumulated in it with their full reasoning. Those are archived, not deleted — see the pointer
+**This file holds eight items** — six open plus the two standing rules. It was 287 lines and six items
+when it was rewritten on 2026-08-18, and 1,370 the day before that, because twenty-nine closed defects
+had accumulated in it with their full reasoning. **Its own live line count is deliberately no longer
+quoted here:** the figure went stale twice while this paragraph was being edited on 2026-08-30, which is
+the same argument this register makes about every other number that has no command behind it. The item
+count stays, because I3 already requires the index to track it. Those are archived, not deleted — see the pointer
 near the bottom — on the same principle the 2026-08-12 rewrite used: a register that reads as a thousand lines
 of finished work does not get read, which is the failure both cleanups were undoing.
 
@@ -30,17 +34,21 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Four open lines: one specified feature, one defect and two measurements.** `J9`, `I2a`, `N-b` and N-d2's correction half all closed on
-2026-08-21; `DF23` opened, found by checking whether `G1`'s procedure could actually be followed, which
-is the usual way. `N-c` and `DF22` closed on 2026-08-20, and `DF22` — found by building `N-c` — was the
-only 🔴 the board has had since the register was rewritten.
+**Six open lines: two features, two defects and two measurements.** `N-f` and `DF25` opened on
+2026-08-30, both out of one question the owner asked while T1's storage was being decided — *is the
+right information surviving a power cycle, and are we burning through the write cycles?* That is the
+usual way: `DF23` came from checking whether `G1`'s procedure could be followed, and `DF22` from
+building `N-c`. `J9`, `I2a`, `N-b` and N-d2's correction half all closed on 2026-08-21; `N-c` and
+`DF22` closed on 2026-08-20, and `DF22` was the only 🔴 the board has had since the register was
+rewritten.
 
-**What remains is one software item and three measurements.** `DF23` is software and has a decision in
-it. The three that need hardware are `G1` (the polling rate), `N-d2`'s remaining half (whether the RTC
-survives power loss), and `N-c`'s retain check, which lives in that entry's ⏸️ block rather than on a
-line of its own because the rest of `N-c` is built and tested. Cite an ID when you ask about one — this
-file is the one place that says what an ID means. Rule **I3** governs them: append-only, never reused,
-so a gap means an item closed, not an item lost.
+**What remains is four software items and three measurements.** `N-e` is under way — T0 and T1 have
+landed and T2 is next — and `N-f`, `DF23` and `DF25` each carry a decision in the entry. The three that
+need hardware are `G1` (the polling rate), `N-d2`'s remaining half (whether the RTC survives power
+loss), and `N-c`'s retain check, which lives in that entry's ⏸️ block rather than on a line of its own
+because the rest of `N-c` is built and tested. Cite an ID when you ask about one — this file is the one
+place that says what an ID means. Rule **I3** governs them: append-only, never reused, so a gap means an
+item closed, not an item lost.
 
 **`N-c` stays in this file rather than moving to the archive**, because one thing in it is verified by
 reading only: `MQTT_EVENT_DATA`'s retain flag, which R4.4.2c depends on entirely and which no host test
@@ -51,7 +59,9 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 
 | ID | | Shape | What it is |
 | --- | --- | --- | --- |
-| **N-e** | 🟡 | feature, specified | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, five questions open, not started |
+| **N-e** | 🟡 | feature, in progress | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, four questions open; T0 and T1 landed, **T2 next** |
+| **N-f** | 🟡 | feature, specified here | Where the readings live — internal flash or an SD card, human-readable files, persisted session values and rotating telemetry. Five decisions taken, six questions open, not started; question 1 changes a documented register contract and should be answered first |
+| **DF25** | 🟡 | defect, found 2026-08-30 | A write to non-volatile storage that fails is reported by nothing — `begin()`'s bool and every `put*` byte count are discarded, so a device that has stopped keeping your lifetime totals looks perfect until a power cycle |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | measurement | Whether the RTC survives power loss is unknown — the correction half (a gate protecting the VLF probe's position) landed 2026-08-21 |
@@ -61,13 +71,15 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 because I3 makes them append-only and a retired id must still resolve. **I2** and **I3** are standing rules
 that never close.
 
-**What this list is NOT.** Nothing here is blocking a build, a test or an export: every gate in the
-repository is green (host **2,058 checks across 27 suites**, 220 unit, 51 exporter, 51 visual, 0 audit
-findings, and a firmware that compiles at RAM 24.7% / Flash 39.0%, measured 2026-08-26 from a CLEAN
-dependency cache — the earlier 38.2% came from a stale container, see `platformio.ini`). One is a feature
-nobody has started, two need hardware that has never existed for this project, `I2a` is a rule enforced by
-prose. That is a
-different condition from "twelve things are broken", which is what this register looked like two days ago.
+**What this list is NOT.** Nothing here is blocking a build, a test or an export. Measured 2026-08-30:
+host **2,095 checks across 28 suites**, 0 failures, and a firmware that compiles in the container at RAM
+24.7% / Flash 39.0% — byte-identical to 2026-08-26, which is the expected result for T1, whose two
+headers nothing includes yet. NOT re-run on 2026-08-30 and therefore quoted as the 2026-08-26 figures:
+220 unit, 51 exporter, 51 visual, 0 audit findings. (Both compile figures come from a CLEAN dependency
+cache; the earlier 38.2% came from a stale container, see `platformio.ini`.) Of the six open lines one
+feature is under way, one has not started, two defects have decisions in them and two need hardware that
+has never existed for this project. That is a different condition from "twelve things are broken", which
+is what this register looked like before the 2026-08-18 rewrite.
 
 ---
 
@@ -155,7 +167,7 @@ settings it predates — but nothing yet repairs it on the device.
 
 ---
 
-## N-e 🟡 Sensor cascade topology — specified 2026-08-26, six questions open, not started
+## N-e 🟡 Sensor cascade topology — specified 2026-08-26, four questions open, T1 landed 2026-08-30
 
 The owner's feature: channels may be wired in CASCADE (a main meter with others downstream) rather
 than only in parallel. That makes the present total wrong — a downstream channel's water was already
@@ -221,11 +233,188 @@ should not later read as one nobody noticed.
 **~~Blocked on `DF24`~~ — T0 is DONE, 2026-08-26.** The cascade's aggregate was about to be built on
 `<base>/total/state`, whose two dead fields proved the snapshot assembly in `firmware.cpp` was
 reachable by no test. That assembly now lives in `net/mqtt_snapshot.h` with 23 host checks, so the
-cascade's own aggregation has somewhere testable to land. Slice **T1** — the topology module — is next.
+cascade's own aggregation has somewhere testable to land.
+
+**T1 is DONE, 2026-08-30 — the topology module, 37 host checks.** `sensors/sensor_topology.h` holds the
+forest and `sensors/sensor_topology_nvs.h` its trip to flash. Four things in it are decisions rather
+than transcriptions:
+
+- **`apply()` is the only mutator**, taking all eight parents at once. §3.6 requires a write that would
+  break the forest to change nothing, and a per-channel setter would let a master write four parents,
+  fail the fifth, and leave the device metering a shape nobody asked for — which looks exactly like a
+  shape somebody did.
+- **The in-service set is passed as a BITMAP**, not a bool array, because that is the form the device
+  already keeps it in: `conn_map` in flash and `connectedSensorsBitmap` in `firmware.cpp`. A second
+  representation of one fact is how two of this project's defects started.
+- **R1.2's depth limit is not a check.** An acyclic forest of eight nodes cannot exceed seven edges, so
+  a depth rule could only reject a shape `validateForest` has already accepted. It is asserted from the
+  legal side instead — a legal eight-channel chain measures exactly 7.
+- **A stored set that is not a forest becomes ALL ROOTS and says so** (`SensorTopologyLoad::stored`).
+  Flash can hold anything a corrupt page wrote, and the parallel topology is the one substitute that
+  cannot over-count water. Repairing a cycle by cutting an edge would guess which meter feeds which.
+
+**The keys are `parent_0` … `parent_7`, spelled out.** The platform caps a key at 15 characters and
+`parent_7` is eight, so a new key has no excuse to be an abbreviation. The `cfg_*` calibration keys stay
+frozen for the reason `sensor_config_nvs.h` gives — renaming one silently discards a calibrated channel
+on upgrade — and the new file says so, because "tidy the old keys to match" is the next reader's
+plausible-looking mistake.
+
+**Separate from the calibration serializer, deliberately.** `SensorCharacteristics` is tripwired at
+`sensor_config_nvs.h:56` so a sixth field cannot be added without someone deciding whether it persists;
+for `parent` the answer is "persist it, but not there". Calibration describes a METER and topology
+describes PLUMBING — a meter swap changes one and not the other — and
+`SensorCharacteristics::operator==` is the 60-second dirty check, so folding topology in would make a
+re-plumb look like a recalibration.
+
+**And the new module carries the same tripwire, which has a known first customer.**
+`static_assert(sizeof(SensorTopology) == kNumSensors, …)`: the class is one byte per channel and nothing
+else, so a ninth byte means somebody added state — and T3's commissioned baseline is already scheduled
+to want exactly that (§9's slice row now says so). Verified by adding a byte: the build fails naming the
+line. A guard that has been shown to fire is worth more than one that has only been written.
+
+**NOTHING CALLS IT YET, and the module says so at the top.** The boot-time load lands with T2, which is
+the first consumer of an effective root, and the save with T4, which is the first thing that can change
+a parent. Stated rather than left to be discovered: a setting with no author is precisely the shape of
+`DF22`, `DF23` and `DF24`.
+
+**Verified:** 37 checks, and mutation-tested on exit codes. Six mutations, five of which compiled:
+committing a refused topology fails 1 assertion, inverting the in-service test fails 6, reporting a
+corrupt load as ok fails 3, an off-by-one in the cycle bound fails 6, counting nodes instead of edges
+fails 3, and saving only non-root parents fails 2. The sixth — deleting the in-service test outright —
+would not compile under `-Werror` because the parameter went unused, which is the flag doing its job.
+Host **2,095 checks across 28 suites**, 0 failures.
+
+Slice **T2** — the netted aggregation beside the gross one, with R2.2's bit-identity assertion and
+R2.4's liveness repointing — is next.
+
+**A count in this entry was wrong, twice over.** The heading said six open questions and the index row
+said five; §7's table has **four** (`1a`, `4`, `5`, `6`). The residue inside Q3's decided entry — the
+peak needs a defined window — is a consequence to specify at implementation time, not a fifth open
+question, and counting it as one is how the number drifted.
 
 **Blocks.** Nothing today — a parallel installation is correctly served by the current firmware, and
 the spec's `R2.2` requires the new arithmetic to reduce to it bit-identically. This is a feature, not
 a repair.
+
+---
+
+## N-f 🟡 Where the readings live — internal flash or an SD card, and what a card makes affordable
+
+Asked 2026-08-30 by the owner, out of the audit that T1's storage decision provoked: *is the right
+information surviving a power cycle, and are we burning through the write cycles?*
+
+**The audit's answer first, because it decides what this entry is.** What persists today is the
+per-channel lifetime volume (`cml_0`…`cml_7`), the calibration, the in-service bitmap, the RS485 link
+settings, the network settings, the flow unit, the two reset-command guard epochs, the LED step and
+period, and the menu-pack attempt counter. Session volume and peak flow are deliberately NOT persisted,
+and the requirements say so explicitly — `Project_document.md:204` documents register 111 as **"not
+persistent"** and register 22 is named "Master Reset All Session Values" with the gloss "session
+(**non-persistent**) values". So the split is correct as built.
+
+**The wear budget is bounded, and bounded by the right thing.** Only the litres are written on a timer:
+every 60 s, and only for channels whose value actually moved (`firmware.cpp:1044-1063`), with the shadow
+copies seeded from the loaded values at `:996-999` so a reboot causes no redundant write. Worst case is
+therefore 8 writes per minute — the comment at `:1042` already sizes the unconditional version at ~525k
+writes per key per year — and the changed-value check makes wear proportional to **water actually
+metered rather than to uptime**, which for a domestic install is a large factor. An absolute lifetime
+figure needs the flash part number off the module and is not claimed here.
+
+**So this is a feature, not a repair, and it must not be justified by a wear risk nobody has measured.**
+What a card actually buys is three things: session values that survive a power cycle, files a human can
+read, and room for telemetry.
+
+**Decided 2026-08-30 by the owner:**
+
+| # | Decision |
+| --- | --- |
+| 1 | The device detects an SD card; the storage menu entry appears only when one is present |
+| 2 | Internal or external storage is an operator setting, not a build-time choice |
+| 3 | External files are ASCII and human-readable, with names that say what they hold |
+| 4 | On external storage the SESSION values are persisted too, since a card tolerates far more writes |
+| 5 | Rotating telemetry and metrics logging to the card, for troubleshooting, behind its own flag |
+
+**The card path already half-exists**: the menu-pack feature reads from a card
+(`ui/pack/ui_pack_storage_sd.cpp`), and there is an SPI arbiter with its own host suite, so this is not a
+new bus.
+
+**Open questions.**
+
+1. **Decision 4 changes a documented contract, and that is this entry's sharpest edge.** Register 111 is
+   published as non-persistent and a master may reasonably reboot a device to clear a session. Persisting
+   it on a card makes the same register behave differently depending on which store an operator picked,
+   which is worse than either answer alone. *Recommendation: if yes, say so in the register map and give
+   the state its own status bit, so a master can tell which store it is talking to. A storage backend
+   must not silently redefine a register.*
+2. **What happens when the card is removed while it is the selected store?** The lifetime total is the
+   one number that must never go backwards — Home Assistant records it per channel and anyone billing
+   reads it. *Recommendation: fall back to internal and refuse to publish a total that would decrease;
+   this needs a decision before any of it is built.*
+3. **Is internal still written when external is selected?** A mirror doubles the writes the card was
+   chosen to avoid; abandoning it means a removed card has lost everything since the switch.
+4. **ASCII means a parse at boot, and a truncated last line is the NORMAL case** after a power cut, not
+   the exotic one. What a half-written record means has to be decided before the format is.
+5. **Telemetry rotation**: how many files, how large, what happens when the card fills, and whether the
+   writer may take the SPI bus while the display and the pack loader want it.
+6. **Does the card path share `DF25`'s error surface?** *Recommendation: yes — one warning glyph and one
+   code sequence. An operator seeing a triangle should not have to know which store failed to look up
+   the code.*
+
+**One thing T1 already settled in this entry's favour.** `sensor_topology_nvs.h` and
+`sensor_config_nvs.h` are both templated on the store, so an SD-backed store is an adapter rather than a
+rewrite. That is a seam, not a finished decision: a human-readable ASCII file is a different
+serialization shape from a key-value store, so the adapter has real work in it.
+
+**Blocks.** Nothing. Not started, and it should not start before question 1 is answered.
+
+---
+
+## DF25 🟡 A write to non-volatile storage that fails is reported by nothing
+
+Found 2026-08-30 while auditing what survives a power cycle (`N-f`). It is the fourth instance of one
+shape and the shape is now worth naming: **a value with a home, a writer and no error path.** `DF22` was
+registers nobody filled, `DF23` a field nobody assigns, `DF24` two fields never written — and this is a
+write that can simply fail.
+
+**What is discarded.** `preferences.begin("flow-data", false)` returns a bool saying whether the store
+opened; it is discarded at `firmware.cpp:910`. Arduino's `Preferences::put*` return the number of bytes
+written and **0 on failure**; every call site discards that too, and `sensor_config_nvs.h` documents the
+discard as deliberate ("the return is deliberately ignored, as it was before") — which was an honest
+description of the code it replaced and is now the thing to change.
+
+**So a device whose store has failed looks perfect.** The live flow, the session volume and the lifetime
+total all keep publishing from RAM, correctly, on Modbus and on MQTT and on the panel. The failure is
+invisible until a power cycle discards the lifetime total — the one number Home Assistant records per
+channel and the one anyone would bill from. Causes are not exotic: a store that fails to initialise, a
+corrupt page, or a full partition (20 KB, five sectors, shared with the WiFi stack's own data —
+`default_8MB.csv`, no custom table in `platformio.ini`).
+
+**Decided 2026-08-30 by the owner:** use the return value, and when writes start failing show a warning
+on the panel — a danger triangle with a CODE — with the codes documented on a wiki page as the start of
+a numbered error-code sequence.
+
+**Split in two, deliberately, and the second half rides with `N-e`'s T5.** The detection half is cheap
+and host-testable: thread the write result out of the serializers and the once-a-minute pass, decide what
+counts as failing, and expose it on a status bit and the diagnostics topic. The panel half is a UI
+pipeline change — a new indicator has to exist in the dataset, the exporter, the generated tables, the
+renderer and the value catalogue, and a glyph costs characters out of a fixed budget. **T5 already bumps
+the catalogue ABI and appends to the ledger**, so putting the triangle there costs one ABI bump instead
+of two.
+
+**Open questions.**
+
+1. **What counts as failing?** A single refused write can succeed on the next pass once the store
+   compacts. *Recommendation: N consecutive failures for the same key, N small, so the triangle means
+   "this device is no longer keeping your totals" and not "one write was retried".*
+2. **Does a failed write retry, and how often?** A retry storm against a full partition is its own
+   hazard, and the writer runs on the logic loop.
+3. **One code space or several?** The link settings, the network settings, the LED and the pack counter
+   all write to the same store. *Recommendation: one sequence — the operator sees one triangle, so the
+   code has to be the thing that disambiguates.*
+4. **Does the code survive a reboot?** A store that cannot be written cannot record its own failure,
+   which is a small joke with a real consequence: the panel must be able to say it from RAM alone.
+
+**Blocks.** Nothing that a test can see, which is the argument for filing it rather than waiting for a
+bench. It is recorded now because `N-f` would otherwise be built on top of it.
 
 ---
 
