@@ -51,10 +51,15 @@ namespace plc {
  * append only, never renumber, never reuse. `1`-`31` belong to storage; `32` upward is reserved so the
  * next subsystem to earn a place on the triangle cannot renumber these.
  *
- * WHAT A CODE CAN AND CANNOT SAY. Arduino's `Preferences` logs the underlying `esp_err_t` and drops it
- * inside framework code this project must not edit, so a code can only ever name WHICH GROUP OF KEYS
- * stopped persisting — never why. "Partition full" and "corrupt page" are indistinguishable from here.
- * That ceiling is stated so nobody designs a wiki page promising a cause.
+ * WHAT A CODE CAN AND CANNOT SAY. For a WRITE fault, Arduino's `Preferences` logs the underlying
+ * `esp_err_t` and drops it inside framework code this project must not edit, so the code can only ever
+ * name WHICH GROUP OF KEYS stopped persisting — never why. "Partition full" and "corrupt page" are
+ * indistinguishable from here. That ceiling is stated so nobody designs a wiki page promising a cause.
+ *
+ * Not every code is a write fault, and that is deliberate rather than drift: `TopologyNotAForest` (13)
+ * reports a READ whose bytes arrived intact and made no sense. It is in this space because an operator
+ * sees one triangle and one number, and splitting the space by cause would mean the triangle had to say
+ * which space it came from first.
  */
 enum class StorageFault : std::uint16_t {
   None = 0,
@@ -82,13 +87,24 @@ enum class StorageFault : std::uint16_t {
   PackAttemptCounter = 11,
   /** `clear()` during a factory reset. A failure here means the reset was a no-op that looked done. */
   FactoryResetErase = 12,
+  /**
+   * The stored `parent_*` keys READ BACK FINE and are not a forest — nothing failed to persist.
+   *
+   * Appended after review pointed out that reporting this as `Topology` (4) said something false on
+   * three surfaces at once: the wiki row tells an operator the topology "is not reaching flash", and
+   * this file claims a code "can only ever name WHICH GROUP OF KEYS stopped persisting". A corrupt page
+   * in healthy flash is a different fault with a different remedy — re-enter the topology, do not
+   * suspect the hardware — so it gets its own number rather than borrowing one whose contract is write
+   * health.
+   */
+  TopologyNotAForest = 13,
 };
 
 /** One past the last code in use. Append here; never renumber what is above. */
-inline constexpr std::uint16_t kStorageFaultCount = 13;
+inline constexpr std::uint16_t kStorageFaultCount = 14;
 /** The band reserved to storage. `32` upward belongs to whatever joins the triangle next. */
 inline constexpr std::uint16_t kStorageFaultBandEnd = 32;
-static_assert(static_cast<std::uint16_t>(StorageFault::FactoryResetErase) + 1 == kStorageFaultCount,
+static_assert(static_cast<std::uint16_t>(StorageFault::TopologyNotAForest) + 1 == kStorageFaultCount,
               "kStorageFaultCount must be one past the last enumerator: append the new code to the enum, "
               "bump this count, and give it a description in tools/wiki/gen-registers.mjs");
 static_assert(kStorageFaultCount <= kStorageFaultBandEnd,
@@ -137,6 +153,7 @@ inline constexpr bool storageFaultIsPeriodic(StorageFault fault) {
     case StorageFault::CommandEpoch:
     case StorageFault::PackAttemptCounter:
     case StorageFault::FactoryResetErase:
+    case StorageFault::TopologyNotAForest:
       return false;
   }
   return false;
@@ -180,10 +197,11 @@ class NvsWriteHealth {
   /**
    * Raise a group to the alarm immediately, for a failure that NOTHING WILL RETRY.
    *
-   * Two conditions earn this and they are both one-shot: `begin()` failing means the store is not open
-   * for the whole of this boot, and a factory reset's `clear()` failing means the erase that was
-   * supposed to happen did not. Waiting for three consecutive failures would mean waiting for three
-   * events that cannot occur — the counting policy assumes a writer that comes back once a minute.
+   * THREE conditions earn this and each is one-shot: `begin()` failing means the store is not open for
+   * the whole of this boot; a factory reset's `clear()` failing means the erase that was supposed to
+   * happen did not; and a stored topology that is not a forest is a boot-time READ that will not be
+   * re-read. Waiting for three consecutive failures would mean waiting for three events that cannot
+   * occur — the counting policy assumes a writer that comes back once a minute.
    *
    * Deliberately NOT a general escape hatch. Every periodic writer goes through `noteResult`, because
    * "one refused write is not news" is the whole content of the 2026-08-30 decision.

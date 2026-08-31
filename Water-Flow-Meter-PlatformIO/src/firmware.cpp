@@ -985,13 +985,12 @@ void logicTaskCode(void * pvParameters) {
   // port is opened. This used to call preferences.begin() *after* Serial.begin()
   // with 9600/8N1 hardcoded, so a configured baud rate could never take effect on
   // the first open.
-  // DF25: the bool was discarded here, and it is the single point that turns this device into an
-  // all-defaults machine that also cannot record anything — every get() returns its default and every
-  // put() fails. Raised immediately rather than counted: nothing retries begin(), so waiting for three
-  // consecutive failures would be waiting for events that cannot happen.
-  if (!preferences.begin("flow-data", false)) {
-    nvsHealth.raiseNow(plc::StorageFault::StoreDidNotOpen);
-  }
+  // The store is already open — `setup()` opens it before its first reader, which is `DF27`. Calling
+  // `begin()` again here would return false on a perfectly healthy device (it refuses when already
+  // started) and raise fault code 1 on every boot, so this site checks rather than opens.
+  //
+  // Project_document.md §4.1.1's requirement still holds and is still met: the link settings must load
+  // from NVS before the RS485 port is opened, and they do, three lines below.
   linkSettings.begin(loadLinkSettings());
 
   RTUutils::prepareHardwareSerial(RS485_SERIAL_PORT);
@@ -1062,7 +1061,9 @@ void logicTaskCode(void * pvParameters) {
     const plc::SensorTopologyLoad loaded = plc::loadSensorTopologyFrom(preferences);
     sensorTopology = loaded.topology;
     if (!loaded.stored.ok()) {
-      nvsHealth.raiseNow(plc::StorageFault::Topology);
+      // Code 13, not code 4: the bytes arrived intact and are not a forest, so nothing failed to
+      // persist. Reporting a write fault here would send an operator looking at the flash.
+      nvsHealth.raiseNow(plc::StorageFault::TopologyNotAForest);
       Serial.printf("[topology] stored parents are not a forest (error %u at channel %u); every channel "
                     "reverts to a root\n",
                     static_cast<unsigned>(loaded.stored.error),
@@ -1687,6 +1688,31 @@ void setup() {
 
   M5StamPLC.begin();
   Serial.begin(115200);
+
+  /**
+   * THE STORE OPENS HERE, BEFORE ANY READER — `DF27`.
+   *
+   * It used to open inside `logicTaskCode`, which `setup()` does not create until its last lines. So
+   * every NVS read in `setup()` ran against a CLOSED store: `Preferences` guards each accessor on
+   * `_started` and hands back the caller's default, silently. Two consequences, both invisible:
+   *
+   *  - `loadNetSettings` below saw no keys at all, so a device came up on DEFAULTS every boot and the
+   *    radio never associated. The stored block was intact in flash and unreachable — and the log said
+   *    "settings restored (revision 0), wifi=off mqtt=off", which reads like a device nobody had
+   *    configured.
+   *  - the menu pack's attempt counter could neither be read nor incremented, so §4.7's anti-boot-loop
+   *    guard was dead: a pack that validates and then takes the renderer down was retried at every
+   *    boot forever, instead of being given up on at the third.
+   *
+   * `begin()` returns false when the store is ALREADY open (`Preferences.cpp:33-35`), so there is
+   * exactly one call and it is this one — a second one in the logic task would report a healthy device
+   * as fault code 1 on every boot.
+   */
+  if (!preferences.begin("flow-data", false)) {
+    nvsHealth.raiseNow(plc::StorageFault::StoreDidNotOpen);
+    Serial.println("[storage] the non-volatile store did NOT open: every setting reads its default and "
+                   "nothing can be saved (fault code 1)");
+  }
 
   // Now that the bus and the library are up the calendar can be read — and believed only if the flag
   // above says it survived. `noteBootTrust` discards the value entirely when it did not.

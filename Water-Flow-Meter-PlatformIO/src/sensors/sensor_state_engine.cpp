@@ -21,20 +21,23 @@ void SensorStateEngine::update(float elapsedSeconds) {
   // parent at 0 every in-service channel is an effective root, so the index set and the accumulation
   // order are the gross pair's, and the IEEE-754 result is the same double by construction.
   //
-  // NOT computed as `gross - downstream`, and the reason is STRUCTURAL rather than numerical — the
-  // numerical claim is worth getting right because the obvious version of it is false. Measured: over
-  // four million plausible eight-channel tuples the two forms are bit-identical, and a difference
-  // appears only when one channel's volume sits about nine decades below another's (0.0108 L beside
-  // 8,963,428 L), where it is a single ulp. So no test on realistic volumes can tell them apart, and
-  // anybody who "optimises" this into a subtraction will find the suite still green.
+  // NOT computed as `gross - downstream`, and the reason is STRUCTURAL rather than numerical. The
+  // numerical difference is real but far too rare to be a guard: summing 200,000 random eight-channel
+  // tuples of float volumes spread over 1e-2..1e7 L, the two forms disagree in 481 cases with one
+  // channel downstream and 1,453 with seven — 0.2 % to 0.7 %, always by an ulp. Within seven decades
+  // (1e-2..1e5 L) they never disagree. So no test at realistic magnitudes enforces the distinction,
+  // and anybody who "optimises" this into a subtraction will find the suite still green.
   //
   // Summing the roots is still the right form: it computes what R2.1 DEFINES instead of deriving it
   // from an accumulator that R2.3 deliberately leaves for other consumers, so a later change to the
   // gross pair cannot move the delivered figure behind their backs. It also carries R2.5 without a
   // special case — an unknown branch is decided per delivery point, which a subtraction has no place
-  // to express. And the order-independence above does NOT hold for `cumulativeLiters`, which is a
-  // double: if the lifetime aggregate is ever netted (§7 Q5, open), the same subtraction would differ
-  // from the sum in 99.5 % of cases.
+  // to express.
+  //
+  // `cumulativeLiters` is a DOUBLE, and that changes the arithmetic completely: over the same tuples,
+  // ascending and descending summation of double addends disagree in 51 % of cases. If the lifetime
+  // aggregate is ever netted (§7 Q5, open), order and form both matter there and this comment does not
+  // transfer.
   double deliveredSessionLiters = 0.0;
   double deliveredFlowLpm = 0.0;
   uint16_t unknownBranches = 0;

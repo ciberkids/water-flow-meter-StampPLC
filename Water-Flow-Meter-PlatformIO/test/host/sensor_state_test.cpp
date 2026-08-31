@@ -302,7 +302,16 @@ void deliveredReducesToGrossTests() {
   const DeliveredRun noTopology = runDelivered(nullptr, kAllInUse, kAllCalibrated, kSeeds, nullptr);
   check(noTopology.delivered == noTopology.gross,
         "a null topology delivers exactly the gross double, bit for bit");
-  check(noTopology.deliveredFlow == noTopology.grossFlow, "and the same for flow");
+  // With no pulses both flows are 0.0, so comparing them there proves nothing — review was right that
+  // the assertion could not fail. The flow half of R2.2 is asserted below on METERED flow instead.
+  const uint32_t reductionPulses[plc::kNumSensors] = {60, 30, 15, 0, 0, 0, 0, 0};
+  const float noSeedsForFlow[plc::kNumSensors] = {0, 0, 0, 0, 0, 0, 0, 0};
+  const DeliveredRun metered =
+      runDelivered(nullptr, kAllInUse, kAllCalibrated, noSeedsForFlow, reductionPulses);
+  check(metered.grossFlow == 105.0, "three metering channels give a gross flow of 60 + 30 + 15 L/min");
+  check(metered.deliveredFlow == metered.grossFlow,
+        "and with every parent at 0 the delivered FLOW is that same double — R2.2's other half, on a "
+        "value that is not zero");
   check(noTopology.unknownBranches == 0, "with nothing unknown");
 
   plc::SensorTopology allRoots;  // default-constructed: every parent 0
@@ -313,12 +322,17 @@ void deliveredReducesToGrossTests() {
   check(parallel.delivered == noTopology.delivered,
         "so a device that has never been told about topology and one told it is parallel agree exactly");
 
-  // WHY THERE IS NO ORDER-PERMUTATION ASSERTION HERE, though R2.2's wording invites one: the addends
-  // are `float` (24-bit mantissa) and the accumulator is `double` (53-bit), so summing eight of them is
-  // EXACT and every permutation yields the identical double by construction. Such an assertion would
-  // pass against any implementation, including a wrong one — a test that cannot fail. Order only
-  // re-emerges for DOUBLE addends, which is what `cumulativeLiters` is, so that is where an order
-  // assertion belongs if the lifetime aggregate is ever netted (§7 Q5, open).
+  // WHY THERE IS NO ORDER-PERMUTATION ASSERTION HERE, though R2.2's wording invites one — and the
+  // reason is BOUNDED, because the unbounded version of it is false. The addends are `float` (24-bit
+  // mantissa) and the accumulator is `double` (53-bit), so eight of them sum exactly WHILE THEIR
+  // MAGNITUDES STAY WITHIN ABOUT SEVEN DECADES: ascending versus descending summation over 200,000
+  // random tuples disagrees 0 times across 1e-2..1e5 L, 180 times across 1e-2..1e7, and 13,590 times
+  // across 1e-2..1e9. An order assertion would therefore pass against almost any implementation at
+  // metering magnitudes while being genuinely falsifiable only on volumes no channel reaches — which
+  // makes it a test that looks strong and is not.
+  //
+  // For DOUBLE addends the same sweep disagrees 51 % of the time, so if the lifetime aggregate is ever
+  // netted (§7 Q5, open) that is where an order assertion earns its place.
 }
 
 void deliveredExcludesDownstreamTests() {
@@ -332,11 +346,14 @@ void deliveredExcludesDownstreamTests() {
 
   const DeliveredRun cascade = runDelivered(&chain, kAllInUse, kAllCalibrated, kSeeds, nullptr);
 
-  // The ORACLE, recomputed here in ascending index order over the roots only. It pins the delivered
-  // total to an independently computed expectation, which is what catches a wrong index set — a
-  // predicate that also demanded `configIsValid`, one that used the stored parent instead of the
-  // effective one, or one that dropped the NaN rule (mutation-tested: 3, 1 and 2 assertions
-  // respectively).
+  // The ORACLE, recomputed here in ascending index order over the roots only. What IT catches is a
+  // wrong index set that is visible with everything in service and calibrated: summing
+  // `cumulativeLiters` instead of `sessionLiters`, or a mis-built in-service mask. The other mutations
+  // are caught elsewhere and the attribution is worth getting right — `configIsValid` in the predicate
+  // fails the uncalibrated-child case in `unknownBranchTests`, the stored-parent-instead-of-effective
+  // mutation fails `deliveredFollowsServiceStateTests`, and dropping the NaN rule fails
+  // `unknownBranchTests` — because a comment that credits the wrong assertion is how a test's real
+  // coverage gets over-estimated.
   //
   // WHAT IT DOES NOT CATCH, stated because the first version of this comment claimed it did:
   // `delivered = gross - downstream` passes every assertion in this file. Measured over four million
@@ -440,11 +457,32 @@ void unknownBranchTests() {
         "root's business and the root can still state the branch");
   check(childCase.delivered == childCase.delivered, "so the total is still a number");
 
+  // NOTHING IN SERVICE, and every channel UNCALIBRATED — which is the fixture this assertion needs.
+  // It used to pass `kAllCalibrated`, so no channel could have been unknown whatever the code did and
+  // the check passed for the wrong reason. Review called it correctly: the assertion's own text claims
+  // to test that the root must be IN SERVICE, and only this fixture makes that claim testable.
   bool nothingInUse[plc::kNumSensors] = {false, false, false, false, false, false, false, false};
-  const DeliveredRun idle = runDelivered(&chain, nothingInUse, kAllCalibrated, kSeeds, nullptr);
+  const bool noneCalibrated[plc::kNumSensors] = {false, false, false, false,
+                                                 false, false, false, false};
+  const DeliveredRun idle = runDelivered(&chain, nothingInUse, noneCalibrated, kSeeds, nullptr);
   check(idle.delivered == 0.0 && idle.unknownBranches == 0,
-        "a device with nothing in service delivers 0.0 and nothing unknown — not NaN, because there is "
-        "no branch anybody is asking about");
+        "an OUT-OF-SERVICE uncalibrated channel marks nothing unknown and delivers 0.0 — not NaN, "
+        "because there is no branch anybody is asking about");
+
+  // FINDING 6 — nothing pinned the bitmap to any bit but 0, so an index-to-bit mis-mapping survived.
+  // Channel 2 becomes an effective root by skipping an out-of-service ancestor, so this fixture pins
+  // the mapping AND R1.4's interaction with R2.5 at the same time.
+  plc::SensorTopology deep;
+  std::uint8_t deepParents[plc::SensorTopology::kChannels] = {};
+  deepParents[2] = 1;  // channel 2 is fed by channel 0
+  check(deep.apply(deepParents).ok(), "a topology where channel 2 hangs off channel 0 applies");
+  bool headOut[plc::kNumSensors] = {true, true, true, true, true, true, true, true};
+  headOut[0] = false;  // its only ancestor is out of service, so channel 2 IS the delivery point
+  bool twoUncalibrated[plc::kNumSensors] = {true, true, true, true, true, true, true, true};
+  twoUncalibrated[2] = false;
+  const DeliveredRun bitTwo = runDelivered(&deep, headOut, twoUncalibrated, kSeeds, nullptr);
+  check(bitTwo.unknownBranches == 0x0004,
+        "the unknown bit is the CHANNEL's own bit — 2 sets 0x0004, not its parent's bit and not bit 0");
 }
 
 }  // namespace

@@ -121,7 +121,9 @@ const STORAGE_FAULTS = {
     "The **lifetime volumes** have failed to reach flash three passes in a row (the pass runs once a minute). The figures on the panel and the bus are correct and live, but they are held in RAM only: a power cut loses everything accumulated since the last successful save. This is the code to alarm on if anything downstream bills from the totals.",
   SensorCalibration:
     "A channel's calibration is not reaching flash. The channel measures correctly now and will come back as `SET?` after a power cycle, having lost its q_max, multiplier, offset and pulses-per-litre.",
-  Topology: "The sensor cascade topology (which channel feeds which) is not reaching flash. The device will come back as a parallel installation, and a cascade's delivered total will be wrong until it is re-entered.",
+  Topology: "The sensor cascade topology (which channel feeds which) is not reaching flash. A change just made to it will not survive a power cycle: the device will come back on the previous topology, and a cascade's delivered total will be wrong until it is re-entered.",
+  TopologyNotAForest:
+    "**The stored topology read back intact and does not make sense** \u2014 it contains a loop, a channel naming itself, or a parent this device does not have. Nothing is wrong with the flash, so this is not a reason to suspect the hardware. Every channel has reverted to being its own root, which is the parallel installation and the one arrangement that cannot over-count water; a cascade's delivered total will be wrong until the topology is re-entered. The serial console names the offending channel at boot.",
   ConnectedBitmap:
     "Which channels are in service is not reaching flash. After a power cycle the device may come back with the wrong set of channels enabled — a channel that reads `--` rather than a figure.",
   LinkSettings:

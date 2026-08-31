@@ -72,7 +72,7 @@ because I3 makes them append-only and a retired id must still resolve. **I2** an
 that never close.
 
 **What this list is NOT.** Nothing here is blocking a build, a test or an export. Measured 2026-08-30
-after `DF25a` and its review: host **2,168 checks across 29 suites**, 0 failures, the register-reference gate green
+after T2 and its review: host **2,197 checks across 29 suites**, 0 failures, the register-reference gate green
 (and shown to fail on a removed code description), and a firmware that compiles in the container at RAM
 24.7% / Flash 39.0% — 81,040 and 1,303,457 bytes against T1's 81,008 and 1,301,925, so DF25a with both
 review rounds costs **32 bytes of RAM and 1,532 of flash**. NOT re-run on 2026-08-30 and therefore quoted as the 2026-08-26
@@ -329,11 +329,42 @@ mantissa) and the accumulator is `double` (53-bit), so summing eight of them is 
 permutation yields the identical double by construction — verified over 200,000 tuples × 40 shuffles, 0
 mismatches. Order only re-emerges for double addends, i.e. `cumulativeLiters`.
 
-**Verified:** 24 new checks in `sensor_state_test.cpp`; mutation-tested — adding `configIsValid` to the
+**Verified:** 27 checks in `sensor_state_test.cpp`; mutation-tested — adding `configIsValid` to the
 predicate fails 3 assertions, using the stored parent instead of the effective one fails 1, NaN reaching
 the gross pair fails 1, marking every uncalibrated channel unknown fails 2, and removing the NaN
-substitution fails 2. Host **2,192 checks across 29 suites**, 0 failures; firmware SUCCESS at RAM 24.7 % /
+substitution fails 2. Host **2,197 checks across 29 suites**, 0 failures; firmware SUCCESS at RAM 24.7 % /
 Flash 39.0 %.
+
+**REVIEWED, and it found eight things — one of them not about T2 at all** (`DF27` above, the store that
+opened after `setup()` had read it). Of the seven that were:
+
+- **a READ failure was reporting a WRITE code.** The boot load raised `StorageFault::Topology` (4) when
+  the stored parents read back intact and were not a forest — nothing had failed to persist, and the wiki
+  row for code 4 tells an operator the topology "is not reaching flash", which would send them looking at
+  the hardware. Appended **code 13, `TopologyNotAForest`**, with its own description saying the flash is
+  fine and the topology needs re-entering. Two claims in `nvs_write_health.h` were false as a result and
+  are corrected: that a code "can only ever name which group of keys stopped persisting", and that "two
+  conditions" earn an immediate raise (it is three).
+- **a fixture neutered its own assertion.** The "nothing in service" case passed `kAllCalibrated`, so no
+  channel COULD have been marked unknown whatever the code did — the check passed for the wrong reason
+  while its text claimed to test that a root must be in service. Fixed by passing an all-uncalibrated
+  array, which is the fixture the claim needs.
+- **nothing pinned the unknown bitmap to any bit but 0**, so an index-to-bit mis-mapping survived the
+  suite. Added a case where channel 2 becomes a delivery point by skipping an out-of-service ancestor and
+  must set `0x0004`.
+- **R2.2's flow half could not fail** — with no pulses both sides were 0.0. It is now asserted on metered
+  flow (105 L/min across three channels).
+- **and two of my floating-point claims were simply wrong**, which is worth more than the fixes. "Float
+  addends into a double sum exactly by construction" is false beyond about seven decades of spread:
+  measured over 200,000 tuples, ascending versus descending summation disagrees **0** times across
+  1e-2…1e5 L, **180** times across 1e-2…1e7, and **13,590** times across 1e-2…1e9. And the "99.5 % of
+  cases" figure for double addends is **51 %**. Both are now stated with the sweep that produced them,
+  and the `gross - downstream` divergence with them: 481 cases in 200,000 with one channel downstream,
+  1,453 with seven. The conclusions survive — an order assertion is still not worth writing, and summing
+  the roots is still right for structural reasons — but a number nobody can reproduce is exactly what
+  this register's opening rule is about.
+- the eighth was a mutation attribution crediting assertions that do not hold those mutations, corrected
+  because a comment that over-states coverage is how coverage gets over-estimated.
 
 **Nothing publishes the delivered pair yet** — the Modbus block is T4, the panel T5, the MQTT keys T6 —
 and that is said out loud because a value with no reader is `DF22`-`DF25`'s shape.
@@ -610,6 +641,44 @@ a `hold=cancel` prompt, and the existing comment's asymmetry argument is where t
 
 **Blocks.** Nothing that a test can see, which is the argument for filing it rather than waiting for a
 bench. It is recorded now because `N-f` would otherwise be built on top of it.
+
+---
+
+## ~~DF27~~ ✅ FIXED 2026-08-30 — the store opened AFTER `setup()` had already read it, so stored WiFi and MQTT settings never took effect
+
+Found by the `T2` review, which was looking at the boot ordering of the new topology load and noticed the
+line above it. **This is the most consequential defect this register has carried**, and it had been in the
+firmware since 2026-08-05.
+
+`preferences.begin("flow-data", false)` lived inside `logicTaskCode`. `setup()` does not create that task
+until its last lines — so every NVS read in `setup()` ran against a CLOSED store, and `Preferences` guards
+each accessor on `_started` and hands back the caller's default without a word.
+
+**Two consequences, both silent, both permanent:**
+
+1. **`loadNetSettings` saw no keys at all.** A configured device came up on DEFAULTS at every boot: the
+   radio never associated, MQTT never published. The stored block was intact in flash and unreachable.
+   Worse than a blank log — the console printed `[net] settings restored (revision 0), wifi=off mqtt=off`,
+   which reads exactly like a device nobody had ever configured. And the destruction was deferred rather
+   than avoided: `netSettingsSavedRevision` was seeded from those defaults, so the once-a-minute pass saw
+   no drift and left flash alone, until the operator's first edit in some boot bumped the revision and
+   wrote defaults-plus-that-one-edit over all fourteen keys.
+2. **§4.7's anti-boot-loop guard was dead.** The menu pack's attempt counter could neither be read nor
+   incremented, so `attempts.read()` returned 0 forever and the give-up check could never fire. A pack
+   that validates and then takes the renderer down was retried at **every** boot rather than being given
+   up on at the third — which is the whole point of the counter, and it is documented in §3.6 step 11 as
+   working.
+
+**Fixed by opening the store at the top of `setup()`, before any reader**, and by NOT opening it again in
+the logic task: `Preferences::begin` returns false when the store is already open
+(`Preferences.cpp:33-35`), so a second call would have raised fault code 1 on every healthy boot — which
+is a trap worth naming, because "add a begin() to be safe" is the obvious wrong fix. §4.1.1's requirement
+that the link settings load before the RS485 port opens still holds and still passes.
+
+**What let it live for eight weeks.** `firmware.cpp` is in no host link set, so nothing could reach it; the
+symptom is indistinguishable from an unconfigured device; and the log line asserted the opposite of what
+had happened. `DF25`'s work is what made it findable at all — the review was tracing which writers report
+their outcomes when it hit the reader that had nothing to read.
 
 ---
 

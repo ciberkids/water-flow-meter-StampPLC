@@ -191,8 +191,11 @@ void wireContractTests() {
   check(static_cast<std::uint16_t>(StorageFault::CommandEpoch) == 10, "10 = command rate-limit epochs");
   check(static_cast<std::uint16_t>(StorageFault::PackAttemptCounter) == 11, "11 = menu-pack attempts");
   check(static_cast<std::uint16_t>(StorageFault::FactoryResetErase) == 12, "12 = factory-reset erase");
-  check(plc::kStorageFaultCount == 13 && plc::kStorageFaultBandEnd == 32,
-        "thirteen codes in a band of thirty-two, so the next subsystem cannot renumber these");
+  check(static_cast<std::uint16_t>(StorageFault::TopologyNotAForest) == 13,
+        "13 = a stored topology that read back intact and is not a forest — a READ fault, appended "
+        "rather than folded into 4, whose contract is write health");
+  check(plc::kStorageFaultCount == 14 && plc::kStorageFaultBandEnd == 32,
+        "fourteen codes in a band of thirty-two, so the next subsystem cannot renumber these");
 }
 
 
@@ -204,6 +207,8 @@ void writerCadenceTests() {
             plc::storageFaultIsPeriodic(StorageFault::ConnectedBitmap) &&
             plc::storageFaultIsPeriodic(StorageFault::NetworkSettings),
         "the four groups the once-a-minute pass re-attempts are periodic");
+  check(!plc::storageFaultIsPeriodic(StorageFault::TopologyNotAForest),
+        "a boot-time read that will not be re-read is one-shot, so it raises on the first failure");
   check(!plc::storageFaultIsPeriodic(StorageFault::LinkSettings) &&
             !plc::storageFaultIsPeriodic(StorageFault::FlowUnit) &&
             !plc::storageFaultIsPeriodic(StorageFault::LedSettings) &&
