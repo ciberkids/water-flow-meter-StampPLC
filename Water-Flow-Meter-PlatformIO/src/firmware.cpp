@@ -268,8 +268,19 @@ plc::WifiManager wifiManager(netSettings, wifiRadio);
  * operator decision instead of once per millisecond.
  */
 uint16_t netSettingsSavedRevision = 0;
-/** DF25: a failed network save waits a minute before retrying, rather than writing flash every tick. */
-uint32_t netSettingsRetryAtMs = 0;
+/**
+ * DF25: a failed network save waits a minute before retrying, rather than writing flash every tick.
+ *
+ * Three variables rather than one deadline, and each earns its place: the ATTEMPTED flag so the first
+ * save after a decision is immediate, the timestamp so the retry interval is `now - last >= 60000` and
+ * survives the `millis()` rollover, and a separate NOTIFIED revision so the radio hears about new
+ * credentials on the first pass even while the write is waiting out its retry.
+ */
+bool netSettingsSaveAttempted = false;
+uint32_t netSettingsLastSaveAttemptMs = 0;
+uint16_t netSettingsNotifiedRevision = 0;
+/** Latched so the held-restart notice prints once rather than on every logic pass. */
+bool restartHeldLogged = false;
 
 // ── MQTT (N5) ────────────────────────────────────────────────────────────────────────
 /**
@@ -1455,19 +1466,34 @@ void logicTaskCode(void * pvParameters) {
     // above, every write stalls the pulse sampler. So a failure schedules the next attempt a minute
     // out, which is the same one-attempt-per-minute cadence the litre keys get and what makes N = 3
     // mean three minutes here too.
-    if (netSettings.revision() != netSettingsSavedRevision && now >= netSettingsRetryAtMs) {
+    // Tell the radio the credentials moved, on the FIRST pass that sees a new revision and regardless
+    // of whether flash accepted them. It self-guards on a credential fingerprint, so calling it after an
+    // unrelated apply (an MQTT port, say) costs a comparison and does not bounce a working link.
+    //
+    // OUTSIDE the write's retry gate, which a second review pass caught: with the notification inside
+    // it, a failed save armed a 60 s retry and the next apply's credentials did not reach the radio
+    // until that timer expired — a storage fault delaying provisioning by a minute, which is not a
+    // consequence flash has any business having. The comment in the block below already said the
+    // radio's job does not depend on flash; now the code agrees.
+    if (netSettings.revision() != netSettingsNotifiedRevision) {
+      netSettingsNotifiedRevision = netSettings.revision();
+      wifiManager.noteProvisioningComplete(now);
+    }
+    // `now - last >= interval` rather than `now >= deadline`, which is the idiom every other timer in
+    // this file uses and the only one that survives the ~49-day `millis()` rollover.
+    if (netSettings.revision() != netSettingsSavedRevision &&
+        (!netSettingsSaveAttempted || now - netSettingsLastSaveAttemptMs >= 60000)) {
+      netSettingsSaveAttempted = true;
+      netSettingsLastSaveAttemptMs = now;
       const std::size_t netWritesFailed = plc::saveNetSettings(preferences, netSettings);
       nvsHealth.noteResult(plc::StorageFault::NetworkSettings, netWritesFailed == 0);
       if (netWritesFailed == 0) {
         netSettingsSavedRevision = netSettings.revision();
-      } else {
-        netSettingsRetryAtMs = now + 60000;
+  // Seeded together: an unseeded notified-revision would tell the radio at boot that credentials had
+  // just changed. Harmless — it self-guards on a fingerprint — but a spurious call is a spurious call.
+  netSettingsNotifiedRevision = netSettings.revision();
+        netSettingsSaveAttempted = false;  // the next decision gets an immediate attempt
       }
-      // Tell the radio the credentials moved. It self-guards on a credential fingerprint, so calling
-      // it after an unrelated apply (an MQTT port, say) costs a comparison and does not bounce a
-      // working link. Called on the first attempt whether or not the write landed: the LIVE settings
-      // did change, and the radio's job does not depend on flash.
-      wifiManager.noteProvisioningComplete(now);
       // The log says what happened rather than asserting success — it used to print "settings saved"
       // beside a write that had just failed.
       if (netWritesFailed == 0) {
@@ -1577,10 +1603,22 @@ void logicTaskCode(void * pvParameters) {
       // DF25, found by review: a factory reset whose `clear()` failed did not happen, and rebooting
       // accomplishes nothing except destroying the only evidence — the fault code lives in RAM. So the
       // device stays up with code 12 on register 34 and on the diagnostics topic, where an operator or
-      // a master can actually see it. Every other scheduled restart is unaffected.
+      // a master can actually see it.
+      //
+      // This suppresses only the FACTORY RESET's restart, and not because of a check here:
+      // `InteractionResult::restartScheduled` is assigned from `factoryResetState_.restartScheduled`
+      // and from nothing else (`interaction_handler.cpp:130`), so it is the only scheduled reboot the
+      // firmware has. A link change reopens the port instead of rebooting.
+      //
+      // AND THE LOG IS LATCHED, which a second review pass caught: `restartScheduled` stays true once
+      // set, so this branch runs on every logic pass. Without the latch it printed roughly a thousand
+      // lines a second at `vTaskDelay(1)` — a fix that made the fault harder to read than the defect.
       if (nvsHealth.inAlarm(plc::StorageFault::FactoryResetErase)) {
-        Serial.println("[storage] factory reset did NOT erase the store; holding the restart so the "
-                       "fault stays reportable (register 34 = 12)");
+        if (!restartHeldLogged) {
+          restartHeldLogged = true;
+          Serial.println("[storage] factory reset did NOT erase the store; holding the restart so the "
+                         "fault stays reportable (register 34 = 12)");
+        }
       } else {
         esp_restart();
       }

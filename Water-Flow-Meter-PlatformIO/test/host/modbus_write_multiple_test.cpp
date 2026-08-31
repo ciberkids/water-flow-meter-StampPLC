@@ -487,6 +487,40 @@ void theStorageFaultCodeIsPublished() {
   check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) == 0,
         "a successful write clears it, so a master sees the recovery too");
 
+  // THE OR ACROSS CHANNELS — the fix review asked to be guarded, and the reason it matters: a master's
+  // reset writes eight `cml_*` keys through one group, so reporting per channel let a later channel's
+  // success erase an earlier channel's failure, and a partial failure went out as a clean success.
+  {
+    Device eight;
+    for (std::size_t i = 0; i < plc::kNumSensors; ++i) {
+      eight.sensors[i].inUse = true;
+    }
+    ModbusManager resets(eight.deps());
+    Preferences::failKey("cml_0");  // the FIRST channel fails; the other seven succeed after it
+    resets.applyHoldingWrite(plc::REG_MASTER_RESET_ALL_MEASURED, 1);
+    Preferences::failNoKeys();
+    check(eight.nvsHealth.consecutiveFailures(plc::StorageFault::CumulativeLitres) == 1,
+          "one dead channel out of eight is recorded as ONE failure for the group, not erased by the "
+          "seven successes that follow it");
+
+    // And three such resets reach the threshold, which is what makes the record reportable at all.
+    for (int round = 0; round < 2; ++round) {
+      Preferences::failKey("cml_0");
+      resets.applyHoldingWrite(plc::REG_MASTER_RESET_ALL_MEASURED, 1);
+      Preferences::failNoKeys();
+    }
+    resets.syncGlobalRegisters();
+    check(eight.registers.at(plc::REG_STORAGE_FAULT_CODE) ==
+              static_cast<uint16_t>(plc::StorageFault::CumulativeLitres),
+          "and three of them publish code 2 — the partial failure is no longer invisible");
+
+    // A clean reset clears it, so the group is not stuck on a transient.
+    resets.applyHoldingWrite(plc::REG_MASTER_RESET_ALL_MEASURED, 1);
+    resets.syncGlobalRegisters();
+    check(eight.registers.at(plc::REG_STORAGE_FAULT_CODE) == 0,
+          "while a reset with every channel writing clears the group");
+  }
+
   // The LED route: a write through the manager records without the caller holding the health object.
   modbus.noteNvsResult(plc::StorageFault::LedSettings, false);
   modbus.noteNvsResult(plc::StorageFault::LedSettings, false);

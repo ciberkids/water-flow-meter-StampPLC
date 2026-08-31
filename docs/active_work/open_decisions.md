@@ -72,10 +72,10 @@ because I3 makes them append-only and a retired id must still resolve. **I2** an
 that never close.
 
 **What this list is NOT.** Nothing here is blocking a build, a test or an export. Measured 2026-08-30
-after `DF25a` and its review: host **2,165 checks across 29 suites**, 0 failures, the register-reference gate green
+after `DF25a` and its review: host **2,168 checks across 29 suites**, 0 failures, the register-reference gate green
 (and shown to fail on a removed code description), and a firmware that compiles in the container at RAM
-24.7% / Flash 39.0% — 81,032 and 1,303,305 bytes against T1's 81,008 and 1,301,925, so DF25a with its
-review fixes costs **24 bytes of RAM and 1,380 of flash**. NOT re-run on 2026-08-30 and therefore quoted as the 2026-08-26
+24.7% / Flash 39.0% — 81,040 and 1,303,457 bytes against T1's 81,008 and 1,301,925, so DF25a with both
+review rounds costs **32 bytes of RAM and 1,532 of flash**. NOT re-run on 2026-08-30 and therefore quoted as the 2026-08-26
 figures: 220 unit, 51 exporter, 51 visual, 0 audit findings. (Both compile figures come from a CLEAN dependency
 cache; the earlier 38.2% came from a stale container, see `platformio.ini`.) Of the six open lines one
 feature is under way, one has not started, two defects have decisions in them and two need hardware that
@@ -484,10 +484,31 @@ same class of defect:
 8. **A `check(true, …)`** whose only failure mode was a crash, correctly called vacuous. Replaced with
    the two claims its own label made.
 
-Verified after the fixes: host **2,165 checks across 29 suites**, 0 failures; firmware SUCCESS in the
-container at RAM 24.7 % / Flash 39.0 % (81,032 and 1,303,305 bytes — the review's fixes cost 460 bytes of
-flash and no RAM); the register-reference gate green and shown to fail on both a removed description and
-an unparsable enumerator.
+**A SECOND REVIEW PASS then found three defects in the two fixes written by hand** rather than the ones
+review had handed over, which is its own lesson about where to look:
+
+- **the held restart printed its notice on every logic pass** — `restartScheduled` stays true once set,
+  so a fix meant to keep a fault readable emitted roughly a thousand console lines a second at
+  `vTaskDelay(1)`. Latched. (The suppression itself is correctly narrow, and now says why rather than
+  asserting it: `InteractionResult::restartScheduled` is assigned from the factory-reset state and
+  nothing else, so it is the only scheduled reboot the firmware has.)
+- **a storage failure delayed WiFi provisioning by up to a minute.** `noteProvisioningComplete` sat
+  inside the write's new retry gate, so a failed save armed a 60 s timer and the operator's next
+  credentials did not reach the radio until it expired. The block's own comment already said the radio
+  does not depend on flash; the code now agrees.
+- **the retry deadline was not rollover-safe.** `now >= deadline` against `millis()`; every other timer
+  in the file uses `now - last >= interval`, which survives the ~49-day wrap. Matched.
+
+**And the one review fix that was host-testable now has its test.** The `saveCumulativeToNvs` change
+landed in `modbus_manager.cpp`, which four suites link, and it was verified only by "the suite still
+passes". The shared `Preferences` stub gained an OPT-IN failure knob (default off, so the five suites
+that depend on writes succeeding are untouched), and the FC16 suite now asserts that one dead channel out
+of eight is recorded as one group failure, that three such resets publish code 2, and that a clean reset
+clears it. Mutation-tested: restoring per-channel reporting fails 2 assertions.
+
+Verified after all of it: host **2,168 checks across 29 suites**, 0 failures; firmware SUCCESS in the
+container at RAM 24.7 % / Flash 39.0 % (81,040 and 1,303,457 bytes); the register-reference gate green
+and shown to fail on both a removed description and an unparsable enumerator.
 
 ---
 
