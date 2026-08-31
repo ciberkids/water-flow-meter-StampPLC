@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include "sensors/sensor_topology.h"
+#include "storage/nvs_write_health.h"  // nvsPutOk — DF25
 
 namespace plc {
 
@@ -16,11 +17,11 @@ namespace plc {
  * test, and that is how a calibration serializer shipped writing three of five fields. The real
  * `Preferences` and a fake satisfy the same two calls with no virtual dispatch on the device:
  *
- *     void    putUChar(const char* key, uint8_t value)
+ *     size_t  putUChar(const char* key, uint8_t value)
  *     uint8_t getUChar(const char* key, uint8_t defaultValue)
  *
- * (`Preferences::putUChar` returns `size_t`. The return is NOT ignored by design here — see the note on
- * `saveSensorTopologyTo` — but the template only requires the two shapes above.)
+ * The `size_t` is the bytes written, 0 on failure, and it is CHECKED — see `saveSensorTopologyTo` and
+ * `DF25`.
  *
  * SEPARATE FROM THE CALIBRATION SERIALIZER, deliberately. `SensorCharacteristics` is tripwired at
  * `sensor_config_nvs.h:56` with a `static_assert` on its size so a sixth field cannot be added without
@@ -64,20 +65,28 @@ struct SensorTopologyLoad {
 };
 
 /**
- * Persists all eight parents.
+ * Persists all eight parents, and returns HOW MANY FAILED — `DF25`.
  *
  * Writes every channel rather than only the changed ones. A topology commits atomically (§3.6), so the
  * eight keys are one value in eight boxes, and a partial write is the state this whole module exists to
  * make impossible. Eight writes on an operator action is nothing: the wear budget is set by the
  * once-a-minute litre writes, and a re-plumb is not a once-a-minute event.
+ *
+ * A NON-ZERO RETURN IS EXACTLY THE PARTIAL STATE THIS MODULE REFUSES TO CREATE IN RAM, so the caller
+ * cannot treat it as cosmetic: the forest in memory is valid and the one in flash is not, and the next
+ * boot will load the difference. `loadSensorTopologyFrom` is what catches it — a partial write that is
+ * no longer a forest falls back to all-roots and says so — but a partial write that happens to REMAIN a
+ * forest is a different topology, silently. `[[nodiscard]]` for the same reason its neighbour has it.
  */
 template <typename Store>
-void saveSensorTopologyTo(Store& store, const SensorTopology& topology) {
+[[nodiscard]] std::size_t saveSensorTopologyTo(Store& store, const SensorTopology& topology) {
   char key[kSensorTopologyKeyBytes];
+  std::size_t failed = 0;
   for (std::size_t i = 0; i < SensorTopology::kChannels; ++i) {
     formatSensorParentKey(key, sizeof(key), i);
-    store.putUChar(key, topology.parent(i));
+    failed += nvsPutOk(store.putUChar(key, topology.parent(i)), sizeof(std::uint8_t)) ? 0 : 1;
   }
+  return failed;
 }
 
 /**

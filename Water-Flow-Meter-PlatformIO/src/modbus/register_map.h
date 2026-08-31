@@ -62,6 +62,22 @@ inline constexpr uint16_t REG_DISPLAY_FLOW_UNIT = 33;
  */
 inline constexpr uint16_t kHoldingRegisterSpace = 752;
 
+/**
+ * The storage fault code (`DF25`) — 0 while the device is keeping what it was told to keep.
+ *
+ * Read-only, device-wide, and a WORD rather than a spare status bit for three reasons. The decided
+ * design is one code sequence for every key group, and a code needs more than a flag. The spare bits
+ * that exist are per-CHANNEL (`OFF_STATUS_FLAGS` 2-15, and the high halves of 10 and 30), while the keys
+ * that can fail here include the connected bitmap, the flow unit and the network settings, which belong
+ * to no channel. And this repository has already ruled on borrowing a documented word's spare bits —
+ * `kMqttFlags` bit 2 stays reserved rather than reassigned.
+ *
+ * The values are `plc::StorageFault` in `storage/nvs_write_health.h`, which owns the numbering and says
+ * why it is append-only. **35-39 are held for storage's neighbours** so the sequence has room without
+ * borrowing from the link block at 40.
+ */
+inline constexpr uint16_t REG_STORAGE_FAULT_CODE = 34;
+
 inline constexpr uint16_t REG_LINK_SLAVE_ID = 40;
 inline constexpr uint16_t REG_LINK_BAUD_INDEX = 41;
 inline constexpr uint16_t REG_LINK_PARITY = 42;

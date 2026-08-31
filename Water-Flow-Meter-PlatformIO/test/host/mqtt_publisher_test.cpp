@@ -661,6 +661,9 @@ void payloadTests() {
   // reading that is wrong versus no reading at all — and an assertion where both read 3 would pass
   // just as happily with the two fields swapped.
   snap.diagnostics.uncalibratedFlags = 0x84;
+  // DF25 — code 2 is `StorageFault::CumulativeLitres`. A non-zero fixture value on purpose: a formatter
+  // tested only against 0 is the shape that let `baselineKhz` publish zeros for the life of the topic.
+  snap.diagnostics.storageFaultCode = 2;
   snap.diagnostics.boardTemperatureC = 31.5f;
   snap.diagnostics.uptimeSeconds = 86400;
   snap.diagnostics.wifiRssiDbm = -67;
@@ -682,8 +685,8 @@ void payloadTests() {
   // opposite explanations for a flow of 0.
   checkStr(lastPayloadFor(sink, "wm/diagnostics/state").c_str(),
            "{\"pollingRateKhz\":4.500,\"baselineKhz\":4.750,\"undersampling\":3,"
-           "\"uncalibrated\":132,\"tempC\":31.5,\"uptimeS\":86400,\"rssi\":-67,"
-           "\"lastCmd\":\"idle\"}",
+           "\"uncalibrated\":132,\"storageFault\":2,\"tempC\":31.5,\"uptimeS\":86400,"
+           "\"rssi\":-67,\"lastCmd\":\"idle\"}",
            "and the R2.1.2 pair travels together, so a regression is visible in HA");
   // `idle` and not `accepted` on a device that has had no command: R4.4.2d's value has to be able to
   // say "nothing has happened", or a fresh device claims a success nobody asked for.

@@ -57,9 +57,13 @@ struct Candidate {
  */
 class FakeStore {
  public:
-  void putUChar(const char* key, std::uint8_t value) {
+  // Returns the bytes written, like the real `Preferences::putUChar` — see DF25 and
+  // `storage/nvs_write_health.h`. This fake always succeeds; the failing one lives in
+  // `nvs_write_health_test.cpp`, which is where the failure POLICY is asserted.
+  std::size_t putUChar(const char* key, std::uint8_t value) {
     values_[key] = value;
     written_.insert(key);
+    return sizeof(value);
   }
   std::uint8_t getUChar(const char* key, std::uint8_t defaultValue) const {
     const auto it = values_.find(key);
@@ -244,7 +248,8 @@ void persistenceTests() {
   forest.parents[6] = 8;
   check(topology.apply(forest.parents).ok(), "a forest with a deep branch and a back-reference applies");
 
-  plc::saveSensorTopologyTo(store, topology);
+  check(plc::saveSensorTopologyTo(store, topology) == 0,
+        "saving a topology to a healthy store reports zero failed writes (DF25)");
   check(store.distinctKeys() == kChannels,
         "saving writes one distinct key per channel — no truncation collision");
   check(store.holds("parent_0") && store.holds("parent_7"),

@@ -1,4 +1,5 @@
 #include "led/led_controller.h"
+#include "storage/nvs_write_health.h"  // nvsPutOk — DF25
 
 #include <Preferences.h>
 
@@ -24,9 +25,15 @@ void LedController::loadFromPreferences(Preferences& prefs) {
   clampConfig();
 }
 
-void LedController::saveToPreferences(Preferences& prefs) const {
-  prefs.putUShort(kPrefKeyStep, volumeStepLiters_);
-  prefs.putUShort(kPrefKeyPeriod, pulsePeriodMs_);
+bool LedController::saveToPreferences(Preferences& prefs) const {
+  // Both are attempted before returning: a half-saved pair is what the load path already tolerates
+  // (an absent key reads its default), and stopping at the first failure would only lose a write that
+  // might have landed. DF25.
+  const bool stepOk = plc::nvsPutOk(prefs.putUShort(kPrefKeyStep, volumeStepLiters_),
+                                    sizeof(volumeStepLiters_));
+  const bool periodOk = plc::nvsPutOk(prefs.putUShort(kPrefKeyPeriod, pulsePeriodMs_),
+                                      sizeof(pulsePeriodMs_));
+  return stepOk && periodOk;
 }
 
 void LedController::setVolumeStepLiters(uint16_t stepLiters) {

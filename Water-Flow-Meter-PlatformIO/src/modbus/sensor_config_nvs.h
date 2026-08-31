@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include "modbus/sensor_types.h"
+#include "storage/nvs_write_health.h"  // nvsPutOk — DF25
 
 namespace plc {
 
@@ -34,12 +35,16 @@ namespace plc {
  * parameter so the real `Preferences` and a fake one satisfy the same four calls with no virtual
  * dispatch on the device:
  *
- *     void     putUShort(const char* key, uint16_t value)
+ *     size_t   putUShort(const char* key, uint16_t value)
  *     uint16_t getUShort(const char* key, uint16_t defaultValue)
- *     void     putShort (const char* key, int16_t  value)
+ *     size_t   putShort (const char* key, int16_t  value)
  *     int16_t  getShort (const char* key, int16_t  defaultValue)
  *
- * (`Preferences::put*` return `size_t`; the return is deliberately ignored, as it was before.)
+ * THE RETURN VALUE IS NO LONGER IGNORED (`DF25`). This comment used to end "the return is deliberately
+ * ignored, as it was before" — an honest description of the code it replaced, and the sentence DF25
+ * names. `Preferences::put*` return the bytes written and 0 on failure, so discarding it meant a device
+ * whose store had failed kept publishing correct totals from RAM and lost them at the next power cycle
+ * with nothing reporting it. `saveSensorConfigTo` now returns how many of the five writes failed.
  */
 
 /**
@@ -101,20 +106,36 @@ inline void formatSensorConfigKey(char* out, std::size_t size, SensorConfigField
   std::snprintf(out, size, "%s%u", sensorConfigKeyPrefix(field), static_cast<unsigned>(index));
 }
 
-/** Persists all five fields of one channel's calibration. */
+/**
+ * Persists all five fields of one channel's calibration, and returns HOW MANY FAILED — `DF25`.
+ *
+ * `[[nodiscard]]` deliberately: the defect being closed here is a caller that ignored the result, so
+ * the compiler is the thing that stops the next one. Under `-Werror` an ignoring call site is a build
+ * failure, which is the same argument the size tripwire above makes.
+ *
+ * All five are attempted even after one fails. A partial calibration is what the original defect
+ * produced and the load path is written to survive it (an absent key reads its default), so stopping
+ * early would only lose the writes that might still have landed — and the count is more useful to an
+ * operator than a position.
+ */
 template <typename Store>
-void saveSensorConfigTo(Store& store, std::size_t index, const SensorCharacteristics& cfg) {
+[[nodiscard]] std::size_t saveSensorConfigTo(Store& store, std::size_t index,
+                                             const SensorCharacteristics& cfg) {
   char key[kSensorConfigKeyBytes];
+  std::size_t failed = 0;
   formatSensorConfigKey(key, sizeof(key), SensorConfigField::QMax, index);
-  store.putUShort(key, cfg.q_max);
+  failed += nvsPutOk(store.putUShort(key, cfg.q_max), sizeof(uint16_t)) ? 0 : 1;
   formatSensorConfigKey(key, sizeof(key), SensorConfigField::FMultiplier, index);
-  store.putShort(key, cfg.f_multiplier);
+  failed += nvsPutOk(store.putShort(key, cfg.f_multiplier), sizeof(int16_t)) ? 0 : 1;
   formatSensorConfigKey(key, sizeof(key), SensorConfigField::Adjust, index);
-  store.putShort(key, cfg.adjust);
+  failed += nvsPutOk(store.putShort(key, cfg.adjust), sizeof(int16_t)) ? 0 : 1;
   formatSensorConfigKey(key, sizeof(key), SensorConfigField::Calibration, index);
-  store.putUShort(key, static_cast<uint16_t>(cfg.calibration));
+  failed += nvsPutOk(store.putUShort(key, static_cast<uint16_t>(cfg.calibration)), sizeof(uint16_t))
+                ? 0
+                : 1;
   formatSensorConfigKey(key, sizeof(key), SensorConfigField::PulsesPerLitre, index);
-  store.putUShort(key, cfg.pulses_per_litre);
+  failed += nvsPutOk(store.putUShort(key, cfg.pulses_per_litre), sizeof(uint16_t)) ? 0 : 1;
+  return failed;
 }
 
 /**

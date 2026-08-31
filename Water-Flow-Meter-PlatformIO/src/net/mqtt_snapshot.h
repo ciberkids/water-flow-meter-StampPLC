@@ -31,6 +31,8 @@ namespace plc {
 
 /** Everything the snapshot needs that is not per-channel state. */
 struct MqttSnapshotInputs {
+  /** `DF25` — `plc::NvsWriteHealth::code()`, the same number Modbus register 34 carries. */
+  uint16_t storageFaultCode = 0;
   /** The GROSS aggregates the engine maintains — `aggregateFlowLpmCache` and `totalSessionLitersCache`. */
   double aggregateFlowLpm = 0.0;
   double totalSessionLiters = 0.0;
@@ -126,6 +128,9 @@ inline void fillMqttSnapshot(MqttSnapshot& out,
   out.diagnostics.pollingRateKhz = inputs.pollingRateKhz;
   out.diagnostics.undersamplingFlags = inputs.undersamplingFlags;
   out.diagnostics.uncalibratedFlags = uncalibratedFlags;
+  // DF25. Passed in rather than derived: the health object lives beside the `Preferences` instance in
+  // firmware.cpp, and this assembly is deliberately Arduino-free.
+  out.diagnostics.storageFaultCode = inputs.storageFaultCode;
   out.diagnostics.uptimeSeconds = inputs.uptimeSeconds;
   out.diagnostics.wifiRssiDbm = inputs.wifiRssiDbm;
   // R4.4.2d's remote half. Sticky, so it describes the last command rather than the last tick.

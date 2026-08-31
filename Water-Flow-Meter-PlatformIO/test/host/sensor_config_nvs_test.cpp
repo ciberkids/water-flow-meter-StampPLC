@@ -41,13 +41,18 @@ void check(bool condition, const char* what) {
  */
 class FakeStore {
  public:
-  void putUShort(const char* key, uint16_t value) {
+  // Returns the bytes written, like the real `Preferences::putUShort` — see DF25 and
+  // `storage/nvs_write_health.h`. This fake always succeeds; failure injection lives in
+  // `nvs_write_health_test.cpp` beside the policy it exercises.
+  std::size_t putUShort(const char* key, uint16_t value) {
     unsigned_[key] = value;
     written_.insert(key);
+    return sizeof(value);
   }
-  void putShort(const char* key, int16_t value) {
+  std::size_t putShort(const char* key, int16_t value) {
     signed_[key] = value;
     written_.insert(key);
+    return sizeof(value);
   }
   uint16_t getUShort(const char* key, uint16_t defaultValue) const {
     const auto it = unsigned_.find(key);
@@ -92,7 +97,8 @@ void roundTripTests() {
   pulses.pulses_per_litre = 450;
 
   FakeStore store;
-  plc::saveSensorConfigTo(store, 0, pulses);
+  check(plc::saveSensorConfigTo(store, 0, pulses) == 0,
+        "a healthy store reports zero failed writes out of five (DF25)");
   const SensorCharacteristics reloaded = plc::loadSensorConfigFrom(store, 0);
 
   check(reloaded.calibration == CalibrationType::PulsesPerLitre,
@@ -110,7 +116,7 @@ void roundTripTests() {
   formula.f_multiplier = 6;
   formula.adjust = -120;
   formula.calibration = CalibrationType::Formula;
-  plc::saveSensorConfigTo(store, 1, formula);
+  check(plc::saveSensorConfigTo(store, 1, formula) == 0, "and so does a second channel");
   const SensorCharacteristics reloadedFormula = plc::loadSensorConfigFrom(store, 1);
   check(reloadedFormula == formula, "a formula channel round-trips too, negative adjust included");
   check(reloadedFormula.adjust == -120, "and the sign of adjust is not lost through NVS");
@@ -128,9 +134,11 @@ void keyTests() {
   cfg.q_max = 10;
   cfg.f_multiplier = 2;
   cfg.pulses_per_litre = 7;
+  std::size_t failedAcrossEight = 0;
   for (std::size_t i = 0; i < plc::kNumSensors; ++i) {
-    plc::saveSensorConfigTo(store, i, cfg);
+    failedAcrossEight += plc::saveSensorConfigTo(store, i, cfg);
   }
+  check(failedAcrossEight == 0, "and forty writes across eight channels all land");
   check(store.keyCount() == 5 * plc::kNumSensors,
         "eight channels x five fields = 40 distinct keys, so nothing truncated into a collision");
   check(store.has("cfg_q0") && store.has("cfg_f0") && store.has("cfg_a0"),
@@ -189,7 +197,7 @@ void corruptionTests() {
   SensorCharacteristics cfg;
   cfg.q_max = 100;
   cfg.f_multiplier = 6;
-  plc::saveSensorConfigTo(store, 2, cfg);
+  check(plc::saveSensorConfigTo(store, 2, cfg) == 0, "a channel is stored before the page is corrupted");
 
   store.forceCalibrationWord(2, 7);  // neither 0 nor 1 — a corrupt page, or a future firmware's form
   const SensorCharacteristics loaded = plc::loadSensorConfigFrom(store, 2);

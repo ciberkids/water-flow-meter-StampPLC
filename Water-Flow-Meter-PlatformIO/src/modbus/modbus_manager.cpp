@@ -198,7 +198,8 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
         }
       }
       deps_.ledController->resetToDefaults();
-      deps_.ledController->saveToPreferences(*deps_.preferences);
+      noteNvsResult(plc::StorageFault::LedSettings,
+                    deps_.ledController->saveToPreferences(*deps_.preferences));
       deps_.ledController->markSessionsCleared();
       resetRuntimeCaches();
       evaluateSensorDiagnostics();
@@ -284,7 +285,8 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
       return false;
     }
     deps_.ledController->setVolumeStepLiters(value);
-    deps_.ledController->saveToPreferences(*deps_.preferences);
+    noteNvsResult(plc::StorageFault::LedSettings,
+                  deps_.ledController->saveToPreferences(*deps_.preferences));
     deps_.registers->setUint16(address, deps_.ledController->volumeStepLiters());
     return true;
   }
@@ -294,7 +296,8 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
       return false;
     }
     deps_.ledController->setPulsePeriodMs(value);
-    deps_.ledController->saveToPreferences(*deps_.preferences);
+    noteNvsResult(plc::StorageFault::LedSettings,
+                  deps_.ledController->saveToPreferences(*deps_.preferences));
     deps_.registers->setUint16(address, deps_.ledController->pulsePeriodMs());
     return true;
   }
@@ -306,7 +309,8 @@ bool ModbusManager::applyHoldingWrite(uint16_t address,
       return false;
     }
     *deps_.displayFlowUnit = value;
-    deps_.preferences->putUShort("flow_unit", value);
+    noteNvsResult(plc::StorageFault::FlowUnit,
+                  plc::nvsPutOk(deps_.preferences->putUShort("flow_unit", value), sizeof(value)));
     deps_.registers->setUint16(address, value);
     return true;
   }
@@ -573,6 +577,12 @@ void ModbusManager::syncGlobalRegisters() {
   deps_.registers->setUint16(REG_LED_RED_PULSE_PERIOD, deps_.ledController->pulsePeriodMs());
   if (deps_.displayFlowUnit) {
     deps_.registers->setUint16(REG_DISPLAY_FLOW_UNIT, *deps_.displayFlowUnit);
+  }
+  // DF25. Published on every sync rather than only when it changes, for the reason the network block
+  // republishes wholesale: this is the one place the convention lives, and a master polling register 34
+  // must never read a stale 0 from a device that has since stopped persisting.
+  if (deps_.nvsHealth) {
+    deps_.registers->setUint16(REG_STORAGE_FAULT_CODE, deps_.nvsHealth->code());
   }
   publishClock();
 }
@@ -937,5 +947,9 @@ void ModbusManager::saveCumulativeToNvs(std::size_t index) {
   }
   char key[8];
   std::snprintf(key, sizeof(key), "cml_%u", static_cast<unsigned>(index));
-  deps_.preferences->putDouble(key, deps_.sensors[index].cumulativeLiters);
+  // The OTHER litre writer. firmware.cpp's once-a-minute pass is the one DF25's headline scenario turns
+  // on, but a master's reset lands here, and a reset that fails to persist comes back at the next boot.
+  noteNvsResult(plc::StorageFault::CumulativeLitres,
+                plc::nvsPutOk(deps_.preferences->putDouble(key, deps_.sensors[index].cumulativeLiters),
+                              sizeof(double)));
 }

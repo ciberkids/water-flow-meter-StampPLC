@@ -61,7 +61,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **N-e** | 🟡 | feature, in progress | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, four questions open; T0 and T1 landed, **T2 next** |
 | **N-f** | 🟡 | feature, specified here | Where the readings live — internal flash or an SD card, human-readable files, persisted session values and rotating telemetry. Five decisions taken, six questions open, not started; question 1 changes a documented register contract and should be answered first |
-| **DF25** | 🟡 | defect, found 2026-08-30 | A write to non-volatile storage that fails is reported by nothing — `begin()`'s bool and every `put*` byte count are discarded, so a device that has stopped keeping your lifetime totals looks perfect until a power cycle |
+| **DF25** | 🟡 | defect, found 2026-08-30 | A write to non-volatile storage that fails is reported by nothing. **Detection and publication landed 2026-08-30** (`DF25a`: register 34, MQTT `storageFault`, 49 host checks) — the panel's warning triangle rides with `N-e`'s T5, and three of its four questions were built on the recommendation rather than decided |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
 | **N-d2** | ⏸️ | measurement | Whether the RTC survives power loss is unknown — the correction half (a gate protecting the VLF probe's position) landed 2026-08-21 |
@@ -71,11 +71,12 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 because I3 makes them append-only and a retired id must still resolve. **I2** and **I3** are standing rules
 that never close.
 
-**What this list is NOT.** Nothing here is blocking a build, a test or an export. Measured 2026-08-30:
-host **2,095 checks across 28 suites**, 0 failures, and a firmware that compiles in the container at RAM
-24.7% / Flash 39.0% — byte-identical to 2026-08-26, which is the expected result for T1, whose two
-headers nothing includes yet. NOT re-run on 2026-08-30 and therefore quoted as the 2026-08-26 figures:
-220 unit, 51 exporter, 51 visual, 0 audit findings. (Both compile figures come from a CLEAN dependency
+**What this list is NOT.** Nothing here is blocking a build, a test or an export. Measured 2026-08-30
+after `DF25a`: host **2,156 checks across 29 suites**, 0 failures, the register-reference gate green
+(and shown to fail on a removed code description), and a firmware that compiles in the container at RAM
+24.7% / Flash 39.0% — 81,032 and 1,302,845 bytes against T1's 81,008 and 1,301,925, so DF25a's cost is
+**24 bytes of RAM and 920 of flash**. NOT re-run on 2026-08-30 and therefore quoted as the 2026-08-26
+figures: 220 unit, 51 exporter, 51 visual, 0 audit findings. (Both compile figures come from a CLEAN dependency
 cache; the earlier 38.2% came from a stale container, see `platformio.ini`.) Of the six open lines one
 feature is under way, one has not started, two defects have decisions in them and two need hardware that
 has never existed for this project. That is a different condition from "twelve things are broken", which
@@ -390,15 +391,77 @@ corrupt page, or a full partition (20 KB, five sectors, shared with the WiFi sta
 
 **Decided 2026-08-30 by the owner:** use the return value, and when writes start failing show a warning
 on the panel — a danger triangle with a CODE — with the codes documented on a wiki page as the start of
-a numbered error-code sequence.
+a numbered error-code sequence. **What counts as failing: N CONSECUTIVE failures on the same key**, so
+the triangle means "this device is no longer keeping your totals" rather than "one write was retried".
+
+**~~DF25a~~ ✅ DETECTION AND PUBLICATION LANDED 2026-08-30 — 49 host checks.** (A bold lead-in, not a
+heading: I3 says sub-IDs are lead-ins so the heading census stays a census of items. This paragraph was
+briefly a `###` and broke that rule in the same round the rule was corrected.)
+
+`storage/nvs_write_health.h` owns the code space and the counting policy; N = 3, which at one pass a
+minute means roughly three minutes of not keeping totals. Published on **Modbus register 34**
+(`REG_STORAGE_FAULT_CODE`) and as **`storageFault`** on the MQTT diagnostics topic. Twelve writers now
+report: the store's own `begin()`, the once-a-minute litre and calibration pass, the connected bitmap,
+the topology, the link settings (including §4.1.1's unattended rollback), the live and factory-reset flow
+unit, the LED settings through all five of their call sites, the network settings, the command epochs,
+a master's cumulative-litre reset, and the factory reset's `clear()`.
+
+**AND THE SECOND HALF OF THE DEFECT, which was worse than the first.** The once-a-minute pass advanced
+its shadow copies unconditionally, immediately after the write nobody checked
+(`persistedCumulative[i] = …` right after `saveCumulativeData`). So the dirty check said "already saved"
+on the next pass and **a failed write was never attempted again** — which is what turned a transient
+failure into a permanent loss. The shadows now advance only on success, and that makes the pass its own
+retry: exactly one attempt per minute per key, bounded by the pass, so no retry storm. That is the
+answer to question 2 and it cost less than a retry loop would have.
+
+**The trap that would have shipped a fix worse than the defect.** `Preferences::putString` returns
+`strlen(value)`, not a fixed width — so a SUCCESSFUL write of an empty string returns 0, and
+`net_settings_nvs.h` writes an empty string on every save for any unset field, which for an unset MQTT
+password is most devices in the field. Testing `returned != 0` there would have raised a storage alarm
+on healthy hardware. `nvsPutStringOk` exists solely for that case and the suite asserts it. Every other
+`put*` is checked as `returned == expected` rather than `!= 0`, which also catches a short write.
+
+**The wiki table is GENERATED from the enum**, by `tools/wiki/gen-registers.mjs`, and reconciled in both
+directions: a code appended to the header without a description fails the build, and so does a
+description for a code that no longer exists. Verified by removing one — the generator names both halves
+and exits 1. That is the same argument the register table itself is generated on, and it is what makes
+the owner's "a sequence of error codes in the wiki page" a thing that cannot drift.
+
+**Two codes are reserved but not yet reported, and this is the shape DF25 is about, so it is named
+rather than left to be found.** `PackAttemptCounter` (11) needs a bool through `ui::PackAttemptCounter`'s
+virtual interface and its fake; a lost attempt counter is benign — a pack simply gets retried. `Topology`
+(4) reports only from `N-e`'s serializer, which has no production caller until T4. Neither is a silent
+hole: both are in the generated wiki table, and this paragraph is the record.
+
+**Three answers were BUILT ON THE RECOMMENDATION rather than decided**, each one line to change:
+question 2 (the retry is the next pass), question 3 (one code space for every writer) and question 4
+(RAM only — a store that cannot be written cannot record its own failure). They are asked properly in
+the same round this landed.
+
+---
 
 **Split in two, deliberately, and the second half rides with `N-e`'s T5.** The detection half is cheap
-and host-testable: thread the write result out of the serializers and the once-a-minute pass, decide what
-counts as failing, and expose it on a status bit and the diagnostics topic. The panel half is a UI
-pipeline change — a new indicator has to exist in the dataset, the exporter, the generated tables, the
-renderer and the value catalogue, and a glyph costs characters out of a fixed budget. **T5 already bumps
-the catalogue ABI and appends to the ledger**, so putting the triangle there costs one ABI bump instead
-of two.
+and host-testable; it landed as `DF25a` above.
+
+**A CLAIM IN THIS ENTRY WAS WRONG, and the correction makes the remaining work cheaper.** It said the
+panel half needs a new indicator "in the dataset, the exporter, the generated tables, the renderer and
+the value catalogue". It does not. A warning banner already exists at every layer that matters — the
+firmware renderer, the host tests, the mockup mirror, the unit and visual suites and both geometry
+audits — and it is deliberately OUTSIDE the dataset/exporter/generated-table pipeline: no element
+declares it, no binding reaches it, the exporter never sees it (`warningBanner.ts:7` against this
+entry's own list). So the work is to extend `drawWarningBanner` and `bannerActive()` plus their five
+mirrors, and it needs **no dataset, schema, exporter, generated-table or ABI work at all**. The ABI and
+ledger leg only becomes DF25's cost if the numeric code is also exposed as a bindable catalogue value,
+which is a separate decision — and on that route the one loud gate that would catch a missing resolver
+arm (`everyScreenBindingResolvesTests`) never fires, because nothing binds it.
+
+Still worth landing with T5 rather than alone: T5 is already editing the banner's class and the panel's
+per-channel rows, and a second pass over the same five mirrors is the kind of duplication this
+repository keeps paying for.
+
+**The one thing the panel leg must decide explicitly:** whether a storage failure is exempt from the
+editor suppression that `hasWarnings` obeys. A device that has stopped keeping totals arguably outranks
+a `hold=cancel` prompt, and the existing comment's asymmetry argument is where the answer belongs.
 
 **Open questions.**
 
@@ -881,9 +944,17 @@ a future batch takes `J` or a new two-letter prefix, never a letter that once me
 - **A split keeps the parent and adds a suffix** (`N-d` → `N-d1`, `N-d2`), so an ID cited from outside
   this file still resolves. `G1`, `N-b`, `N-c` and `I2` are cited from `README.md`, four requirement
   documents and three source files — renaming one breaks a cross-reference that still looks valid.
-- **Sub-IDs are bold lead-ins, not headings.** `###` carries item headings only (`DF`, `J`); a sub-line
-  like `I2a` or `N-d2` is a bold lead-in inside its parent, so `grep '^### '` stays a census of items
-  and never double-counts one.
+- **Sub-IDs are bold lead-ins, not headings.** A sub-line like `I2a` or `N-d2` is a bold lead-in inside
+  its parent, never a heading of its own, so the census never double-counts one. **This rule said `###`
+  until 2026-08-30 and every heading in the file is `##`** — so the command it named,
+  `grep '^### '`, matched nothing at all, which is a rule describing a check that could not run. `##` is
+  also the right level: the index and the two closed tables are `##` peers of the items, so demoting
+  items to `###` would nest them under nothing. The census that works, and excludes the four structural
+  sections by matching the ID itself:
+
+      grep -cE '^## (~~)?(DF|J|N-|G[0-9]|I[0-9])' docs/active_work/open_decisions.md
+
+  It reports **13** today: six open, five struck through in place, and the two standing rules.
 - **The index at the top is maintained by hand and must match the headings.** Closing an item is two
   edits in one commit: strike the heading, delete the index row. An index that lists a fixed item is
   the same failure as the status emoji this register was rewritten to fix — one fact with two homes.

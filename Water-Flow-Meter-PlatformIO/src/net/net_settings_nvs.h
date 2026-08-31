@@ -12,6 +12,7 @@
 // wall-mounted meter — it is the difference between commissioning once and commissioning forever.
 
 #include <Preferences.h>
+#include "storage/nvs_write_health.h"  // nvsPutOk / nvsPutStringOk — DF25
 
 #include <cstddef>
 #include <cstdint>
@@ -113,19 +114,40 @@ inline void loadNetSettings(Preferences& prefs, NetSettings& settings) {
  * exposure — §8.1 already accepts it for the WiFi passphrase, since the radio needs the plaintext —
  * but it is worth stating where the bytes land rather than leaving it to be discovered.
  */
-inline void saveNetSettings(Preferences& prefs, const NetSettings& settings) {
+/**
+ * Returns HOW MANY of the fourteen writes failed — `DF25`.
+ *
+ * A partial failure here is the worst-shaped one in the firmware: `loadNetSettings` skips absent keys, so
+ * a half-written block comes back as a MIXTURE of new and old credentials, and this file's own header
+ * warns that a blank portal password "would lock nobody out". So the count matters, not just a boolean.
+ *
+ * THE STRING TEST IS `nvsPutStringOk`, NOT A COMPARISON WITH ZERO. `Preferences::putString` returns
+ * `strlen(value)`, and an unset MQTT password or portal user is an EMPTY string on a perfectly healthy
+ * device — `NetSettings::get` returns true for an unset field, so the empty write happens on every save.
+ * Treating a zero return as failure here would raise a storage alarm on most devices in the field, which
+ * is a defect wearing the costume of a fix.
+ */
+inline std::size_t saveNetSettings(Preferences& prefs, const NetSettings& settings) {
   char buffer[NetSettings::kMaxValueBytes + 1] = {};
+  std::size_t failed = 0;
   for (std::size_t i = 0; i < static_cast<std::size_t>(NetField::Count); ++i) {
     if (!settings.get(static_cast<NetField>(i), buffer, sizeof(buffer))) {
       continue;
     }
-    prefs.putString(net_nvs::kTextKeys[i], buffer);
+    failed += nvsPutStringOk(prefs.putString(net_nvs::kTextKeys[i], buffer), buffer) ? 0 : 1;
   }
-  prefs.putBool(net_nvs::kWifiEnabled, settings.wifiEnabled());
-  prefs.putBool(net_nvs::kMqttEnabled, settings.mqttEnabled());
-  prefs.putUShort(net_nvs::kMqttPort, settings.mqttPort());
-  prefs.putUShort(net_nvs::kMqttPeriod, settings.mqttPublishPeriodS());
-  prefs.putUShort(net_nvs::kMqttFlags, NetRegisterMap::mqttFlags(settings));
+  failed += nvsPutOk(prefs.putBool(net_nvs::kWifiEnabled, settings.wifiEnabled()), 1) ? 0 : 1;
+  failed += nvsPutOk(prefs.putBool(net_nvs::kMqttEnabled, settings.mqttEnabled()), 1) ? 0 : 1;
+  failed += nvsPutOk(prefs.putUShort(net_nvs::kMqttPort, settings.mqttPort()), sizeof(uint16_t)) ? 0 : 1;
+  failed +=
+      nvsPutOk(prefs.putUShort(net_nvs::kMqttPeriod, settings.mqttPublishPeriodS()), sizeof(uint16_t))
+          ? 0
+          : 1;
+  failed += nvsPutOk(prefs.putUShort(net_nvs::kMqttFlags, NetRegisterMap::mqttFlags(settings)),
+                     sizeof(uint16_t))
+                ? 0
+                : 1;
+  return failed;
 }
 
 }  // namespace plc

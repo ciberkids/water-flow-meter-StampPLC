@@ -68,6 +68,7 @@ struct Device {
   SensorData sensors[plc::kNumSensors]{};
   SensorCharacteristics configs[plc::kNumSensors]{};
   Preferences preferences;
+  plc::NvsWriteHealth nvsHealth;
   LedController leds;
   plc::DeviceClock clock;
   plc::NetSettings net;
@@ -97,6 +98,7 @@ struct Device {
     d.displayFlowUnit = &displayFlowUnit;
     d.allSensorsReadyCache = &allSensorsReady;
     d.pollingRateKhz = &pollingRateKhz;
+    d.nvsHealth = &nvsHealth;  // DF25 — register 34
     d.sensorCount = plc::kNumSensors;
     return d;
   }
@@ -444,6 +446,66 @@ void singleWriteStillWorks() {
         "while FC16 with the same wrong magic does not — §5.1's zero-fill must survive");
 }
 
+
+/**
+ * DF25 — the storage fault code reaches a master, and stays put while the fault does.
+ *
+ * Here rather than in `nvs_write_health_test.cpp` because this is the WIRING, not the policy: the policy
+ * suite is Arduino-free and never links the manager, so a code that was counted correctly and published
+ * nowhere would pass it. That is the same gap DF23 is: a value with a formatter and no author.
+ */
+void theStorageFaultCodeIsPublished() {
+  std::printf("\n[DF25 — register 34 carries the storage fault code]\n");
+  Device h;
+  ModbusManager modbus(h.deps());
+
+  modbus.syncGlobalRegisters();
+  check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) == 0,
+        "a healthy device publishes 0 on register 34");
+
+  // Two failures is not yet news, and the register must not move.
+  h.nvsHealth.noteResult(plc::StorageFault::CumulativeLitres, false);
+  h.nvsHealth.noteResult(plc::StorageFault::CumulativeLitres, false);
+  modbus.syncGlobalRegisters();
+  check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) == 0,
+        "two failed writes in a row still publish 0 — one refused write is not news");
+
+  h.nvsHealth.noteResult(plc::StorageFault::CumulativeLitres, false);
+  modbus.syncGlobalRegisters();
+  check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) ==
+            static_cast<uint16_t>(plc::StorageFault::CumulativeLitres),
+        "the third publishes code 2 — the lifetime litres are no longer being kept");
+
+  // The republish must not lose it, which is exactly how DF22's eight registers died.
+  modbus.syncGlobalRegisters();
+  modbus.syncGlobalRegisters();
+  check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) == 2,
+        "and it survives repeated syncs rather than being zeroed by the next one");
+
+  h.nvsHealth.noteResult(plc::StorageFault::CumulativeLitres, true);
+  modbus.syncGlobalRegisters();
+  check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) == 0,
+        "a successful write clears it, so a master sees the recovery too");
+
+  // The LED route: a write through the manager records without the caller holding the health object.
+  modbus.noteNvsResult(plc::StorageFault::LedSettings, false);
+  modbus.noteNvsResult(plc::StorageFault::LedSettings, false);
+  modbus.noteNvsResult(plc::StorageFault::LedSettings, false);
+  modbus.syncGlobalRegisters();
+  check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) ==
+            static_cast<uint16_t>(plc::StorageFault::LedSettings),
+        "noteNvsResult is the hub for a caller with no health handle — ui_actions.cpp uses it");
+
+  // And a manager with no health object must not crash: several suites construct one that way.
+  ModbusDependencies headless = h.deps();
+  headless.nvsHealth = nullptr;
+  ModbusManager noHealth(headless);
+  noHealth.noteNvsResult(plc::StorageFault::CumulativeLitres, false);
+  noHealth.syncGlobalRegisters();
+  check(true, "a manager with no health object records nothing and publishes nothing, without crashing");
+}
+
+
 }  // namespace
 
 void liveStatusSurvivesTheBlockRepublish() {
@@ -507,6 +569,7 @@ int main() {
   refusalsThatMustStay();
   byteCountIsStillChecked();
   singleWriteStillWorks();
+  theStorageFaultCodeIsPublished();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

@@ -35,6 +35,7 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "modbus/register_bank.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_config_nvs.h"
+#include "storage/nvs_write_health.h"
 #include "modbus/sensor_types.h"
 #include "net/net_register_map.h"
 #include "core_layout.h"
@@ -95,6 +96,17 @@ constexpr int RS485_DE_PIN = 46;  // Direction Enable pin for RS485 transceiver
 SensorData sensors[kNumSensors];
 SensorCharacteristics configs[kNumSensors];
 Preferences preferences;
+
+/**
+ * Whether this device is still keeping what it was told to keep — DF25.
+ *
+ * Beside the `Preferences` instance it watches, because every writer in this file reaches that instance
+ * and none of them looked at what it returned. Published on Modbus register 34 and on the MQTT
+ * diagnostics topic; the panel's warning triangle rides with N-e's T5.
+ *
+ * RAM only, deliberately: a store that cannot be written cannot record its own failure.
+ */
+plc::NvsWriteHealth nvsHealth;
 ModbusServerRTU modbus(2000, RS485_DE_PIN);
 volatile float pollingRate_kHz = 0.0f;
 TaskHandle_t PollingTask;
@@ -192,6 +204,7 @@ ModbusDependencies modbusDeps{.sensors = sensors,
                               .ledController = &ledController,
                               // So a session reset arriving by ANY route is dated (time/device_clock.h).
                               .clock = &deviceClock,
+                              .nvsHealth = &nvsHealth,
                               // R4.4.2d and register 561 — two LIVE values the network block cannot
                               // carry, written after it. See ModbusDependencies.
                               .mqttStateValue = &mqttStateRegisterValue,
@@ -507,9 +520,15 @@ void serviceMqttCommand(uint32_t now) {
   // R4.4.2b — persisted ONLY on acceptance. Writing on every rejection would mean a looping command
   // loops NVS writes too, turning a nuisance into flash wear (Loadable_UI_Menu_Packs §3.6's rule).
   if (nowEpoch != 0) {
-    preferences.putUInt(command == plc::MqttCommand::ResetSession ? kPrefCmdEpochSession
-                                                                 : kPrefCmdEpochTotals,
-                        nowEpoch);
+    // DF25. A failure here silently re-arms the rate limit this key exists to hold across a reboot,
+    // so it is recorded rather than discarded.
+    nvsHealth.noteResult(
+        plc::StorageFault::CommandEpoch,
+        plc::nvsPutOk(preferences.putUInt(command == plc::MqttCommand::ResetSession
+                                              ? kPrefCmdEpochSession
+                                              : kPrefCmdEpochTotals,
+                                          nowEpoch),
+                      sizeof(uint32_t)));
   }
 }
 
@@ -584,13 +603,14 @@ InteractionHandler interactionHandler;
 
 namespace {
 
-void saveCumulativeData(uint8_t index) {
+/** Returns whether the write landed — DF25. The caller uses it to decide whether to RETRY. */
+bool saveCumulativeData(uint8_t index) {
   if (index >= kNumSensors) {
-    return;
+    return false;
   }
   char key[8];
   std::snprintf(key, sizeof(key), "cml_%u", static_cast<unsigned>(index));
-  preferences.putDouble(key, sensors[index].cumulativeLiters);
+  return plc::nvsPutOk(preferences.putDouble(key, sensors[index].cumulativeLiters), sizeof(double));
 }
 
 void loadCumulativeData(uint8_t index) {
@@ -619,11 +639,12 @@ constexpr const char* kPrefLinkStop = "lnk_stop";
  * which is why nothing caught it. These two remain as the binding of that logic to the one
  * `Preferences` instance and the one `configs` array.
  */
-void saveSensorConfig(std::size_t index) {
+/** Returns whether all five fields landed — DF25. */
+bool saveSensorConfig(std::size_t index) {
   if (index >= kNumSensors) {
-    return;
+    return false;
   }
-  plc::saveSensorConfigTo(preferences, index, configs[index]);
+  return plc::saveSensorConfigTo(preferences, index, configs[index]) == 0;
 }
 
 void loadSensorConfig(std::size_t index) {
@@ -647,11 +668,21 @@ LinkSettings loadLinkSettings() {
   return s.valid() ? s : LinkSettings{};
 }
 
+/**
+ * Persists the four link settings and RECORDS the outcome — DF25.
+ *
+ * Recorded here rather than at the three call sites because one of them is not an operator action at
+ * all: §4.1.1's rollback fires from the logic loop after an unconfirmed apply, with nobody present. If
+ * that write fails the device reverts the live port and keeps the broken settings in flash, and comes
+ * back on them at the next boot — the failure that most needs reporting is the one nobody is watching.
+ */
 void saveLinkSettings(const LinkSettings& s) {
-  preferences.putUChar(kPrefLinkSlaveId, s.slaveId);
-  preferences.putUChar(kPrefLinkBaud, s.baudIndex);
-  preferences.putUChar(kPrefLinkParity, s.parity);
-  preferences.putUChar(kPrefLinkStop, s.stopBits);
+  std::size_t failed = 0;
+  failed += plc::nvsPutOk(preferences.putUChar(kPrefLinkSlaveId, s.slaveId), 1) ? 0 : 1;
+  failed += plc::nvsPutOk(preferences.putUChar(kPrefLinkBaud, s.baudIndex), 1) ? 0 : 1;
+  failed += plc::nvsPutOk(preferences.putUChar(kPrefLinkParity, s.parity), 1) ? 0 : 1;
+  failed += plc::nvsPutOk(preferences.putUChar(kPrefLinkStop, s.stopBits), 1) ? 0 : 1;
+  nvsHealth.noteResult(plc::StorageFault::LinkSettings, failed == 0);
 }
 
 /**
@@ -715,18 +746,29 @@ void performFactoryReset() {
   modbusManager.applyHoldingWrite(REG_MASTER_RESET_ALL_SENSORS, 1);
   modbusManager.applyHoldingWrite(REG_CONNECTED_SENSORS_BITMAP, 0);
 
-  preferences.clear();
+  // DF25, and this is the most consequential discarded result in the firmware: if clear() failed, the
+  // whole reset is a no-op and the device reboots LOOKING reset. Raised immediately — a factory reset
+  // happens once and nothing retries it.
+  if (!preferences.clear()) {
+    nvsHealth.raiseNow(plc::StorageFault::FactoryResetErase);
+  }
   linkSettings.begin(LinkSettings{});
   saveLinkSettings(linkSettings.live());
-  preferences.putUShort(kPrefConnectedBitmap, 0);
-  preferences.putUShort(kPrefFlowUnit, 0);
+  nvsHealth.noteResult(
+      plc::StorageFault::ConnectedBitmap,
+      plc::nvsPutOk(preferences.putUShort(kPrefConnectedBitmap, 0), sizeof(uint16_t)));
+  nvsHealth.noteResult(plc::StorageFault::FlowUnit,
+                       plc::nvsPutOk(preferences.putUShort(kPrefFlowUnit, 0), sizeof(uint16_t)));
+  std::size_t configWritesFailed = 0;
   for (std::size_t i = 0; i < kNumSensors; ++i) {
     configs[i] = SensorCharacteristics{};
-    saveSensorConfig(i);
+    configWritesFailed += saveSensorConfig(i) ? 0 : 1;
   }
+  nvsHealth.noteResult(plc::StorageFault::SensorCalibration, configWritesFailed == 0);
   ledController.resetToDefaults();
   ledController.markSessionsCleared();
-  ledController.saveToPreferences(preferences);
+  nvsHealth.noteResult(plc::StorageFault::LedSettings,
+                       ledController.saveToPreferences(preferences));
 
   registerBank.fill(0);
   totalSessionLitersCache = 0.0;
@@ -907,7 +949,13 @@ void logicTaskCode(void * pvParameters) {
   // port is opened. This used to call preferences.begin() *after* Serial.begin()
   // with 9600/8N1 hardcoded, so a configured baud rate could never take effect on
   // the first open.
-  preferences.begin("flow-data", false);
+  // DF25: the bool was discarded here, and it is the single point that turns this device into an
+  // all-defaults machine that also cannot record anything — every get() returns its default and every
+  // put() fails. Raised immediately rather than counted: nothing retries begin(), so waiting for three
+  // consecutive failures would be waiting for events that cannot happen.
+  if (!preferences.begin("flow-data", false)) {
+    nvsHealth.raiseNow(plc::StorageFault::StoreDidNotOpen);
+  }
   linkSettings.begin(loadLinkSettings());
 
   RTUutils::prepareHardwareSerial(RS485_SERIAL_PORT);
@@ -1041,23 +1089,56 @@ void logicTaskCode(void * pvParameters) {
     // that actually moved are written: Preferences::put* does not guarantee it skips
     // an identical write, and at one pass per minute an unconditional write would be
     // roughly 525k writes per key per year.
+    //
+    // DF25 — AND THE SHADOW COPIES NOW ADVANCE ONLY ON SUCCESS, which is what makes this pass its own
+    // retry. They used to advance unconditionally, immediately after a write nobody checked, so the
+    // dirty check said "already saved" on the next pass and a failed write was never attempted again.
+    // That is what turned a transient failure into a permanent loss. Leaving the shadow behind gives
+    // exactly one retry per minute per key — bounded by the pass itself, so no retry storm, which is
+    // the answer to DF25's question 2.
     if (now - lastSaveTime > 60000) { // Every minute
+      // "Attempted" is tracked separately from "failed" because a pass that wrote nothing proves
+      // nothing about the store: with no water metered and no configuration change there is no write to
+      // succeed, and reporting a success would clear a run that is still failing.
+      bool litreWriteAttempted = false;
+      bool litreWriteFailed = false;
+      bool configWriteAttempted = false;
+      bool configWriteFailed = false;
       for (std::size_t i = 0; i < kNumSensors; ++i) {
         if (!sensors[i].inUse) {
           continue;
         }
         if (sensors[i].cumulativeLiters != persistedCumulative[i]) {
-          saveCumulativeData(static_cast<uint8_t>(i));
-          persistedCumulative[i] = sensors[i].cumulativeLiters;
+          litreWriteAttempted = true;
+          if (saveCumulativeData(static_cast<uint8_t>(i))) {
+            persistedCumulative[i] = sensors[i].cumulativeLiters;
+          } else {
+            litreWriteFailed = true;
+          }
         }
         if (configs[i] != persistedConfigs[i]) {
-          saveSensorConfig(i);
-          persistedConfigs[i] = configs[i];
+          configWriteAttempted = true;
+          if (saveSensorConfig(i)) {
+            persistedConfigs[i] = configs[i];
+          } else {
+            configWriteFailed = true;
+          }
         }
       }
       if (connectedSensorsBitmap != persistedBitmap) {
-        preferences.putUShort(kPrefConnectedBitmap, connectedSensorsBitmap);
-        persistedBitmap = connectedSensorsBitmap;
+        if (plc::nvsPutOk(preferences.putUShort(kPrefConnectedBitmap, connectedSensorsBitmap),
+                          sizeof(uint16_t))) {
+          persistedBitmap = connectedSensorsBitmap;
+          nvsHealth.noteResult(plc::StorageFault::ConnectedBitmap, true);
+        } else {
+          nvsHealth.noteResult(plc::StorageFault::ConnectedBitmap, false);
+        }
+      }
+      if (litreWriteAttempted) {
+        nvsHealth.noteResult(plc::StorageFault::CumulativeLitres, !litreWriteFailed);
+      }
+      if (configWriteAttempted) {
+        nvsHealth.noteResult(plc::StorageFault::SensorCalibration, !configWriteFailed);
       }
       lastSaveTime = now;
     }
@@ -1294,6 +1375,7 @@ void logicTaskCode(void * pvParameters) {
       snapshotInputs.totalSessionLiters = totalSessionLitersCache;
       snapshotInputs.pollingRateKhz = pollingRate_kHz;
       snapshotInputs.undersamplingFlags = undersamplingFlags;
+      snapshotInputs.storageFaultCode = nvsHealth.code();  // DF25
       snapshotInputs.uptimeSeconds = now / 1000;
       snapshotInputs.wifiRssiDbm = static_cast<int8_t>(wifiManager.rssiDbm());
       snapshotInputs.lastCommandResult =
@@ -1360,7 +1442,8 @@ void logicTaskCode(void * pvParameters) {
     // than it looks: a flash write suspends the other core's scheduler with cache disabled (§2.1.3),
     // which stops the pulse sampler outright, so every avoidable write is avoidable sampler downtime.
     if (netSettings.revision() != netSettingsSavedRevision) {
-      plc::saveNetSettings(preferences, netSettings);
+      nvsHealth.noteResult(plc::StorageFault::NetworkSettings,
+                           plc::saveNetSettings(preferences, netSettings) == 0);
       netSettingsSavedRevision = netSettings.revision();
       // Tell the radio the credentials moved. It self-guards on a credential fingerprint, so calling
       // it after an unrelated apply (an MQTT port, say) costs a comparison and does not bounce a

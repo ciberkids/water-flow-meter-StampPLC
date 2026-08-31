@@ -248,10 +248,11 @@ void MqttPublisher::formatDiagnostics(const MqttDiagnosticsTelemetry& d, char* o
   // subscriber seeing 0 flow needs both to tell which.
   std::snprintf(out, size,
                 "{\"pollingRateKhz\":%s,\"baselineKhz\":%s,\"undersampling\":%u,"
-                "\"uncalibrated\":%u,\"tempC\":%s,\"uptimeS\":%lu,\"rssi\":%d,"
-                "\"lastCmd\":\"%s\"}",
+                "\"uncalibrated\":%u,\"storageFault\":%u,\"tempC\":%s,\"uptimeS\":%lu,"
+                "\"rssi\":%d,\"lastCmd\":\"%s\"}",
                 rate, baseline, static_cast<unsigned>(d.undersamplingFlags),
-                static_cast<unsigned>(d.uncalibratedFlags), temperature,
+                static_cast<unsigned>(d.uncalibratedFlags),
+                static_cast<unsigned>(d.storageFaultCode), temperature,
                 static_cast<unsigned long>(d.uptimeSeconds), static_cast<int>(d.wifiRssiDbm),
                 mqttCommandResultText(d.lastCommandResult));
 }

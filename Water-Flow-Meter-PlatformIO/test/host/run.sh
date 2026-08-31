@@ -181,6 +181,15 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/sensor_config_nvs_test" \
 g++ "${CXXFLAGS[@]}" -o "$OUT/sensor_topology_test" \
   test/host/sensor_topology_test.cpp
 
+# DF25 — whether the device can tell that it has stopped keeping what it was told to keep. Header-only.
+# The FAILING store lives in this suite rather than in stubs/Preferences.h on purpose: the shared stub
+# cannot fail a write, and five other suites plus three firmware sources depend on it succeeding. The
+# three checks worth naming: putString returns strlen, so a SUCCESSFUL empty-string write returns 0 and
+# an unset MQTT password would otherwise raise a false alarm on most devices in the field; a success on
+# one key must not clear another key's run; and the published code must not change while the fault does.
+g++ "${CXXFLAGS[@]}" -o "$OUT/nvs_write_health_test" \
+  test/host/nvs_write_health_test.cpp
+
 # N4 — the WiFi state machine: backoff ladder, AP window, and the provisioning hand-off.
 g++ "${CXXFLAGS[@]}" -o "$OUT/wifi_manager_test" \
   test/host/wifi_manager_test.cpp \
@@ -308,6 +317,8 @@ echo
 "$OUT/sensor_config_nvs_test"
 echo
 "$OUT/sensor_topology_test"
+echo
+"$OUT/nvs_write_health_test"
 echo
 "$OUT/wifi_manager_test"
 echo
