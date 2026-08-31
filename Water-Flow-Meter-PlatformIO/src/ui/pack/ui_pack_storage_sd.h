@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include "storage/nvs_write_health.h"
 
 #include "bus/spi_arbiter.h"
 #include "ui/pack/ui_pack_loader.h"
@@ -78,13 +79,23 @@ class NvsPackAttemptCounter : public ui::PackAttemptCounter {
  public:
   static constexpr const char* kKey = "ui_pack_try";
 
-  explicit NvsPackAttemptCounter(Preferences& preferences) : preferences_(preferences) {}
+  /**
+   * `health` is optional and records a failed write under `StorageFault::PackAttemptCounter` (`DF25`).
+   *
+   * The counter records its OWN outcome rather than returning it, so `PackLoader` — which is
+   * Arduino-free and knows nothing about storage — does not grow a health parameter to carry one bool
+   * through two call sites. This was the last of the twelve fault codes with no author, and a code
+   * nothing reports is the defect DF25 is about.
+   */
+  explicit NvsPackAttemptCounter(Preferences& preferences, plc::NvsWriteHealth* health = nullptr)
+      : preferences_(preferences), health_(health) {}
 
   uint8_t read() override;
   void write(uint8_t value) override;
 
  private:
   Preferences& preferences_;
+  plc::NvsWriteHealth* health_ = nullptr;
 };
 
 }  // namespace plc

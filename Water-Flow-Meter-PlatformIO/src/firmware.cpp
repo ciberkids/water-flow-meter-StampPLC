@@ -1519,7 +1519,7 @@ void logicTaskCode(void * pvParameters) {
     // the card held the bus must not count as a successful render.
     if (packOutcome == ui::LoadOutcome::CardPack && !packRenderConfirmed &&
         uiController.context().currentScreen != nullptr && spiArbiter.mayBeginFrame()) {
-      plc::NvsPackAttemptCounter packAttempts(preferences);
+      plc::NvsPackAttemptCounter packAttempts(preferences, &nvsHealth);  // DF25
       packLoader.noteSuccessfulRender(packAttempts);
       packRenderConfirmed = true;
       Serial.println("[ui] menu pack rendered; boot-loop guard cleared");
@@ -1678,7 +1678,7 @@ void setup() {
   // immediately and there is no contention to manage. This is the cheapest window there will
   // ever be, which is why the specification puts card access in it.
   {
-    plc::NvsPackAttemptCounter packAttempts(preferences);
+    plc::NvsPackAttemptCounter packAttempts(preferences, &nvsHealth);  // DF25
     packBuffer = static_cast<uint8_t*>(malloc(ui::PackLoader::kMaxPackBytes));
     if (!packBuffer) {
       // Out of heap is not a pack failure — nothing was attempted — so it must not burn an

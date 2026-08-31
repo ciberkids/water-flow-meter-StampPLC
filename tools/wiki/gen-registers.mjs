@@ -260,6 +260,105 @@ reconcile("serial link", declaredLink, new Set(LINK.map((r) => r[0])));
 reconcile("sensor block", declaredSensor, new Set(SENSOR.map((r) => r[0])));
 reconcile("network block", declaredNet, new Set(NETWORK.map((r) => r[0])));
 
+/**
+ * Does any documented value's SPAN reach the next one's address? — `DF26`.
+ *
+ * The reconciliation above matches constant NAMES, so it cannot see width: `REG_POLLING_RATE_KHZ` is
+ * written with `setFloat` and occupies registers 0 AND 1, and this page described it as a one-register
+ * `uint16` for as long as the page existed. That failure is quiet in the worst way — an integrator
+ * reading register 0 as a `uint16` gets the high half of an IEEE-754 float, which is a plausible number
+ * (16467 for 3.31 kHz) that moves in the right direction when the real rate changes. It looks like a
+ * working integration.
+ *
+ * `ENCODING` already carries each layout's width, so the check is nearly free: sort by address and fail
+ * when one entry's span reaches the next entry's address. Text has no fixed width and is skipped — the
+ * network block's strings carry their own extent in `net_register_map.h`.
+ */
+function checkSpans(label, rows, addressOf) {
+  const placed = rows
+    .map((row) => ({ name: row[0], address: addressOf(row[0]), regs: ENCODING[row[2]].regs }))
+    .filter((entry) => entry.address !== undefined && entry.regs !== null)
+    .sort((a, b) => a.address - b.address);
+  for (let i = 0; i < placed.length - 1; ++i) {
+    const end = placed[i].address + placed[i].regs;
+    if (end > placed[i + 1].address) {
+      problems.push(
+        `${label}: ${placed[i].name} at ${placed[i].address} is ${placed[i].regs} register(s) wide, so ` +
+          `it reaches ${end - 1} and collides with ${placed[i + 1].name} at ${placed[i + 1].address} — ` +
+          `either the encoding on this row is wrong or the addresses overlap`
+      );
+    }
+  }
+}
+
+/**
+ * Does the documented encoding match how the firmware actually WRITES the register? — `DF26`, properly.
+ *
+ * `checkSpans` above catches an over-wide declaration, and it would NOT have caught DF26: describing a
+ * `float32` as a `uint16` makes the documented span NARROWER, and narrower never collides with anything.
+ * The error that actually shipped is under-declaration, and the only thing that can see it is the
+ * writer — `RegisterBank::setFloat` occupies two registers whatever this page says.
+ *
+ * So the writer is the authority, exactly as the addresses' authority is the header: every
+ * `set{Uint16,Float,Double}(REG_NAME` in `src/` is read out and reconciled against the row's encoding.
+ * A register written one way and documented another fails the build with both halves named.
+ *
+ * Read-only fields nothing writes through these setters are silent here — the per-sensor block is packed
+ * by `syncSensorToHolding` through a computed offset rather than a named constant, so this check covers
+ * the global, link and network blocks, which is where every named write lives.
+ */
+const SETTER_ENCODING = { setUint16: "u16", setFloat: "f32", setDouble: "f64" };
+
+function checkWriterEncodings() {
+  const sources = [
+    firmware("modbus", "modbus_manager.cpp"),
+    firmware("modbus", "link_settings.cpp"),
+    firmware("net", "net_register_map.cpp"),
+    firmware("firmware.cpp"),
+  ].filter((file) => fs.existsSync(file));
+
+  const documented = new Map();
+  for (const row of [...GLOBAL_ROWS, ...LINK]) documented.set(row[0], row[2]);
+  for (const row of NETWORK) documented.set(row[0], row[2]);
+
+  const seen = new Map();
+  for (const file of sources) {
+    const source = fs.readFileSync(file, "utf-8");
+    for (const match of source.matchAll(
+      /(setUint16|setFloat|setDouble)\s*\(\s*(?:plc::)?(?:net_reg::)?([A-Za-z_]\w*)/g
+    )) {
+      const [, setter, name] = match;
+      if (!documented.has(name)) continue;  // a local, an offset, or a per-sensor address
+      const expected = SETTER_ENCODING[setter];
+      const previous = seen.get(name);
+      if (previous && previous !== expected) {
+        problems.push(
+          `encoding: ${name} is written both as ${previous} and as ${expected} — one register cannot be two shapes`
+        );
+      }
+      seen.set(name, expected);
+    }
+  }
+
+  for (const [name, written] of seen) {
+    const shown = documented.get(name);
+    if (shown !== written) {
+      problems.push(
+        `encoding: ${name} is WRITTEN as ${ENCODING[written].label} (${written}) but this page documents ` +
+          `it as ${ENCODING[shown].label} (${shown}) — an integrator decoding the documented width reads ` +
+          `the wrong bytes and gets a plausible number`
+      );
+    }
+  }
+}
+
+checkWriterEncodings();
+
+checkSpans("global", GLOBAL_ROWS, (name) => core.get(name));
+checkSpans("serial link", LINK, (name) => core.get(name));
+checkSpans("sensor block", SENSOR, (name) => core.get(name));
+checkSpans("network block", NETWORK, (name) => net.get(name));
+
 if (problems.length > 0) {
   console.error("The register reference and the firmware headers disagree:\n");
   for (const problem of problems) console.error(`  - ${problem}`);

@@ -427,11 +427,13 @@ description for a code that no longer exists. Verified by removing one — the g
 and exits 1. That is the same argument the register table itself is generated on, and it is what makes
 the owner's "a sequence of error codes in the wiki page" a thing that cannot drift.
 
-**Two codes are reserved but not yet reported, and this is the shape DF25 is about, so it is named
-rather than left to be found.** `PackAttemptCounter` (11) needs a bool through `ui::PackAttemptCounter`'s
-virtual interface and its fake; a lost attempt counter is benign — a pack simply gets retried. `Topology`
-(4) reports only from `N-e`'s serializer, which has no production caller until T4. Neither is a silent
-hole: both are in the generated wiki table, and this paragraph is the record.
+**ONE code is reserved but not yet reported**, and it is named rather than left to be found because a
+code nothing reports is the shape DF25 is about. `Topology` (4) reports only from `N-e`'s serializer,
+which has no production caller until T4 — so it becomes live in the slice that gives an operator a way to
+change a parent, and not before. `PackAttemptCounter` (11) was the other one and is now wired:
+`NvsPackAttemptCounter` records its own outcome rather than returning it, so `PackLoader` — Arduino-free
+and knowing nothing about storage — did not have to grow a health parameter to carry one bool through two
+call sites.
 
 **Three answers were BUILT ON THE RECOMMENDATION rather than decided**, each one line to change:
 question 2 (the retry is the next pass), question 3 (one code space for every writer) and question 4
@@ -567,10 +569,20 @@ reference is generated to prevent, and it survived because the reconciliation ga
 NAMES and cannot see a multi-register SPAN.
 
 Fixed by declaring the row `f32`, which makes the page state "2 registers, IEEE-754, high word first"
-and correctly claims 0 and 1. **The span blindness itself is not fixed** — the `ENCODING` table already
-carries a `regs` width, so the gate could walk the globals in address order and fail when one register's
-span reaches the next one's address. Recorded here rather than built, because it is a gate change that
-wants its own round and its own test.
+and correctly claims 0 and 1.
+
+**And the gate now catches it, which took two checks rather than one.** The obvious one — walk the
+documented rows in address order and fail when a span reaches the next address — was written first and
+**would not have caught DF26**: describing a `float32` as a `uint16` makes the documented span NARROWER,
+and narrower never collides. Under-declaration is the error that actually shipped, and the only authority
+on width is the WRITER. So `checkWriterEncodings` reads every
+`set{Uint16,Float,Double}(REG_NAME` out of `src/` and reconciles it against the row's encoding, the same
+way the addresses are reconciled against the header. Both checks are in, and the second was proven by
+re-introducing DF26 and watching the build fail naming both halves. The span check stays because it
+catches the opposite error, an over-wide row overlapping its neighbour.
+
+That "the first fix would not have caught the defect it was written for" is worth keeping. It is the same
+lesson as this round's others: the check has to be aimed at the failure that actually happened.
 
 ---
 
