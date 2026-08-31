@@ -35,6 +35,7 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "modbus/register_bank.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_config_nvs.h"
+#include "sensors/sensor_topology_nvs.h"
 #include "storage/nvs_write_health.h"
 #include "modbus/sensor_types.h"
 #include "net/net_register_map.h"
@@ -600,6 +601,24 @@ void publishDiscovery() {
                 static_cast<unsigned>(count));
 }
 
+/**
+ * The cascade topology (`N-e`), loaded once at boot — T2 is T1's first production caller.
+ *
+ * Held here rather than in the engine because T4's Modbus apply and T5's panel editor will both write
+ * it, and §3.6 requires one atomic commit path. The engine takes a const pointer and reads.
+ */
+plc::SensorTopology sensorTopology;
+
+/**
+ * The DELIVERED pair (R2.1) and the unknown-branch bitmap (R2.5), beside the gross caches rather than
+ * instead of them (R2.3). Nothing publishes them yet: the Modbus block lands with T4, the panel with T5
+ * and the MQTT keys with T6. Said out loud because a value with no reader is the shape of `DF22`-`DF25`,
+ * and the slice plan in §9 is what puts a reader on each surface.
+ */
+double deliveredSessionLitersCache = 0.0;
+double deliveredFlowLpmCache = 0.0;
+uint16_t unknownBranchesCache = 0;
+
 SensorStateEngine::Dependencies sensorEngineDeps{
     .sensors = sensors,
     .configs = configs,
@@ -610,6 +629,10 @@ SensorStateEngine::Dependencies sensorEngineDeps{
     .aggregateFlowLpmCache = &aggregateFlowLpmCache,
     .allSensorsReadyCache = &allSensorsReadyCache,
     .undersamplingFlags = &undersamplingFlags,
+    .topology = &sensorTopology,
+    .deliveredSessionLitersCache = &deliveredSessionLitersCache,
+    .deliveredFlowLpmCache = &deliveredFlowLpmCache,
+    .unknownBranchesCache = &unknownBranchesCache,
 };
 SensorStateEngine sensorStateEngine(sensorEngineDeps);
 InteractionHandler interactionHandler;
@@ -1027,6 +1050,25 @@ void logicTaskCode(void * pvParameters) {
   // cached bit to false and nothing ever recomputed it — so every reboot left a calibrated channel
   // counting pulses it then discarded, and publishing 0.0 for a lifetime total that was intact in RAM.
   connectedSensorsBitmap = preferences.getUShort(kPrefConnectedBitmap, 0);
+
+  // The cascade topology (`N-e` R1.1). A device with firmware that predates the feature has no
+  // `parent_*` keys, reads all zeros, and IS the parallel installation it already was — no migration.
+  //
+  // A stored set that is not a forest becomes all-roots and is REPORTED rather than absorbed: the
+  // parallel topology is the one substitute that cannot over-count water, and repairing a cycle by
+  // cutting an edge would guess which meter feeds which. This is also `StorageFault::Topology`'s first
+  // author, so code 4 stops being reserved-and-unreported.
+  {
+    const plc::SensorTopologyLoad loaded = plc::loadSensorTopologyFrom(preferences);
+    sensorTopology = loaded.topology;
+    if (!loaded.stored.ok()) {
+      nvsHealth.raiseNow(plc::StorageFault::Topology);
+      Serial.printf("[topology] stored parents are not a forest (error %u at channel %u); every channel "
+                    "reverts to a root\n",
+                    static_cast<unsigned>(loaded.stored.error),
+                    static_cast<unsigned>(loaded.stored.index));
+    }
+  }
   // Defaults to L/m, which is the stored unit and the meter datasheet's — so a device that has never
   // been configured shows the same numbers the wire carries.
   displayFlowUnit = preferences.getUShort(kPrefFlowUnit, 0);

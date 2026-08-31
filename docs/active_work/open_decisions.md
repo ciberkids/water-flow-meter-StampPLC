@@ -59,7 +59,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 
 | ID | | Shape | What it is |
 | --- | --- | --- | --- |
-| **N-e** | 🟡 | feature, in progress | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, four questions open; T0 and T1 landed, **T2 next** |
+| **N-e** | 🟡 | feature, in progress | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, four questions open; T0, T1 and T2 landed, **T3/T4/T6 next**, and R2.5's MQTT sentence needs amending |
 | **N-f** | 🟡 | feature, specified here | Where the readings live — internal flash or an SD card, human-readable files, persisted session values and rotating telemetry. Five decisions taken, six questions open, not started; question 1 changes a documented register contract and should be answered first |
 | **DF25** | 🟡 | defect, found 2026-08-30 | A write to non-volatile storage that fails is reported by nothing. **Detection and publication landed 2026-08-30** (`DF25a`: register 34, MQTT `storageFault`, 49 host checks) — the panel's warning triangle rides with `N-e`'s T5, and three of its four questions were built on the recommendation rather than decided |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
@@ -168,7 +168,7 @@ settings it predates — but nothing yet repairs it on the device.
 
 ---
 
-## N-e 🟡 Sensor cascade topology — specified 2026-08-26, four questions open, T1 landed 2026-08-30
+## N-e 🟡 Sensor cascade topology — specified 2026-08-26, four questions open, T1 and T2 landed 2026-08-30
 
 The owner's feature: channels may be wired in CASCADE (a main meter with others downstream) rather
 than only in parallel. That makes the present total wrong — a downstream channel's water was already
@@ -285,8 +285,67 @@ fails 3, and saving only non-root parents fails 2. The sixth — deleting the in
 would not compile under `-Werror` because the parameter went unused, which is the flag doing its job.
 Host **2,095 checks across 28 suites**, 0 failures.
 
-Slice **T2** — the netted aggregation beside the gross one, with R2.2's bit-identity assertion and
-R2.4's liveness repointing — is next.
+**T2 is DONE, 2026-08-30 — the delivered aggregate, 24 host checks.** `SensorStateEngine` now computes a
+DELIVERED pair beside the gross one, in the same ascending loop, out of the same two float fields — which
+is what earns R2.2's bit-identity rather than hoping for it. Five things in it are decisions:
+
+- **The predicate is `isEffectiveRoot` and nothing else.** Adding `configIsValid` would look tidy and
+  would silently narrow R2.2 to the all-calibrated case: the gross sum includes an in-service
+  uncalibrated channel's FROZEN volume (§5.4), so the delivered sum must too, or the two disagree on the
+  state a meter swap produces every time. What that means for a ROOT is R2.5's business, answered with
+  NaN rather than by dropping an addend.
+- **The in-service set is built in its own tiny pass**, because whether channel 0 is a delivery point
+  depends on channel 7's service state, so the mask cannot be assembled as the main loop walks. Eight
+  bool reads and no destructive ones — `pulseCount` is consumed in the main loop and must be touched
+  exactly once, which is also why the per-channel conversion was not factored out and called twice.
+- **A null topology means all-roots**, so every existing host test kept asserting the same numbers and a
+  caller with no opinion about topology gets R2.2's reduction for free.
+- **NaN goes only to the delivered pair.** R2.3 said the gross pair keeps its meaning; that is now a HARD
+  constraint rather than a preference, because `LedController::update` keeps a `lastTotalLiters_`
+  baseline and one NaN through it poisons the red volume LED for the rest of the boot — fixing the
+  calibration would not clear it.
+- **The unknown bitmap is NOT `uncalibratedFlags`.** That one names every uncalibrated channel; this one
+  names uncalibrated EFFECTIVE ROOTS. On a parallel topology the two sets are identical, so reusing it
+  would look correct until the first cascade was declared and no test on the default topology could tell
+  them apart.
+
+**T2 is also T1's first production caller**, so the boot-time load landed with it — and with it
+`StorageFault::Topology` (code 4) stops being reserved-and-unreported: a stored set that is not a forest
+raises it, says which channel, and reverts every channel to a root.
+
+**A claim I wrote in this slice was wrong, and the mutation test is what caught it.** The comment beside
+the accumulation said computing `delivered = gross - downstream` would fail the cascade oracle. It does
+not — that mutation passes every assertion in the suite. Measured: over four million plausible
+eight-channel tuples the two forms are **bit-identical**, and they diverge by a single ulp only when one
+channel's volume sits about nine decades below another's (0.0108 L beside 8,963,428 L). So no test at
+realistic magnitudes can enforce the distinction, and both comments now say so. The reason to sum the
+roots is structural — it computes what R2.1 defines instead of deriving it from an accumulator R2.3
+leaves to other consumers — and the numerical claim is only true for `cumulativeLiters`, which is a
+`double`, where the same subtraction differs in 99.5 % of cases (§7 Q5's territory).
+
+**And R2.2's "same ascending order" clause is UNFALSIFIABLE for this pair**, which is worth knowing
+before someone strengthens the suite with a test that cannot fail. The addends are `float` (24-bit
+mantissa) and the accumulator is `double` (53-bit), so summing eight of them is exact and every
+permutation yields the identical double by construction — verified over 200,000 tuples × 40 shuffles, 0
+mismatches. Order only re-emerges for double addends, i.e. `cumulativeLiters`.
+
+**Verified:** 24 new checks in `sensor_state_test.cpp`; mutation-tested — adding `configIsValid` to the
+predicate fails 3 assertions, using the stored parent instead of the effective one fails 1, NaN reaching
+the gross pair fails 1, marking every uncalibrated channel unknown fails 2, and removing the NaN
+substitution fails 2. Host **2,192 checks across 29 suites**, 0 failures; firmware SUCCESS at RAM 24.7 % /
+Flash 39.0 %.
+
+**Nothing publishes the delivered pair yet** — the Modbus block is T4, the panel T5, the MQTT keys T6 —
+and that is said out loud because a value with no reader is `DF22`-`DF25`'s shape.
+
+Slice **T4** or **T6** is next, and T3 (the skew arithmetic) is the other candidate. **One spec amendment
+is owed before T6:** R2.5 says MQTT should omit the key rather than publish `null` for an unknown total,
+and `jsonNumber` publishes `null` for every non-finite value as a documented rule with a stated reason
+(`nan` is invalid JSON, so Home Assistant drops the whole message silently) plus a standing assertion.
+No HA entity reads the total topic, so omission buys nothing a consumer can see while costing conditional
+payload assembly in a file built on fixed format strings. Recommend amending R2.5's sentence rather than
+the formatter — the unknown-branch bitmap is what distinguishes a deliberate unknown from an arithmetic
+slip.
 
 **A count in this entry was wrong, twice over.** The heading said six open questions and the index row
 said five; §7's table has **four** (`1a`, `4`, `5`, `6`). The residue inside Q3's decided entry — the
@@ -427,10 +486,9 @@ description for a code that no longer exists. Verified by removing one — the g
 and exits 1. That is the same argument the register table itself is generated on, and it is what makes
 the owner's "a sequence of error codes in the wiki page" a thing that cannot drift.
 
-**ONE code is reserved but not yet reported**, and it is named rather than left to be found because a
-code nothing reports is the shape DF25 is about. `Topology` (4) reports only from `N-e`'s serializer,
-which has no production caller until T4 — so it becomes live in the slice that gives an operator a way to
-change a parent, and not before. `PackAttemptCounter` (11) was the other one and is now wired:
+**Every code now has an author.** `Topology` (4) was the last one waiting, and `N-e`'s T2 gave it one
+sooner than expected: T2 loads the topology at boot, so a stored set that is not a forest raises code 4
+and names the channel. `PackAttemptCounter` (11) was the other and is wired too:
 `NvsPackAttemptCounter` records its own outcome rather than returning it, so `PackLoader` — Arduino-free
 and knowing nothing about storage — did not have to grow a health parameter to carry one bool through two
 call sites.

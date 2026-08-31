@@ -129,6 +129,8 @@ inline constexpr bool storageFaultIsPeriodic(StorageFault fault) {
     case StorageFault::None:
     case StorageFault::StoreDidNotOpen:
     case StorageFault::Topology:
+      // Written by an operator re-plumbing (T4), and raised at boot by a stored set that is not a
+      // forest — neither of which anything retries.
     case StorageFault::LinkSettings:
     case StorageFault::FlowUnit:
     case StorageFault::LedSettings:

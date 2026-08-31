@@ -1,5 +1,7 @@
 #include "sensors/sensor_state_engine.h"
 
+#include <limits>
+
 namespace plc {
 
 SensorStateEngine::SensorStateEngine(const Dependencies& deps) : deps_(deps) {}
@@ -13,6 +15,40 @@ void SensorStateEngine::update(float elapsedSeconds) {
   double aggregateFlowLpm = 0.0;
   bool allReady = true;
   std::size_t activeSensors = 0;
+
+  // The DELIVERED pair — R2.1 — accumulated in the same loop, in the same ascending order, out of the
+  // same two float fields. That is what earns R2.2's bit-identity rather than hoping for it: with every
+  // parent at 0 every in-service channel is an effective root, so the index set and the accumulation
+  // order are the gross pair's, and the IEEE-754 result is the same double by construction.
+  //
+  // NOT computed as `gross - downstream`, and the reason is STRUCTURAL rather than numerical — the
+  // numerical claim is worth getting right because the obvious version of it is false. Measured: over
+  // four million plausible eight-channel tuples the two forms are bit-identical, and a difference
+  // appears only when one channel's volume sits about nine decades below another's (0.0108 L beside
+  // 8,963,428 L), where it is a single ulp. So no test on realistic volumes can tell them apart, and
+  // anybody who "optimises" this into a subtraction will find the suite still green.
+  //
+  // Summing the roots is still the right form: it computes what R2.1 DEFINES instead of deriving it
+  // from an accumulator that R2.3 deliberately leaves for other consumers, so a later change to the
+  // gross pair cannot move the delivered figure behind their backs. It also carries R2.5 without a
+  // special case — an unknown branch is decided per delivery point, which a subtraction has no place
+  // to express. And the order-independence above does NOT hold for `cumulativeLiters`, which is a
+  // double: if the lifetime aggregate is ever netted (§7 Q5, open), the same subtraction would differ
+  // from the sum in 99.5 % of cases.
+  double deliveredSessionLiters = 0.0;
+  double deliveredFlowLpm = 0.0;
+  uint16_t unknownBranches = 0;
+
+  // Which channels are in service, as the bitmap `SensorTopology::effectiveParent` takes (R1.4). Built
+  // in its own pass because the effective-root question for channel 0 depends on channel 7's service
+  // state, so the answer cannot be assembled as the main loop walks. Eight reads of a bool, and NO
+  // destructive reads: `pulseCount` is consumed in the main loop and must be touched exactly once.
+  uint16_t inServiceMask = 0;
+  for (std::size_t i = 0; i < deps_.sensorCount && i < 16; ++i) {
+    if (deps_.sensors[i].inUse) {
+      inServiceMask = static_cast<uint16_t>(inServiceMask | (1u << i));
+    }
+  }
 
   for (std::size_t i = 0; i < deps_.sensorCount; ++i) {
     auto& sensor = deps_.sensors[i];
@@ -71,6 +107,28 @@ void SensorStateEngine::update(float elapsedSeconds) {
 
       totalSessionLiters += sensor.sessionLiters;
       aggregateFlowLpm += sensor.instantFlow_L_min;
+
+      // R2.1. A null topology means every channel is a root, which is the parallel installation — so
+      // this reduces to the two lines above, addend for addend.
+      //
+      // The predicate is `isEffectiveRoot` and NOTHING ELSE. Adding `configIsValid` here would look
+      // tidy and would silently narrow R2.2 to the all-calibrated case: the gross sum above includes an
+      // in-service uncalibrated channel's FROZEN volume (§5.4), so the delivered sum has to include it
+      // too or the two disagree on a state that occurs every time a meter is swapped. What that state
+      // means for a ROOT is R2.5's business, below, and it is answered with NaN rather than by dropping
+      // an addend.
+      const bool isDeliveryPoint =
+          deps_.topology == nullptr || deps_.topology->isEffectiveRoot(i, inServiceMask);
+      if (isDeliveryPoint) {
+        deliveredSessionLiters += sensor.sessionLiters;
+        deliveredFlowLpm += sensor.instantFlow_L_min;
+        if (!configIsValid(config) && i < 16) {
+          // R2.5: this root's branch volume is not a number anybody can state. Recorded per branch
+          // rather than as a flag, so a consumer can name the branch.
+          unknownBranches = static_cast<uint16_t>(unknownBranches | (1u << i));
+        }
+      }
+
       if (!configIsValid(config)) {
         allReady = false;
       }
@@ -90,6 +148,32 @@ void SensorStateEngine::update(float elapsedSeconds) {
 
   if (activeSensors == 0) {
     allReady = false;
+  }
+
+  // R2.5. NaN rather than the smaller number the sum happens to hold: an uncalibrated root means one
+  // branch whose volume nobody knows, and a device should refuse to state a total it cannot support
+  // rather than state one that is wrong by a whole branch. A wrong number is harder to notice than a
+  // missing one. NaN also PROPAGATES — a master that ignores the bitmap and sums it gets NaN rather
+  // than a plausible figure.
+  //
+  // Applied to the DELIVERED pair only. The gross pair must stay finite (R2.3), and that is now a hard
+  // constraint rather than a preference: `LedController::update` keeps a `lastTotalLiters_` baseline,
+  // and one NaN through it poisons the red volume LED for the rest of the boot — fixing the calibration
+  // would not clear it.
+  if (unknownBranches != 0) {
+    const double unknown = std::numeric_limits<double>::quiet_NaN();
+    deliveredSessionLiters = unknown;
+    deliveredFlowLpm = unknown;
+  }
+
+  if (deps_.deliveredSessionLitersCache) {
+    *deps_.deliveredSessionLitersCache = deliveredSessionLiters;
+  }
+  if (deps_.deliveredFlowLpmCache) {
+    *deps_.deliveredFlowLpmCache = deliveredFlowLpm;
+  }
+  if (deps_.unknownBranchesCache) {
+    *deps_.unknownBranchesCache = unknownBranches;
   }
 
   if (deps_.totalSessionLitersCache) {
