@@ -5,7 +5,8 @@
  *   node tools/wiki/gen-gallery.mjs --out <file>    (tools/wiki/sync.sh does this)
  *
  * The pictures are `graphics/screens/<id>.png`, captured from the web designer by
- * `web/mockup/tools/screenshots/capture.mjs`. This only arranges them. Levels and their order come from
+ * `web/mockup/tools/screenshots/capture.mjs` — in CI, on every run — and sync.sh publishes them into the
+ * wiki repository under `screens/`. This only arranges them. Levels and their order come from
  * gen-diagrams.mjs's walk, so the gallery and the Screen Navigation tree cannot disagree.
  *
  * It FAILS rather than publish a partial gallery: a screen with no picture means the captures are older
@@ -19,17 +20,20 @@ import { byId, dataset, descendOf, ringTitle, rings } from "./gen-diagrams.mjs";
 
 const repoRoot = path.join(import.meta.dirname, "..", "..");
 const shotsDir = path.join(repoRoot, "graphics", "screens");
-// Absolute, because a wiki page cannot reach the repository's files by a relative path. From `main`,
-// which is the only branch the wiki is published from.
-const imageBase = "https://raw.githubusercontent.com/ciberkids/water-flow-meter-StampPLC/main/graphics/screens";
+// The WIKI repository's copy, which sync.sh writes next to the pages. raw.githubusercontent.com/wiki/...
+// is where GitHub serves a wiki repository's files; the page and its pictures are pushed in one commit,
+// so they always describe the same menu.
+const imageBase = "https://raw.githubusercontent.com/wiki/ciberkids/water-flow-meter-StampPLC/screens";
 
-const shots = new Set(fs.readdirSync(shotsDir).filter((f) => f.endsWith(".png")).map((f) => f.slice(0, -4)));
+// Absent on a fresh clone (gitignored), which is the same answer as empty: capture first.
+const shotFiles = fs.existsSync(shotsDir) ? fs.readdirSync(shotsDir) : [];
+const shots = new Set(shotFiles.filter((f) => f.endsWith(".png")).map((f) => f.slice(0, -4)));
 const missing = dataset.screens.filter((s) => !shots.has(s.id)).map((s) => s.id);
 const orphans = [...shots].filter((id) => !byId.has(id));
 if (missing.length || orphans.length) {
   if (missing.length) console.error(`no picture for: ${missing.join(", ")}`);
   if (orphans.length) console.error(`picture for a screen that no longer exists: ${orphans.join(", ")}`);
-  console.error("re-capture: cd web/mockup && npm run capture:screens");
+  console.error("capture first: cd web/mockup && npm run capture:screens");
   process.exit(1);
 }
 
@@ -47,10 +51,9 @@ out.push("");
 out.push("Every screen of the **default menu**, as the web designer draws it. The values are the designer's");
 out.push("sample values, not readings from a device.");
 out.push("");
-out.push("> **Generated.** `web/mockup/tools/screenshots/capture.mjs` captures the pictures into");
-out.push("> `graphics/screens/`, and `tools/wiki/gen-gallery.mjs` lays them out in the same levels and order");
-out.push("> as [[Screen Navigation]]. After changing the menu, run `npm run capture:screens` in `web/mockup`");
-out.push("> and commit the pictures.");
+out.push("> **Generated on every publish.** CI captures the pictures with `web/mockup/tools/screenshots/capture.mjs`");
+out.push("> and `tools/wiki/gen-gallery.mjs` lays them out in the same levels and order as [[Screen Navigation]],");
+out.push("> so a menu change appears here on its next merge to `main`. Nothing to re-run by hand.");
 out.push("");
 out.push("Screens are numbered by their position in their level: **DOWN** goes to the next number and **UP**");
 out.push("to the previous one. A setting with a value editor shows its editor next to it; ENTER opens it.");
