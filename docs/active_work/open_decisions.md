@@ -34,7 +34,7 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Six open lines: two features, two defects and two measurements.** `N-f` and `DF25` opened on
+**Seven open lines: three features, two defects and two measurements.** `N-g` opened on 2026-10-01, when documenting the SD card showed a pack cannot yet be built. `N-f` and `DF25` opened on
 2026-08-30, both out of one question the owner asked while T1's storage was being decided — *is the
 right information surviving a power cycle, and are we burning through the write cycles?* That is the
 usual way: `DF23` came from checking whether `G1`'s procedure could be followed, and `DF22` from
@@ -61,6 +61,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **N-e** | 🟡 | feature, in progress | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, four questions open; T0, T1 and T2 landed, **T3/T4/T6 next**, and R2.5's MQTT sentence needs amending |
 | **N-f** | 🟡 | feature, specified here | Where the readings live — internal flash or an SD card, human-readable files, persisted session values and rotating telemetry. Five decisions taken, six questions open, not started; question 1 changes a documented register contract and should be answered first |
+| **N-g** | 🟡 | feature, opened 2026-10-01 | A menu pack cannot be built: the `.uipack` writer exists (`packEmitter.ts`) but only a test calls it, so the SD card the wiki now documents holds files nobody can produce. **To do this evening**: an `npm run export:pack` command, then lift the ⚠️ on the wiki SD Card page |
 | **DF25** | 🟡 | defect, found 2026-08-30 | A write to non-volatile storage that fails is reported by nothing. **Detection and publication landed 2026-08-30** (`DF25a`: register 34, MQTT `storageFault`, 49 host checks) — the panel's warning triangle rides with `N-e`'s T5, and three of its four questions were built on the recommendation rather than decided |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
@@ -81,6 +82,28 @@ cache; the earlier 38.2% came from a stale container, see `platformio.ini`.) Of 
 feature is under way, one has not started, two defects have decisions in them and two need hardware that
 has never existed for this project. That is a different condition from "twelve things are broken", which
 is what this register looked like before the 2026-08-18 rewrite.
+
+---
+
+## N-g 🟡 A menu pack cannot be built — the SD card holds files nobody can produce
+
+Opened 2026-10-01, while answering whether the wiki explains the SD card. It now does (the generated
+**SD Card** page: `/ui/<name>.uipack`, the `/ui/active` pointer, the 64 KB and 64-character limits, read
+from `ui_pack_storage_sd.h` and `ui_pack_loader.h`). But the firmware half is the only half that exists:
+
+- `web/mockup/tools/exporter/packEmitter.ts` writes the `.uipack` format, and its sole caller is
+  `__tests__/pack_emit.test.ts`, which writes `tests/fixtures/default.uipack` for the host round-trip test.
+- No npm script, exporter flag or designer button produces a pack, so nobody can put a menu on a card.
+
+**To finish** (planned for the evening of 2026-10-01):
+
+1. An `npm run export:pack` command (or an exporter flag) that emits `<name>.uipack` from the dataset,
+   through the same gates as `export:firmware`, so a pack that would not load is refused at build time.
+2. Optionally a download button in the designer's Import & Export tab.
+3. Remove the ⚠️ block from the SD Card page in `tools/wiki/sync.sh`, and say how to build a pack there.
+
+Not part of this item: the SD-card WiFi/MQTT credential file, which is `N8b` in `WiFi_MQTT_Connectivity.md`
+and still unbuilt. The wiki page says so.
 
 ---
 
