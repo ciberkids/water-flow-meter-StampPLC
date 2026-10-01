@@ -16,6 +16,7 @@ class Preferences;
 #include "modbus/register_map.h"
 #include "time/device_clock.h"
 #include "modbus/sensor_types.h"
+#include "storage/nvs_write_health.h"
 
 namespace plc {
 
@@ -70,6 +71,20 @@ struct ModbusDependencies {
   plc::DeviceClock* clock = nullptr;
 
   /**
+   * Whether the device is still keeping what it was told to keep (`DF25`). Nullable.
+   *
+   * Reached from here for the third time on the same argument the clock and the network block make:
+   * this manager is already where a master's write, the panel's action and the portal's apply converge,
+   * and it performs non-volatile writes of its own — the live flow unit and a master's cumulative-litre
+   * reset. Recording outcomes anywhere else would mean finding every route into a write and remembering
+   * each one.
+   *
+   * Nullable because several host suites construct this struct with no opinion about storage; every call
+   * is guarded, so adding it cannot break them.
+   */
+  plc::NvsWriteHealth* nvsHealth = nullptr;
+
+  /**
    * Two LIVE network values, as their underlying enum values. Nullable.
    *
    * `NetRegisterMap::publish` packs the network SETTINGS and leaves every other cell of its 233-register
@@ -109,6 +124,19 @@ struct ModbusDependencies {
 
 class ModbusManager {
  public:
+  /**
+   * Record one non-volatile write outcome (`DF25`). Safe to call when no health object is wired.
+   *
+   * Exists so a call site whose context has no health handle — `ui_actions.cpp`'s LED save reaches this
+   * manager but not the object — can still report, rather than the result being discarded at one route
+   * out of five. A no-op when `deps_.nvsHealth` is null.
+   */
+  void noteNvsResult(plc::StorageFault fault, bool ok) {
+    if (deps_.nvsHealth) {
+      deps_.nvsHealth->noteResult(fault, ok);
+    }
+  }
+
   explicit ModbusManager(const ModbusDependencies& deps);
 
   bool isWritableAddress(uint16_t address) const;
@@ -162,7 +190,13 @@ class ModbusManager {
   uint16_t stagedClockLo_ = 0;
   bool meetsNyquistLimit(const SensorCharacteristics& cfg) const;
   void resetRuntimeCaches();
-  void saveCumulativeToNvs(std::size_t index);
+  /**
+   * Persists one channel's lifetime volume; returns whether the write landed (`DF25`).
+   *
+   * Returns rather than records, so a caller looping over channels can OR the failures and report the
+   * group once. Recording per channel let a later channel's success erase an earlier channel's failure.
+   */
+  bool saveCumulativeToNvs(std::size_t index);
   bool prepareConfigUpdate(std::size_t index, const SensorCharacteristics& candidate, bool* acceptedOverride);
 
   ModbusDependencies deps_;

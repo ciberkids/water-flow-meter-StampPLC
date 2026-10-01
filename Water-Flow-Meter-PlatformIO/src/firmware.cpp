@@ -35,6 +35,8 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "modbus/register_bank.h"
 #include "modbus/register_map.h"
 #include "modbus/sensor_config_nvs.h"
+#include "sensors/sensor_topology_nvs.h"
+#include "storage/nvs_write_health.h"
 #include "modbus/sensor_types.h"
 #include "net/net_register_map.h"
 #include "core_layout.h"
@@ -95,6 +97,17 @@ constexpr int RS485_DE_PIN = 46;  // Direction Enable pin for RS485 transceiver
 SensorData sensors[kNumSensors];
 SensorCharacteristics configs[kNumSensors];
 Preferences preferences;
+
+/**
+ * Whether this device is still keeping what it was told to keep — DF25.
+ *
+ * Beside the `Preferences` instance it watches, because every writer in this file reaches that instance
+ * and none of them looked at what it returned. Published on Modbus register 34 and on the MQTT
+ * diagnostics topic; the panel's warning triangle rides with N-e's T5.
+ *
+ * RAM only, deliberately: a store that cannot be written cannot record its own failure.
+ */
+plc::NvsWriteHealth nvsHealth;
 ModbusServerRTU modbus(2000, RS485_DE_PIN);
 volatile float pollingRate_kHz = 0.0f;
 TaskHandle_t PollingTask;
@@ -192,6 +205,7 @@ ModbusDependencies modbusDeps{.sensors = sensors,
                               .ledController = &ledController,
                               // So a session reset arriving by ANY route is dated (time/device_clock.h).
                               .clock = &deviceClock,
+                              .nvsHealth = &nvsHealth,
                               // R4.4.2d and register 561 — two LIVE values the network block cannot
                               // carry, written after it. See ModbusDependencies.
                               .mqttStateValue = &mqttStateRegisterValue,
@@ -255,6 +269,19 @@ plc::WifiManager wifiManager(netSettings, wifiRadio);
  * operator decision instead of once per millisecond.
  */
 uint16_t netSettingsSavedRevision = 0;
+/**
+ * DF25: a failed network save waits a minute before retrying, rather than writing flash every tick.
+ *
+ * Three variables rather than one deadline, and each earns its place: the ATTEMPTED flag so the first
+ * save after a decision is immediate, the timestamp so the retry interval is `now - last >= 60000` and
+ * survives the `millis()` rollover, and a separate NOTIFIED revision so the radio hears about new
+ * credentials on the first pass even while the write is waiting out its retry.
+ */
+bool netSettingsSaveAttempted = false;
+uint32_t netSettingsLastSaveAttemptMs = 0;
+uint16_t netSettingsNotifiedRevision = 0;
+/** Latched so the held-restart notice prints once rather than on every logic pass. */
+bool restartHeldLogged = false;
 
 // ── MQTT (N5) ────────────────────────────────────────────────────────────────────────
 /**
@@ -507,9 +534,15 @@ void serviceMqttCommand(uint32_t now) {
   // R4.4.2b — persisted ONLY on acceptance. Writing on every rejection would mean a looping command
   // loops NVS writes too, turning a nuisance into flash wear (Loadable_UI_Menu_Packs §3.6's rule).
   if (nowEpoch != 0) {
-    preferences.putUInt(command == plc::MqttCommand::ResetSession ? kPrefCmdEpochSession
-                                                                 : kPrefCmdEpochTotals,
-                        nowEpoch);
+    // DF25. A failure here silently re-arms the rate limit this key exists to hold across a reboot,
+    // so it is recorded rather than discarded.
+    nvsHealth.noteResult(
+        plc::StorageFault::CommandEpoch,
+        plc::nvsPutOk(preferences.putUInt(command == plc::MqttCommand::ResetSession
+                                              ? kPrefCmdEpochSession
+                                              : kPrefCmdEpochTotals,
+                                          nowEpoch),
+                      sizeof(uint32_t)));
   }
 }
 
@@ -568,6 +601,24 @@ void publishDiscovery() {
                 static_cast<unsigned>(count));
 }
 
+/**
+ * The cascade topology (`N-e`), loaded once at boot — T2 is T1's first production caller.
+ *
+ * Held here rather than in the engine because T4's Modbus apply and T5's panel editor will both write
+ * it, and §3.6 requires one atomic commit path. The engine takes a const pointer and reads.
+ */
+plc::SensorTopology sensorTopology;
+
+/**
+ * The DELIVERED pair (R2.1) and the unknown-branch bitmap (R2.5), beside the gross caches rather than
+ * instead of them (R2.3). Nothing publishes them yet: the Modbus block lands with T4, the panel with T5
+ * and the MQTT keys with T6. Said out loud because a value with no reader is the shape of `DF22`-`DF25`,
+ * and the slice plan in §9 is what puts a reader on each surface.
+ */
+double deliveredSessionLitersCache = 0.0;
+double deliveredFlowLpmCache = 0.0;
+uint16_t unknownBranchesCache = 0;
+
 SensorStateEngine::Dependencies sensorEngineDeps{
     .sensors = sensors,
     .configs = configs,
@@ -578,19 +629,24 @@ SensorStateEngine::Dependencies sensorEngineDeps{
     .aggregateFlowLpmCache = &aggregateFlowLpmCache,
     .allSensorsReadyCache = &allSensorsReadyCache,
     .undersamplingFlags = &undersamplingFlags,
+    .topology = &sensorTopology,
+    .deliveredSessionLitersCache = &deliveredSessionLitersCache,
+    .deliveredFlowLpmCache = &deliveredFlowLpmCache,
+    .unknownBranchesCache = &unknownBranchesCache,
 };
 SensorStateEngine sensorStateEngine(sensorEngineDeps);
 InteractionHandler interactionHandler;
 
 namespace {
 
-void saveCumulativeData(uint8_t index) {
+/** Returns whether the write landed — DF25. The caller uses it to decide whether to RETRY. */
+bool saveCumulativeData(uint8_t index) {
   if (index >= kNumSensors) {
-    return;
+    return false;
   }
   char key[8];
   std::snprintf(key, sizeof(key), "cml_%u", static_cast<unsigned>(index));
-  preferences.putDouble(key, sensors[index].cumulativeLiters);
+  return plc::nvsPutOk(preferences.putDouble(key, sensors[index].cumulativeLiters), sizeof(double));
 }
 
 void loadCumulativeData(uint8_t index) {
@@ -619,11 +675,12 @@ constexpr const char* kPrefLinkStop = "lnk_stop";
  * which is why nothing caught it. These two remain as the binding of that logic to the one
  * `Preferences` instance and the one `configs` array.
  */
-void saveSensorConfig(std::size_t index) {
+/** Returns whether all five fields landed — DF25. */
+bool saveSensorConfig(std::size_t index) {
   if (index >= kNumSensors) {
-    return;
+    return false;
   }
-  plc::saveSensorConfigTo(preferences, index, configs[index]);
+  return plc::saveSensorConfigTo(preferences, index, configs[index]) == 0;
 }
 
 void loadSensorConfig(std::size_t index) {
@@ -647,11 +704,21 @@ LinkSettings loadLinkSettings() {
   return s.valid() ? s : LinkSettings{};
 }
 
+/**
+ * Persists the four link settings and RECORDS the outcome — DF25.
+ *
+ * Recorded here rather than at the three call sites because one of them is not an operator action at
+ * all: §4.1.1's rollback fires from the logic loop after an unconfirmed apply, with nobody present. If
+ * that write fails the device reverts the live port and keeps the broken settings in flash, and comes
+ * back on them at the next boot — the failure that most needs reporting is the one nobody is watching.
+ */
 void saveLinkSettings(const LinkSettings& s) {
-  preferences.putUChar(kPrefLinkSlaveId, s.slaveId);
-  preferences.putUChar(kPrefLinkBaud, s.baudIndex);
-  preferences.putUChar(kPrefLinkParity, s.parity);
-  preferences.putUChar(kPrefLinkStop, s.stopBits);
+  std::size_t failed = 0;
+  failed += plc::nvsPutOk(preferences.putUChar(kPrefLinkSlaveId, s.slaveId), 1) ? 0 : 1;
+  failed += plc::nvsPutOk(preferences.putUChar(kPrefLinkBaud, s.baudIndex), 1) ? 0 : 1;
+  failed += plc::nvsPutOk(preferences.putUChar(kPrefLinkParity, s.parity), 1) ? 0 : 1;
+  failed += plc::nvsPutOk(preferences.putUChar(kPrefLinkStop, s.stopBits), 1) ? 0 : 1;
+  nvsHealth.noteResult(plc::StorageFault::LinkSettings, failed == 0);
 }
 
 /**
@@ -715,18 +782,29 @@ void performFactoryReset() {
   modbusManager.applyHoldingWrite(REG_MASTER_RESET_ALL_SENSORS, 1);
   modbusManager.applyHoldingWrite(REG_CONNECTED_SENSORS_BITMAP, 0);
 
-  preferences.clear();
+  // DF25, and this is the most consequential discarded result in the firmware: if clear() failed, the
+  // whole reset is a no-op and the device reboots LOOKING reset. Raised immediately — a factory reset
+  // happens once and nothing retries it.
+  if (!preferences.clear()) {
+    nvsHealth.raiseNow(plc::StorageFault::FactoryResetErase);
+  }
   linkSettings.begin(LinkSettings{});
   saveLinkSettings(linkSettings.live());
-  preferences.putUShort(kPrefConnectedBitmap, 0);
-  preferences.putUShort(kPrefFlowUnit, 0);
+  nvsHealth.noteResult(
+      plc::StorageFault::ConnectedBitmap,
+      plc::nvsPutOk(preferences.putUShort(kPrefConnectedBitmap, 0), sizeof(uint16_t)));
+  nvsHealth.noteResult(plc::StorageFault::FlowUnit,
+                       plc::nvsPutOk(preferences.putUShort(kPrefFlowUnit, 0), sizeof(uint16_t)));
+  std::size_t configWritesFailed = 0;
   for (std::size_t i = 0; i < kNumSensors; ++i) {
     configs[i] = SensorCharacteristics{};
-    saveSensorConfig(i);
+    configWritesFailed += saveSensorConfig(i) ? 0 : 1;
   }
+  nvsHealth.noteResult(plc::StorageFault::SensorCalibration, configWritesFailed == 0);
   ledController.resetToDefaults();
   ledController.markSessionsCleared();
-  ledController.saveToPreferences(preferences);
+  nvsHealth.noteResult(plc::StorageFault::LedSettings,
+                       ledController.saveToPreferences(preferences));
 
   registerBank.fill(0);
   totalSessionLitersCache = 0.0;
@@ -907,7 +985,12 @@ void logicTaskCode(void * pvParameters) {
   // port is opened. This used to call preferences.begin() *after* Serial.begin()
   // with 9600/8N1 hardcoded, so a configured baud rate could never take effect on
   // the first open.
-  preferences.begin("flow-data", false);
+  // The store is already open — `setup()` opens it before its first reader, which is `DF27`. Calling
+  // `begin()` again here would return false on a perfectly healthy device (it refuses when already
+  // started) and raise fault code 1 on every boot, so this site checks rather than opens.
+  //
+  // Project_document.md §4.1.1's requirement still holds and is still met: the link settings must load
+  // from NVS before the RS485 port is opened, and they do, three lines below.
   linkSettings.begin(loadLinkSettings());
 
   RTUutils::prepareHardwareSerial(RS485_SERIAL_PORT);
@@ -966,6 +1049,27 @@ void logicTaskCode(void * pvParameters) {
   // cached bit to false and nothing ever recomputed it — so every reboot left a calibrated channel
   // counting pulses it then discarded, and publishing 0.0 for a lifetime total that was intact in RAM.
   connectedSensorsBitmap = preferences.getUShort(kPrefConnectedBitmap, 0);
+
+  // The cascade topology (`N-e` R1.1). A device with firmware that predates the feature has no
+  // `parent_*` keys, reads all zeros, and IS the parallel installation it already was — no migration.
+  //
+  // A stored set that is not a forest becomes all-roots and is REPORTED rather than absorbed: the
+  // parallel topology is the one substitute that cannot over-count water, and repairing a cycle by
+  // cutting an edge would guess which meter feeds which. This is also `StorageFault::Topology`'s first
+  // author, so code 4 stops being reserved-and-unreported.
+  {
+    const plc::SensorTopologyLoad loaded = plc::loadSensorTopologyFrom(preferences);
+    sensorTopology = loaded.topology;
+    if (!loaded.stored.ok()) {
+      // Code 13, not code 4: the bytes arrived intact and are not a forest, so nothing failed to
+      // persist. Reporting a write fault here would send an operator looking at the flash.
+      nvsHealth.raiseNow(plc::StorageFault::TopologyNotAForest);
+      Serial.printf("[topology] stored parents are not a forest (error %u at channel %u); every channel "
+                    "reverts to a root\n",
+                    static_cast<unsigned>(loaded.stored.error),
+                    static_cast<unsigned>(loaded.stored.index));
+    }
+  }
   // Defaults to L/m, which is the stored unit and the meter datasheet's — so a device that has never
   // been configured shows the same numbers the wire carries.
   displayFlowUnit = preferences.getUShort(kPrefFlowUnit, 0);
@@ -1041,23 +1145,56 @@ void logicTaskCode(void * pvParameters) {
     // that actually moved are written: Preferences::put* does not guarantee it skips
     // an identical write, and at one pass per minute an unconditional write would be
     // roughly 525k writes per key per year.
+    //
+    // DF25 — AND THE SHADOW COPIES NOW ADVANCE ONLY ON SUCCESS, which is what makes this pass its own
+    // retry. They used to advance unconditionally, immediately after a write nobody checked, so the
+    // dirty check said "already saved" on the next pass and a failed write was never attempted again.
+    // That is what turned a transient failure into a permanent loss. Leaving the shadow behind gives
+    // exactly one retry per minute per key — bounded by the pass itself, so no retry storm, which is
+    // the answer to DF25's question 2.
     if (now - lastSaveTime > 60000) { // Every minute
+      // "Attempted" is tracked separately from "failed" because a pass that wrote nothing proves
+      // nothing about the store: with no water metered and no configuration change there is no write to
+      // succeed, and reporting a success would clear a run that is still failing.
+      bool litreWriteAttempted = false;
+      bool litreWriteFailed = false;
+      bool configWriteAttempted = false;
+      bool configWriteFailed = false;
       for (std::size_t i = 0; i < kNumSensors; ++i) {
         if (!sensors[i].inUse) {
           continue;
         }
         if (sensors[i].cumulativeLiters != persistedCumulative[i]) {
-          saveCumulativeData(static_cast<uint8_t>(i));
-          persistedCumulative[i] = sensors[i].cumulativeLiters;
+          litreWriteAttempted = true;
+          if (saveCumulativeData(static_cast<uint8_t>(i))) {
+            persistedCumulative[i] = sensors[i].cumulativeLiters;
+          } else {
+            litreWriteFailed = true;
+          }
         }
         if (configs[i] != persistedConfigs[i]) {
-          saveSensorConfig(i);
-          persistedConfigs[i] = configs[i];
+          configWriteAttempted = true;
+          if (saveSensorConfig(i)) {
+            persistedConfigs[i] = configs[i];
+          } else {
+            configWriteFailed = true;
+          }
         }
       }
       if (connectedSensorsBitmap != persistedBitmap) {
-        preferences.putUShort(kPrefConnectedBitmap, connectedSensorsBitmap);
-        persistedBitmap = connectedSensorsBitmap;
+        if (plc::nvsPutOk(preferences.putUShort(kPrefConnectedBitmap, connectedSensorsBitmap),
+                          sizeof(uint16_t))) {
+          persistedBitmap = connectedSensorsBitmap;
+          nvsHealth.noteResult(plc::StorageFault::ConnectedBitmap, true);
+        } else {
+          nvsHealth.noteResult(plc::StorageFault::ConnectedBitmap, false);
+        }
+      }
+      if (litreWriteAttempted) {
+        nvsHealth.noteResult(plc::StorageFault::CumulativeLitres, !litreWriteFailed);
+      }
+      if (configWriteAttempted) {
+        nvsHealth.noteResult(plc::StorageFault::SensorCalibration, !configWriteFailed);
       }
       lastSaveTime = now;
     }
@@ -1294,6 +1431,7 @@ void logicTaskCode(void * pvParameters) {
       snapshotInputs.totalSessionLiters = totalSessionLitersCache;
       snapshotInputs.pollingRateKhz = pollingRate_kHz;
       snapshotInputs.undersamplingFlags = undersamplingFlags;
+      snapshotInputs.storageFaultCode = nvsHealth.code();  // DF25
       snapshotInputs.uptimeSeconds = now / 1000;
       snapshotInputs.wifiRssiDbm = static_cast<int8_t>(wifiManager.rssiDbm());
       snapshotInputs.lastCommandResult =
@@ -1359,15 +1497,56 @@ void logicTaskCode(void * pvParameters) {
     // successful apply, so this is once per operator decision — not once per pass. That matters more
     // than it looks: a flash write suspends the other core's scheduler with cache disabled (§2.1.3),
     // which stops the pulse sampler outright, so every avoidable write is avoidable sampler downtime.
-    if (netSettings.revision() != netSettingsSavedRevision) {
-      plc::saveNetSettings(preferences, netSettings);
-      netSettingsSavedRevision = netSettings.revision();
-      // Tell the radio the credentials moved. It self-guards on a credential fingerprint, so calling
-      // it after an unrelated apply (an MQTT port, say) costs a comparison and does not bounce a
-      // working link.
+    //
+    // THE SHADOW ADVANCES ONLY ON SUCCESS — found by review 2026-08-30, and it was the same defect as
+    // the litre pass's: `netSettingsSavedRevision` used to advance immediately after a write nobody had
+    // checked, so a failed apply was never re-attempted, the counter parked at 1, and the device came
+    // back after a power cycle on a MIXTURE of old and new credentials with register 34 reading 0.
+    //
+    // The retry is RATE-LIMITED rather than left to the loop, and that is the constraint the naive fix
+    // breaks: this block runs on every logic pass, not in the once-a-minute pass, so leaving the shadow
+    // behind on its own would turn one failed apply into a flash write per tick — and per the note
+    // above, every write stalls the pulse sampler. So a failure schedules the next attempt a minute
+    // out, which is the same one-attempt-per-minute cadence the litre keys get and what makes N = 3
+    // mean three minutes here too.
+    // Tell the radio the credentials moved, on the FIRST pass that sees a new revision and regardless
+    // of whether flash accepted them. It self-guards on a credential fingerprint, so calling it after an
+    // unrelated apply (an MQTT port, say) costs a comparison and does not bounce a working link.
+    //
+    // OUTSIDE the write's retry gate, which a second review pass caught: with the notification inside
+    // it, a failed save armed a 60 s retry and the next apply's credentials did not reach the radio
+    // until that timer expired — a storage fault delaying provisioning by a minute, which is not a
+    // consequence flash has any business having. The comment in the block below already said the
+    // radio's job does not depend on flash; now the code agrees.
+    if (netSettings.revision() != netSettingsNotifiedRevision) {
+      netSettingsNotifiedRevision = netSettings.revision();
       wifiManager.noteProvisioningComplete(now);
-      Serial.printf("[net] settings saved (revision %u)\n",
-                    static_cast<unsigned>(netSettings.revision()));
+    }
+    // `now - last >= interval` rather than `now >= deadline`, which is the idiom every other timer in
+    // this file uses and the only one that survives the ~49-day `millis()` rollover.
+    if (netSettings.revision() != netSettingsSavedRevision &&
+        (!netSettingsSaveAttempted || now - netSettingsLastSaveAttemptMs >= 60000)) {
+      netSettingsSaveAttempted = true;
+      netSettingsLastSaveAttemptMs = now;
+      const std::size_t netWritesFailed = plc::saveNetSettings(preferences, netSettings);
+      nvsHealth.noteResult(plc::StorageFault::NetworkSettings, netWritesFailed == 0);
+      if (netWritesFailed == 0) {
+        netSettingsSavedRevision = netSettings.revision();
+  // Seeded together: an unseeded notified-revision would tell the radio at boot that credentials had
+  // just changed. Harmless — it self-guards on a fingerprint — but a spurious call is a spurious call.
+  netSettingsNotifiedRevision = netSettings.revision();
+        netSettingsSaveAttempted = false;  // the next decision gets an immediate attempt
+      }
+      // The log says what happened rather than asserting success — it used to print "settings saved"
+      // beside a write that had just failed.
+      if (netWritesFailed == 0) {
+        Serial.printf("[net] settings saved (revision %u)\n",
+                      static_cast<unsigned>(netSettings.revision()));
+      } else {
+        Serial.printf("[net] settings NOT saved (revision %u): %u writes failed, retrying in 60s\n",
+                      static_cast<unsigned>(netSettings.revision()),
+                      static_cast<unsigned>(netWritesFailed));
+      }
     }
 
     uiRenderer.update(now, uiController.context());
@@ -1383,7 +1562,7 @@ void logicTaskCode(void * pvParameters) {
     // the card held the bus must not count as a successful render.
     if (packOutcome == ui::LoadOutcome::CardPack && !packRenderConfirmed &&
         uiController.context().currentScreen != nullptr && spiArbiter.mayBeginFrame()) {
-      plc::NvsPackAttemptCounter packAttempts(preferences);
+      plc::NvsPackAttemptCounter packAttempts(preferences, &nvsHealth);  // DF25
       packLoader.noteSuccessfulRender(packAttempts);
       packRenderConfirmed = true;
       Serial.println("[ui] menu pack rendered; boot-loop guard cleared");
@@ -1464,7 +1643,28 @@ void logicTaskCode(void * pvParameters) {
     }
 
     if (interactions.restartScheduled && now >= interactions.restartAtMs) {
-      esp_restart();
+      // DF25, found by review: a factory reset whose `clear()` failed did not happen, and rebooting
+      // accomplishes nothing except destroying the only evidence — the fault code lives in RAM. So the
+      // device stays up with code 12 on register 34 and on the diagnostics topic, where an operator or
+      // a master can actually see it.
+      //
+      // This suppresses only the FACTORY RESET's restart, and not because of a check here:
+      // `InteractionResult::restartScheduled` is assigned from `factoryResetState_.restartScheduled`
+      // and from nothing else (`interaction_handler.cpp:130`), so it is the only scheduled reboot the
+      // firmware has. A link change reopens the port instead of rebooting.
+      //
+      // AND THE LOG IS LATCHED, which a second review pass caught: `restartScheduled` stays true once
+      // set, so this branch runs on every logic pass. Without the latch it printed roughly a thousand
+      // lines a second at `vTaskDelay(1)` — a fix that made the fault harder to read than the defect.
+      if (nvsHealth.inAlarm(plc::StorageFault::FactoryResetErase)) {
+        if (!restartHeldLogged) {
+          restartHeldLogged = true;
+          Serial.println("[storage] factory reset did NOT erase the store; holding the restart so the "
+                         "fault stays reportable (register 34 = 12)");
+        }
+      } else {
+        esp_restart();
+      }
     }
 
     vTaskDelay(1); // Yield to other tasks
@@ -1488,6 +1688,31 @@ void setup() {
 
   M5StamPLC.begin();
   Serial.begin(115200);
+
+  /**
+   * THE STORE OPENS HERE, BEFORE ANY READER — `DF27`.
+   *
+   * It used to open inside `logicTaskCode`, which `setup()` does not create until its last lines. So
+   * every NVS read in `setup()` ran against a CLOSED store: `Preferences` guards each accessor on
+   * `_started` and hands back the caller's default, silently. Two consequences, both invisible:
+   *
+   *  - `loadNetSettings` below saw no keys at all, so a device came up on DEFAULTS every boot and the
+   *    radio never associated. The stored block was intact in flash and unreachable — and the log said
+   *    "settings restored (revision 0), wifi=off mqtt=off", which reads like a device nobody had
+   *    configured.
+   *  - the menu pack's attempt counter could neither be read nor incremented, so §4.7's anti-boot-loop
+   *    guard was dead: a pack that validates and then takes the renderer down was retried at every
+   *    boot forever, instead of being given up on at the third.
+   *
+   * `begin()` returns false when the store is ALREADY open (`Preferences.cpp:33-35`), so there is
+   * exactly one call and it is this one — a second one in the logic task would report a healthy device
+   * as fault code 1 on every boot.
+   */
+  if (!preferences.begin("flow-data", false)) {
+    nvsHealth.raiseNow(plc::StorageFault::StoreDidNotOpen);
+    Serial.println("[storage] the non-volatile store did NOT open: every setting reads its default and "
+                   "nothing can be saved (fault code 1)");
+  }
 
   // Now that the bus and the library are up the calendar can be read — and believed only if the flag
   // above says it survived. `noteBootTrust` discards the value entirely when it did not.
@@ -1521,7 +1746,7 @@ void setup() {
   // immediately and there is no contention to manage. This is the cheapest window there will
   // ever be, which is why the specification puts card access in it.
   {
-    plc::NvsPackAttemptCounter packAttempts(preferences);
+    plc::NvsPackAttemptCounter packAttempts(preferences, &nvsHealth);  // DF25
     packBuffer = static_cast<uint8_t*>(malloc(ui::PackLoader::kMaxPackBytes));
     if (!packBuffer) {
       // Out of heap is not a pack failure — nothing was attempted — so it must not burn an

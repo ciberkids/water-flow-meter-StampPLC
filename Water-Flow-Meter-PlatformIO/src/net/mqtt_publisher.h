@@ -158,6 +158,19 @@ struct MqttDiagnosticsTelemetry {
    * decision, not a side effect of telling the truth here.
    */
   uint16_t uncalibratedFlags = 0;
+  /**
+   * `DF25` — the storage fault code, 0 while the device is keeping what it was told to keep.
+   *
+   * The same number Modbus register 34 carries, and `plc::StorageFault` owns the values. Here because
+   * this is the only remote route to the fact: every other topic keeps publishing correct figures from
+   * RAM while the store is failing, which is exactly what made the defect invisible. A subscriber that
+   * archives the lifetime totals wants to know that the device has stopped keeping its own copy.
+   *
+   * NOT a Home Assistant entity, for the reason `uncalibratedFlags` and `baselineKhz` are not: adding
+   * one means naming it in `ha_discovery`, which republishes discovery to every existing install
+   * (R4.4.6) — a dashboard decision, not a side effect of telling the truth here.
+   */
+  uint16_t storageFaultCode = 0;
   float boardTemperatureC = 0.0f;
   uint32_t uptimeSeconds = 0;
   int8_t wifiRssiDbm = 0;

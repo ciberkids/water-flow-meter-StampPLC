@@ -61,8 +61,15 @@ tidiness one. Home Assistant reaches each field with a `value_template`.
 //                                                  active channels
 
 // <base>/diagnostics/state
-{"pollingRateKhz":3.310,"baselineKhz":0.000,"undersampling":0,"uncalibrated":0,"tempC":41.2,"uptimeS":86400,"rssi":-57,"lastCmd":"idle"}
+{"pollingRateKhz":3.310,"baselineKhz":0.000,"undersampling":0,"uncalibrated":0,"storageFault":0,"tempC":41.2,"uptimeS":86400,"rssi":-57,"lastCmd":"idle"}
 ```
+
+**`storageFault` is `0` on a healthy device, and it is the only remote warning that the device has
+stopped keeping its own records.** Every other figure in every other payload keeps arriving, correct and
+live, from RAM while the flash writes are failing — which is exactly what made `DF25` invisible. Any
+non-zero value names the group of settings or readings that stopped reaching flash; the codes and what to
+do about each are tabled on the Modbus Registers page under *Storage fault codes*. **If anything
+downstream archives or bills from the lifetime totals, alarm on this key.**
 
 Two things to note. **Flow is always L/min on the wire**, whatever the panel is set to show — the
 display unit (`REG_DISPLAY_FLOW_UNIT`, register `33`) is a screen preference and never rescales a

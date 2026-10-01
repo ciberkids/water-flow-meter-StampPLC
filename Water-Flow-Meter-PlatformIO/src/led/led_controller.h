@@ -14,7 +14,15 @@ class LedController {
   void begin();
 
   void loadFromPreferences(Preferences& prefs);
-  void saveToPreferences(Preferences& prefs) const;
+  /**
+   * Persists the two red-LED settings; returns whether BOTH writes landed (`DF25`).
+   *
+   * Not `[[nodiscard]]`: unlike the two NVS serializers, this has five call sites in three files and one
+   * of them (`ui_actions.cpp`) reaches it through a context with no health handle. That call site records
+   * the result through `ModbusManager::noteNvsResult` instead, which is the hub the same file already
+   * uses for the clock and the network block.
+   */
+  bool saveToPreferences(Preferences& prefs) const;
 
   void setVolumeStepLiters(uint16_t stepLiters);
   void setPulsePeriodMs(uint16_t periodMs);

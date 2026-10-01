@@ -115,7 +115,10 @@ void handleEnterIdle(const UiActionContext& ctx, const ui_exporter::Flow&) {
 
 void handleSaveConfig(const UiActionContext& ctx, const ui_exporter::Flow&) {
   ctx.controller.notifyInteraction(ctx.nowMs);
-  ctx.leds.saveToPreferences(ctx.preferences);
+  // Recorded through the manager rather than discarded: this context has no health handle, and a result
+  // dropped at one route out of five is how DF25 was invisible in the first place.
+  ctx.modbus.noteNvsResult(plc::StorageFault::LedSettings,
+                           ctx.leds.saveToPreferences(ctx.preferences));
 }
 
 // Display_UI_Requirements §4.3 note 3: a completed reset must issue the matching

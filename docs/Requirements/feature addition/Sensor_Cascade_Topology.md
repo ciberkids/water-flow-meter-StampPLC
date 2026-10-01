@@ -411,11 +411,11 @@ Ordered so each is verifiable when it lands.
 | Slice | Content | State |
 | --- | --- | --- |
 | ~~**T0**~~ | ~~Precursor: fix `DF24` and move the MQTT snapshot assembly out of `firmware.cpp`~~ | ✅ 2026-08-26, `net/mqtt_snapshot.h`, 23 host checks |
-| **T1** | The topology module: parent storage, effective-parent resolution, depth, cycle detection, forest validation. Arduino-free, own host binary. | |
-| **T2** | The netted aggregation beside the gross one, with R2.2's bit-identity assertion and R2.4's liveness repointing. | |
-| **T3** | The skew arithmetic: window, floor, sign, baseline, peak, litre difference, and the states. Same module as T1. | |
+| ~~**T1**~~ | ~~The topology module: parent storage, effective-parent resolution, depth, cycle detection, forest validation. Arduino-free, own host binary.~~ | ✅ 2026-08-30, `sensors/sensor_topology.h` + `sensors/sensor_topology_nvs.h`, 37 host checks |
+| ~~**T2**~~ | ~~The netted aggregation beside the gross one, with R2.2's bit-identity assertion and R2.4's liveness repointing.~~ | ✅ 2026-08-30, `sensor_state_engine.{h,cpp}`, 24 host checks. R2.4 needed no repointing — all three gross consumers already read the gross pair, so it is asserted rather than changed |
+| **T3** | The skew arithmetic: window, floor, sign, baseline, peak, litre difference, and the states. Same module as T1 (`sensors/sensor_topology.h`); its commissioned baseline has to survive a power cycle, so it also needs a persistence decision — share T1's serializer or take its own. | |
 | **T4** | Modbus: the per-sensor parent offset, the staged apply, the read-only results, R4.5's separate tuning registers, and the wiki reconciliation rows. | |
-| **T5** | Panel: the per-channel parent row and editor, the skew row, the warning-banner class, and the catalogue ABI bump with its ledger append. | |
+| **T5** | Panel: the per-channel parent row and editor, the skew row, the warning-banner class, and the catalogue ABI bump with its ledger append. **`DF25`'s storage-failure triangle rides here** — the warning-banner class and the ABI bump are the same work, so it costs one bump instead of two. | |
 | **T6** | MQTT: the diagnostics keys, read-only. Home Assistant entities deliberately NOT added — see §5.1. | |
 | **T7** | The requirements this document leaves open (§7) resolved, the wiki page, and the register entry closed. | |
 

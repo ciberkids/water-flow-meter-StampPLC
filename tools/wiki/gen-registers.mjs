@@ -29,6 +29,7 @@ const firmware = (...parts) => path.join(repoRoot, "Water-Flow-Meter-PlatformIO"
 
 const CORE_HEADER = firmware("modbus", "register_map.h");
 const NET_HEADER = firmware("net", "net_register_map.h");
+const STORAGE_HEADER = firmware("storage", "nvs_write_health.h");
 
 /** Every `inline constexpr <int type> NAME = VALUE;` in a header, as a name -> number map. */
 function readConstants(file) {
@@ -44,6 +45,44 @@ function readConstants(file) {
   }
   return out;
 }
+
+/**
+ * Every `Name = N,` inside `enum class <enumName> ... { ... }`, as a name -> number map.
+ *
+ * Same argument as `readConstants` above: the storage fault codes are a wire contract an operator reads
+ * off a panel and looks up here, so the numbering has exactly one home — `storage/nvs_write_health.h` —
+ * and this script reads it. A hand-copied table would drift the first time a code was appended.
+ */
+function readEnum(file, enumName) {
+  const source = fs.readFileSync(file, "utf-8");
+  const start = source.indexOf(`enum class ${enumName}`);
+  if (start < 0) throw new Error(`${enumName} not found in ${file}`);
+  const open = source.indexOf("{", start);
+  const close = source.indexOf("};", open);
+  const body = source.slice(open, close);
+  const out = new Map();
+  for (const match of body.matchAll(/^\s*(\w+)\s*=\s*(0x[0-9a-fA-F]+|\d+)\s*,?\s*$/gm)) {
+    out.set(match[1], Number(match[2]));
+  }
+  // AN UNPARSED ENUMERATOR IS LOUD, because a silent one defeats the whole point of generating this.
+  // Review demonstrated three legal C++ forms the first pattern skipped without a word — an implicit
+  // value, a hex value, and the LIKELIEST one, an explicit value with no trailing comma on the final
+  // enumerator — each of which produced a green build with the code missing from the operator's table.
+  // Hex and the optional trailing comma are now handled; anything still unmatched is named here.
+  for (const line of body.split("\n")) {
+    const candidate = line.match(/^\s*([A-Z]\w*)\s*(=|,|$)/);
+    if (candidate && !out.has(candidate[1])) {
+      problems.push(
+        `${enumName}::${candidate[1]} could not be parsed out of the header — give it an explicit ` +
+          `decimal or hex value so this table cannot silently omit it`
+      );
+    }
+  }
+  return out;
+}
+
+/** Collected and reported together at the end, so one run names every disagreement. */
+const problems = [];
 
 const core = readConstants(CORE_HEADER);
 const net = readConstants(NET_HEADER);
@@ -67,9 +106,42 @@ const ENCODING = {
 
 const RW = { r: "R", w: "W", rw: "R/W" };
 
+/**
+ * What each storage fault code means to somebody reading it off the panel — `DF25`.
+ *
+ * The NUMBERS come from the header; these are the sentences a header cannot carry. Reconciled in both
+ * directions below, so a code appended to the enum without a description here fails the build, and so
+ * does a description for a code that no longer exists.
+ */
+const STORAGE_FAULTS = {
+  None: "Everything the device was told to keep is reaching flash. This is the value you should see.",
+  StoreDidNotOpen:
+    "The non-volatile store did not open at boot. Nothing is being saved and nothing was loaded — every setting on the device is at its default, and re-entering them will not make them stick. Power-cycle once; if the code persists the flash partition needs re-initialising, which means a reflash.",
+  CumulativeLitres:
+    "The **lifetime volumes** have failed to reach flash three passes in a row (the pass runs once a minute). The figures on the panel and the bus are correct and live, but they are held in RAM only: a power cut loses everything accumulated since the last successful save. This is the code to alarm on if anything downstream bills from the totals.",
+  SensorCalibration:
+    "A channel's calibration is not reaching flash. The channel measures correctly now and will come back as `SET?` after a power cycle, having lost its q_max, multiplier, offset and pulses-per-litre.",
+  Topology: "The sensor cascade topology (which channel feeds which) is not reaching flash. A change just made to it will not survive a power cycle: the device will come back on the previous topology, and a cascade's delivered total will be wrong until it is re-entered.",
+  TopologyNotAForest:
+    "**The stored topology read back intact and does not make sense** \u2014 it contains a loop, a channel naming itself, or a parent this device does not have. Nothing is wrong with the flash, so this is not a reason to suspect the hardware. Every channel has reverted to being its own root, which is the parallel installation and the one arrangement that cannot over-count water; a cascade's delivered total will be wrong until the topology is re-entered. The serial console names the offending channel at boot.",
+  ConnectedBitmap:
+    "Which channels are in service is not reaching flash. After a power cycle the device may come back with the wrong set of channels enabled — a channel that reads `--` rather than a figure.",
+  LinkSettings:
+    "The RS485 slave id, baud rate, parity or stop bits are not reaching flash. **Read this one carefully:** if a link change was applied and then rolled back, the rollback also failed to persist, so the device will come back at the next boot on the settings that broke the link.",
+  FlowUnit: "The panel's flow unit is not reaching flash. A display preference only — no wire surface changes.",
+  LedSettings: "The red LED's volume step or pulse period is not reaching flash. Cosmetic; the LED works, it will return to defaults after a power cycle.",
+  NetworkSettings:
+    "The WiFi and MQTT settings are not reaching flash. A partial failure here is the awkward one: absent keys keep their old values on load, so the device can come back with a MIXTURE of old and new credentials. Re-apply and watch for this code clearing before trusting what is stored.",
+  CommandEpoch:
+    "The MQTT reset-command rate limit is not reaching flash. The guard still works while the device is up; a reboot re-arms it, so a repeated remote reset command could be accepted sooner than the limit intends.",
+  PackAttemptCounter: "The menu-pack load-attempt counter is not reaching flash. A pack that crashes the display could be retried indefinitely instead of being given up on.",
+  FactoryResetErase:
+    "A factory reset could not erase the store. **The reset did not happen** — the device rebooted looking reset while the old settings are still in flash. Do not assume the device is clean.",
+};
+
 /* ── The global block ─────────────────────────────────────────────────────────────────────────── */
 const GLOBAL = [
-  ["REG_POLLING_RATE_KHZ", "r", "u16", "kHz", "Live pulse-sampling rate. Compare against the baseline in the MQTT diagnostics payload; a fall here is an under-sampling regression (§2.1.2)."],
+  ["REG_POLLING_RATE_KHZ", "r", "f32", "kHz", "Live pulse-sampling rate. Compare against the baseline in the MQTT diagnostics payload; a fall here is an under-sampling regression (§2.1.2)."],
   ["REG_CONNECTED_SENSORS_BITMAP", "r", "u16", "—", "Bit *n* set = sensor *n+1* is in use. The persisted companion to each channel's own status flag."],
   ["REG_MASTER_RESET_ALL_SENSORS", "w", "u16", "—", "Write `1` to clear every channel's totals, session and peak. Any other value is ignored."],
   ["REG_MASTER_RESET_ALL_MEASURED", "w", "u16", "—", "Write `1` to clear every channel's measured values but keep its calibration."],
@@ -78,6 +150,7 @@ const GLOBAL = [
   ["REG_UNDERSAMPLING_FLAGS", "r", "u16", "—", "Bit *n* set = sensor *n+1* is pulsing faster than the sampler can count, so its readings are low. Also published on the MQTT diagnostics topic."],
   ["REG_LED_RED_VOLUME_STEP", "rw", "u16", "L", "How many litres of cumulative volume make the red LED pulse once."],
   ["REG_LED_RED_PULSE_PERIOD", "rw", "u16", "ms", "How long that pulse lasts."],
+  ["REG_STORAGE_FAULT_CODE", "r", "u16", "enum", "**0 while the device is keeping what it was told to keep.** Any other value means a group of settings or readings has failed to reach flash three consecutive times, and the number says which group — see the storage fault codes table below. Read-only, device-wide, and also published as `storageFault` on the MQTT diagnostics topic. This register exists because every write to non-volatile storage used to discard its result (`DF25`): a device whose store had failed kept publishing correct live flow, session volume and lifetime totals from RAM, and only lost the lifetime totals at the next power cycle, with nothing anywhere reporting it. A master archiving the lifetime figures should alarm on this register — it is the only warning that the device has stopped keeping its own copy."],
   ["REG_DISPLAY_FLOW_UNIT", "rw", "u16", "enum", "What the PANEL shows flows in: `0` L/min, `1` L/s, `2` m³/h. **A display preference only.** Every wire surface — these registers, MQTT, Home Assistant — stays L/min regardless, so a master must never rescale because somebody changed the screen."],
   ["REG_CLOCK_SET_EPOCH_HI", "rw", "u16", "—", "Clock: the HIGH word of a Unix epoch to set, staged. Write this and 51, then the magic to 52; nothing happens until then, because two registers are not atomic under FC6 and an epoch composed from one new half and one old one is a timestamp nobody chose."],
   ["REG_CLOCK_SET_EPOCH_LO", "rw", "u16", "—", "Clock: the LOW word of the staged epoch. See 50."],
@@ -161,8 +234,6 @@ const NETWORK = [
 ];
 
 /* ── Reconciliation: the two halves must describe the same set ─────────────────────────────────── */
-const problems = [];
-
 function reconcile(label, declared, described) {
   for (const name of declared) {
     if (!described.has(name)) {
@@ -176,6 +247,8 @@ function reconcile(label, declared, described) {
   }
 }
 
+const storageFaults = readEnum(STORAGE_HEADER, "StorageFault");
+
 const declaredGlobal = new Set([...core.keys()].filter((n) => n.startsWith("REG_") && !n.startsWith("REG_LINK_")));
 const declaredLink = new Set([...core.keys()].filter((n) => n.startsWith("REG_LINK_")));
 const declaredSensor = new Set([...core.keys()].filter((n) => n.startsWith("OFF_")));
@@ -184,9 +257,109 @@ const declaredNet = new Set(
 );
 
 reconcile("global", declaredGlobal, new Set(GLOBAL_ROWS.map((r) => r[0])));
+reconcile("storage fault", new Set(storageFaults.keys()), new Set(Object.keys(STORAGE_FAULTS)));
 reconcile("serial link", declaredLink, new Set(LINK.map((r) => r[0])));
 reconcile("sensor block", declaredSensor, new Set(SENSOR.map((r) => r[0])));
 reconcile("network block", declaredNet, new Set(NETWORK.map((r) => r[0])));
+
+/**
+ * Does any documented value's SPAN reach the next one's address? — `DF26`.
+ *
+ * The reconciliation above matches constant NAMES, so it cannot see width: `REG_POLLING_RATE_KHZ` is
+ * written with `setFloat` and occupies registers 0 AND 1, and this page described it as a one-register
+ * `uint16` for as long as the page existed. That failure is quiet in the worst way — an integrator
+ * reading register 0 as a `uint16` gets the high half of an IEEE-754 float, which is a plausible number
+ * (16467 for 3.31 kHz) that moves in the right direction when the real rate changes. It looks like a
+ * working integration.
+ *
+ * `ENCODING` already carries each layout's width, so the check is nearly free: sort by address and fail
+ * when one entry's span reaches the next entry's address. Text has no fixed width and is skipped — the
+ * network block's strings carry their own extent in `net_register_map.h`.
+ */
+function checkSpans(label, rows, addressOf) {
+  const placed = rows
+    .map((row) => ({ name: row[0], address: addressOf(row[0]), regs: ENCODING[row[2]].regs }))
+    .filter((entry) => entry.address !== undefined && entry.regs !== null)
+    .sort((a, b) => a.address - b.address);
+  for (let i = 0; i < placed.length - 1; ++i) {
+    const end = placed[i].address + placed[i].regs;
+    if (end > placed[i + 1].address) {
+      problems.push(
+        `${label}: ${placed[i].name} at ${placed[i].address} is ${placed[i].regs} register(s) wide, so ` +
+          `it reaches ${end - 1} and collides with ${placed[i + 1].name} at ${placed[i + 1].address} — ` +
+          `either the encoding on this row is wrong or the addresses overlap`
+      );
+    }
+  }
+}
+
+/**
+ * Does the documented encoding match how the firmware actually WRITES the register? — `DF26`, properly.
+ *
+ * `checkSpans` above catches an over-wide declaration, and it would NOT have caught DF26: describing a
+ * `float32` as a `uint16` makes the documented span NARROWER, and narrower never collides with anything.
+ * The error that actually shipped is under-declaration, and the only thing that can see it is the
+ * writer — `RegisterBank::setFloat` occupies two registers whatever this page says.
+ *
+ * So the writer is the authority, exactly as the addresses' authority is the header: every
+ * `set{Uint16,Float,Double}(REG_NAME` in `src/` is read out and reconciled against the row's encoding.
+ * A register written one way and documented another fails the build with both halves named.
+ *
+ * Read-only fields nothing writes through these setters are silent here — the per-sensor block is packed
+ * by `syncSensorToHolding` through a computed offset rather than a named constant, so this check covers
+ * the global, link and network blocks, which is where every named write lives.
+ */
+const SETTER_ENCODING = { setUint16: "u16", setFloat: "f32", setDouble: "f64" };
+
+function checkWriterEncodings() {
+  const sources = [
+    firmware("modbus", "modbus_manager.cpp"),
+    firmware("modbus", "link_settings.cpp"),
+    firmware("net", "net_register_map.cpp"),
+    firmware("firmware.cpp"),
+  ].filter((file) => fs.existsSync(file));
+
+  const documented = new Map();
+  for (const row of [...GLOBAL_ROWS, ...LINK]) documented.set(row[0], row[2]);
+  for (const row of NETWORK) documented.set(row[0], row[2]);
+
+  const seen = new Map();
+  for (const file of sources) {
+    const source = fs.readFileSync(file, "utf-8");
+    for (const match of source.matchAll(
+      /(setUint16|setFloat|setDouble)\s*\(\s*(?:plc::)?(?:net_reg::)?([A-Za-z_]\w*)/g
+    )) {
+      const [, setter, name] = match;
+      if (!documented.has(name)) continue;  // a local, an offset, or a per-sensor address
+      const expected = SETTER_ENCODING[setter];
+      const previous = seen.get(name);
+      if (previous && previous !== expected) {
+        problems.push(
+          `encoding: ${name} is written both as ${previous} and as ${expected} — one register cannot be two shapes`
+        );
+      }
+      seen.set(name, expected);
+    }
+  }
+
+  for (const [name, written] of seen) {
+    const shown = documented.get(name);
+    if (shown !== written) {
+      problems.push(
+        `encoding: ${name} is WRITTEN as ${ENCODING[written].label} (${written}) but this page documents ` +
+          `it as ${ENCODING[shown].label} (${shown}) — an integrator decoding the documented width reads ` +
+          `the wrong bytes and gets a plausible number`
+      );
+    }
+  }
+}
+
+checkWriterEncodings();
+
+checkSpans("global", GLOBAL_ROWS, (name) => core.get(name));
+checkSpans("serial link", LINK, (name) => core.get(name));
+checkSpans("sensor block", SENSOR, (name) => core.get(name));
+checkSpans("network block", NETWORK, (name) => net.get(name));
 
 if (problems.length > 0) {
   console.error("The register reference and the firmware headers disagree:\n");
@@ -240,6 +413,43 @@ w("| --- | --- | --- | --- | --- | --- |");
 for (const [name, access, enc, unit, note] of GLOBAL_ROWS) {
   w(`| \`${core.get(name)}\` | \`${name}\` | ${RW[access]} | ${ENCODING[enc].label} | ${unit} | ${note} |`);
 }
+w();
+
+w("## Storage fault codes");
+w();
+w("`REG_STORAGE_FAULT_CODE` reads `0` on a healthy device. Any other value means one group of settings");
+w("or readings has stopped reaching flash. The same number is published as `storageFault` on the MQTT");
+w("diagnostics topic. **The panel does not show it yet** — the on-device warning triangle is the second");
+w("half of this work and is not built.");
+w();
+w("How many failures it takes depends on whether anything retries the write, which is a property of the");
+w("group and not a global rule:");
+w();
+w("- the groups written by the once-a-minute pass — the lifetime litres, the calibration, the in-service");
+w("  bitmap and the network settings — are re-attempted every minute, and the code appears after **three");
+w("  consecutive failures**, so roughly three minutes. One refused write is not reported, because a");
+w("  single failure often succeeds on the next attempt once the store compacts.");
+w("- everything else is written once, when an operator or a master does something. Nothing comes back to");
+w("  retry it, so those codes appear on the **first** failure — waiting for three would mean waiting for");
+w("  events that cannot happen. A later successful write of the same group clears the code.");
+w();
+w("Two things this code cannot tell you, stated so nobody plans around them. It says WHICH GROUP of");
+w("keys stopped persisting, never WHY: the underlying error is logged and dropped inside the Arduino");
+w("framework, so a full partition and a corrupt page look identical from here. And when more than one");
+w("group is failing, the LOWEST code is published — so that a code an operator wrote down still means");
+w("the same thing an hour later.");
+w();
+w("The numbers are append-only. A code is never renumbered or reused, because an integrator's alarm");
+w("rule and an operator's note both outlive the firmware that produced them.");
+w();
+w("| Code | Name | What it means, and what to do |");
+w("| --- | --- | --- |");
+for (const [name, value] of [...storageFaults.entries()].sort((a, b) => a[1] - b[1])) {
+  w(`| \`${value}\` | \`${name}\` | ${STORAGE_FAULTS[name]} |`);
+}
+w();
+w("Codes `1`-`31` belong to storage; `32` upward is reserved, so the next subsystem to earn a place");
+w("beside the warning triangle cannot renumber these.");
 w();
 
 w("## Serial link");

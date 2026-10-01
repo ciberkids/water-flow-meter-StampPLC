@@ -68,6 +68,7 @@ struct Device {
   SensorData sensors[plc::kNumSensors]{};
   SensorCharacteristics configs[plc::kNumSensors]{};
   Preferences preferences;
+  plc::NvsWriteHealth nvsHealth;
   LedController leds;
   plc::DeviceClock clock;
   plc::NetSettings net;
@@ -97,6 +98,7 @@ struct Device {
     d.displayFlowUnit = &displayFlowUnit;
     d.allSensorsReadyCache = &allSensorsReady;
     d.pollingRateKhz = &pollingRateKhz;
+    d.nvsHealth = &nvsHealth;  // DF25 — register 34
     d.sensorCount = plc::kNumSensors;
     return d;
   }
@@ -444,6 +446,107 @@ void singleWriteStillWorks() {
         "while FC16 with the same wrong magic does not — §5.1's zero-fill must survive");
 }
 
+
+/**
+ * DF25 — the storage fault code reaches a master, and stays put while the fault does.
+ *
+ * Here rather than in `nvs_write_health_test.cpp` because this is the WIRING, not the policy: the policy
+ * suite is Arduino-free and never links the manager, so a code that was counted correctly and published
+ * nowhere would pass it. That is the same gap DF23 is: a value with a formatter and no author.
+ */
+void theStorageFaultCodeIsPublished() {
+  std::printf("\n[DF25 — register 34 carries the storage fault code]\n");
+  Device h;
+  ModbusManager modbus(h.deps());
+
+  modbus.syncGlobalRegisters();
+  check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) == 0,
+        "a healthy device publishes 0 on register 34");
+
+  // Two failures is not yet news, and the register must not move.
+  h.nvsHealth.noteResult(plc::StorageFault::CumulativeLitres, false);
+  h.nvsHealth.noteResult(plc::StorageFault::CumulativeLitres, false);
+  modbus.syncGlobalRegisters();
+  check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) == 0,
+        "two failed writes in a row still publish 0 — one refused write is not news");
+
+  h.nvsHealth.noteResult(plc::StorageFault::CumulativeLitres, false);
+  modbus.syncGlobalRegisters();
+  check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) ==
+            static_cast<uint16_t>(plc::StorageFault::CumulativeLitres),
+        "the third publishes code 2 — the lifetime litres are no longer being kept");
+
+  // The republish must not lose it, which is exactly how DF22's eight registers died.
+  modbus.syncGlobalRegisters();
+  modbus.syncGlobalRegisters();
+  check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) == 2,
+        "and it survives repeated syncs rather than being zeroed by the next one");
+
+  h.nvsHealth.noteResult(plc::StorageFault::CumulativeLitres, true);
+  modbus.syncGlobalRegisters();
+  check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) == 0,
+        "a successful write clears it, so a master sees the recovery too");
+
+  // THE OR ACROSS CHANNELS — the fix review asked to be guarded, and the reason it matters: a master's
+  // reset writes eight `cml_*` keys through one group, so reporting per channel let a later channel's
+  // success erase an earlier channel's failure, and a partial failure went out as a clean success.
+  {
+    Device eight;
+    for (std::size_t i = 0; i < plc::kNumSensors; ++i) {
+      eight.sensors[i].inUse = true;
+    }
+    ModbusManager resets(eight.deps());
+    Preferences::failKey("cml_0");  // the FIRST channel fails; the other seven succeed after it
+    resets.applyHoldingWrite(plc::REG_MASTER_RESET_ALL_MEASURED, 1);
+    Preferences::failNoKeys();
+    check(eight.nvsHealth.consecutiveFailures(plc::StorageFault::CumulativeLitres) == 1,
+          "one dead channel out of eight is recorded as ONE failure for the group, not erased by the "
+          "seven successes that follow it");
+
+    // And three such resets reach the threshold, which is what makes the record reportable at all.
+    for (int round = 0; round < 2; ++round) {
+      Preferences::failKey("cml_0");
+      resets.applyHoldingWrite(plc::REG_MASTER_RESET_ALL_MEASURED, 1);
+      Preferences::failNoKeys();
+    }
+    resets.syncGlobalRegisters();
+    check(eight.registers.at(plc::REG_STORAGE_FAULT_CODE) ==
+              static_cast<uint16_t>(plc::StorageFault::CumulativeLitres),
+          "and three of them publish code 2 — the partial failure is no longer invisible");
+
+    // A clean reset clears it, so the group is not stuck on a transient.
+    resets.applyHoldingWrite(plc::REG_MASTER_RESET_ALL_MEASURED, 1);
+    resets.syncGlobalRegisters();
+    check(eight.registers.at(plc::REG_STORAGE_FAULT_CODE) == 0,
+          "while a reset with every channel writing clears the group");
+  }
+
+  // The LED route: a write through the manager records without the caller holding the health object.
+  modbus.noteNvsResult(plc::StorageFault::LedSettings, false);
+  modbus.noteNvsResult(plc::StorageFault::LedSettings, false);
+  modbus.noteNvsResult(plc::StorageFault::LedSettings, false);
+  modbus.syncGlobalRegisters();
+  check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) ==
+            static_cast<uint16_t>(plc::StorageFault::LedSettings),
+        "noteNvsResult is the hub for a caller with no health handle — ui_actions.cpp uses it");
+
+  // And a manager with no health object must not crash: several suites construct one that way.
+  ModbusDependencies headless = h.deps();
+  headless.nvsHealth = nullptr;
+  ModbusManager noHealth(headless);
+  noHealth.noteNvsResult(plc::StorageFault::CumulativeLitres, false);
+  noHealth.syncGlobalRegisters();
+  // Asserted rather than assumed. This was a literal `true` whose only failure mode was a crash — which
+  // review correctly called a vacuous check: it would have passed a null-health manager that wrote a 0
+  // over the bank, and it would have passed one that recorded into the shared object anyway.
+  check(h.registers.at(plc::REG_STORAGE_FAULT_CODE) ==
+            static_cast<uint16_t>(plc::StorageFault::LedSettings),
+        "a manager with no health object publishes NOTHING — the bank keeps the value it held");
+  check(h.nvsHealth.consecutiveFailures(plc::StorageFault::CumulativeLitres) == 0,
+        "and records nothing either, rather than reaching into the shared object");
+}
+
+
 }  // namespace
 
 void liveStatusSurvivesTheBlockRepublish() {
@@ -507,6 +610,7 @@ int main() {
   refusalsThatMustStay();
   byteCountIsStillChecked();
   singleWriteStillWorks();
+  theStorageFaultCodeIsPublished();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

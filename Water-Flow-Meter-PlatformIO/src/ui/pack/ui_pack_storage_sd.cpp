@@ -205,6 +205,13 @@ std::size_t SdPackStorage::listPacks(char (*names)[ui::PackLoader::kMaxNameBytes
 
 uint8_t NvsPackAttemptCounter::read() { return preferences_.getUChar(kKey, 0); }
 
-void NvsPackAttemptCounter::write(uint8_t value) { preferences_.putUChar(kKey, value); }
+void NvsPackAttemptCounter::write(uint8_t value) {
+  const bool ok = plc::nvsPutOk(preferences_.putUChar(kKey, value), sizeof(value));
+  if (health_) {
+    // DF25. A lost attempt counter is benign on its own — a pack simply gets retried — but a code that
+    // nothing ever reports is the defect this register is about, so the last unwired one is wired.
+    health_->noteResult(plc::StorageFault::PackAttemptCounter, ok);
+  }
+}
 
 }  // namespace plc
