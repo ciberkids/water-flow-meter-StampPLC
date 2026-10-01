@@ -124,21 +124,27 @@ function navigationTree() {
   out.push("%% One box per screen, grouped by the LEVEL it belongs to. A solid arrow is ENTER");
   out.push("%% descending into a level; every screen inside a level is reachable from its siblings");
   out.push("%% with UP and DOWN, which is left undrawn because it holds everywhere and drawing it");
-  out.push("%% would bury the part that varies.");
-  out.push("flowchart TB");
+  out.push("%% would bury the part that varies. #n is a screen's position in its level, in DOWN order.");
+  // LEFT TO RIGHT, and no `direction` inside the levels. Top to bottom laid every level out as one
+  // row, because mermaid ignores a subgraph's own direction once an edge crosses its border, and every
+  // level here has one: the tree came out several thousand pixels wide and unreadable once a page
+  // scaled it down. Left to right makes each level a column and the tree reads parent -> child.
+  out.push("flowchart LR");
 
   rings.forEach((ring, index) => {
     const title = ringTitle(ring, "Root ring (info pages)");
     out.push(`    subgraph L${index}["${title}"]`);
-    out.push("        direction TB");
-    for (const id of ring) {
-      out.push(`        ${nodeId(id)}["${label(id)}"]`);
-    }
+    // The layout engine orders the boxes in a column to minimise crossings, NOT in ring order, and no
+    // mermaid directive pins it. UP and DOWN follow the ring, so the order goes into the label, where
+    // the layout cannot shuffle it. Not "1." — mermaid reads a leading "1. " as a Markdown list.
+    ring.forEach((id, position) => {
+      out.push(`        ${nodeId(id)}["#${position + 1} · ${label(id)}"]`);
+    });
     if (ring.includes("info-p0-global-status")) {
       // Not in the dataset, so this generator has nothing to read — the same hardcoding the FW
       // subgraph below already needs, and for the same reason. UiNavigator splices it onto the END
       // of this level (src/ui/core/ui_root_tail.h), which packs cannot undo.
-      out.push('        ui_select_menu["SELECT MENU - appended by the firmware<br/><i>ENTER opens the pack selector</i>"]');
+      out.push(`        ui_select_menu["#${ring.length + 1} · SELECT MENU - appended by the firmware<br/><i>ENTER opens the pack selector</i>"]`);
     }
     out.push("    end");
   });
@@ -158,7 +164,6 @@ function navigationTree() {
    * any depth, which is the part no edge can express.
    */
   out.push('    subgraph FW["Firmware-drawn, in no screen table"]');
-  out.push("        direction TB");
   out.push('        pack_selector["Select Menu (pack selector)<br/><i>UP+DOWN+ENTER held 3 s, from any screen at any depth</i><br/><i>UP/DOWN move - ENTER selects and reboots - held ENTER leaves</i>"]');
   out.push('        pack_note["Two routes in.<br/><i>Loadable_UI_Menu_Packs 3.4s root-level entry is built - see SELECT MENU in the root ring -<br/>and the three-button gesture still works when a pack draws nothing.</i>"]');
   out.push("    end");
