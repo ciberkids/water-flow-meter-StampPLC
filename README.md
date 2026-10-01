@@ -72,6 +72,7 @@ is the reference for anyone connecting to the device rather than changing its co
 | [WiFi](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/WiFi) | Turning WiFi on, provisioning, and the radio's states |
 | [Screen Navigation](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/Screen-Navigation) | Every screen on the panel and how the buttons move between them, generated from the dataset |
 | [Screen Gallery](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/Screen-Gallery) | A picture of every screen in the default menu, captured from the web designer |
+| [SD Card](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/SD-Card) | The microSD card's file layout for menu packs, and what is not built yet |
 | [UI Dataset Contract](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/UI-Dataset-Contract) | The rules a `screens.json` must follow |
 
 The wiki is not edited by hand. `tools/wiki/sync.sh` builds it from this repository and CI

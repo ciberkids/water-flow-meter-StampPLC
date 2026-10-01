@@ -56,7 +56,7 @@ two to disagree about.
 | Understand the interaction model | `docs/Requirements/feature addition/Display_UI_Requirements.md` |
 | See a specific screen's agreed layout | `docs/Requirements/feature addition/Display_Per_Screen_Spec.md` |
 | Wire something new into the firmware | `docs/Requirements/feature addition/UI_Firmware_Interface.md` |
-| Work on SD-card menu packs | `docs/Requirements/feature addition/Loadable_UI_Menu_Packs.md` |
+| Put a menu pack on the SD card | [[SD Card]] — the card's file layout, and what is not built yet |
 | Switch the device to a different UI | Hold **UP + DOWN + ENTER for 3 s** — the Select Menu. It is firmware-drawn and in no screen table, so nothing on the panel advertises it; `docs/Requirements/Gesture_Reference.md` §3.6 |
 | Integrate over Modbus | [[Modbus Registers]] — the whole map, generated from the firmware headers |
 | Read telemetry into Home Assistant | [[MQTT]] |
@@ -175,6 +175,72 @@ echo '```'
 node tools/wiki/gen-gallery.mjs --out "$STAGE/Screen-Gallery.md"
 mkdir -p "$STAGE/screens"
 cp graphics/screens/*.png "$STAGE/screens/"
+
+# ── SD Card ──────────────────────────────────────────────────────────────────────────────────────
+#
+# The paths and limits are READ from the firmware headers, never typed here, so the page cannot describe
+# a card layout the reader no longer uses. A constant that cannot be found stops the publish.
+SD_H="Water-Flow-Meter-PlatformIO/src/ui/pack/ui_pack_storage_sd.h"
+LOADER_H="Water-Flow-Meter-PlatformIO/src/ui/pack/ui_pack_loader.h"
+sd_const() { sed -nE "s/.*$2 = \"?([^\";]+)\"?;.*/\1/p" "$1" | head -1; }
+SD_DIR="$(sd_const "$SD_H" kDirectory)"
+SD_POINTER="$(sd_const "$SD_H" kPointerPath)"
+SD_MAX_KB="$(sd_const "$LOADER_H" kMaxPackBytes | sed -E 's/ *\* *1024//')"
+SD_MAX_NAME="$(sd_const "$LOADER_H" kMaxNameBytes)"
+for v in SD_DIR SD_POINTER SD_MAX_KB SD_MAX_NAME; do
+  [ -n "${!v}" ] || { echo "SD Card page: could not read $v from the firmware headers" >&2; exit 1; }
+done
+cat > "$STAGE/SD-Card.md" <<PAGE
+# SD Card
+
+The StampPLC has a microSD slot. Today the firmware uses the card for **one thing: menu packs**, which
+swap the panel's whole menu without reflashing. With no card, or nothing usable on it, the device runs
+the menu built into the firmware, so a card is never required.
+
+> ⚠️ **Not finished yet — tracked as \`N-g\` in \`docs/active_work/open_decisions.md\`.** The device can
+> read and select packs, but there is **no command yet that builds a \`.uipack\` from the designer**: the
+> pack writer (\`web/mockup/tools/exporter/packEmitter.ts\`) is only called by a test. Until that lands,
+> this page describes the format the firmware reads, not something you can produce.
+
+## File layout
+
+Format the card as **FAT32** and put everything in one folder:
+
+\`\`\`
+${SD_DIR}/
+├── active            which pack to load: a text file holding one file name
+├── default.uipack    a menu pack
+└── other.uipack      as many packs as you like
+\`\`\`
+
+| File | What it is |
+| --- | --- |
+| \`${SD_DIR}/<name>.uipack\` | One complete menu in a single binary file. At most **${SD_MAX_KB} KB**, and the file name must be under **${SD_MAX_NAME} characters**. Only files ending in \`.uipack\` are listed |
+| \`${SD_POINTER}\` | Plain text: the file name of the pack to load, e.g. \`default.uipack\`. A trailing newline from a text editor is fine. The Select Menu writes this file for you |
+
+## Choosing a pack
+
+Open the **Select Menu** from the \`SELECT MENU\` page at the end of the root ring, or by holding
+**UP + DOWN + ENTER for 3 s** from any screen. It lists the packs on the card. UP and DOWN move,
+ENTER selects one and reboots into it, and a held ENTER leaves without changing anything. See
+[[Screen Navigation]].
+
+## When something is wrong
+
+The device never gets stuck on a bad card; it boots the built-in menu instead. A pack is refused when
+it is missing, larger than the limit, fails its checksum, or was built for a different firmware
+version. If loading the selected pack fails on two boots in a row, the device also deletes
+\`${SD_POINTER}\`, so the next boot starts clean.
+
+## Not on the card yet
+
+**WiFi and MQTT settings from a file on the card** are planned (item \`N8b\` in
+\`docs/Requirements/feature addition/WiFi_MQTT_Connectivity.md\`) but **not built**. Set them up with
+the configuration portal or over Modbus instead; see [[WiFi]].
+
+The full design, including the binary format, is in
+\`docs/Requirements/feature addition/Loadable_UI_Menu_Packs.md\`.
+PAGE
 
 # ── The communication pages ──────────────────────────────────────────────────────────────────────
 #
