@@ -12,6 +12,7 @@
     "test:unit": "vitest run",
     "test:visual": "tsc && vite build && playwright test",
     "test:visual:update": "tsc && vite build && playwright test --update-snapshots",
+    "capture:screens": "tsc && vite build && node tools/screenshots/capture.mjs",
     "test:exporter": "npm run build:exporter && node --test dist-exporter/tools/exporter/__tests__/*.js",
     "clean:exporter": "node -e \"require('fs').rmSync('dist-exporter',{recursive:true,force:true})\""
   },

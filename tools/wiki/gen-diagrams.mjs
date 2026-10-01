@@ -218,19 +218,27 @@ function configurationTree() {
   return out.join("\n") + "\n";
 }
 
-const outputs = {
-  "docs/diagrams/ui_navigation_tree.mermaid": navigationTree(),
-  "docs/diagrams/ui_config_layout.mermaid": configurationTree()
-};
+/**
+ * The level walk, shared with gen-gallery.mjs so the Screen Gallery groups and orders screens exactly as
+ * this tree does. A second walk there would be a second home for the menu's structure.
+ */
+export { byId, descendOf, dataset, nameOf, ringTitle, rings };
 
-if (process.argv.includes("--write")) {
+// Only when run, not when imported for the walk above.
+const runDirectly = process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename;
+
+if (runDirectly) {
+  const outputs = {
+    "docs/diagrams/ui_navigation_tree.mermaid": navigationTree(),
+    "docs/diagrams/ui_config_layout.mermaid": configurationTree()
+  };
   for (const [file, content] of Object.entries(outputs)) {
-    fs.writeFileSync(path.join(repoRoot, file), content);
-    console.error(`wrote ${file} (${content.split("\n").length} lines)`);
-  }
-} else {
-  for (const [file, content] of Object.entries(outputs)) {
-    console.log(`──── ${file} ────`);
-    console.log(content);
+    if (process.argv.includes("--write")) {
+      fs.writeFileSync(path.join(repoRoot, file), content);
+      console.error(`wrote ${file} (${content.split("\n").length} lines)`);
+    } else {
+      console.log(`──── ${file} ────`);
+      console.log(content);
+    }
   }
 }
