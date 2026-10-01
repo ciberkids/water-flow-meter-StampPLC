@@ -6,7 +6,7 @@ by **three buttons**.
 
 <p align="center">
   <a href="https://docs.m5stack.com/en/core/StamPLC">
-    <img src="https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1129/K141_01.webp"
+    <img src="graphics/hardware/stampplc.jpg"
          alt="M5Stack StampPLC: ESP32-S3 controller with a 1.14-inch display, three user buttons, eight isolated inputs, four relays and an RS485 port"
          width="480">
   </a>
