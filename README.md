@@ -20,6 +20,46 @@ The distinctive part, and the thing to understand before changing anything: **th
 is designed in a web app, exported to JSON, and translated into `constexpr` C++ tables that the
 firmware renders.** Nothing about the screens is hand-written in the firmware.
 
+### Why the UI is designed in a web app
+
+A 240×135 panel with three buttons is a hard place to iterate. Every label change, layout tweak
+or new menu path would otherwise cost a C++ edit, a firmware build and a reflash, and someone would
+need the device on their desk to see the result. `web/mockup/` takes all of that off the hardware:
+
+- **See it without a device.** The browser shows every screen at the panel's exact pixel size, so
+  you can check layout, fonts and colours before anything is built.
+- **Try the buttons for real.** `ArrowUp`, `ArrowDown` and `Enter` work like the three device
+  buttons, with the same short-press, long-press and hold timings, so you can walk through
+  navigation, editors and countdowns in the browser.
+- **One source for the screens.** The design is saved as data (`src/data/screens.json`), not
+  code. The exporter turns it into C++, and its gates refuse any export that refers to a screen,
+  action or value the firmware does not have (see **The pipeline** below).
+- **Keep the device logic stable.** Generated UI code lives apart from the measurement, Modbus
+  and diagnostics code, so redesigning a menu can't break pulse counting.
+
+The original rationale is in
+[`Display_Web_Mockup_and_Translator.md`](docs/Requirements/feature%20addition/Display_Web_Mockup_and_Translator.md),
+and the tool's own guide is [`web/mockup/README.md`](web/mockup/README.md).
+
+### Documentation: the wiki
+
+**[github.com/ciberkids/water-flow-meter-StampPLC/wiki](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki)**
+is the reference for anyone connecting to the device rather than changing its code:
+
+| Page | Covers |
+| --- | --- |
+| [Home](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki) | Orientation: where to look for each task |
+| [Communications](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/Communications) | The three ways to talk to the device (Modbus RTU, MQTT, WiFi), what each can do, and units on every wire |
+| [Modbus Registers](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/Modbus-Registers) | The register map, generated from the firmware headers |
+| [MQTT](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/MQTT) | Telemetry topics, payloads and Home Assistant discovery |
+| [WiFi](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/WiFi) | Turning WiFi on, provisioning, and the radio's states |
+| [UI Dataset Contract](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/UI-Dataset-Contract) | The rules a `screens.json` must follow |
+
+The wiki is not edited by hand. `tools/wiki/sync.sh` builds it from this repository and CI
+publishes it on every push to `main`, so it always matches `main`. To change a page, edit its
+source in the repo and commit: `tools/wiki/pages/` for the long pages, `sync.sh` itself for Home
+and UI Dataset Contract, `gen-registers.mjs` for the register map.
+
 ---
 
 ## Verify the checkout in four commands
