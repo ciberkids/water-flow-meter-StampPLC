@@ -15,6 +15,10 @@ web/mockup/dist-exporter/
 # PlatformIO build tree
 Water-Flow-Meter-PlatformIO/.pio/
 
+# Screen captures for the wiki's Screen Gallery. CI captures them on every run and publishes them into
+# the wiki, so they are never committed: see web/mockup/tools/screenshots/capture.mjs.
+graphics/screens/
+
 # Test/run artifacts
 web/mockup/test-results/
 web/mockup/server.log

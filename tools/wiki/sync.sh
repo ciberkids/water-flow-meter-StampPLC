@@ -168,9 +168,13 @@ echo '```'
 
 # ── Screen Gallery ───────────────────────────────────────────────────────────────────────────────
 #
-# Pictures of every screen, laid out in the navigation tree's levels. Generated, and it exits non-zero
-# when graphics/screens/ and the dataset disagree, which stops the publish: see gen-gallery.mjs.
+# Pictures of every screen, laid out in the navigation tree's levels. The pictures are captured by CI
+# (`npm run capture:screens`) before this runs and published into the wiki repository under screens/,
+# never committed. gen-gallery.mjs exits non-zero when graphics/screens/ and the dataset disagree,
+# which stops the publish: run the capture first.
 node tools/wiki/gen-gallery.mjs --out "$STAGE/Screen-Gallery.md"
+mkdir -p "$STAGE/screens"
+cp graphics/screens/*.png "$STAGE/screens/"
 
 # ── The communication pages ──────────────────────────────────────────────────────────────────────
 #
@@ -233,6 +237,9 @@ HELP
 fi
 
 cp "$STAGE"/*.md "$WIKI/"
+# Replaced wholesale, so a screen removed from the menu loses its picture too.
+rm -rf "$WIKI/screens"
+cp -r "$STAGE/screens" "$WIKI/screens"
 cd "$WIKI"
 git add -A
 if git diff --cached --quiet; then

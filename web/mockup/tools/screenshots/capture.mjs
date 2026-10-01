@@ -4,9 +4,15 @@
  *
  *   cd web/mockup && npm run capture:screens        (builds first, then captures)
  *
- * Writes `graphics/screens/<screen-id>.png` (the 240 × 135 panel at the designer's default 200 % zoom) for every screen in
- * `src/data/screens.json`, and deletes any PNG there whose screen no longer exists, so the folder is
- * always exactly the current menu. `tools/wiki/sync.sh` builds the wiki's Screen Gallery from it.
+ * Writes `graphics/screens/<screen-id>.png` (the 240 × 135 panel at the designer's default 200 % zoom) for
+ * every screen in `src/data/screens.json`, and deletes any PNG there whose screen no longer exists, so the
+ * folder is always exactly the current menu. `tools/wiki/sync.sh` builds the wiki's Screen Gallery from it.
+ *
+ * NOBODY HAS TO REMEMBER TO RUN THIS. CI runs it on every push and publishes the pictures into the wiki
+ * from `main`, and the folder is gitignored, so a menu change shows up in the gallery on its next merge.
+ * Run it locally only to preview. The pictures are not committed for a second reason too: the device font
+ * falls back to the machine's monospace (the bundled `press-start-2p.woff2` is not a font), so a capture
+ * on one machine never matches another's byte for byte, and a committed copy could only drift or churn.
  *
  * WHY THE DESIGNER AND NOT THE DEVICE. There is no way to screenshot the panel from a host, and the
  * designer renders the same dataset the exporter turns into the firmware's tables. The pictures are the

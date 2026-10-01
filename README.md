@@ -205,9 +205,9 @@ it is POSTed with the request rather than re-read from disk.
 
 Commit the dataset and the regenerated assets **together**. CI fails if they disagree.
 
-After changing the menu, `npm run capture:screens` re-captures every screen into `graphics/screens/` for
-the wiki's Screen Gallery. Commit the pictures with the dataset; the wiki refuses to publish while a
-screen has no picture.
+The wiki's Screen Gallery updates itself: CI captures every screen from the designer on each run and
+publishes the pictures with the wiki from `main`, so there is nothing to re-run after a menu change.
+`npm run capture:screens` writes the same pictures into `graphics/screens/` (gitignored) to preview locally.
 
 `tools/skeleton/generate.mjs` regenerates the default menu from the catalogue and refuses to emit
 one that leaves any setting unreachable. Run it after adding a firmware setting.

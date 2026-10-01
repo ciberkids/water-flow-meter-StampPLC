@@ -137,6 +137,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: web/mockup/package-lock.json   # for the screen capture below
 
       # Reconciliation, in both directions: a register the headers declare and the generator does
       # not describe fails here, and so does a description for a register that no longer exists.
@@ -196,6 +198,19 @@ jobs:
 
       - name: Every diagram will actually render
         run: node tools/wiki/check-diagrams.mjs
+
+      # The Screen Gallery's pictures, captured from the designer HERE rather than committed, so a menu
+      # change reaches the wiki on its next merge without anyone remembering to re-capture. The device
+      # font falls back to the runner's monospace, so these are this image's rendering, consistently.
+      - name: Install the designer for the screen capture
+        working-directory: web/mockup
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Capture every screen for the Screen Gallery
+        working-directory: web/mockup
+        run: npm run capture:screens
 
       # Dry run: builds every page and refuses if any repository path a page cites has moved.
       # A wiki page pointing at a renamed file is how a reader decides the docs are stale and
