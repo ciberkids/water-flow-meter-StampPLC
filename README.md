@@ -4,6 +4,18 @@ A water-flow meter on an **M5Stack StampPLC** (ESP32-S3). It measures up to eigh
 flow sensors, publishes readings over **Modbus RTU**, and has a 240×135 landscape display driven
 by **three buttons**.
 
+<p align="center">
+  <a href="https://docs.m5stack.com/en/core/StamPLC">
+    <img src="https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1129/K141_01.webp"
+         alt="M5Stack StampPLC: ESP32-S3 controller with a 1.14-inch display, three user buttons, eight isolated inputs, four relays and an RS485 port"
+         width="480">
+  </a>
+  <br>
+  <sub>The target hardware: the eight isolated inputs take the flow sensors' pulses, PWR485 carries
+  Modbus RTU, and the 1.14" screen with the three buttons below it is the UI this repository designs.
+  Image © M5Stack, from the <a href="https://docs.m5stack.com/en/core/StamPLC">product documentation</a>.</sub>
+</p>
+
 The distinctive part, and the thing to understand before changing anything: **the on-device UI
 is designed in a web app, exported to JSON, and translated into `constexpr` C++ tables that the
 firmware renders.** Nothing about the screens is hand-written in the firmware.
