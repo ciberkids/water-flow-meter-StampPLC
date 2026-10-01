@@ -52,6 +52,7 @@ two to disagree about.
 | --- | --- |
 | Edit anything about the panel's screens | [[UI Dataset Contract]] — **read this first**, two of the four JSON files are generated |
 | See every screen and how to move between them | [[Screen Navigation]] — the menu tree, generated from the dataset |
+| See what every screen looks like | [[Screen Gallery]] — a picture of each, from the web designer |
 | Understand the interaction model | `docs/Requirements/feature addition/Display_UI_Requirements.md` |
 | See a specific screen's agreed layout | `docs/Requirements/feature addition/Display_Per_Screen_Spec.md` |
 | Wire something new into the firmware | `docs/Requirements/feature addition/UI_Firmware_Interface.md` |
@@ -152,7 +153,8 @@ displays and the value editors behind setting pages are left out, so the shape o
 - **The Select Menu** is drawn by the firmware and is in no screen table. It opens from the `SELECT MENU`
   page at the end of the root ring, or by holding **UP + DOWN + ENTER for 3 s** from any screen.
 
-The full gesture rules are in `docs/Requirements/Gesture_Reference.md`.
+The full gesture rules are in `docs/Requirements/Gesture_Reference.md`. To see what each screen looks
+like, open the [[Screen Gallery]].
 
 ## The tree
 
@@ -163,6 +165,12 @@ PAGE
 sed -e '/^%%/d' -e '/./,$!d' docs/diagrams/ui_navigation_tree.mermaid
 echo '```'
 } > "$STAGE/Screen-Navigation.md"
+
+# ── Screen Gallery ───────────────────────────────────────────────────────────────────────────────
+#
+# Pictures of every screen, laid out in the navigation tree's levels. Generated, and it exits non-zero
+# when graphics/screens/ and the dataset disagree, which stops the publish: see gen-gallery.mjs.
+node tools/wiki/gen-gallery.mjs --out "$STAGE/Screen-Gallery.md"
 
 # ── The communication pages ──────────────────────────────────────────────────────────────────────
 #

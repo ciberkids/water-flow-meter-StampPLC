@@ -71,6 +71,7 @@ is the reference for anyone connecting to the device rather than changing its co
 | [MQTT](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/MQTT) | Telemetry topics, payloads and Home Assistant discovery |
 | [WiFi](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/WiFi) | Turning WiFi on, provisioning, and the radio's states |
 | [Screen Navigation](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/Screen-Navigation) | Every screen on the panel and how the buttons move between them, generated from the dataset |
+| [Screen Gallery](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/Screen-Gallery) | A picture of every screen in the default menu, captured from the web designer |
 | [UI Dataset Contract](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/UI-Dataset-Contract) | The rules a `screens.json` must follow |
 
 The wiki is not edited by hand. `tools/wiki/sync.sh` builds it from this repository and CI
@@ -203,6 +204,10 @@ Then edit screens in the browser and press Export. The dataset you see is what g
 it is POSTed with the request rather than re-read from disk.
 
 Commit the dataset and the regenerated assets **together**. CI fails if they disagree.
+
+After changing the menu, `npm run capture:screens` re-captures every screen into `graphics/screens/` for
+the wiki's Screen Gallery. Commit the pictures with the dataset; the wiki refuses to publish while a
+screen has no picture.
 
 `tools/skeleton/generate.mjs` regenerates the default menu from the catalogue and refuses to emit
 one that leaves any setting unreachable. Run it after adding a firmware setting.
