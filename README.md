@@ -4,17 +4,34 @@ A water-flow meter on an **M5Stack StampPLC** (ESP32-S3). It measures up to eigh
 flow sensors, publishes readings over **Modbus RTU**, and has a 240×135 landscape display driven
 by **three buttons**.
 
-<p align="center">
-  <a href="https://docs.m5stack.com/en/core/StamPLC">
-    <img src="graphics/hardware/stampplc.jpg"
-         alt="M5Stack StampPLC: ESP32-S3 controller with a 1.14-inch display, three user buttons, eight isolated inputs, four relays and an RS485 port"
-         width="480">
-  </a>
-  <br>
-  <sub>The target hardware: the eight isolated inputs take the flow sensors' pulses, PWR485 carries
-  Modbus RTU, and the 1.14" screen with the three buttons below it is the UI this repository designs.
-  Image © M5Stack, from the <a href="https://docs.m5stack.com/en/core/StamPLC">product documentation</a>.</sub>
-</p>
+<table align="center">
+  <tr>
+    <td align="center" valign="middle">
+      <img src="graphics/hardware/flowmeter.jpeg"
+           alt="Brass Hall-effect water flow sensor with threaded ends and a three-wire cable"
+           width="300">
+    </td>
+    <td align="center" valign="middle">
+      <a href="https://docs.m5stack.com/en/core/StamPLC">
+        <img src="graphics/hardware/stampplc.jpg"
+             alt="M5Stack StampPLC: ESP32-S3 controller with a 1.14-inch display, three user buttons, eight isolated inputs, four relays and an RS485 port"
+             width="420">
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top">
+      <sub><b>The sensor.</b> A pulse-output Hall-effect flow sensor of the YF-B10 kind the
+      requirements name. Water turns a rotor inside, and each turn sends pulses down the cable, a
+      fixed number per litre (476 for the YF-B10).</sub>
+    </td>
+    <td align="center" valign="top">
+      <sub><b>The controller.</b> Up to eight sensors wire to the isolated inputs. PWR485 carries
+      Modbus RTU, and the 1.14" screen with its three buttons is the UI this repository designs.
+      Image © M5Stack, from the <a href="https://docs.m5stack.com/en/core/StamPLC">product documentation</a>.</sub>
+    </td>
+  </tr>
+</table>
 
 The distinctive part, and the thing to understand before changing anything: **the on-device UI
 is designed in a web app, exported to JSON, and translated into `constexpr` C++ tables that the
