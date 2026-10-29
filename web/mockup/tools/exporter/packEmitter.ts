@@ -11,6 +11,7 @@
 // every screen, element and flow matches. Two implementations of one format is exactly the shape
 // of bug this project keeps finding, so the agreement is checked by execution.
 import type { ScreenDataset, ScreenDefinition, ScreenElement } from "../../src/types.js";
+import type { IRTheme } from "./types.js";
 
 const MAGIC = "WFMUI\0";
 const HEADER_BYTES = 64;
@@ -21,7 +22,17 @@ const HEADER_BYTES = 64;
  * screen after the first. Must match `MenuPack::kFormatVersion`.
  */
 const FORMAT_VERSION = 2;
-const LABEL_BYTES = 20;
+/**
+ * The header's label field: offset 42 up to 62, inside the fixed 64-byte header.
+ *
+ * Part of the LAYOUT, like HEADER_BYTES and the record sizes below, which is why it is typed here and
+ * not read: a different `PackHeader::kLabelBytes` would move the field's end and change the format, not
+ * merely raise a limit. It is exported so `export:pack` can compare it with the value it reads from
+ * `ui_pack.h` and stop when the two disagree (`packExport.ts::buildPack`). Before that comparison, a
+ * larger `kLabelBytes` would have let `pack-label` accept a label this file then cut short without a
+ * word (review of N-g).
+ */
+export const PACK_LABEL_BYTES = 20;
 
 /**
  * 24, not 16: the record carries `visibleWhenStr` and `visibleWhenEquals` so a pack can express
@@ -102,10 +113,26 @@ export function packCrc32(bytes: Buffer): number {
 }
 
 export interface PackOptions {
-  /** Shown in the firmware's menu selector; truncated to 20 bytes. */
+  /**
+   * The header label. At most PACK_LABEL_BYTES bytes: a longer one THROWS rather than being cut, because
+   * a cut label is a silent change to what the author asked for, and a cut in the middle of a multi-byte
+   * character is not a character at all. `export:pack` refuses such a label before it gets here.
+   */
   label: string;
   /** The catalogue version this pack targets (§4.7b). */
   catalogueAbi: number;
+  /**
+   * The theme, from the SAME `ExportIR` the C++ emitter writes `kThemeColors` from.
+   *
+   * Required, so no caller can fall back to `dataset.theme`. That fallback is what this file did until the
+   * review of N-g, and it was wrong twice. `--theme` built the IR from the override while the pack kept
+   * the dataset's own colours, so the two commands turned one set of inputs into two menus. And the
+   * dataset's colours went through a hex-only parser of their own, which turned the shipped
+   * `rgba(124, 162, 206, 0.28)` grid colours into opaque black, `0xff000000`, where `GeneratedUi.cpp`
+   * holds `0x477CA2CE`. Loadable_UI_Menu_Packs §5.2 asks for both emitters to consume one IR; for the
+   * theme block it now holds. Screens, elements and flows are still read from the dataset.
+   */
+  theme: IRTheme;
 }
 
 export interface PackResult {
@@ -125,6 +152,13 @@ export interface PackResult {
 }
 
 export function emitPack(dataset: ScreenDataset, options: PackOptions): PackResult {
+  const labelBytes = Buffer.byteLength(options.label, "utf-8");
+  if (labelBytes > PACK_LABEL_BYTES) {
+    throw new Error(
+      `emitPack: the label "${options.label}" is ${labelBytes} bytes and the header field holds ` +
+        `${PACK_LABEL_BYTES}. It is refused rather than cut; export:pack's pack-label check says so first.`
+    );
+  }
   const strings = new StringTable();
   const screens = dataset.screens;
   const indexById = new Map<string, number>();
@@ -181,7 +215,7 @@ export function emitPack(dataset: ScreenDataset, options: PackOptions): PackResu
 
   const bodyBlock = Buffer.concat(bodies.flatMap((b) => [b.elements, b.flows]));
   const themeOffset = cursor;
-  const themeBlock = encodeTheme(dataset, intern);
+  const themeBlock = encodeTheme(options.theme, intern);
   const stringsOffset = themeOffset + themeBlock.length;
 
   // Interning during layout can add strings, so the block is rebuilt after every offset that
@@ -209,7 +243,9 @@ export function emitPack(dataset: ScreenDataset, options: PackOptions): PackResu
   header.writeUInt32LE(themeOffset, 30);
   header.writeUInt32LE(stringsOffset, 34);
   header.writeUInt32LE(finalStrings.length, 38);
-  header.write(options.label.slice(0, LABEL_BYTES), 42, "utf-8");
+  // The length is explicit, so even a miscounted label could not run past the field into bytes 62-63.
+  // The check at the top of this function is what keeps it from ever needing to.
+  header.write(options.label, 42, PACK_LABEL_BYTES, "utf-8");
 
   return {
     bytes: Buffer.concat([header, payload]),
@@ -291,31 +327,29 @@ function encodeFlows(
   return out;
 }
 
+/**
+ * The theme block, from the IR's already-converted colours.
+ *
+ * Each colour is the `argb8888` the IR computed, the same number `cppEmitter` writes into
+ * `kThemeColors`. This file used to convert the dataset's strings itself with a hex-only parser, which
+ * read `rgba(…)` as `NaN` and wrote opaque black; one conversion, in `ir.ts`, is what keeps the pack and
+ * the compiled-in table from disagreeing about a colour.
+ */
 function encodeTheme(
-  dataset: ScreenDataset,
+  theme: IRTheme,
   intern: (value: string | undefined | null) => number
 ): Buffer {
-  const colors = Object.entries(dataset.theme?.colors ?? {});
+  const colors = Object.entries(theme.colors);
   const out = Buffer.alloc(2 + colors.length * 8 + 6);
   out.writeUInt16LE(colors.length, 0);
   colors.forEach(([key, value], i) => {
     const at = 2 + i * 8;
     out.writeUInt32LE(intern(key), at);
-    out.writeUInt32LE(argbFromHex(String(value)), at + 4);
+    out.writeUInt32LE(value.argb8888 >>> 0, at + 4);
   });
   const typographyAt = 2 + colors.length * 8;
-  const typography = dataset.theme?.typography;
-  out.writeUInt16LE(typography?.base ?? 8, typographyAt);
-  out.writeUInt16LE(typography?.value ?? 10, typographyAt + 2);
-  out.writeUInt16LE(typography?.badge ?? 8, typographyAt + 4);
+  out.writeUInt16LE(theme.typography.base, typographyAt);
+  out.writeUInt16LE(theme.typography.value, typographyAt + 2);
+  out.writeUInt16LE(theme.typography.badge, typographyAt + 4);
   return out;
-}
-
-function argbFromHex(hex: string): number {
-  const cleaned = hex.replace("#", "");
-  const expanded =
-    cleaned.length === 3
-      ? cleaned.split("").map((c) => c + c).join("")
-      : cleaned.padEnd(6, "0").slice(0, 6);
-  return (0xff000000 | parseInt(expanded, 16)) >>> 0;
 }

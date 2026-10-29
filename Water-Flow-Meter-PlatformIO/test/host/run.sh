@@ -151,6 +151,12 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/pack_loader_test" \
   src/ui/pack/ui_pack.cpp \
   src/ui/generated/GeneratedUi.cpp
 
+# Which files the Select Menu lists, from the review of N-g. `npm run export:pack` copies this rule, and it
+# used to be an expression inside listPacks behind `#include <SD.h>`, so nothing could test it. The rule is
+# header-only; the wiring is read as text from ui_pack_storage_sd.cpp, as portal_lifecycle reads firmware.cpp.
+g++ "${CXXFLAGS[@]}" -o "$OUT/pack_listing_test" \
+  test/host/pack_listing_test.cpp
+
 # ── The four network modules (N4, N5, N6, N8a) ────────────────────────────────
 #
 # Each is split so the POLICY half is Arduino-free and lands here, while the SDK-facing adapter
@@ -310,6 +316,8 @@ echo
 "$OUT/pack_test"
 echo
 "$OUT/pack_loader_test"
+echo
+"$OUT/pack_listing_test"
 echo
 "$OUT/spi_arbiter_test"
 echo

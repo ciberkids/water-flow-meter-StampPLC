@@ -32,7 +32,10 @@ interface CliOptions {
    * Loadable_UI_Menu_Packs §5.6). Nothing under the firmware tree is touched and nothing is compiled.
    */
   emitPack?: string;
-  /** `--pack-label <text>`: the header label. Defaults to the file name minus `.uipack`. */
+  /**
+   * `--pack-label <text>`: the header label, refused when it does not fit. Defaults to the file name
+   * minus `.uipack`, cut to the header field.
+   */
   packLabel?: string;
 }
 
@@ -381,6 +384,7 @@ async function writePack(
   options: CliOptions,
   projectRoot: string,
   dataset: ScreenDataset,
+  ir: ExportIR,
   manifest: FirmwareManifest | null,
   manifestSummary: ManifestSummary,
   validationReport: ValidationReport
@@ -388,7 +392,17 @@ async function writePack(
   const outPath = options.emitPack as string;
   const limits = await readFirmwarePackLimits(projectRoot);
   const fileName = path.basename(outPath);
-  const outcome = buildPack({ dataset, manifest, fileName, label: options.packLabel, limits });
+  // The theme comes from the IR, which the gates built from `--theme` when one was given, so this
+  // command and export:firmware draw one menu from one set of inputs (§5.2). It used to come from the
+  // raw dataset: `--theme` was accepted and ignored, and the pack's bytes were identical without it.
+  const outcome = buildPack({
+    dataset,
+    theme: ir.theme,
+    manifest,
+    fileName,
+    label: options.packLabel,
+    limits
+  });
 
   for (const check of outcome.checks) {
     validationReport.checks.push(check);
@@ -478,7 +492,7 @@ async function run() {
     const { ir, manifestSummary, validationReport } = gates;
 
     if (options.emitPack) {
-      await writePack(options, projectRoot, gates.dataset, gates.manifest, manifestSummary, validationReport);
+      await writePack(options, projectRoot, gates.dataset, ir, gates.manifest, manifestSummary, validationReport);
       return;
     }
 

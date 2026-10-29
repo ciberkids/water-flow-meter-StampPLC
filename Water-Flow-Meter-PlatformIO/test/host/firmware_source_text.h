@@ -8,7 +8,8 @@
  * (N-d2), and `portal_lifecycle_test.cpp` guards that a call EXISTS at all (`DF28`): the configuration
  * page's server was declared in `firmware.cpp` and never driven, and no test linked against the firmware
  * glue could have noticed, because no host test can link it. Moved here from `boot_order_test.cpp` when the
- * second user arrived, so the comment-blanking lesson below is learned once.
+ * second user arrived, so the comment-blanking lesson below is learned once. A third, `pack_listing_test.cpp`,
+ * reads `ui_pack_storage_sd.cpp` through `loadSource`, for the same reason: that file includes `SD.h`.
  *
  * WHAT IT CANNOT SEE: it does not parse C++. A call moved inside a conditional, or into a function nobody
  * calls, satisfies a presence check. It catches the ordinary refactor, which is the one that happens.
@@ -20,12 +21,19 @@
 
 namespace firmware_source {
 
-/** `src/firmware.cpp` as one string, or empty when it cannot be found. */
-inline std::string loadFirmwareSource() {
-  const char* candidates[] = {"src/firmware.cpp", "../src/firmware.cpp",
-                              "Water-Flow-Meter-PlatformIO/src/firmware.cpp"};
-  for (const char* path : candidates) {
-    if (std::FILE* f = std::fopen(path, "rb")) {
+/**
+ * A firmware source file, named relative to `Water-Flow-Meter-PlatformIO/` (e.g. `src/firmware.cpp`), as
+ * one string — or empty when it cannot be found from the working directory.
+ *
+ * Generalised from `loadFirmwareSource` when `pack_listing_test.cpp` needed `ui_pack_storage_sd.cpp`: the
+ * SD adapter is Arduino-only, so whether `listPacks` still decides by its host-tested rule is, like the
+ * two checks on `firmware.cpp`, a fact about the file rather than about anything a host binary can run.
+ */
+inline std::string loadSource(const char* relative) {
+  const std::string candidates[] = {std::string(relative), std::string("../") + relative,
+                                    std::string("Water-Flow-Meter-PlatformIO/") + relative};
+  for (const std::string& path : candidates) {
+    if (std::FILE* f = std::fopen(path.c_str(), "rb")) {
       std::string out;
       char buffer[4096];
       std::size_t read = 0;
@@ -36,6 +44,9 @@ inline std::string loadFirmwareSource() {
   }
   return std::string();
 }
+
+/** `src/firmware.cpp` as one string, or empty when it cannot be found. */
+inline std::string loadFirmwareSource() { return loadSource("src/firmware.cpp"); }
 
 /**
  * The source with comments and string literals blanked to spaces, preserving every byte's position.

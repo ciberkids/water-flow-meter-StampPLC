@@ -80,8 +80,12 @@ export function readHeaderConstant(source: string, name: string, where: string):
     return literal[1];
   }
 
+  // `0` or a digit string that does not START with 0, then an optional integer suffix. A leading zero is
+  // refused rather than read: C++ takes `0100` as OCTAL, sixty-four, and `parseInt(…, 10)` would return a
+  // hundred — a plausible wrong value, which is exactly what this function promises never to return. The
+  // pack headers use no octal today; the day one does, the export stops and says so (review of N-g).
   const factors = text.split("*").map((factor) => factor.trim());
-  if (factors.every((factor) => /^\d+(?:[uU]?[lL]{0,2}|[lL]{0,2}[uU]?)$/.test(factor))) {
+  if (factors.every((factor) => /^(?:0|[1-9]\d*)(?:[uU]?[lL]{0,2}|[lL]{0,2}[uU]?)$/.test(factor))) {
     return factors.reduce((product, factor) => product * Number.parseInt(factor, 10), 1);
   }
 
@@ -105,12 +109,25 @@ function asString(value: number | string, name: string, where: string): string {
   return value;
 }
 
-/** Reads every limit `export:pack` enforces. Throws when any header cannot be read or parsed. */
+/**
+ * Reads every limit `export:pack` enforces. Throws when any header cannot be read or parsed.
+ *
+ * Every error names the header by its repository-relative path, so the message says which file moved
+ * or changed shape rather than only that a read failed somewhere under a temporary directory.
+ */
 export async function readFirmwarePackLimits(projectRoot: string): Promise<FirmwarePackLimits> {
-  const read = async (relative: string) => ({
-    where: relative,
-    source: await fs.readFile(path.join(projectRoot, relative), "utf-8")
-  });
+  const read = async (relative: string) => {
+    const where = relative.split(path.sep).join("/");
+    try {
+      return { where, source: await fs.readFile(path.join(projectRoot, relative), "utf-8") };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `${where}: cannot be read (${reason}). The pack limits are read from this header on every ` +
+          "run; if it moved, update tools/exporter/packRules.ts with it."
+      );
+    }
+  };
   const [loader, storage, format] = await Promise.all([
     read(kLoaderHeader),
     read(kStorageHeader),
@@ -210,9 +227,11 @@ export function checkPackFileName(fileName: string, limits: FirmwarePackLimits):
 /**
  * The header label: printable ASCII, at most `PackHeader::kLabelBytes` bytes.
  *
- * REFUSED rather than truncated. `emitPack` writes the label into a fixed 20-byte field, so a longer one
- * would be cut, and a multi-byte character cut in the middle is not a character at all. ASCII makes
- * characters and bytes the same count, which is the only way the limit can be stated to a person.
+ * An explicit `--pack-label` that does not fit is REFUSED rather than truncated: the author typed that
+ * text, a cut one is not what they asked for, and a multi-byte character cut in the middle is not a
+ * character at all. ASCII makes characters and bytes the same count, which is the only way the limit can
+ * be stated to a person. The label DERIVED from the file name is cut to fit before it gets here
+ * (`packExport.ts::defaultPackLabel`), because nobody chose it.
  *
  * Today's Select Menu shows the FILE NAME, not this label (`PackSelector::labelAt`), so a wrong label is
  * invisible on the device. It is checked anyway because §7 Q8 decided the selector should show it, and a
@@ -237,10 +256,12 @@ export function checkPackLabel(label: string, limits: FirmwarePackLimits): Valid
       id,
       title,
       status: "fail",
-      message: `The label "${label}" cannot be stored: ${problems.join("; ")}.`,
+      message:
+        `The label "${label}" cannot be stored: ${problems.join("; ")}. The pack's size and flow ` +
+        "targets are checked once the label fits.",
       recommendation:
         `Pass --pack-label with at most ${limits.labelBytes} printable ASCII characters. Without it, ` +
-        "the label is the file name minus its suffix."
+        `the label is the file name minus its suffix, cut to ${limits.labelBytes} characters.`
     };
   }
   return {

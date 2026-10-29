@@ -119,7 +119,7 @@ bytes on any failure so a caller cannot write them by forgetting to look at the 
 | Check | Refuses |
 | --- | --- |
 | `pack-file-name` | a name not ending in `kPackSuffix` (compared case-sensitively, as `listPacks` does), longer than `kMaxNameBytes - 1`, starting with `.`, or using anything but ASCII letters, digits, `.`, `-`, `_` |
-| `pack-label` | a label over `PackHeader::kLabelBytes` or outside printable ASCII — refused, not truncated |
+| `pack-label` | an explicit `--pack-label` over `PackHeader::kLabelBytes` or outside printable ASCII — refused, not truncated. The label derived from the file name is cut to fit instead (review, below) |
 | `pack-size` | more than `kMaxPackBytes`; exactly at it passes, matching the loader's `>` |
 | `pack-catalogue-abi` | a manifest with no `catalogueAbi`, which the schema allows and a pack cannot be stamped without |
 | `pack-flow-targets` | a flow whose `targetScreenId` names no screen |
@@ -179,9 +179,60 @@ suites each ALL PASSED and exit 0; `npm run export:pack` on the shipped dataset 
 standing banner warning) and byte-identical to the fixture; `npm run export:firmware` as above;
 `tools/wiki/sync.sh` dry run ending "all repo pointers resolve".
 
-**Cost: 0 bytes of firmware.** Container build before and after `kPackSuffix`: RAM 81,096 and flash
-1,319,301 bytes both times (24.7% / 39.5%). The shipped pack is **27,349 bytes for 79 screens**, against
-the 65,536 `kMaxPackBytes` allows.
+**Cost: 0 bytes of firmware**, and 4 bytes of flash after the review below. Container build before and
+after `kPackSuffix`: RAM 81,096 and flash 1,319,301 bytes both times (24.7% / 39.5%). The shipped pack is
+**27,349 bytes for 79 screens**, against the 65,536 `kMaxPackBytes` allows.
+
+**Review, 2026-10-29: eight findings, seven fixed on the branch and one relayed** (the index row and the
+count paragraphs, which this branch deliberately does not edit).
+
+1. *The pack's theme was not the compiled-in table's.* The emitter read `dataset.theme` and converted
+   each colour with a hex-only parser of its own. So `--theme` was accepted and ignored: a pack built with
+   an override was byte-identical to one built without it. And with no `--theme` at all, the shipped
+   `gridMinor` and `gridMajor`, `rgba(124, 162, 206, 0.28)` and `0.55`, were written as opaque black,
+   `0xFF000000`, where `GeneratedUi.cpp` holds `0x477CA2CE` and `0x8C7CA2CE`. The emitter now takes the
+   theme from the `ExportIR` the gates build, the one `cppEmitter` writes `kThemeColors` from, as a
+   required option. §5.2's "both emitters consume the same `ExportIR`" now holds **for the theme block
+   only**: screens, elements and flows are still read from the dataset. `ui_pack.cpp` bounds-checks
+   `themeOffset` and reads nothing behind it yet, so the wrong colours were never drawn. The fixture
+   changed in 12 bytes (`cmp -l`): the 4 CRC bytes and 4 for each grid colour. It is still 27,349 bytes.
+   A test compares every colour of the command's pack with `GeneratedUi.cpp`'s table, and another builds
+   with `--theme` and reads that file's colours back out of the bytes.
+2. *A long file name was refused for its label.* With no `--pack-label`, the label was the whole stem,
+   so a stem longer than `kLabelBytes` was refused although the device lists, loads and shows the file
+   (the Select Menu shows the file name). `service-menu-for-site-b.uipack` could not be built. The
+   derived label is now cut to fit, which is safe because `pack-file-name` holds names to ASCII. An
+   explicit `--pack-label` that does not fit is still refused. Nothing is emitted while the label fails,
+   so the size and flow-target checks wait for a label that fits rather than measuring another one.
+3. *The label field had a second, typed home.* `pack-label` read `kLabelBytes` from `ui_pack.h`, and the
+   emitter wrote with its own `20` and `.slice()`, so a larger header value would have been accepted and
+   then cut without a word. The field size is now `packEmitter.ts::PACK_LABEL_BYTES`, typed because it is
+   layout like the header size, and `buildPack` stops when it differs from the header's. `emitPack` throws
+   instead of cutting, including on a label with fewer characters than the field but more bytes, which
+   `.slice()` counted in UTF-16 units and `write` then ran past offset 62.
+4. *No test held the limits to the headers.* Typing all five back into `readFirmwarePackLimits` left the
+   suite green. A test now writes three fake headers whose values differ from the real ones and asserts
+   the reader returns exactly those; a missing header, or a missing constant, throws naming its
+   repository-relative path.
+5. *A leading zero was read as decimal.* `readHeaderConstant` returned 100 for `0100`, which C++ reads as
+   octal 64. Only `0` or a number not starting with `0` is accepted now; anything else throws.
+6. *The Select Menu's listing rule could not be tested.* It was an expression inside `listPacks`, behind
+   `SD.h`, while the exporter copies it. It is now `SdPackStorage::isListablePackName` in
+   `ui_pack_storage_sd.h`, a pure move (a bare `.uipack` is still listed), driven by the new host
+   `pack_listing_test` (16 checks), which also reads `ui_pack_storage_sd.cpp` as text: `listPacks` must
+   call it and compare no suffix itself. The two `char path[96]` buffers are `kPathBytes`, with a
+   `static_assert` that it holds the directory, a separator and `kMaxNameBytes`.
+7. *`UI_Dataset_Contract.md`'s pipeline diagram* had an unfinished line; it now reads "read by host tests".
+
+Each behavioural fix was reverted once to see its test fail: each of the seven exporter reversions failed
+one to three tests, and each of the four firmware ones failed a host check or the build.
+
+**Checks after the review:** `npx tsc --noEmit` clean; `npm run test:unit` 220 passed;
+`npm run test:exporter` **77** passed (67 before: 9 new in `pack_export.test.ts`, 1 in
+`pack_emit.test.ts`); the host suite, 31 suites each ALL PASSED and exit 0; `npm run export:pack`
+byte-identical to the regenerated fixture; `tools/wiki/sync.sh` dry run ending "all repo pointers
+resolve". Container build: RAM 81,096 and flash 1,319,305 bytes, against 81,096 and 1,319,301 for the
+branch before the review, built the same way on the same day.
 
 **⏸️ Not seen on a board**, like everything else on this device. The first proof is `default.uipack`
 copied to `/ui/` with `/ui/active` naming it, and the panel booting into it with no "menu rejected".

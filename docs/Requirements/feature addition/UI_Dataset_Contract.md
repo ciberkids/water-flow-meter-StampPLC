@@ -37,7 +37,7 @@ did not expect.
  │ src/ui/generated/GeneratedUi.{h,cpp}   compiled-in tables  │
  │ src/ui/generated/ui_export_ir.json     debugging IR        │
  │ dist-pack/<name>.uipack                an SD-card pack     │
- │ tests/fixtures/default.uipack          the default menu's  │
+ │ tests/fixtures/default.uipack          read by host tests  │
  └────────────────────────────────────────────────────────────┘
 ```
 

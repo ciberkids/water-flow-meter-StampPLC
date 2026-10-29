@@ -229,8 +229,9 @@ npm run export:pack -- --screens path/to/screens.json --emit-pack web/mockup/dis
 \`\`\`
 
 Paths are taken from the repository root, as for every exporter option. \`--pack-label\` sets the label
-stored inside the pack, at most ${SD_LABEL} characters; without it the label is the file name without
-\`${SD_SUFFIX}\`. The Select Menu shows the file name, not the label.
+stored inside the pack, at most ${SD_LABEL} characters, and a longer one is refused. Without it the label
+is the file name without \`${SD_SUFFIX}\`, cut to ${SD_LABEL} characters, so a file name within the limit
+below is never refused because of its label. The Select Menu shows the file name, not the label.
 
 **The command refuses to write a pack the device would not load**, and says why. It runs every check
 \`npm run export:firmware\` runs on the design (a screen, action or value the firmware does not have, an

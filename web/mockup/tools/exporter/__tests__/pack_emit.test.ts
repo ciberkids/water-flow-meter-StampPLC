@@ -4,7 +4,8 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { emitPack, packCrc32 } from "../packEmitter.js";
+import { emitPack, packCrc32, PACK_LABEL_BYTES } from "../packEmitter.js";
+import { buildIntermediateRepresentation } from "../ir.js";
 import type { ScreenDataset } from "../../../src/types.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -24,13 +25,15 @@ function shippedInputs() {
   const manifest = JSON.parse(
     fs.readFileSync(path.join(projectRoot, "src", "data", "actionManifest.json"), "utf-8")
   ) as { catalogueAbi: number };
-  return { dataset, manifest };
+  // The theme from the IR, as `export:pack` passes it: the one conversion `cppEmitter` also writes from.
+  const theme = buildIntermediateRepresentation(dataset, dataset.theme).theme;
+  return { dataset, manifest, theme };
 }
 
 test("emits a pack for the shipped dataset", () => {
-  const { dataset, manifest } = shippedInputs();
+  const { dataset, manifest, theme } = shippedInputs();
   assert.equal(typeof manifest.catalogueAbi, "number", "the manifest carries the firmware's ABI");
-  const result = emitPack(dataset, { label: "default", catalogueAbi: manifest.catalogueAbi });
+  const result = emitPack(dataset, { label: "default", catalogueAbi: manifest.catalogueAbi, theme });
   assert.equal(result.bytes.readUInt16LE(8), manifest.catalogueAbi,
                "and it reaches the header at offset 8, where MenuPack::validate reads it");
   assert.equal(result.bytes.subarray(0, 5).toString("latin1"), "WFMUI");
@@ -62,8 +65,30 @@ test("emits a pack for the shipped dataset", () => {
  * dataset change committed without its pack fails there rather than reaching the host job stale — which
  * is the DF19 shape: six scrollbar heights changed and the committed pack never followed.
  */
+test("a label longer than the header field is refused by the emitter, never cut", () => {
+  const { dataset, manifest, theme } = shippedInputs();
+  const fits = "x".repeat(PACK_LABEL_BYTES);
+  const written = emitPack(dataset, { label: fits, catalogueAbi: manifest.catalogueAbi, theme });
+  assert.equal(written.bytes.subarray(42, 42 + PACK_LABEL_BYTES).toString("latin1"), fits,
+               "a label exactly the field's size is written whole");
+  assert.equal(written.bytes.readUInt16LE(62), 0, "and nothing runs past the field into bytes 62-63");
+  assert.throws(
+    () => emitPack(dataset, { label: fits + "x", catalogueAbi: manifest.catalogueAbi, theme }),
+    new RegExp(`is ${PACK_LABEL_BYTES + 1} bytes and the header field holds ${PACK_LABEL_BYTES}`)
+  );
+  // Fewer characters than the field, more bytes: the case the old `.slice(0, 20)` let through whole,
+  // because it counts UTF-16 units, after which `write` ran past offset 62 into the header's last bytes.
+  const twoByteCharacters = Math.floor(PACK_LABEL_BYTES / 2) + 1;
+  assert.throws(
+    () => emitPack(dataset, {
+      label: "é".repeat(twoByteCharacters), catalogueAbi: manifest.catalogueAbi, theme
+    }),
+    new RegExp(`is ${twoByteCharacters * 2} bytes`)
+  );
+});
+
 test("npm run export:pack's command writes the fixture the firmware's host tests read", () => {
-  const { dataset, manifest } = shippedInputs();
+  const { dataset, manifest, theme } = shippedInputs();
   const run = spawnSync(process.execPath, [cli, "--emit-pack", fixture], { encoding: "utf-8" });
   assert.equal(run.status, 0, `the shipped menu is refused:\n${run.stdout}\n${run.stderr}`);
 
@@ -80,6 +105,6 @@ test("npm run export:pack's command writes the fixture the firmware's host tests
 
   const written = fs.readFileSync(fixture);
   assert.equal(report.summary.bytes, written.length);
-  const library = emitPack(dataset, { label: "default", catalogueAbi: manifest.catalogueAbi });
+  const library = emitPack(dataset, { label: "default", catalogueAbi: manifest.catalogueAbi, theme });
   assert.ok(written.equals(library.bytes), "the command's pack is byte for byte the emitter's");
 });

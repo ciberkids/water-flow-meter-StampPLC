@@ -84,8 +84,12 @@ npm run export:pack -- --screens path/to/screens.json --emit-pack web/mockup/dis
   `Water-Flow-Meter-PlatformIO/`. The SD Card wiki page states them, from the same headers.
 - File names are held to ASCII letters, digits, `.`, `-` and `_`, ending in lower-case `.uipack` —
   stricter than the device, which also takes most other punctuation, because what FAT and the card's code
-  page do with the rest has not been checked. `--pack-label <text>` sets the header label; without it the
-  label is the file name minus `.uipack`. The Select Menu shows the file name.
+  page do with the rest has not been checked. `--pack-label <text>` sets the header label, and one longer
+  than `PackHeader::kLabelBytes` is refused. Without it the label is the file name minus `.uipack`, cut to
+  that length, so any name the device lists can be built. The Select Menu shows the file name.
+- `--theme <file>` reaches the pack as it reaches the C++ tables: both take their colours from the one
+  intermediate representation (`Loadable_UI_Menu_Packs.md` §5.2). Screens, elements and flows are still
+  read from the dataset by the pack emitter, not from that representation.
 - Paths are relative to the repository root, like `--screens`; a second `--emit-pack` after `--` replaces
   the script's default. `dist-pack/` is ignored by git.
 - No compile step: a pack holds no code, and the device validates it when it loads it. The report says so
