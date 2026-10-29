@@ -127,10 +127,10 @@ void aFailedStartIsRetried() {
 
 /**
  * Every offset at which `name` is ASSIGNED in comment-blanked `source`: the name, optional whitespace,
- * then `=` not followed by `=`. A declaration with an initialiser (`uint16_t name = 0;`) is excluded by
- * requiring that the name is not preceded by a type on the same statement, approximated by rejecting
- * an identifier character or a space-separated word immediately before it — good enough for the one
- * declaration this file has, and the check below fails loudly if that ever changes the count.
+ * then `=` not followed by `=`. The one declaration (`uint16_t name = 0;`) is excluded by its type name,
+ * and only by that: an earlier version skipped anything preceded by an identifier, which let
+ * `else name = ...` through as if it were a declaration. A new declaration of the shadow would change
+ * the count and fail the check below, which is the right outcome.
  */
 std::vector<std::size_t> assignmentsTo(const std::string& source, const char* name) {
   std::vector<std::size_t> out;
@@ -141,11 +141,12 @@ std::vector<std::size_t> assignmentsTo(const std::string& source, const char* na
     }
     while (i < source.size() && (source[i] == ' ' || source[i] == '\t')) ++i;
     if (i + 1 >= source.size() || source[i] != '=' || source[i + 1] == '=') continue;
-    // A declaration: the previous non-space token on the line is a type name.
+    // The declaration: `uint16_t` immediately before the name, spaces aside.
     std::size_t before = at;
     while (before > 0 && source[before - 1] == ' ') --before;
-    if (before > 0 && (std::isalnum(static_cast<unsigned char>(source[before - 1])) ||
-                       source[before - 1] == '_')) {
+    static const char kType[] = "uint16_t";
+    const std::size_t typeLength = sizeof(kType) - 1;
+    if (before >= typeLength && source.compare(before - typeLength, typeLength, kType) == 0) {
       continue;
     }
     out.push_back(at);

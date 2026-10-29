@@ -213,7 +213,10 @@ class ArduinoPortalServer {
    * string from WebServer's decoded arguments would have been a second implementation of it.
    *
    * The same callback is WebServer's UPLOAD callback for a `multipart/` POST, where there is no raw
-   * buffer at all; `rawActive()` is asked first, and such a body is refused (see ListeningWebServer).
+   * buffer at all; `rawActive()` is asked first, and such a body is simply not collected, so handlePost
+   * finds no complete body and answers 400 (see ListeningWebServer). It deliberately sets no flag: if
+   * WebServer then abandons the request, handlePost never runs, and a flag set here would answer the
+   * NEXT request with this one's verdict.
    *
    * Buffered in memory allocated ONCE, at RAW_START, from the request's Content-Length, which is refused
    * first if it exceeds `PortalForm::kMaxSubmitBytes` (derived from the form by the host tests). Not an
@@ -228,13 +231,12 @@ class ArduinoPortalServer {
    * KNOWN COST, not a defect: WebServer asks the socket for a full chunk however few bytes remain, and
    * `Stream::readBytes` waits out its one-second timeout for the bytes that never come. So each save
    * holds the logic task about a second longer than the old path did — the display and MQTT pause for
-   * that second, the sampler and Modbus (other task, other core) do not. Removing it would mean changing
+   * that second; the sampler (the other core) and the Modbus server (same core, higher priority) do not. Removing it would mean changing
    * `HTTP_RAW_BUFLEN` for the whole framework build, which is a bigger lever than this cost justifies.
    */
   void receiveBody() {
     if (!server_.rawActive()) {
       releaseBody();
-      bodyRefused_ = true;
       return;
     }
     HTTPRaw& raw = server_.raw();
@@ -351,7 +353,8 @@ class ArduinoPortalServer {
       releaseBody();
       server_.send(refused ? 413 : 400, "text/plain",
                    refused ? "The form was larger than this device accepts, or malformed. Nothing was saved."
-                           : "The form did not arrive complete. Nothing was saved.");
+                           : "The form did not arrive complete, or not in the format this page sends. "
+                             "Nothing was saved.");
       return;
     }
     // The RAW urlencoded string, as submit() expects: its own decoder is what the host checks exercise,

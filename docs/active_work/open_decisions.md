@@ -181,7 +181,8 @@ which always collects it; the call stays as belt and braces and says so.
 **A third round, from reviewing the second.** The second callback that makes WebServer stream the body is
 ALSO its upload callback, so a `multipart/` POST called `receiveBody()` with no raw buffer, and
 dereferencing it rebooted the device — before any login check, for anyone in radio range of the access
-point. `ListeningWebServer::rawActive()` is asked first now, and such a body is refused. The same review
+point. `ListeningWebServer::rawActive()` is asked first now; such a body is not collected, and the
+request is answered 400 without leaving any state behind for the next one. The same review
 found the body's flags survived from one request to the next, that a failed `String::concat` could drop
 a chunk from the middle of a body still submitted as complete, and that a DNS responder that kept failing
 was retried, and logged, on every logic pass. The body is now one allocation of the declared
@@ -198,8 +199,10 @@ server and reads `firmware.cpp` as text, comments blanked: the call must be ther
 `wifiManager.update(`, with the `ApPortal` condition and the access point's address as its arguments, no
 other `portalServer.begin/end/update` beside it, and `netSettingsNotifiedRevision` assigned only inside
 the notify check and inside `setup()`'s braces — every assignment counted, whatever its right-hand side or
-spacing, after a review showed an exact-match version passed two rewordings of the stray line. Removing
-the call fails it; restoring the stray line, either rewording, or a seed moved into `loop()` fails it. The
+spacing, after reviews showed an exact-match version passed two rewordings of the stray line and a
+later version passed it behind an `else`. Removing
+the call fails it; restoring the stray line, any of those rewordings, or a seed moved into `loop()` fails
+it. The
 source-text helpers it shares with `boot_order_test.cpp` moved to `test/host/firmware_source_text.h`.
 `portal_form_test.cpp` gained a browser: it renders the page, submits it the way HTML says a browser
 does, and requires `submit()` to accept it on the device's own construction; that check failed before
@@ -217,7 +220,7 @@ with static RAM unchanged at 81,096 bytes. The second round added 1,144 bytes of
 RAM (1,321,005 and 81,120 on CI): the body buffer's bookkeeping lives in the global server object.
 The third round, measured in the build container against the second round built there (CI and the
 container differ by a few hundred bytes of embedded paths, so only same-machine deltas are compared):
-8 more bytes of static RAM and 328 fewer of flash, the `String` growth code having gone.
+8 more bytes of static RAM and 272 fewer of flash, the `String` growth code having gone.
 
 **⏸️ Not seen on a board**, like everything else on this device. The bench check is the whole chain: a
 phone joins `water_flow_meter_<6 digits>` and gets the login page, the WiFi credentials are saved with a
