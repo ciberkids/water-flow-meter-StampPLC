@@ -24,7 +24,8 @@ A generated client id would have been simpler and wrong: two devices sharing one
 the broker in a loop, and from the device end that looks like an unreliable network rather than a
 collision.
 
-The base topic is configurable (network register `634`, the web portal, or the panel). It is **refused
+The base topic is configurable (network register `634`, or the web portal once `DF28` is fixed); the
+panel shows it but cannot edit text. It is **refused
 rather than repaired** if it contains `+`, `#`, an interior `//`, or a leading or trailing `/` —
 silently stripping a wildcard would publish to a topic the operator did not type and cannot find.
 
@@ -229,7 +230,8 @@ rather than reused, because a toggle that does nothing implies protection that i
 
 Three routes, all writing the same settings:
 
-1. **The web portal** — join the provisioning AP, see [WiFi](WiFi).
+1. **The web portal** — join the provisioning AP, see [WiFi](WiFi). **Not served yet** (`DF28`), so
+   use Modbus until it is.
 2. **Modbus** — the network register block, addresses `560`–`672`. See
    [Modbus registers](Modbus-Registers); note that writes stage and register `730` commits.
 3. **The panel** — Configuration → Modbus / Display for local settings. The panel is a **reader** of
