@@ -136,35 +136,70 @@ host checks exercise the form against strings, and the adapter that would serve 
 test can construct. `ce67ef8f` fixed the adapter's `/save` routing on 2026-08-14 without noticing that
 the adapter itself never runs.
 
-**Consequence for the docs.** The wiki's WiFi page described the page as working with one routing
-defect; it now says the page is not served. Provision over Modbus — the WiFi page's *Configuring it over
-Modbus* sequence — which is the route that works.
+**How the docs were handled.** The wiki's WiFi page had described the page as working, with one routing
+defect. While this entry was open it said the page was not served and pointed at Modbus; the fix below
+changed it to say the page is served and has not been seen working on a board.
 
-**~~To fix~~ — FIXED 2026-10-29, 22 host checks.** The rule is `src/net/portal_lifecycle.h`:
-`plc::drivePortal(server, apPortalActive, apIp)` starts the page when the state machine is in `ApPortal`
-and the access point has an address, services it on every pass, and stops it when either goes away.
-`firmware.cpp` calls it once per logic pass, after the provisioning notice, so the pass in which a
-submitted form closes the access point is also the pass that stops the page. Three decisions inside it:
-never on the station interface (the DNS responder answers every name with the device's address), not
-before the address exists (it would tell every reply to point at 0.0.0.0), and a failed start retried on
-the next pass rather than latched for the window.
+**~~To fix~~ — FIXED 2026-10-29, in two rounds.** The first round started the page. An independent review of
+that round found the page could be loaded and could still not do its job, for three older reasons that had
+been unreachable while nothing served it. They are lettered here rather than given IDs of their own,
+because each is a part of "the configuration page does not work" and the item is not fixed without all
+four (the `DF25a` precedent for lead-ins):
 
-**The wiring is gated, not just the rule.** `test/host/portal_lifecycle_test.cpp` also reads
-`firmware.cpp` as text, comments blanked, and fails unless the call is there exactly once, after
-`wifiManager.update(`, with no other `portalServer.begin/end/update` beside it. Shown to fire: with the
-call commented out, that check fails. The source-text helpers it shares with `boot_order_test.cpp` moved
-to `test/host/firmware_source_text.h`.
+- **DF28a — never started.** The rule is `src/net/portal_lifecycle.h`: `plc::drivePortal(server,
+  apPortalActive, apIp)` starts the page when the state machine is in `ApPortal` and the access point has
+  an address, services it on every pass, and stops it when either goes away. `firmware.cpp` calls it once
+  per logic pass, after the provisioning notice. Never on the station interface, because the DNS
+  responder answers every name with the device's address. A start that reports failure is retried on the
+  next pass; the address-0 guard is only a guard, because `WifiManager` reads the address once.
+- **DF28b — the body was never read.** `handlePost` read `arg("plain")`, which WebServer creates only for a
+  body that is NOT urlencoded, and a form with no enctype is urlencoded. So every submission reached
+  `submit()` as an empty string and the page answered "Nothing changed". Both POST routes now carry a
+  second callback, which makes WebServer stream the body raw to `receiveBody()`; it is buffered up to
+  `PortalForm::kMaxSubmitBytes` and handed to `submit()`, whose own decoder is the tested one. A body over
+  the bound, or carrying a NUL, is refused whole with an error page, never truncated.
+- **DF28c — a successful submission never reached the radio.** `netSettingsNotifiedRevision =
+  netSettings.revision();` sat inside the logic loop's save-success branch since `6c4b8009`, a seed meant
+  for `setup()`. The page applies a submission between the notify check and the save, so that line marked
+  every submission as already notified, and the access point stayed up for its whole window with the device
+  never joining the network it had been given. The seed is in `setup()` now.
+- **DF28d — every submission reported errors.** A disabled checkbox's hidden "0" companion was not
+  disabled with it. On the device, which builds the form with no settings store, every per-sensor row is
+  read-only, so a browser posted eight `config.sensor.connected@n=0` fields that `submit()` refused, and
+  the operator was told "Nothing was saved. Fix these and submit again" after a save that had worked. The
+  companion is disabled with its checkbox now.
 
-**A leak it would have started, fixed in the same change.** `ArduinoPortalServer::begin()` registered its
-routes on every call, and `WebServer::stop()` does not clear the handler list, so every reopened window
-would have leaked three handlers. The routes are now registered once per object.
+**Also from the review.** `ArduinoPortalServer::begin()` returned true on every path, because
+`WebServer::begin()` is void and a failed listen is silent; `ListeningWebServer` reads the protected
+socket's `_listening` so a failed start is reported. A failed DNS responder no longer fails the page and
+is retried from `update()`. The routes are registered once per object, because `WebServer::stop()` does
+not clear the handler list and every reopened window would have leaked three handlers. The comment that
+said `header("Authorization")` is always empty without `collectHeaders()` was false for the pinned core,
+which always collects it; the call stays as belt and braces and says so.
 
-**Cost: 14,892 bytes of flash, no static RAM** — 39.0% to 39.5%. Measured by building the same tree with
-the call disabled: the web server and DNS responder were linked as dead code until something called them.
+**The checks, and that they fire.** `test/host/portal_lifecycle_test.cpp` drives the rule against a fake
+server and reads `firmware.cpp` as text, comments blanked: the call must be there exactly once, after
+`wifiManager.update(`, with the `ApPortal` condition and the access point's address as its arguments, no
+other `portalServer.begin/end/update` beside it, and `netSettingsNotifiedRevision` assigned only inside
+the notify check and in `setup()`. Removing the call fails it; restoring the stray line fails it. The
+source-text helpers it shares with `boot_order_test.cpp` moved to `test/host/firmware_source_text.h`.
+`portal_form_test.cpp` gained a browser: it renders the page, submits it the way HTML says a browser
+does, and requires `submit()` to accept it on the device's own construction; that check failed before
+DF28d's fix. The same pass derives the largest legal body from the page, with and without a settings
+store, and fails if `kMaxSubmitBytes` would not hold it.
 
-**⏸️ Not seen on a board**, like everything else on this device. The first proof is a phone joining
-`water_flow_meter_<6 digits>` and getting the login page. If it does not appear, Modbus provisioning is
-unaffected.
+**Not reachable by any host check**, stated so it is not overclaimed: DF28b lives in the Arduino adapter.
+It is verified against the framework source (`WebServer/src/Parsing.cpp`, `detail/RequestHandlersImpl.h`)
+and by compiling, not by running.
+
+**Cost**, measured by CI on the pinned espressif32 7.1.3: the first round took flash from 1,304,961 to
+1,319,861 bytes (+14,900; the web server and DNS responder were dead code until something called them),
+with static RAM unchanged at 81,096 bytes. Round two (DF28b–DF28d and the review fixes) is measured by CI on this branch and recorded in the next line once known.
+
+**⏸️ Not seen on a board**, like everything else on this device. The bench check is the whole chain: a
+phone joins `water_flow_meter_<6 digits>` and gets the login page, the WiFi credentials are saved with a
+"Saved" message, the access point closes within a pass, and register `501` goes to `2` then `3`. If any
+step fails, Modbus provisioning is unaffected.
 
 ---
 

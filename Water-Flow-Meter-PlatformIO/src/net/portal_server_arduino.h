@@ -4,7 +4,7 @@
 //
 // NOT HOST-COMPILED. PortalForm owns everything decidable without a socket — form generation from the
 // settings catalogue, urlencoded parsing, per-field validation, HTML escaping, Basic auth — and
-// carries 226 host checks. This file is the socket, and nothing else. Keeping it that thin is what
+// is covered by test/host/portal_form_test.cpp. This file is the socket, and nothing else. Keeping it that thin is what
 // makes the untestable surface reviewable.
 //
 // §6.3 made this LOAD-BEARING rather than a convenience: with on-device text entry removed, this is
@@ -15,11 +15,27 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 #include "net/httpd_task_policy.h"
 #include "net/portal_form.h"
 
 namespace plc {
+
+/**
+ * WebServer, plus the one fact it will not tell its owner: whether it is actually listening.
+ *
+ * `WebServer::begin()` is void, and the `WiFiServer` under it returns silently with `_listening` false
+ * when socket(), bind() or listen() fails. So `ArduinoPortalServer::begin()` used to report success
+ * unconditionally, and `drivePortal`'s retry of a failed start (`DF28`) could never happen: a failed
+ * listen left the page "up" and answering nothing for the whole window. `_server` is protected and
+ * `WiFiServer` converts to bool as `_listening`, so a subclass is the whole fix — no library change.
+ */
+class ListeningWebServer : public WebServer {
+ public:
+  using WebServer::WebServer;
+  bool listening() { return static_cast<bool>(_server); }
+};
 
 /**
  * Serves PortalForm over WebServer, with a captive-portal DNS responder.
@@ -43,6 +59,11 @@ class ArduinoPortalServer {
    *
    * Idempotent: calling it while already up is a no-op, so the caller can drive it from a condition
    * rather than tracking edges itself.
+   *
+   * Returns false, and leaves nothing half-started, when the HTTP socket is not listening — the one
+   * failure that leaves the page unreachable — so `drivePortal` tries again on the next pass. A DNS
+   * responder that fails to start does NOT fail this: the page is still reachable at the access point's
+   * address, and `update()` keeps trying the responder, which is what makes a phone pop the page.
    */
   bool begin(uint32_t apIp) {
     if (up_) {
@@ -54,13 +75,12 @@ class ArduinoPortalServer {
     }
 
     server_.begin();
-
-    // Every name resolves to us while the AP is up. Deliberately only while the AP is up — hijacking
-    // DNS on a station interface would break the network the device just joined.
-    dnsUp_ = dns_.start(kDnsPort, "*", IPAddress(static_cast<uint8_t>((apIp >> 24) & 0xFF),
-                                                static_cast<uint8_t>((apIp >> 16) & 0xFF),
-                                                static_cast<uint8_t>((apIp >> 8) & 0xFF),
-                                                static_cast<uint8_t>(apIp & 0xFF)));
+    if (!server_.listening()) {
+      server_.stop();
+      return false;
+    }
+    apIp_ = apIp;
+    startDns();
     up_ = true;
     return true;
   }
@@ -89,6 +109,9 @@ class ArduinoPortalServer {
     if (!up_) {
       return;
     }
+    if (!dnsUp_) {
+      startDns();
+    }
     if (dnsUp_) {
       dns_.processNextRequest();
     }
@@ -107,7 +130,10 @@ class ArduinoPortalServer {
    */
   void route() {
     server_.on("/", HTTP_GET, [this] { handleGet(); });
-    server_.on("/", HTTP_POST, [this] { handlePost(); });
+    // Both POST routes carry a second callback, and that is what makes WebServer hand over the body
+    // RAW — see receiveBody(). With one callback, a urlencoded body is parsed into arguments and the
+    // body itself is thrown away.
+    server_.on("/", HTTP_POST, [this] { handlePost(); }, [this] { receiveBody(); });
     /**
      * The path the FORM actually posts to, which was routed nowhere.
      *
@@ -122,25 +148,83 @@ class ArduinoPortalServer {
      * that posts to the page it came from is the obvious thing for a future edit to do, and having both
      * routed costs one line against a silent failure that took a field report to find.
      *
-     * Not caught by PortalForm's 226 host checks, and it could not be: they exercise the form against
+     * Not caught by PortalForm's host checks, and it could not be: they exercise the form against
      * strings, and routing lives here — in the adapter no host test can construct. The same blind spot the
      * `collectHeaders` comment below warns about.
      */
-    server_.on(PortalForm::kFormAction, HTTP_POST, [this] { handlePost(); });
+    server_.on(PortalForm::kFormAction, HTTP_POST, [this] { handlePost(); }, [this] { receiveBody(); });
     // Anything else redirects to "/". That IS the captive-portal behaviour: phones probe a
     // vendor-specific URL and treat a redirect as "a login page is waiting", which is what makes the
     // portal appear without the operator typing an address.
     server_.onNotFound([this] { redirectToRoot(); });
 
-    // WITHOUT THIS, header("Authorization") ALWAYS RETURNS EMPTY. WebServer keeps only a short
-    // built-in set of request headers and discards the rest, so authorize() would be handed "" on
-    // every request, refuse, and the portal would 401 forever — locked out by construction, on the
-    // one surface §6.3 left as the only way to provision a device with no Modbus master.
-    //
-    // Not caught by the compiler and not caught by PortalForm's 226 checks either: they test
-    // authorize() against a header string, and this is the code that fails to obtain one.
+    // Belt and braces, and the comment here used to overstate it. WebServer discards request headers it
+    // was not told to collect, and `header("Authorization")` returning "" would lock the portal behind
+    // a 401 for ever. But the core this firmware is pinned to (Arduino 2.0.17) ALWAYS collects
+    // Authorization: `collectHeaders()` puts it at index 0 whatever it is given, and `begin()`'s
+    // `close()` calls `collectHeaders(0, 0)` when nothing was registered. So this call registers it a
+    // second time, harmlessly, and is kept for a core that stops doing that implicitly.
     static const char* kCollected[] = {"Authorization"};
     server_.collectHeaders(kCollected, 1);
+  }
+
+  /** Starts the captive-portal responder: every name resolves to us, only while the AP is up. */
+  void startDns() {
+    // Deliberately only while the AP is up — hijacking DNS on a station interface would break the
+    // network the device just joined. Retried from update() when it fails, without failing the page.
+    dnsUp_ = dns_.start(kDnsPort, "*", IPAddress(static_cast<uint8_t>((apIp_ >> 24) & 0xFF),
+                                                static_cast<uint8_t>((apIp_ >> 16) & 0xFF),
+                                                static_cast<uint8_t>((apIp_ >> 8) & 0xFF),
+                                                static_cast<uint8_t>(apIp_ & 0xFF)));
+  }
+
+  /**
+   * Collects a POST body as it arrives, called by WebServer once per raw chunk (`DF28`).
+   *
+   * THE BODY USED TO BE READ FROM `arg("plain")`, AND IT IS NEVER THERE FOR THIS FORM. WebServer
+   * creates "plain" only for a body that is NOT `application/x-www-form-urlencoded` (Parsing.cpp: the
+   * urlencoded branch sets `isEncoded`, folds the body into the parsed arguments, and skips "plain"),
+   * and urlencoded is exactly what a browser sends for a form with no enctype. So every submission
+   * reached submit() as "", which reports success with nothing changed, and the page answered "Nothing
+   * changed" to an operator who had just typed their WiFi credentials. Unreachable until the page was
+   * served at all, which is why it survived.
+   *
+   * Registering a second callback makes `canRaw()` true for these routes, and WebServer then streams
+   * the body here in HTTP_RAW_BUFLEN chunks instead of parsing it: RAW_START, one RAW_WRITE per chunk,
+   * then RAW_END, or RAW_ABORTED when the client stops sending (in which case handlePost is not called
+   * at all). PortalForm keeps its own decoder, which is the part the host checks cover; rebuilding the
+   * string from WebServer's decoded arguments would have been a second implementation of it.
+   *
+   * Bounded by `PortalForm::kMaxSubmitBytes`, which the host tests derive from the form itself. A body
+   * over it, or one carrying a NUL byte, is refused whole — never truncated, because a truncated
+   * urlencoded body is a valid shorter one and would apply part of what was sent.
+   */
+  void receiveBody() {
+    HTTPRaw& raw = server_.raw();
+    switch (raw.status) {
+      case RAW_START:
+        body_ = String();
+        bodyComplete_ = false;
+        bodyRefused_ = false;
+        break;
+      case RAW_WRITE:
+        if (bodyRefused_) break;
+        if (body_.length() + raw.currentSize > PortalForm::kMaxSubmitBytes ||
+            std::memchr(raw.buf, '\0', raw.currentSize) != nullptr) {
+          bodyRefused_ = true;
+          body_ = String();
+          break;
+        }
+        body_.concat(reinterpret_cast<const char*>(raw.buf), static_cast<unsigned int>(raw.currentSize));
+        break;
+      case RAW_END:
+        bodyComplete_ = true;
+        break;
+      case RAW_ABORTED:
+        body_ = String();
+        bodyComplete_ = false;
+        break;
+    }
   }
 
   /** Adapts PortalForm's byte sink onto WebServer's chunked response. */
@@ -196,15 +280,23 @@ class ArduinoPortalServer {
   }
 
   void handlePost() {
+    // The body is released on every path out, so a refused or unauthorised request does not leave a
+    // copy of somebody's passphrase on the heap until the next POST.
     if (!authorized()) {
+      body_ = String();
       return;
     }
-    // WebServer has already parsed the body into arguments, but PortalForm wants the raw urlencoded
-    // string: its own parser is what the 226 host checks exercise, including the percent- and
-    // plus-decoding and the empty-writeOnly-means-unchanged rule. Re-parsing here would be a second
-    // implementation of the part that most needs to be single.
-    const String body = server_.hasArg("plain") ? server_.arg("plain") : String();
-    const PortalSubmitResult result = form_.submit(body.c_str());
+    if (bodyRefused_ || !bodyComplete_) {
+      body_ = String();
+      server_.send(bodyRefused_ ? 413 : 400, "text/plain",
+                   bodyRefused_ ? "The form was larger than this device accepts, or malformed. Nothing was saved."
+                                : "The form did not arrive complete. Nothing was saved.");
+      return;
+    }
+    // The RAW urlencoded string, as submit() expects: its own decoder is what the host checks exercise,
+    // including the percent- and plus-decoding and the empty-writeOnly-means-unchanged rule.
+    const PortalSubmitResult result = form_.submit(body_.c_str());
+    body_ = String();
     beginChunked();
     ChunkSink sink(server_);
     form_.renderSubmitPage(sink, result);
@@ -217,10 +309,16 @@ class ArduinoPortalServer {
   }
 
   PortalForm& form_;
-  WebServer server_;
+  ListeningWebServer server_;
   DNSServer dns_;
+  /** The access point's address, kept so update() can retry the DNS responder. */
+  uint32_t apIp_ = 0;
   bool up_ = false;
   bool dnsUp_ = false;
+  /** The POST body being received, at most PortalForm::kMaxSubmitBytes. Empty between requests. */
+  String body_;
+  bool bodyComplete_ = false;
+  bool bodyRefused_ = false;
   /** Whether `route()` has run. The routes outlive `end()`, so they are registered once. */
   bool routed_ = false;
 };

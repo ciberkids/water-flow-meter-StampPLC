@@ -21,10 +21,13 @@ namespace plc {
  *   EVERY name with the device's own address. That is right for a phone that has just joined the
  *   device's access point, and would break name resolution on the network the device joined as a
  *   station. So `Connected` is not a reason to serve, even though a page on the LAN would be convenient.
- * - **Not before the address exists.** `apIp == 0` means the access point has not reported one yet, and
- *   the DNS responder would be told to answer with 0.0.0.0. Wait a pass instead.
- * - **A failed `begin()` is retried on the next pass**, not latched. The pass runs many times a second,
- *   and `begin()` is cheap to attempt; a portal that silently stays down for the rest of its window
+ * - **Not without an address.** `apIp == 0` would tell every DNS reply to point at 0.0.0.0, so the page
+ *   is not started. This is a guard, not a recovery: `WifiManager` reads the address once, when it
+ *   raises the access point, and the access point's network interface is created with a static
+ *   address, so 0 is not expected; if it ever happened, the page would stay down for that window.
+ * - **A failed `begin()` is retried on the next pass**, not latched. `ArduinoPortalServer::begin()`
+ *   returns false when its socket is not actually listening (it could not tell, until `DF28`'s review
+ *   gave it `ListeningWebServer`), and a page that silently stays down for the rest of its window
  *   because one start failed is the defect this function replaces, in a smaller form.
  *
  * `update()` runs the server on the CALLER'S task, which is the logic task at priority 1 — a slow client

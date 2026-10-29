@@ -120,10 +120,13 @@ never served on the network the device joins as a station, because the same serv
 name with the device's own address. The rule is `src/net/portal_lifecycle.h`.
 
 > **Fixed 2026-10-29, not yet seen working on a board (`DF28`).** Until then the firmware built this
-> page and never started it, so the access point came up and nothing answered on it. The rule above is
-> host-tested, including a check that the firmware actually calls it. What no host test can show is a
-> phone joining the access point and getting the page, so if it does not appear, provision over
-> **Modbus** (below) and report it.
+> page and never started it, so the access point came up and nothing answered on it. Behind that were
+> three older defects that would have stopped a submission saving anything, and they are fixed too: the
+> form's body was never read, a successful save never reached the WiFi state machine, and every
+> submission reported errors for read-only rows. The rules are host-tested, including a simulated browser
+> submitting the page and a check that the firmware calls the rule correctly. What no host test can show
+> is a phone getting the page and the device then joining your network, so if that does not happen,
+> provision over **Modbus** (below) and report it.
 
 ## Configuring it over Modbus
 
