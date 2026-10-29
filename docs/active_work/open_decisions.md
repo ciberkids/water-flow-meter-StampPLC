@@ -34,9 +34,9 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Nine open lines: three features, four defects and two measurements.** `DF28` and `DF29` opened on
+**Eight open lines: three features, three defects and two measurements.** `DF28` and `DF29` opened on
 2026-10-29, when writing the wiki's Features and Capabilities page showed the configuration web page is
-never started and the board temperature never measured.
+never started and the board temperature never measured; `DF28` closed the same day.
 `N-g` opened on 2026-10-01, when documenting the SD card showed a pack cannot yet be built. `N-f` and `DF25` opened on
 2026-08-30, both out of one question the owner asked while T1's storage was being decided — *is the
 right information surviving a power cycle, and are we burning through the write cycles?* That is the
@@ -45,9 +45,9 @@ building `N-c`. `J9`, `I2a`, `N-b` and N-d2's correction half all closed on 2026
 `DF22` closed on 2026-08-20, and `DF22` was the only 🔴 the board has had since the register was
 rewritten.
 
-**What remains is six software items and three measurements.** `N-e` is under way — T0 and T1 have
-landed and T2 is next — and `N-f`, `DF23` and `DF25` each carry a decision in the entry; `DF28` and
-`DF29` carry their fixes in the entry, not yet applied. The three that
+**What remains is five software items and three measurements.** `N-e` is under way — T0 and T1 have
+landed and T2 is next — and `N-f`, `DF23` and `DF25` each carry a decision in the entry; `DF29`
+carries its fix in the entry, not yet applied. The three that
 need hardware are `G1` (the polling rate), `N-d2`'s remaining half (whether the RTC survives power
 loss), and `N-c`'s retain check, which lives in that entry's ⏸️ block rather than on a line of its own
 because the rest of `N-c` is built and tested. Cite an ID when you ask about one — this file is the one
@@ -67,7 +67,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **N-f** | 🟡 | feature, specified here | Where the readings live — internal flash or an SD card, human-readable files, persisted session values and rotating telemetry. Five decisions taken, six questions open, not started; question 1 changes a documented register contract and should be answered first |
 | **N-g** | 🟡 | feature, opened 2026-10-01 | A menu pack cannot be built: the `.uipack` writer exists (`packEmitter.ts`) but only a test calls it, so the SD card the wiki now documents holds files nobody can produce. **To do this evening**: an `npm run export:pack` command, then lift the ⚠️ on the wiki SD Card page |
 | **DF29** | 🟡 | defect, found 2026-10-29 | Board temperature is never measured: `boardTemperatureC` has no writer, so MQTT publishes `tempC: 0.0` and Home Assistant's *Board temperature* entity reads zero. The board's LM75B sensor is never read |
-| **DF28** | 🟡 | defect, found 2026-10-29 | The configuration web page is never started: `portalServer` is constructed in `firmware.cpp` and nothing calls its `begin()` or `update()`, so the provisioning access point comes up and nothing answers on it. Provisioning works over Modbus only |
 | **DF25** | 🟡 | defect, found 2026-08-30 | A write to non-volatile storage that fails is reported by nothing. **Detection and publication landed 2026-08-30** (`DF25a`: register 34, MQTT `storageFault`, 49 host checks) — the panel's warning triangle rides with `N-e`'s T5, and three of its four questions were built on the recommendation rather than decided |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
@@ -113,7 +112,7 @@ and still unbuilt. The wiki page says so.
 
 ---
 
-## DF28 🟡 The configuration web page is never started — the provisioning access point serves nothing
+## ~~DF28~~ ✅ FIXED 2026-10-29 — the configuration web page is served while the access point is up
 
 Found 2026-10-29 while writing the wiki's **Features and Capabilities** page, by checking that the page
 it was about to describe could actually be reached.
@@ -141,10 +140,31 @@ the adapter itself never runs.
 defect; it now says the page is not served. Provision over Modbus — the WiFi page's *Configuring it over
 Modbus* sequence — which is the route that works.
 
-**To fix**, not done: call `portalServer.begin(wifiRadio.apIpAddress())` when `wifiManager.state()`
-enters `ApPortal`, `portalServer.update()` on every logic pass while it is up, and `portalServer.end()`
-when the state leaves it — the commit message's own design. It needs the bench as much as the code: the
-first proof it works is a phone joining the access point.
+**~~To fix~~ — FIXED 2026-10-29, 22 host checks.** The rule is `src/net/portal_lifecycle.h`:
+`plc::drivePortal(server, apPortalActive, apIp)` starts the page when the state machine is in `ApPortal`
+and the access point has an address, services it on every pass, and stops it when either goes away.
+`firmware.cpp` calls it once per logic pass, after the provisioning notice, so the pass in which a
+submitted form closes the access point is also the pass that stops the page. Three decisions inside it:
+never on the station interface (the DNS responder answers every name with the device's address), not
+before the address exists (it would tell every reply to point at 0.0.0.0), and a failed start retried on
+the next pass rather than latched for the window.
+
+**The wiring is gated, not just the rule.** `test/host/portal_lifecycle_test.cpp` also reads
+`firmware.cpp` as text, comments blanked, and fails unless the call is there exactly once, after
+`wifiManager.update(`, with no other `portalServer.begin/end/update` beside it. Shown to fire: with the
+call commented out, that check fails. The source-text helpers it shares with `boot_order_test.cpp` moved
+to `test/host/firmware_source_text.h`.
+
+**A leak it would have started, fixed in the same change.** `ArduinoPortalServer::begin()` registered its
+routes on every call, and `WebServer::stop()` does not clear the handler list, so every reopened window
+would have leaked three handlers. The routes are now registered once per object.
+
+**Cost: 14,892 bytes of flash, no static RAM** — 39.0% to 39.5%. Measured by building the same tree with
+the call disabled: the web server and DNS responder were linked as dead code until something called them.
+
+**⏸️ Not seen on a board**, like everything else on this device. The first proof is a phone joining
+`water_flow_meter_<6 digits>` and getting the login page. If it does not appear, Modbus provisioning is
+unaffected.
 
 ---
 

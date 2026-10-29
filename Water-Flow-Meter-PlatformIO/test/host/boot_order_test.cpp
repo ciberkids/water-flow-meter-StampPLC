@@ -31,11 +31,16 @@
  * populated. Set the time, pull power for a minute, boot, read VLF. Nothing here can answer that.
  */
 #include <cstdio>
-#include <cstring>
 #include <string>
-#include <vector>
+
+#include "firmware_source_text.h"
 
 namespace {
+
+using firmware_source::lineOf;
+using firmware_source::loadFirmwareSource;
+using firmware_source::offsetsOf;
+using firmware_source::withoutCommentsOrStrings;
 
 int failures = 0;
 int checks = 0;
@@ -44,89 +49,6 @@ void check(bool condition, const char* what) {
   ++checks;
   std::printf("  %-74s %s\n", what, condition ? "ok" : "FAIL");
   if (!condition) ++failures;
-}
-
-/** `src/firmware.cpp` as one string, or empty when it cannot be found. */
-std::string loadFirmwareSource() {
-  const char* candidates[] = {"src/firmware.cpp", "../src/firmware.cpp",
-                              "Water-Flow-Meter-PlatformIO/src/firmware.cpp"};
-  for (const char* path : candidates) {
-    if (std::FILE* f = std::fopen(path, "rb")) {
-      std::string out;
-      char buffer[4096];
-      std::size_t read = 0;
-      while ((read = std::fread(buffer, 1, sizeof(buffer), f)) > 0) out.append(buffer, read);
-      std::fclose(f);
-      if (!out.empty()) return out;
-    }
-  }
-  return std::string();
-}
-
-/**
- * The source with comments and string literals blanked to spaces, preserving every byte's position.
- *
- * A REGEX OVER THE RAW FILE DOES NOT WORK, and the first run proved it: the comment above the probe
- * explains that "`M5StamPLC.begin()` clears the RX8130CE's flag register", so a raw scan found a
- * `begin()` call six lines ABOVE the probe and reported the ordering broken. The prose about an
- * invariant must not be able to violate it. `gen-actions.mjs` learned the same lesson and calls its
- * approach "a scanner, not a regex".
- *
- * Blanking rather than deleting keeps offsets and line numbers true, so a failure still names the line
- * a human has to look at.
- */
-std::string withoutCommentsOrStrings(const std::string& source) {
-  std::string out = source;
-  enum class In { Code, LineComment, BlockComment, String, Char };
-  In state = In::Code;
-  for (std::size_t i = 0; i < out.size(); ++i) {
-    const char c = out[i];
-    const char next = (i + 1 < out.size()) ? out[i + 1] : '\0';
-    switch (state) {
-      case In::Code:
-        if (c == '/' && next == '/') { state = In::LineComment; out[i] = ' '; out[i + 1] = ' '; ++i; }
-        else if (c == '/' && next == '*') { state = In::BlockComment; out[i] = ' '; out[i + 1] = ' '; ++i; }
-        else if (c == '"') { state = In::String; out[i] = ' '; }
-        else if (c == '\'') { state = In::Char; out[i] = ' '; }
-        break;
-      case In::LineComment:
-        if (c == '\n') state = In::Code; else out[i] = ' ';
-        break;
-      case In::BlockComment:
-        if (c == '*' && next == '/') { state = In::Code; out[i] = ' '; out[i + 1] = ' '; ++i; }
-        else if (c != '\n') out[i] = ' ';
-        break;
-      case In::String:
-      case In::Char: {
-        const char quote = (state == In::String) ? '"' : '\'';
-        if (c == '\\') { out[i] = ' '; if (i + 1 < out.size() && out[i + 1] != '\n') out[++i] = ' '; }
-        else if (c == quote) { state = In::Code; out[i] = ' '; }
-        else if (c != '\n') out[i] = ' ';
-        break;
-      }
-    }
-  }
-  return out;
-}
-
-/** Every 0-based offset at which `needle` occurs. */
-std::vector<std::size_t> offsetsOf(const std::string& haystack, const char* needle) {
-  std::vector<std::size_t> out;
-  const std::size_t length = std::strlen(needle);
-  for (std::size_t at = haystack.find(needle); at != std::string::npos;
-       at = haystack.find(needle, at + length)) {
-    out.push_back(at);
-  }
-  return out;
-}
-
-/** 1-based line number of an offset, for a message a human can act on. */
-std::size_t lineOf(const std::string& text, std::size_t offset) {
-  std::size_t line = 1;
-  for (std::size_t i = 0; i < offset && i < text.size(); ++i) {
-    if (text[i] == '\n') ++line;
-  }
-  return line;
 }
 
 void theProbeComesFirst() {

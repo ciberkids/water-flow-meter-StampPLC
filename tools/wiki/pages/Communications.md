@@ -23,8 +23,8 @@ reachable over MQTT, deliberately; [MQTT](MQTT) explains the security position u
 broker host cannot be typed at the device. It configures the meters, its own display behaviour and the
 Modbus serial parameters, and reports the network settings.
 
-**The configuration web page is not served yet** (`DF28`): the firmware builds it and never starts it.
-Until that is fixed, Modbus is the only route to the WiFi and MQTT settings; see [WiFi](WiFi).
+**The configuration web page** sets the WiFi and MQTT settings from a phone, but only while the device
+is offering its provisioning access point; see [WiFi](WiFi). Modbus reaches the same settings at any time.
 
 ## Units, in one place
 

@@ -58,8 +58,7 @@ and has a 240×135 landscape display driven by **three buttons**.
   whether every channel is calibrated, and shows when water is flowing.
 
 What each feature can do, its status, and what is not built yet (the cascade of one meter feeding
-another, building a menu pack for the SD card, and the configuration web page, which is built but
-never started) are on the wiki's
+another, and building a menu pack for the SD card) are on the wiki's
 **[Features and Capabilities](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/Features-and-Capabilities)**
 page. None of it has run on hardware yet; see the end of this file.
 

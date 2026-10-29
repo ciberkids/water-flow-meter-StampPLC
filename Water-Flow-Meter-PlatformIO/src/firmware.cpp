@@ -50,6 +50,7 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "net/mqtt_transport_esp.h"
 #include "net/net_status.h"
 #include "net/portal_form.h"
+#include "net/portal_lifecycle.h"
 #include "net/portal_server_arduino.h"
 #include "net/wifi_manager.h"
 #include "net/wifi_radio_arduino.h"
@@ -1522,6 +1523,12 @@ void logicTaskCode(void * pvParameters) {
       netSettingsNotifiedRevision = netSettings.revision();
       wifiManager.noteProvisioningComplete(now);
     }
+
+    // The configuration page (`DF28`): up exactly while the access point is, and served from this task.
+    // AFTER the provisioning notice above, so the pass in which a submitted form closes the access point
+    // is also the pass that stops the page, rather than serving one more pass on an interface going away.
+    plc::drivePortal(portalServer, wifiManager.state() == plc::WifiState::ApPortal,
+                     wifiManager.apIpAddress());
     // `now - last >= interval` rather than `now >= deadline`, which is the idiom every other timer in
     // this file uses and the only one that survives the ~49-day `millis()` rollover.
     if (netSettings.revision() != netSettingsSavedRevision &&

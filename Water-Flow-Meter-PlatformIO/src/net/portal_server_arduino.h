@@ -48,41 +48,10 @@ class ArduinoPortalServer {
     if (up_) {
       return true;
     }
-    server_.on("/", HTTP_GET, [this] { handleGet(); });
-    server_.on("/", HTTP_POST, [this] { handlePost(); });
-    /**
-     * The path the FORM actually posts to, which was routed nowhere.
-     *
-     * `PortalForm::kFormAction` is `/save` and its own comment states the contract — "the adapter must
-     * route this exact path (R7.11 commits on POST only)". This adapter routed `POST` on `/` alone, and
-     * ESP32's `Uri::canHandle` is `_uri == requestUri`, exact string equality. So every submission fell
-     * through to `onNotFound`, got a 302 to `/`, and the browser re-issued it as a GET: the configuration
-     * was discarded with no error shown, on the ONLY provisioning route a device without a Modbus master
-     * has.
-     *
-     * `/` keeps its POST handler as well. Removing it would break nothing that exists today, but a form
-     * that posts to the page it came from is the obvious thing for a future edit to do, and having both
-     * routed costs one line against a silent failure that took a field report to find.
-     *
-     * Not caught by PortalForm's 226 host checks, and it could not be: they exercise the form against
-     * strings, and routing lives here — in the adapter no host test can construct. The same blind spot the
-     * `collectHeaders` comment below warns about.
-     */
-    server_.on(PortalForm::kFormAction, HTTP_POST, [this] { handlePost(); });
-    // Anything else redirects to "/". That IS the captive-portal behaviour: phones probe a
-    // vendor-specific URL and treat a redirect as "a login page is waiting", which is what makes the
-    // portal appear without the operator typing an address.
-    server_.onNotFound([this] { redirectToRoot(); });
-
-    // WITHOUT THIS, header("Authorization") ALWAYS RETURNS EMPTY. WebServer keeps only a short
-    // built-in set of request headers and discards the rest, so authorize() would be handed "" on
-    // every request, refuse, and the portal would 401 forever — locked out by construction, on the
-    // one surface §6.3 left as the only way to provision a device with no Modbus master.
-    //
-    // Not caught by the compiler and not caught by PortalForm's 226 checks either: they test
-    // authorize() against a header string, and this is the code that fails to obtain one.
-    static const char* kCollected[] = {"Authorization"};
-    server_.collectHeaders(kCollected, 1);
+    if (!routed_) {
+      route();
+      routed_ = true;
+    }
 
     server_.begin();
 
@@ -127,6 +96,53 @@ class ArduinoPortalServer {
   }
 
  private:
+  /**
+   * Registers the routes and the collected headers. ONCE per object, not once per `begin()`.
+   *
+   * `WebServer::on()` appends to a handler list (`_addRequestHandler`) that `stop()` does not clear —
+   * `stop()` is `close()`, which closes the socket and leaves the list alone. So registering on every
+   * `begin()`, which is what this code did while nothing called `begin()` at all (`DF28`), would add
+   * three handlers each time the provisioning window reopened and leak them for the life of the device.
+   * First match wins, so it would never have shown as wrong behaviour; only as heap gone.
+   */
+  void route() {
+    server_.on("/", HTTP_GET, [this] { handleGet(); });
+    server_.on("/", HTTP_POST, [this] { handlePost(); });
+    /**
+     * The path the FORM actually posts to, which was routed nowhere.
+     *
+     * `PortalForm::kFormAction` is `/save` and its own comment states the contract — "the adapter must
+     * route this exact path (R7.11 commits on POST only)". This adapter routed `POST` on `/` alone, and
+     * ESP32's `Uri::canHandle` is `_uri == requestUri`, exact string equality. So every submission fell
+     * through to `onNotFound`, got a 302 to `/`, and the browser re-issued it as a GET: the configuration
+     * was discarded with no error shown, on the ONLY provisioning route a device without a Modbus master
+     * has.
+     *
+     * `/` keeps its POST handler as well. Removing it would break nothing that exists today, but a form
+     * that posts to the page it came from is the obvious thing for a future edit to do, and having both
+     * routed costs one line against a silent failure that took a field report to find.
+     *
+     * Not caught by PortalForm's 226 host checks, and it could not be: they exercise the form against
+     * strings, and routing lives here — in the adapter no host test can construct. The same blind spot the
+     * `collectHeaders` comment below warns about.
+     */
+    server_.on(PortalForm::kFormAction, HTTP_POST, [this] { handlePost(); });
+    // Anything else redirects to "/". That IS the captive-portal behaviour: phones probe a
+    // vendor-specific URL and treat a redirect as "a login page is waiting", which is what makes the
+    // portal appear without the operator typing an address.
+    server_.onNotFound([this] { redirectToRoot(); });
+
+    // WITHOUT THIS, header("Authorization") ALWAYS RETURNS EMPTY. WebServer keeps only a short
+    // built-in set of request headers and discards the rest, so authorize() would be handed "" on
+    // every request, refuse, and the portal would 401 forever — locked out by construction, on the
+    // one surface §6.3 left as the only way to provision a device with no Modbus master.
+    //
+    // Not caught by the compiler and not caught by PortalForm's 226 checks either: they test
+    // authorize() against a header string, and this is the code that fails to obtain one.
+    static const char* kCollected[] = {"Authorization"};
+    server_.collectHeaders(kCollected, 1);
+  }
+
   /** Adapts PortalForm's byte sink onto WebServer's chunked response. */
   class ChunkSink final : public PortalSink {
    public:
@@ -205,6 +221,8 @@ class ArduinoPortalServer {
   DNSServer dns_;
   bool up_ = false;
   bool dnsUp_ = false;
+  /** Whether `route()` has run. The routes outlive `end()`, so they are registered once. */
+  bool routed_ = false;
 };
 
 }  // namespace plc

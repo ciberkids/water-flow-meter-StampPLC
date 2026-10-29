@@ -222,6 +222,11 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/ui_walk_test" \
 g++ "${CXXFLAGS[@]}" -o "$OUT/boot_order_test" \
   test/host/boot_order_test.cpp
 
+# DF28 — WHEN the configuration page is served, and that firmware.cpp serves it at all. The server was
+# declared and never driven; the rule is header-only and the wiring is read as text, like boot_order.
+g++ "${CXXFLAGS[@]}" -o "$OUT/portal_lifecycle_test" \
+  test/host/portal_lifecycle_test.cpp
+
 # N5 — the MQTT publish policy: cadence, the drop order, topic construction.
 g++ "${CXXFLAGS[@]}" -o "$OUT/mqtt_publisher_test" \
   test/host/mqtt_publisher_test.cpp \
@@ -331,6 +336,8 @@ echo
 "$OUT/httpd_task_policy_test"
 echo
 "$OUT/boot_order_test"
+echo
+"$OUT/portal_lifecycle_test"
 echo
 "$OUT/ui_walk_test"
 echo
