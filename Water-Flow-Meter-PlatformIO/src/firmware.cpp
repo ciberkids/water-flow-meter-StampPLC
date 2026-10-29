@@ -54,6 +54,7 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "net/portal_server_arduino.h"
 #include "net/wifi_manager.h"
 #include "net/wifi_radio_arduino.h"
+#include "sensors/board_temperature.h"
 #include "sensors/pulse_counter.h"
 #include "sensors/sensor_state_engine.h"
 #include "ui/core/ui_actions.h"
@@ -562,7 +563,17 @@ void refreshNetStatusCache() {
   netStatusCache.mqttLastCommandResult = static_cast<uint8_t>(mqttLastCommandResultValue);
 }
 
-/** Publishes every discovery config for the currently connected sensors (§4.4.b). */
+/**
+ * Publishes every discovery config for the currently connected sensors (§4.4.b).
+ *
+ * `DF30`, OPEN: this enqueues the whole set, 3 per channel in service plus 7, with no pump in between,
+ * and the queue has 16 slots. On a connect, two availability messages are already in it, so 14 fit and
+ * with three or more channels the tail is refused. A republish with the queue otherwise empty has all
+ * 16, which still refuses it with four or more. `notePublished` below is reached only when nothing was
+ * refused, and every republish starts again from the first entity. The queue was sized on the promise,
+ * in `mqtt_publisher.h`'s `kQueueCapacity` comment, that the caller pumps as it enqueues; this caller
+ * does not, yet.
+ */
 void publishDiscovery() {
   if (!netSettings.mqttHaDiscovery() || !haDiscovery.configured()) {
     return;
@@ -931,6 +942,27 @@ void verifyBulkInputRead() {
   Serial.println("[poll] bulk input read verified: 2 I2C transactions per sample instead of 8");
 }
 
+// ── The board temperature (`DF29`) ───────────────────────────────────────────────────
+//
+// The LM75B at 0x48 sits on THIS bus, behind the same driver mutex as the AW9523 above, so a read here
+// is time the sampler waits. When to read and what to publish are decided in sensors/board_temperature.h;
+// this file supplies the transaction and makes the one call, from the logic task's MQTT block.
+
+/** Read by the logic task only. Never touched on core 0. */
+plc::BoardTemperature boardTemperature;
+
+/**
+ * The temperature register's two bytes, with the bus's verdict.
+ *
+ * `m5::In_I2C.readRegister` rather than `M5StamPLC.getTemp()`: the library's `LM75B_Class::read16`
+ * throws this same `bool` away and decodes an uninitialised buffer when the read fails, which is how a
+ * missing chip would become a confident temperature. See board_temperature.h.
+ */
+bool readBoardTemperatureBytes(uint8_t* out) {
+  return m5::In_I2C.readRegister(plc::kLm75bAddress, plc::kLm75bTemperatureRegister, out, 2,
+                                 plc::kLm75bBusFrequencyHz);
+}
+
 }  // namespace
 
 //===================================================================
@@ -981,6 +1013,9 @@ void logicTaskCode(void * pvParameters) {
   double persistedCumulative[kNumSensors] = {};
   SensorCharacteristics persistedConfigs[kNumSensors] = {};
   uint16_t persistedBitmap = 0;
+  // DF29: whether the last board temperature read succeeded, so the console reports the first good
+  // reading and each recovery rather than one line a minute.
+  bool boardTemperatureWasGood = false;
 
   // Project_document.md §4.1.1: link settings must load from NVS BEFORE the RS485
   // port is opened. This used to call preferences.begin() *after* Serial.begin()
@@ -1427,11 +1462,44 @@ void logicTaskCode(void * pvParameters) {
       // "total":0.000000,"sensors":0 for the life of the topic, while the serializer's own test passed
       // because it set all four by hand. Moved rather than asserted around, per the precedent
       // modbus/sensor_config_nvs.h set for the same failure.
+      //
+      // The board temperature (`DF29`) is read HERE, inside the connected block and before the inputs
+      // are filled, for three reasons. Its only consumer is this snapshot, so with no broker there is
+      // no read and no bus time taken from the sampler (R2.1.6). Reading before filling means no
+      // snapshot is ever assembled with a reading a full read interval old: after an outage of a minute
+      // or more, the first pass after the reconnect finds a read due and takes it before filling, and
+      // after a shorter one the last reading is still inside its minute, exactly as between two reads.
+      // That bounds the snapshot, not the queue: a diagnostics message queued before the drop is still
+      // sent first after it, with the old reading, and replaced by the next (board_temperature.h). And
+      // this is the logic task on core 1, never the sampler's core. At most one bus transaction a
+      // minute; board_temperature.h gives the reasons for the cadence.
+      const plc::BoardTemperatureRead temperatureRead =
+          plc::sampleBoardTemperature(boardTemperature, now, readBoardTemperatureBytes);
+      if (temperatureRead == plc::BoardTemperatureRead::BusFailed ||
+          temperatureRead == plc::BoardTemperatureRead::Implausible) {
+        // At most once a minute, because that is how often a read is attempted. Says what Home
+        // Assistant will show, so a bench reading the console knows the null is deliberate.
+        Serial.printf("[temp] LM75B read %s; tempC publishes null until a read succeeds\n",
+                      temperatureRead == plc::BoardTemperatureRead::BusFailed
+                          ? "failed on the bus"
+                          : "returned a code outside -55..125 C");
+      } else if (temperatureRead == plc::BoardTemperatureRead::Good &&
+                 !boardTemperatureWasGood) {
+        // The first good reading, and the first after a failure: the one line a bring-up needs to
+        // confirm the chip answers. Not every minute, which would bury the rest of the console.
+        Serial.printf("[temp] board temperature %.3f C\n",
+                      static_cast<double>(boardTemperature.celsius(now)));
+      }
+      if (temperatureRead != plc::BoardTemperatureRead::NotDue) {
+        boardTemperatureWasGood = temperatureRead == plc::BoardTemperatureRead::Good;
+      }
+
       plc::MqttSnapshotInputs snapshotInputs;
       snapshotInputs.aggregateFlowLpm = aggregateFlowLpmCache;
       snapshotInputs.totalSessionLiters = totalSessionLitersCache;
       snapshotInputs.pollingRateKhz = pollingRate_kHz;
       snapshotInputs.undersamplingFlags = undersamplingFlags;
+      snapshotInputs.boardTemperatureC = boardTemperature.celsius(now);  // DF29
       snapshotInputs.storageFaultCode = nvsHealth.code();  // DF25
       snapshotInputs.uptimeSeconds = now / 1000;
       snapshotInputs.wifiRssiDbm = static_cast<int8_t>(wifiManager.rssiDbm());

@@ -62,7 +62,8 @@ tidiness one. Home Assistant reaches each field with a `value_template`.
 //                                                  active channels
 
 // <base>/diagnostics/state
-{"pollingRateKhz":3.310,"baselineKhz":0.000,"undersampling":0,"uncalibrated":0,"storageFault":0,"tempC":41.2,"uptimeS":86400,"rssi":-57,"lastCmd":"idle"}
+{"pollingRateKhz":3.310,"baselineKhz":0.000,"undersampling":0,"uncalibrated":0,"storageFault":0,"tempC":null,"uptimeS":86400,"rssi":-57,"lastCmd":"idle"}
+//                                                                                                      °C, 1dp, or null
 ```
 
 **`storageFault` is `0` on a healthy device, and it is the only remote warning that the device has
@@ -83,6 +84,25 @@ update, and nothing does — so the field is published, documented and empty. It
 This example showed `3.400` until 2026-08-21, which is the kind of plausible figure that makes a
 document harder to trust than a blank one. Compare the live rate against the 3.3 kHz design assumption
 until the baseline is real.
+
+**`tempC` is the temperature of the circuit board, from the LM75B sensor on it.** It is not the
+water's temperature and not the room's. It is in °C, printed to one decimal, and the sensor itself
+reads in steps of 0.125 °C. The device reads it once a minute, and only while it is connected to the
+broker, because the sensor shares its bus with the pulse counter. So the value changes at most once a
+minute, however short the publish period is. The rules are in `src/sensors/board_temperature.h`.
+
+**`tempC` is `null` when there is no reading to trust.** That happens when the last read failed on the
+bus, when the sensor answered with a value outside its −55 to 125 °C operating range, and when a
+reading has gone a minute without being replaced. A failed read is never covered by repeating the
+previous value, and the next attempt comes a minute later. Home Assistant renders a JSON `null` as
+`None`, and `None` puts the *Board temperature* entity in `unknown` rather than at a number. A device
+that shows `unknown` there all the time is one whose sensor is not answering properly. The console says
+so too, with a `[temp]` line on each failed read.
+
+The example shows `null` because no board has reported a temperature yet, so any figure here would be
+invented. It showed `41.2` until 2026-10-29, and real devices sent `0.0` until then, because nothing
+read the sensor at all. That was `DF29`: Home Assistant drew a flat line at 0 °C, which is a plausible
+reading and so worse than an empty one.
 
 `pollingRateKhz` travels with `baselineKhz` deliberately. The live rate alone cannot show a
 regression, and a sampling regression that is only visible in a lab is the failure the whole
@@ -198,9 +218,11 @@ rejected payload is an entity that never appears with nothing logged. They are p
 `<prefix>/button/`, not `<prefix>/sensor/`, and they exist regardless of the connected-sensor bitmap: a
 device with nothing wired up can still be told to republish.
 
-The four diagnostics carry `entity_category: diagnostic`; the buttons deliberately do not, or they
-would be folded away in the device page's diagnostics section rather than being available to a
-dashboard. `unique_id` is `<node_id>_<object_id>`. Lifetime
+Three of the four device-wide entities, polling rate, under-sampling and WiFi RSSI, carry
+`entity_category: diagnostic`. *Board temperature* deliberately does not, because it describes the
+device's surroundings rather than the firmware's health, so it stays in the main view. The buttons do
+not either, or they would be folded away in the device page's diagnostics section rather than being
+available to a dashboard. `unique_id` is `<node_id>_<object_id>`. Lifetime
 volume is the one to put on the Water dashboard — `water` + `total_increasing` + m³ is what the energy
 and water panels look for.
 

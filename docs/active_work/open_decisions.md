@@ -36,7 +36,9 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 **Eight open lines: three features, three defects and two measurements.** `DF28` and `DF29` opened on
 2026-10-29, when writing the wiki's Features and Capabilities page showed the configuration web page is
-never started and the board temperature never measured; `DF28` closed the same day.
+never started and the board temperature never measured; both closed the same day. `DF30` opened in
+`DF29`'s review, when checking that the *Board temperature* entity could appear at all showed that Home
+Assistant discovery overflows the publish queue.
 `N-g` opened on 2026-10-01, when documenting the SD card showed a pack cannot yet be built. `N-f` and `DF25` opened on
 2026-08-30, both out of one question the owner asked while T1's storage was being decided — *is the
 right information surviving a power cycle, and are we burning through the write cycles?* That is the
@@ -45,11 +47,11 @@ building `N-c`. `J9`, `I2a`, `N-b` and N-d2's correction half all closed on 2026
 `DF22` closed on 2026-08-20, and `DF22` was the only 🔴 the board has had since the register was
 rewritten.
 
-**What remains is five software items and three measurements.** `N-e` is under way — T0 and T1 have
-landed and T2 is next — and `N-f`, `DF23` and `DF25` each carry a decision in the entry; `DF29`
-carries its fix in the entry, not yet applied. The three that
-need hardware are `G1` (the polling rate), `N-d2`'s remaining half (whether the RTC survives power
-loss), and `N-c`'s retain check, which lives in that entry's ⏸️ block rather than on a line of its own
+**What remains is six software items and three measurements.** `N-e` is under way — T0, T1 and T2 have
+landed and T3/T4/T6 are next — `N-g` has its plan in the entry, `N-f`, `DF23` and `DF25` each carry a
+decision in the entry, and `DF30` carries a likely fix that nobody has decided. (Earlier versions of
+this sentence left `N-g` out of the count.) The three that need hardware are `G1` (the polling rate),
+`N-d2`'s remaining half (whether the RTC survives power loss), and `N-c`'s retain check, which lives in that entry's ⏸️ block rather than on a line of its own
 because the rest of `N-c` is built and tested. Cite an ID when you ask about one — this file is the one
 place that says what an ID means. Rule **I3** governs them: append-only, never reused, so a gap means an
 item closed, not an item lost.
@@ -66,7 +68,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **N-e** | 🟡 | feature, in progress | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, four questions open; T0, T1 and T2 landed, **T3/T4/T6 next**, and R2.5's MQTT sentence needs amending |
 | **N-f** | 🟡 | feature, specified here | Where the readings live — internal flash or an SD card, human-readable files, persisted session values and rotating telemetry. Five decisions taken, six questions open, not started; question 1 changes a documented register contract and should be answered first |
 | **N-g** | 🟡 | feature, opened 2026-10-01 | A menu pack cannot be built: the `.uipack` writer exists (`packEmitter.ts`) but only a test calls it, so the SD card the wiki now documents holds files nobody can produce. **To do this evening**: an `npm run export:pack` command, then lift the ⚠️ on the wiki SD Card page |
-| **DF29** | 🟡 | defect, found 2026-10-29 | Board temperature is never measured: `boardTemperatureC` has no writer, so MQTT publishes `tempC: 0.0` and Home Assistant's *Board temperature* entity reads zero. The board's LM75B sensor is never read |
+| **DF30** | 🟡 | defect, found 2026-10-29 | Home Assistant discovery overflows the publish queue: `publishDiscovery()` enqueues 3 messages per channel in service plus 7 with no pump between them, so only 14 fit after a connect's two availability messages, and 16 on any other republish. From three channels a connect refuses the tail; from five, *Board temperature* is in it |
 | **DF25** | 🟡 | defect, found 2026-08-30 | A write to non-volatile storage that fails is reported by nothing. **Detection and publication landed 2026-08-30** (`DF25a`: register 34, MQTT `storageFault`, 49 host checks) — the panel's warning triangle rides with `N-e`'s T5, and three of its four questions were built on the recommendation rather than decided |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
@@ -229,28 +231,212 @@ step fails, Modbus provisioning is unaffected.
 
 ---
 
-## DF29 🟡 Board temperature is never measured — Home Assistant is told the board is at 0 °C
+## ~~DF29~~ ✅ FIXED 2026-10-29 — the board temperature is read, and published as `null` when there is no reading to trust
 
 Found 2026-10-29, in the same pass as `DF28`. The same shape as `DF23`: **a published field nobody
 assigns**.
 
-**What is missing.** `MqttPublisher`'s diagnostics struct has `float boardTemperatureC = 0.0f`
+**What was missing.** `MqttPublisher`'s diagnostics struct had `float boardTemperatureC = 0.0f`
 (`src/net/mqtt_publisher.h`), the payload prints it as `tempC`, and `ha_discovery.cpp` announces a
-*Board temperature* entity with device class `temperature` and unit °C. Nothing assigns the field. So a
-real device publishes `"tempC":0.0` on every diagnostics message, and Home Assistant draws a flat line at
-0 °C — a plausible reading, which is worse than an empty one. The MQTT wiki page's example shows `41.2`,
+*Board temperature* entity with device class `temperature` and unit °C. Nothing assigned the field. So a
+real device published `"tempC":0.0` on every diagnostics message, and Home Assistant drew a flat line at
+0 °C — a plausible reading, which is worse than an empty one. The MQTT wiki page's example showed `41.2`,
 the same invented-figure pattern that page already confesses for `baselineKhz`.
 
-**The sensor exists.** The StampPLC carries an LM75B at I²C `0x48` on the internal bus, initialised by
-`M5StamPLC.begin()` (`lm75b_init`). The library's `M5StamPLC.getTemp()` should not be used as it stands:
-`LM75B_Class::read16` ignores `readRegister`'s result, so a failed read decodes an uninitialised buffer
-into a confident temperature.
+**The sensor exists.** The StampPLC carries an LM75B at I²C `0x48` on the internal bus. `M5StamPLC.begin()`
+calls `lm75b_init`, which probes the address and writes nothing. The library's `M5StamPLC.getTemp()` is
+not used, on purpose: `LM75B_Class::read16` ignores `readRegister`'s result, so a failed read decodes an
+uninitialised buffer into a confident temperature.
 
-**To fix**, not done: read the two temperature bytes through `m5::In_I2C.readRegister`, which reports
-failure, on the logic task and at a slow cadence — the bus is the one the pulse sampler polls, so each
-read briefly holds the driver mutex the sampler needs. Decode in an Arduino-free function a host test can
-reach, and publish a failed or implausible read as non-finite, which the payload already emits as JSON
-`null`. Then correct the MQTT page's example.
+**~~To fix~~ — FIXED 2026-10-29, 65 host checks.** The rule is `src/sensors/board_temperature.h`, which
+is Arduino-free. `firmware.cpp` supplies the transaction, `m5::In_I2C.readRegister(0x48, 0x00, buf, 2,
+400000)`, whose `bool` is the only thing that can tell a failed read from a cold board, and makes one call
+to `plc::sampleBoardTemperature` from the logic task. The reading reaches the snapshot through a new
+`MqttSnapshotInputs::boardTemperatureC`, which `fillMqttSnapshot` copies without judging it.
+
+- **The decode is the library's, checked rather than trusted.** 11-bit two's complement in the top bits,
+  0.125 °C a step, with the sign extended by hand. `board_temperature_test.cpp` compares it against
+  `LM75B_Class::temp()`'s own arithmetic, transcribed, for all 65,536 inputs.
+- **Plausibility is the chip's operating range**, −55 to +125 °C, the clamp in
+  `LM75B_Class::writeAlertTempHelper`. It catches nonsense codes only. All-zero bytes (0.0 °C) and
+  all-one bytes (−0.125 °C), the two patterns a stuck bus is most likely to produce, both pass it, and
+  the test asserts that they do, so nobody mistakes the range check for a bus check.
+- **One read a minute, and only while MQTT is connected.** R2.1.6 says a device on this bus is polled
+  "only as often as its purpose requires", and this reading's only purpose is the snapshot. So with no
+  broker there is no bus traffic at all, and the sampler's rate with MQTT off is exactly what `G1` and
+  `DF23` will measure. 60 s is `MqttPublisher::kHeartbeatMs`, the staleness bound this firmware already
+  sets for subscribers. A good read is about 49 bit periods, roughly 120 µs on the wire at 400 kHz. That
+  figure is arithmetic from the frame and was not measured.
+- **A failed or implausible read publishes `null` at once.** The previous good value is never kept as a
+  fallback, and the next attempt waits the full minute, not less: the costly failure is a stalled bus,
+  which the driver waits out up to its stall limit, so retrying sooner would multiply exactly the cost
+  the cadence bounds.
+- **No snapshot is ever assembled with a reading a full read interval old.** Past that the reading is
+  non-finite however it got there. After an MQTT outage of a minute or more, the first pass after the
+  reconnect re-reads before filling the snapshot; after a shorter one, the last reading is still inside
+  its minute and goes in exactly as it would between two reads.
+- **That bounds the snapshot, not the queue.** This said "no published reading" until review replayed
+  the publisher. `MqttPublisher` keeps its queue across a disconnect: `pump()` does nothing while the
+  link is down, and neither `onDisconnected()` nor `onConnected()` clears it. So a diagnostics message
+  queued just before a drop goes out first after the reconnect, with the reading from before the
+  outage. In the review's replay (eight channels, discovery off, a ten-minute outage, the board at
+  25.0 °C before it and 30.0 °C after) the reconnect sent `"tempC":25.0` and then `"tempC":30.0`, the
+  second from the reconnect's own full set, queued in the same pass. When `DF30`'s discovery burst fills
+  the queue that set is refused, and in a second replay the next diagnostics message went out one
+  publish period (10 s) after the reconnect. Changing the queue is not this item.
+- **The first read waits out the chip's 100 ms conversion period** (`LM75B_Class::POWER_NORMAL`),
+  because nothing read here says what the register holds before the first conversion, and zero would
+  be `DF29` again.
+- **The unassigned case is now `null` at every layer.** `MqttDiagnosticsTelemetry::boardTemperatureC`
+  and the new input both default to NaN, which `jsonNumber` emits as `null`. So a caller that forgets
+  the field, or `fillMqttSnapshot`'s null-input return, publishes "no reading" rather than a number.
+- **The console says what happened**: a `[temp]` line on each failed read, at most one a minute, and one
+  on the first good reading and on each recovery.
+
+**The wiring is gated, not just the rule.** `board_temperature_test.cpp` reads `firmware.cpp` as text
+with comments blanked, the technique `portal_lifecycle_test.cpp` uses. It fails unless all of these hold:
+the sampling call appears exactly once, and is exactly `plc::sampleBoardTemperature(boardTemperature,
+now, readBoardTemperatureBytes)`; the reader is defined once, its whole body is `return
+m5::In_I2C.readRegister(plc::kLm75bAddress, plc::kLm75bTemperatureRegister, out, 2,
+plc::kLm75bBusFrequencyHz);`, and nothing else names it; the call sits inside `logicTaskCode`, so never
+on the sampler's core, and inside the MQTT connected block; `boardTemperatureC` is named once in the
+file's code, as `snapshotInputs.boardTemperatureC = boardTemperature.celsius(now);`, after the call and
+before `fillMqttSnapshot`; the chip is read through `m5::In_I2C.readRegister` in one place; and
+`getTemp(` and `LM75B.temp(` appear nowhere. Whole statements are compared with all whitespace
+removed, so reflowing them does not fail the gate and a changed argument does. The reader is found by
+its exact signature, so restyling that one line (`uint8_t *out`) fails the gate rather than passing it.
+
+**Review found the first version of that gate too weak, and it was.** It matched the call and the bus
+read by their prefixes only, and five edits that kept the prefixes passed every host suite: the reader
+throwing away the bus's `bool` and returning `true` (`LM75B_Class::read16`'s defect, back in the one
+place this fix moved the read to), the reader asking for the configuration register, the reader asking
+for one byte, a second assignment overwriting the reading with `41.2f`, and the call handed
+`[](uint8_t*) { return true; }` instead of the reader. That last one publishes `"tempC":0.0` as a good
+reading every minute, which is `DF29` itself: the buffer is zeroed before the read, 0x0000 decodes to
+0.0 °C, and 0.0 °C passes the range check. `firmware_source_text.h` said the test guarded "that the
+chip is read at all", and it did not. The whole-statement checks above are four new checks, 61 in that
+suite instead of 57.
+
+**Mutation-tested on exit codes, 24 mutations, every one caught**, all re-run in one script on the
+reviewed tree: each mutation applied to a fresh copy, then `board_temperature_test`, `mqtt_snapshot_test`
+and `mqtt_publisher_test` built with the suite's flags and run, and a mutation counted as caught only
+when one of them exits non-zero. The 13 of the first round, re-created from its list: dropping the
+assignment, dropping the read, reading through the library, moving the read into `pollingTaskCode`,
+moving it out of the connected block, dropping the snapshot copy, putting either default back to
+`0.0f`, keeping the last good value after a failure, removing the maximum age, removing the sign
+extension, ignoring the bus's `bool` in `noteRead`, and removing the range check. Review's five, above.
+And six more of the same shapes: `|| true` after the bus read, another bus speed, an overwrite of
+`snapshot.diagnostics.boardTemperatureC` after the fill, the reader also called from `pollingTaskCode`,
+the call handed `0` instead of `now`, and the assignment reading `celsius(0)`. **On the tests before this round, the 13 were caught and the other
+11 all passed.** **One finding from the first round worth keeping:** the "no fallback after a failed
+read" mutation was caught only by the implausible-read case. At the real cadence a failed read lands
+exactly when the previous value reaches its maximum age, so the two rules agree and the bus-failure
+checks could not tell which one produced the `null`. A separate check now records a failure one second
+after a good read.
+
+**The MQTT page** now shows `"tempC":null` in its example, because no board has reported a figure and
+any number there would be invented. It says what a reader will see: °C to one decimal, read once a
+minute while connected, and `null` (which Home Assistant shows as `unknown`, per its MQTT sensor
+documentation) on a failed, implausible or expired reading. The same edit corrected a sentence that
+said all four device-wide entities carry `entity_category: diagnostic`. Three do, and *Board
+temperature* deliberately does not (`haEntityIsDiagnostic`). README and the Features and Capabilities
+page make no claim about the temperature, so neither changed.
+
+**Verified:** host **2,284 checks across 31 suites**, 0 failures, against 2,219 across 30 at `04e59da2`
+(2,280 before the review round; the count is the sum of the figures the suites print, and three suites
+that print none add 157 `ok` lines on top, unchanged), and the manifest check green. The wiki dry run
+ends "all repo pointers resolve". The firmware compiles in the container.
+
+**Cost: 24 bytes of RAM and 588 of flash.** RAM goes from 81,096 to 81,120 bytes (24.7 % to 24.8 %) and
+flash from 1,319,301 to 1,319,889 bytes (39.5 % either way). Measured by building `04e59da2` and this
+change in the same container from the same copied dependency cache. The review round changed only
+comments in firmware code, and the build after it is the same size to the byte: 81,120 and 1,319,889.
+
+**Not done, because each is the owner's decision:** there is no Modbus register for the temperature,
+which sits awkwardly with RS485 being the source of truth, but adding one changes the register contract.
+The panel does not show it either.
+
+**⏸️ Not seen on a board**, like everything else on this device. The first proof is a
+`[temp] board temperature … C` line on the console after MQTT connects, and a number, not `unknown`, on
+the Home Assistant entity. **Until `DF30` is fixed, the Home Assistant half of that check is reliable
+only with four or fewer channels in service:** from five, the *Board temperature* discovery message is
+refused on every connect, and the entity exists only if an earlier, smaller set or a republish outside a
+connect published it (from six, no republish can). The console line and `tempC` on
+`<base>/diagnostics/state` do not depend on discovery, so they are the check on a fuller device.
+
+---
+
+## DF30 🟡 Home Assistant discovery overflows the publish queue — from three channels in service, every connect refuses part of it
+
+Found 2026-10-29 in `DF29`'s review, by asking whether the *Board temperature* entity that `DF29`'s bench
+check reads could appear at all on a fully populated device. Not caused by `DF29`: `publishDiscovery()`
+is older than it and outside its diff.
+
+**What happens.** `publishDiscovery()` (`src/firmware.cpp`) enqueues every discovery message for the
+connected sensors in one loop, with no `pump()` between enqueues. `HaDiscovery::enumerateEntities`
+orders them three per channel in service, then the four device-wide entities with *Board temperature*
+first, then the three buttons: 3k + 7 messages for k channels, which is `kHaMaxEntities`' shape.
+`MqttPublisher::kQueueCapacity` is 16, and R4.1.3 never evicts a Discovery message, so once the queue
+holds only availability and discovery, every further message is **refused**. On a connect two
+availability messages are already queued, one from `MqttPublisher::onConnected()` and a second from
+`firmware.cpp`'s connect latch, so 14 discovery messages fit:
+
+| Channels in service | Discovery messages | Queued on a connect | Refused |
+| --- | --- | --- | --- |
+| 0, 1, 2 | 7, 10, 13 | all | none |
+| 3 | 16 | 14 | the *Reset lifetime totals* and *Republish discovery* buttons |
+| 4 | 19 | 14 | *Under-sampling*, *WiFi RSSI* and all three buttons |
+| 5 | 22 | 14 | channel 5's *Lifetime volume*, all four device-wide entities and all three buttons |
+| 8 | 31 | 14 | channel 5's *Lifetime volume*, channels 6–8 entirely, the four device-wide entities and the buttons |
+
+The counts were measured by replaying that connect order (`onConnected`, the second availability
+enqueue, then 3k + 7 Discovery enqueues) against the real `MqttPublisher` for every k from 0 to 8; the
+names follow from `enumerateEntities`' order. A bench sees it on the console at every connect:
+`[mqtt] discovery: 14 of 31 entities queued` with all eight channels in service.
+
+**No retry gets further than 16.** `HaRepublishPolicy::notePublished` is called only when the whole set
+was accepted, and `onSensorBitmap` answers `None` until it has been. Every route that does republish — a
+reconnect, Home Assistant's birth message, `cmd/republish` — runs the same loop from the first entity
+again. A reconnect has the same 14 slots. A republish outside a connect, with the queue otherwise empty,
+has all 16: enough for three channels' 16, not for four's 19. So from four channels part of the set is
+never published by any route, and from six that part includes *Board temperature*, which is message
+3k + 1 of the set: the 16th with five channels, the 19th with six. On a connect with three or more, the *Republish discovery* button is
+itself one of the refused entities.
+
+**What a user sees depends on the device's history**, because discovery is retained (R4.4.5). A refused
+message is simply not published, so an entity whose config an earlier, smaller set already published
+stays in Home Assistant from the broker's retained copy. A device commissioned with all its channels at
+once shows the losses in the table; one whose channels were added later may show none of them.
+
+**It also costs the reconnect's telemetry.** `onConnected()` arms a full set for the next `tick()`,
+which runs later in the same pass, after the burst. Measured in a replay at the default 10 s publish
+period, with the payload's `uptimeS` changing each second as `firmware.cpp` sets it: with discovery on
+and two channels, channel 1's state topic first went out 60 s after the reconnect, at the next
+heartbeat (its values did not change in the replay), because the burst left one free slot and each
+later message in the set evicted the one before it; with three or more channels, the first diagnostics
+message went out 10 s after the reconnect, because the whole set was refused. With discovery off,
+channel 1's state and the diagnostics both went out within 2 ms of the reconnect.
+
+**Why nothing caught it.** The comment on `kQueueCapacity` in `mqtt_publisher.h` said "the caller pumps
+as it enqueues", and the caller does not. `ha_discovery_test` checks every payload and
+`mqtt_publisher_test` the queue's policy, each on its own; nothing runs the firmware's connect order
+against the real queue, because that order lives in `firmware.cpp`, which no host test links. The same
+blind spot as `DF28` and `DF29`. Both source comments now point here.
+
+**The wiki is wrong about it, and is not edited here.** The MQTT page says "31 entities on a fully
+populated device", which is what is announced, not what arrives. The Features and Capabilities page
+says Home Assistant discovery is there "so every entity appears without any YAML", which is false for a
+device commissioned with three or more channels. The fix should correct both.
+
+**Likely fix, not decided.** Either pump while enqueuing in `publishDiscovery`, as the header promised,
+bounded for the same reason `pump(4)` is (the logic pass also owns the display's 100 ms acknowledgement
+budget, §7); or queue discovery across passes, a slice at a time, and call `notePublished` when the
+last slice is accepted. Either way it wants a host test that enumerates eight channels, runs the connect
+order and asserts all 31 reach the sink, which means moving the burst out of `firmware.cpp` into an
+Arduino-free header, the way `DF24` moved the snapshot.
+
+**⏸️ Not seen on a board.** With three or more channels in service, the console line above should read
+fewer queued than announced on every connect.
 
 ---
 

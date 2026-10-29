@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 
 #include "modbus/register_map.h"
 #include "net/mqtt_limits.h"
@@ -171,7 +172,18 @@ struct MqttDiagnosticsTelemetry {
    * (R4.4.6) — a dashboard decision, not a side effect of telling the truth here.
    */
   uint16_t storageFaultCode = 0;
-  float boardTemperatureC = 0.0f;
+  /**
+   * `DF29` — the board's LM75B, in °C, published as `tempC` and announced as Home Assistant's *Board
+   * temperature* entity. `plc::BoardTemperature` (`sensors/board_temperature.h`) decides the value.
+   *
+   * DEFAULTS TO NaN, NOT 0, and that default is half of the fix. This field used to default to `0.0f`
+   * and have no writer, so every device published `"tempC":0.0` and Home Assistant drew the board at
+   * 0 °C, a plausible reading, for the life of the entity. NaN is emitted as JSON `null` by
+   * `jsonNumber`, which Home Assistant shows as `unknown`. So a path that fills a snapshot without
+   * setting this field — `fillMqttSnapshot`'s null-input return, or the next refactor — publishes "no
+   * reading" rather than a temperature nobody measured.
+   */
+  float boardTemperatureC = std::numeric_limits<float>::quiet_NaN();
   uint32_t uptimeSeconds = 0;
   int8_t wifiRssiDbm = 0;
   /**
@@ -241,8 +253,15 @@ class MqttPublisher {
    *  Cost: 16 x (128 + 1152 + a few) is ~20.5 KB of static RAM, and the discovery bound above is
    *  what most of it buys. Paid deliberately and statically — the alternative is a heap allocation
    *  on a device whose §2.1 budget is the measurement itself. A discovery burst is larger than any
-   *  sane capacity (kNumSensors x 3 + 4 entities), so the caller pumps as it enqueues rather than
-   *  this number growing to hold one. */
+   *  sane capacity (`kHaMaxEntities`, 31 with every channel in service), so the caller is meant to
+   *  pump as it enqueues rather than this number growing to hold one.
+   *
+   *  IT DOES NOT, YET. `publishDiscovery()` in firmware.cpp enqueues the whole burst with no pump in
+   *  between. On a connect it lands behind the two availability messages, so 14 discovery messages
+   *  fit and, with three or more channels in service, the rest are refused. Every republish starts
+   *  again from the first, and one outside a connect has 16 slots at most, so from four channels part
+   *  of the set is never published at all. That is `DF30`, open. This sentence said "the caller
+   *  pumps as it enqueues" until `DF29`'s review read the caller. */
   static constexpr std::size_t kQueueCapacity = 16;
 
   /**

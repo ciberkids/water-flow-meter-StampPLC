@@ -191,6 +191,35 @@ void everyDiagnosticInputIsCarried() {
         "baselineKhz is still 0 — DF23, deliberately not fixed by this move");
 }
 
+void theBoardTemperatureIsCarried() {
+  std::printf("\n[DF29 — the board temperature reaches the snapshot, and its absence is NaN, not 0]\n");
+
+  SensorData sensors[plc::kNumSensors]{};
+  SensorCharacteristics configs[plc::kNumSensors]{};
+
+  plc::MqttSnapshotInputs inputs;
+  inputs.boardTemperatureC = 23.375f;  // 187 LM75B steps: exact in binary, so == is a fair test
+  plc::MqttSnapshot snapshot;
+  plc::fillMqttSnapshot(snapshot, sensors, configs, plc::kNumSensors, inputs);
+  check(snapshot.diagnostics.boardTemperatureC == 23.375f,
+        "the input reaches diagnostics.boardTemperatureC — the field nothing used to assign");
+
+  // The shape that shipped: a caller that never sets the input. It must publish "no reading", which
+  // the serializer renders as null, rather than the 0.0 Home Assistant drew as a real 0 C.
+  plc::MqttSnapshot unset;
+  plc::fillMqttSnapshot(unset, sensors, configs, plc::kNumSensors, plc::MqttSnapshotInputs{});
+  check(std::isnan(unset.diagnostics.boardTemperatureC),
+        "a caller that never sets it gets NaN (published as null), not 0.0");
+
+  // The early return for null inputs skips the diagnostics assignments entirely, so there the struct's
+  // OWN default is what goes out. Pre-dirtied so a no-op would be visible.
+  plc::MqttSnapshot early;
+  early.diagnostics.boardTemperatureC = 41.2f;
+  plc::fillMqttSnapshot(early, nullptr, nullptr, plc::kNumSensors, inputs);
+  check(std::isnan(early.diagnostics.boardTemperatureC),
+        "the null-input path resets it to NaN too, so no route publishes a stale or invented value");
+}
+
 void badInputCannotProduceGarbage() {
   std::printf("\n[a null or oversized input returns an empty snapshot, not a wild read]\n");
 
@@ -229,6 +258,7 @@ int main() {
   outOfServiceChannelsAreExcludedEverywhere();
   uncalibratedInServiceChannelsAreFlagged();
   everyDiagnosticInputIsCarried();
+  theBoardTemperatureIsCarried();
   badInputCannotProduceGarbage();
   if (failures > 0) {
     std::printf("\nFAILURES (%d of %d)\n", failures, checks);
