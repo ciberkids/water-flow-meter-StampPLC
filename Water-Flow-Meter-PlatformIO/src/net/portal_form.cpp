@@ -632,13 +632,17 @@ void PortalForm::renderRow(PortalSink& out,
       // The hidden companion carries "0" for the same field name, so an UNCHECKED box still submits
       // something. Without it, "unchecked" and "this form never carried the field" are the same wire
       // representation, and a partial POST would silently switch off every boolean it omitted.
-      // submit() treats any truthy occurrence as true, so the order of the two is irrelevant.
+      // ORDER MATTERS, and this comment used to say it did not ("any truthy occurrence is true"). submit()
+      // applies the fields in order and the LAST occurrence wins, so the hidden "0" must come FIRST: a
+      // checked box then overrides it with "1". Swapped, every checked box would submit as off.
+      // portal_form_test's browser checks a checked box round-trips, so the order is held by a test.
       //
       // The companion is disabled WITH its checkbox (`DF28`). A disabled hidden input is not submitted,
       // and it must not be: it used to stay enabled, so on the device — which has no settings store,
       // making every per-sensor row read-only — every browser submission carried eight
       // `config.sensor.connected@n=0` fields that submit() refused, and an operator who had just set
-      // the WiFi credentials successfully was told nothing was saved.
+      // the WiFi credentials successfully was told the save had only partly worked, with eight errors
+      // listed against rows they could not edit.
       out.writeText("<input type=\"hidden\" name=\"");
       portalWriteEscaped(out, name);
       out.writeText("\" value=\"0\"");

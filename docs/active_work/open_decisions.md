@@ -158,16 +158,17 @@ four (the `DF25a` precedent for lead-ins):
   second callback, which makes WebServer stream the body raw to `receiveBody()`; it is buffered up to
   `PortalForm::kMaxSubmitBytes` and handed to `submit()`, whose own decoder is the tested one. A body over
   the bound, or carrying a NUL, is refused whole with an error page, never truncated.
-- **DF28c — a successful submission never reached the radio.** `netSettingsNotifiedRevision =
+- **DF28c — a successful submission reached the radio ten minutes late.** `netSettingsNotifiedRevision =
   netSettings.revision();` sat inside the logic loop's save-success branch since `6c4b8009`, a seed meant
   for `setup()`. The page applies a submission between the notify check and the save, so that line marked
-  every submission as already notified, and the access point stayed up for its whole window with the device
-  never joining the network it had been given. The seed is in `setup()` now.
+  every submission as already notified, and the access point stayed up for the rest of its ten-minute
+  window; only when it expired did the device join the network it had been given. The seed is in
+  `setup()` now.
 - **DF28d — every submission reported errors.** A disabled checkbox's hidden "0" companion was not
   disabled with it. On the device, which builds the form with no settings store, every per-sensor row is
   read-only, so a browser posted eight `config.sensor.connected@n=0` fields that `submit()` refused, and
-  the operator was told "Nothing was saved. Fix these and submit again" after a save that had worked. The
-  companion is disabled with its checkbox now.
+  the operator was told "Partly saved ... the device refused these", with eight rows they could not edit,
+  after a save that had worked. The companion is disabled with its checkbox now.
 
 **Also from the review.** `ArduinoPortalServer::begin()` returned true on every path, because
 `WebServer::begin()` is void and a failed listen is silent; `ListeningWebServer` reads the protected
@@ -177,15 +178,33 @@ not clear the handler list and every reopened window would have leaked three han
 said `header("Authorization")` is always empty without `collectHeaders()` was false for the pinned core,
 which always collects it; the call stays as belt and braces and says so.
 
+**A third round, from reviewing the second.** The second callback that makes WebServer stream the body is
+ALSO its upload callback, so a `multipart/` POST called `receiveBody()` with no raw buffer, and
+dereferencing it rebooted the device — before any login check, for anyone in radio range of the access
+point. `ListeningWebServer::rawActive()` is asked first now, and such a body is refused. The same review
+found the body's flags survived from one request to the next, that a failed `String::concat` could drop
+a chunk from the middle of a body still submitted as complete, and that a DNS responder that kept failing
+was retried, and logged, on every logic pass. The body is now one allocation of the declared
+`Content-Length`, refused if over the bound, explicitly terminated and released with its flags on every
+path; the DNS retry waits five seconds. One cost is accepted and documented in the adapter: WebServer
+asks for a full chunk however few bytes remain, so every save holds the logic task about a second longer
+(display and MQTT pause; the sampler and Modbus do not). The review also corrected two descriptions here:
+`DF28c`'s device did join, ten minutes late, and `DF28d`'s page said "Partly saved", not "Nothing was
+saved". And a comment beside DF28d's fix claimed a boolean's two inputs could come in either order; the
+last one wins, so the hidden "0" must come first, and a test now holds that.
+
 **The checks, and that they fire.** `test/host/portal_lifecycle_test.cpp` drives the rule against a fake
 server and reads `firmware.cpp` as text, comments blanked: the call must be there exactly once, after
 `wifiManager.update(`, with the `ApPortal` condition and the access point's address as its arguments, no
 other `portalServer.begin/end/update` beside it, and `netSettingsNotifiedRevision` assigned only inside
-the notify check and in `setup()`. Removing the call fails it; restoring the stray line fails it. The
+the notify check and inside `setup()`'s braces — every assignment counted, whatever its right-hand side or
+spacing, after a review showed an exact-match version passed two rewordings of the stray line. Removing
+the call fails it; restoring the stray line, either rewording, or a seed moved into `loop()` fails it. The
 source-text helpers it shares with `boot_order_test.cpp` moved to `test/host/firmware_source_text.h`.
 `portal_form_test.cpp` gained a browser: it renders the page, submits it the way HTML says a browser
 does, and requires `submit()` to accept it on the device's own construction; that check failed before
-DF28d's fix. The same pass derives the largest legal body from the page, with and without a settings
+DF28d's fix. It also requires a checked box to survive the round trip, which fails if the hidden input
+and the checkbox swap places. The same pass derives the largest legal body from the page, with and without a settings
 store, and fails if `kMaxSubmitBytes` would not hold it.
 
 **Not reachable by any host check**, stated so it is not overclaimed: DF28b lives in the Arduino adapter.
@@ -194,7 +213,11 @@ and by compiling, not by running.
 
 **Cost**, measured by CI on the pinned espressif32 7.1.3: the first round took flash from 1,304,961 to
 1,319,861 bytes (+14,900; the web server and DNS responder were dead code until something called them),
-with static RAM unchanged at 81,096 bytes. Round two (DF28b–DF28d and the review fixes) is measured by CI on this branch and recorded in the next line once known.
+with static RAM unchanged at 81,096 bytes. The second round added 1,144 bytes of flash and 24 of static
+RAM (1,321,005 and 81,120 on CI): the body buffer's bookkeeping lives in the global server object.
+The third round, measured in the build container against the second round built there (CI and the
+container differ by a few hundred bytes of embedded paths, so only same-machine deltas are compared):
+8 more bytes of static RAM and 328 fewer of flash, the `String` growth code having gone.
 
 **⏸️ Not seen on a board**, like everything else on this device. The bench check is the whole chain: a
 phone joins `water_flow_meter_<6 digits>` and gets the login page, the WiFi credentials are saved with a

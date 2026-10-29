@@ -16,6 +16,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <memory>
+#include <new>
 
 #include "net/httpd_task_policy.h"
 #include "net/portal_form.h"
@@ -35,6 +37,16 @@ class ListeningWebServer : public WebServer {
  public:
   using WebServer::WebServer;
   bool listening() { return static_cast<bool>(_server); }
+  /**
+   * Whether a raw body is being streamed, i.e. whether `raw()` may be dereferenced.
+   *
+   * The second callback a POST route carries is ALSO WebServer's upload callback: a `multipart/` POST
+   * skips the raw branch and calls it from `_parseForm` for every part with a `filename=`, while
+   * `_currentRaw` is null. `raw()` is `*_currentRaw`, so dereferencing it there read address 0 and
+   * rebooted the device — before any login check, for anyone in radio range of the access point. Found
+   * by the review of DF28's second round; this is what `receiveBody()` asks first.
+   */
+  bool rawActive() const { return static_cast<bool>(_currentRaw); }
 };
 
 /**
@@ -51,6 +63,8 @@ class ArduinoPortalServer {
   /** Where a browser is sent when it asks for anything else — the captive-portal redirect. */
   static constexpr uint16_t kHttpPort = 80;
   static constexpr uint16_t kDnsPort = 53;
+  /** How often a DNS responder that failed to start is tried again. */
+  static constexpr uint32_t kDnsRetryMs = 5000;
 
   explicit ArduinoPortalServer(PortalForm& form) : form_(form), server_(kHttpPort) {}
 
@@ -109,7 +123,9 @@ class ArduinoPortalServer {
     if (!up_) {
       return;
     }
-    if (!dnsUp_) {
+    // Rate-limited: a responder that keeps failing would otherwise be retried, and logged by the UDP
+    // layer, on every logic pass, which at this firmware's debug level is about a thousand lines a second.
+    if (!dnsUp_ && millis() - lastDnsAttemptMs_ >= kDnsRetryMs) {
       startDns();
     }
     if (dnsUp_) {
@@ -170,6 +186,7 @@ class ArduinoPortalServer {
 
   /** Starts the captive-portal responder: every name resolves to us, only while the AP is up. */
   void startDns() {
+    lastDnsAttemptMs_ = millis();
     // Deliberately only while the AP is up — hijacking DNS on a station interface would break the
     // network the device just joined. Retried from update() when it fails, without failing the page.
     dnsUp_ = dns_.start(kDnsPort, "*", IPAddress(static_cast<uint8_t>((apIp_ >> 24) & 0xFF),
@@ -195,36 +212,78 @@ class ArduinoPortalServer {
    * at all). PortalForm keeps its own decoder, which is the part the host checks cover; rebuilding the
    * string from WebServer's decoded arguments would have been a second implementation of it.
    *
-   * Bounded by `PortalForm::kMaxSubmitBytes`, which the host tests derive from the form itself. A body
-   * over it, or one carrying a NUL byte, is refused whole — never truncated, because a truncated
-   * urlencoded body is a valid shorter one and would apply part of what was sent.
+   * The same callback is WebServer's UPLOAD callback for a `multipart/` POST, where there is no raw
+   * buffer at all; `rawActive()` is asked first, and such a body is refused (see ListeningWebServer).
+   *
+   * Buffered in memory allocated ONCE, at RAW_START, from the request's Content-Length, which is refused
+   * first if it exceeds `PortalForm::kMaxSubmitBytes` (derived from the form by the host tests). Not an
+   * Arduino `String`, for two reasons the first version of this code had: `concat(ptr, len)` copies
+   * `len + 1` bytes, so a full chunk was read one byte past the end of `HTTPRaw::buf`; and `concat`
+   * returns false and appends nothing when it cannot grow, which that version ignored, so a chunk could
+   * be dropped from the middle of a body that was then submitted as complete. One allocation of the
+   * declared length, checked, removes both. A body that overruns its declared length, carries a NUL, or
+   * cannot be allocated is refused whole — never truncated, because a truncated urlencoded body is a
+   * valid shorter one and would apply part of what was sent.
+   *
+   * KNOWN COST, not a defect: WebServer asks the socket for a full chunk however few bytes remain, and
+   * `Stream::readBytes` waits out its one-second timeout for the bytes that never come. So each save
+   * holds the logic task about a second longer than the old path did — the display and MQTT pause for
+   * that second, the sampler and Modbus (other task, other core) do not. Removing it would mean changing
+   * `HTTP_RAW_BUFLEN` for the whole framework build, which is a bigger lever than this cost justifies.
    */
   void receiveBody() {
+    if (!server_.rawActive()) {
+      releaseBody();
+      bodyRefused_ = true;
+      return;
+    }
     HTTPRaw& raw = server_.raw();
     switch (raw.status) {
-      case RAW_START:
-        body_ = String();
-        bodyComplete_ = false;
-        bodyRefused_ = false;
-        break;
-      case RAW_WRITE:
-        if (bodyRefused_) break;
-        if (body_.length() + raw.currentSize > PortalForm::kMaxSubmitBytes ||
-            std::memchr(raw.buf, '\0', raw.currentSize) != nullptr) {
+      case RAW_START: {
+        releaseBody();
+        const int declared = server_.clientContentLength();
+        if (declared < 0 || static_cast<std::size_t>(declared) > PortalForm::kMaxSubmitBytes) {
           bodyRefused_ = true;
-          body_ = String();
           break;
         }
-        body_.concat(reinterpret_cast<const char*>(raw.buf), static_cast<unsigned int>(raw.currentSize));
+        bodyCapacity_ = static_cast<std::size_t>(declared);
+        body_.reset(new (std::nothrow) char[bodyCapacity_ + 1]);
+        if (!body_) {
+          bodyRefused_ = true;
+          break;
+        }
+        body_[0] = '\0';
+        break;
+      }
+      case RAW_WRITE:
+        if (bodyRefused_ || !body_) break;
+        if (bodyLength_ + raw.currentSize > bodyCapacity_ ||
+            std::memchr(raw.buf, '\0', raw.currentSize) != nullptr) {
+          releaseBody();
+          bodyRefused_ = true;
+          break;
+        }
+        std::memcpy(body_.get() + bodyLength_, raw.buf, raw.currentSize);
+        bodyLength_ += raw.currentSize;
         break;
       case RAW_END:
+        if (bodyRefused_ || !body_) break;
+        body_[bodyLength_] = '\0';
         bodyComplete_ = true;
         break;
       case RAW_ABORTED:
-        body_ = String();
-        bodyComplete_ = false;
+        releaseBody();
         break;
     }
+  }
+
+  /** Frees the body and clears every flag about it, so no request inherits the previous one's state. */
+  void releaseBody() {
+    body_.reset();
+    bodyLength_ = 0;
+    bodyCapacity_ = 0;
+    bodyComplete_ = false;
+    bodyRefused_ = false;
   }
 
   /** Adapts PortalForm's byte sink onto WebServer's chunked response. */
@@ -280,23 +339,25 @@ class ArduinoPortalServer {
   }
 
   void handlePost() {
-    // The body is released on every path out, so a refused or unauthorised request does not leave a
-    // copy of somebody's passphrase on the heap until the next POST.
+    // The body and its flags are released on every path out, so a refused or unauthorised request does
+    // not leave a copy of somebody's passphrase on the heap, and the next request — which may not take
+    // the raw path at all — cannot inherit "complete" or "refused" from this one.
     if (!authorized()) {
-      body_ = String();
+      releaseBody();
       return;
     }
     if (bodyRefused_ || !bodyComplete_) {
-      body_ = String();
-      server_.send(bodyRefused_ ? 413 : 400, "text/plain",
-                   bodyRefused_ ? "The form was larger than this device accepts, or malformed. Nothing was saved."
-                                : "The form did not arrive complete. Nothing was saved.");
+      const bool refused = bodyRefused_;
+      releaseBody();
+      server_.send(refused ? 413 : 400, "text/plain",
+                   refused ? "The form was larger than this device accepts, or malformed. Nothing was saved."
+                           : "The form did not arrive complete. Nothing was saved.");
       return;
     }
     // The RAW urlencoded string, as submit() expects: its own decoder is what the host checks exercise,
     // including the percent- and plus-decoding and the empty-writeOnly-means-unchanged rule.
-    const PortalSubmitResult result = form_.submit(body_.c_str());
-    body_ = String();
+    const PortalSubmitResult result = form_.submit(body_.get());
+    releaseBody();
     beginChunked();
     ChunkSink sink(server_);
     form_.renderSubmitPage(sink, result);
@@ -315,10 +376,13 @@ class ArduinoPortalServer {
   uint32_t apIp_ = 0;
   bool up_ = false;
   bool dnsUp_ = false;
-  /** The POST body being received, at most PortalForm::kMaxSubmitBytes. Empty between requests. */
-  String body_;
+  /** The POST body being received: Content-Length bytes plus a terminator, none between requests. */
+  std::unique_ptr<char[]> body_;
+  std::size_t bodyLength_ = 0;
+  std::size_t bodyCapacity_ = 0;
   bool bodyComplete_ = false;
   bool bodyRefused_ = false;
+  uint32_t lastDnsAttemptMs_ = 0;
   /** Whether `route()` has run. The routes outlive `end()`, so they are registered once. */
   bool routed_ = false;
 };
