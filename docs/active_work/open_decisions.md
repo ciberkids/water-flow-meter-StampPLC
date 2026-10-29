@@ -13,7 +13,7 @@ implementation now* or 🟡 *blocks a later slice*, because the emoji was a seco
 lived in the Decision line and nobody moved it. A register that says forty things are blocking when
 one is does not get read, which is the failure this rewrite is undoing.
 
-**This file holds eight items** — six open plus the two standing rules. It was 287 lines and six items
+**This file holds nine items** — seven open plus the two standing rules. It was 287 lines and six items
 when it was rewritten on 2026-08-18, and 1,370 the day before that, because twenty-nine closed defects
 had accumulated in it with their full reasoning. **Its own live line count is deliberately no longer
 quoted here:** the figure went stale twice while this paragraph was being edited on 2026-08-30, which is
@@ -34,12 +34,13 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Eight open lines: three features, three defects and two measurements.** `DF28` and `DF29` opened on
+**Seven open lines: two features, three defects and two measurements.** `DF28` and `DF29` opened on
 2026-10-29, when writing the wiki's Features and Capabilities page showed the configuration web page is
 never started and the board temperature never measured; both closed the same day. `DF30` opened in
 `DF29`'s review, when checking that the *Board temperature* entity could appear at all showed that Home
 Assistant discovery overflows the publish queue.
-`N-g` opened on 2026-10-01, when documenting the SD card showed a pack cannot yet be built. `N-f` and `DF25` opened on
+`N-g` opened on 2026-10-01, when documenting the SD card showed a pack could not be built, and closed on
+2026-10-29: `npm run export:pack` builds one and refuses a pack the device would not load. `N-f` and `DF25` opened on
 2026-08-30, both out of one question the owner asked while T1's storage was being decided — *is the
 right information surviving a power cycle, and are we burning through the write cycles?* That is the
 usual way: `DF23` came from checking whether `G1`'s procedure could be followed, and `DF22` from
@@ -47,10 +48,9 @@ building `N-c`. `J9`, `I2a`, `N-b` and N-d2's correction half all closed on 2026
 `DF22` closed on 2026-08-20, and `DF22` was the only 🔴 the board has had since the register was
 rewritten.
 
-**What remains is six software items and three measurements.** `N-e` is under way — T0, T1 and T2 have
-landed and T3/T4/T6 are next — `N-g` has its plan in the entry, `N-f`, `DF23` and `DF25` each carry a
-decision in the entry, and `DF30` carries a likely fix that nobody has decided. (Earlier versions of
-this sentence left `N-g` out of the count.) The three that need hardware are `G1` (the polling rate),
+**What remains is five software items and three measurements.** `N-e` is under way — T0, T1 and T2 have
+landed and T3/T4/T6 are next — `N-f`, `DF23` and `DF25` each carry a decision in the entry, and `DF30`
+carries a likely fix that nobody has decided. The three that need hardware are `G1` (the polling rate),
 `N-d2`'s remaining half (whether the RTC survives power loss), and `N-c`'s retain check, which lives in that entry's ⏸️ block rather than on a line of its own
 because the rest of `N-c` is built and tested. Cite an ID when you ask about one — this file is the one
 place that says what an ID means. Rule **I3** governs them: append-only, never reused, so a gap means an
@@ -67,7 +67,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **N-e** | 🟡 | feature, in progress | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, four questions open; T0, T1 and T2 landed, **T3/T4/T6 next**, and R2.5's MQTT sentence needs amending |
 | **N-f** | 🟡 | feature, specified here | Where the readings live — internal flash or an SD card, human-readable files, persisted session values and rotating telemetry. Five decisions taken, six questions open, not started; question 1 changes a documented register contract and should be answered first |
-| **N-g** | 🟡 | feature, opened 2026-10-01 | A menu pack cannot be built: the `.uipack` writer exists (`packEmitter.ts`) but only a test calls it, so the SD card the wiki now documents holds files nobody can produce. **To do this evening**: an `npm run export:pack` command, then lift the ⚠️ on the wiki SD Card page |
 | **DF30** | 🟡 | defect, found 2026-10-29 | Home Assistant discovery overflows the publish queue: `publishDiscovery()` enqueues 3 messages per channel in service plus 7 with no pump between them, so only 14 fit after a connect's two availability messages, and 16 on any other republish. From three channels a connect refuses the tail; from five, *Board temperature* is in it |
 | **DF25** | 🟡 | defect, found 2026-08-30 | A write to non-volatile storage that fails is reported by nothing. **Detection and publication landed 2026-08-30** (`DF25a`: register 34, MQTT `storageFault`, 49 host checks) — the panel's warning triangle rides with `N-e`'s T5, and three of its four questions were built on the recommendation rather than decided |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
@@ -85,9 +84,9 @@ after T2 and its review: host **2,197 checks across 29 suites**, 0 failures, the
 24.7% / Flash 39.0% — 81,040 and 1,303,457 bytes against T1's 81,008 and 1,301,925, so DF25a with both
 review rounds costs **32 bytes of RAM and 1,532 of flash**. NOT re-run on 2026-08-30 and therefore quoted as the 2026-08-26
 figures: 220 unit, 51 exporter, 51 visual, 0 audit findings. (Both compile figures come from a CLEAN dependency
-cache; the earlier 38.2% came from a stale container, see `platformio.ini`.) Of the six open lines one
-feature is under way, one has not started, two defects have decisions in them and two need hardware that
-has never existed for this project. That is a different condition from "twelve things are broken", which
+cache; the earlier 38.2% came from a stale container, see `platformio.ini`.) Of the seven open lines one
+feature is under way, one has not started, two defects have decisions in them, one defect has a likely
+fix awaiting a decision, and two need hardware that has never existed for this project. That is a different condition from "twelve things are broken", which
 is what this register looked like before the 2026-08-18 rewrite.
 
 ---
