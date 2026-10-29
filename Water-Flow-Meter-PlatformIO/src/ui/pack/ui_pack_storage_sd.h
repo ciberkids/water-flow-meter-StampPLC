@@ -2,6 +2,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <string>
 #include "storage/nvs_write_health.h"
 
 #include "bus/spi_arbiter.h"
@@ -30,6 +32,50 @@ class SdPackStorage : public ui::PackStorage {
   /** Directory the packs and the pointer file live in (§3.1). */
   static constexpr const char* kDirectory = "/ui";
   static constexpr const char* kPointerPath = "/ui/active";
+
+  /**
+   * The ending a file must have for `listPacks` to offer it in the Select Menu (§3.1).
+   *
+   * Compared byte for byte, so `MENU.UIPACK` is not listed even though FAT would open it under either
+   * case. A constant rather than the literal `listPacks` used to carry, because two other places have
+   * to agree with it and both READ it from here: `npm run export:pack`
+   * (`web/mockup/tools/exporter/packRules.ts`), which refuses to build a pack the device would never
+   * list, and the wiki's SD Card page. A literal in the `.cpp` was a fact only this file could see (N-g).
+   */
+  static constexpr const char* kPackSuffix = ".uipack";
+
+  /**
+   * Whether `listPacks` offers a directory entry whose leaf name is `leaf` — the Select Menu's rule.
+   *
+   * It ends in the suffix above, and it is shorter than `ui::PackLoader::kMaxNameBytes`, so it fits the
+   * selector's name buffer with its terminator. Defined here, in a header that never includes `SD.h`, so
+   * the host suite can drive it (`test/host/pack_listing_test.cpp`). Until the review of N-g it was an
+   * expression inside `listPacks`, behind `#include <SD.h>`, which no test could reach, while
+   * `npm run export:pack` applies the same rule (`packRules.ts::checkPackFileName`). Changing the
+   * comparison there would have left the exporter and the Select Menu disagreeing, with nothing to
+   * notice. A pure move: it accepts exactly what the expression accepted, a bare suffix included, which
+   * the exporter refuses on its own stricter grounds.
+   */
+  static bool isListablePackName(const char* leaf) {
+    if (!leaf) {
+      return false;
+    }
+    const std::size_t length = std::strlen(leaf);
+    const std::size_t suffixLength = std::strlen(kPackSuffix);
+    return length >= suffixLength && std::strcmp(leaf + length - suffixLength, kPackSuffix) == 0 &&
+           length < ui::PackLoader::kMaxNameBytes;
+  }
+
+  /**
+   * The buffer `packSize` and `readPack` build the directory, a separator and the name in, terminator
+   * included.
+   *
+   * Named, and tied to `kMaxNameBytes` by the static_assert after this class, because both functions
+   * used a bare `char path[96]`: a third limit on the name that nothing compared with the other two. A
+   * `kMaxNameBytes` raised past what it holds would have let the exporter build, and the Select Menu
+   * list, a name these two then failed to open, reported at boot as a missing pack.
+   */
+  static constexpr std::size_t kPathBytes = 96;
 
   /**
    * `csPin` is the card's chip select — 10 on the StampPLC, where the LCD holds 12.
@@ -73,6 +119,14 @@ class SdPackStorage : public ui::PackStorage {
   uint32_t frequencyHz_;
   bool mounted_ = false;
 };
+
+// The longest name `isListablePackName` accepts is `kMaxNameBytes - 1` bytes, and `joinPath` needs the
+// directory, a '/', that name and a terminator: `kMaxNameBytes` plus the directory and the separator.
+// A build failure here, rather than a pack the Select Menu lists and the loader cannot open.
+static_assert(std::char_traits<char>::length(SdPackStorage::kDirectory) + 1 +
+                      ui::PackLoader::kMaxNameBytes <=
+                  SdPackStorage::kPathBytes,
+              "SdPackStorage::kPathBytes cannot hold the longest name listPacks offers");
 
 /** `ui::PackAttemptCounter` over NVS, keyed `ui_pack_try` (§4.7). */
 class NvsPackAttemptCounter : public ui::PackAttemptCounter {

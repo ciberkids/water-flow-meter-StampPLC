@@ -13,7 +13,7 @@ implementation now* or 🟡 *blocks a later slice*, because the emoji was a seco
 lived in the Decision line and nobody moved it. A register that says forty things are blocking when
 one is does not get read, which is the failure this rewrite is undoing.
 
-**This file holds eight items** — six open plus the two standing rules. It was 287 lines and six items
+**This file holds nine items** — seven open plus the two standing rules. It was 287 lines and six items
 when it was rewritten on 2026-08-18, and 1,370 the day before that, because twenty-nine closed defects
 had accumulated in it with their full reasoning. **Its own live line count is deliberately no longer
 quoted here:** the figure went stale twice while this paragraph was being edited on 2026-08-30, which is
@@ -34,12 +34,13 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Eight open lines: three features, three defects and two measurements.** `DF28` and `DF29` opened on
+**Seven open lines: two features, three defects and two measurements.** `DF28` and `DF29` opened on
 2026-10-29, when writing the wiki's Features and Capabilities page showed the configuration web page is
 never started and the board temperature never measured; both closed the same day. `DF30` opened in
 `DF29`'s review, when checking that the *Board temperature* entity could appear at all showed that Home
 Assistant discovery overflows the publish queue.
-`N-g` opened on 2026-10-01, when documenting the SD card showed a pack cannot yet be built. `N-f` and `DF25` opened on
+`N-g` opened on 2026-10-01, when documenting the SD card showed a pack could not be built, and closed on
+2026-10-29: `npm run export:pack` builds one and refuses a pack the device would not load. `N-f` and `DF25` opened on
 2026-08-30, both out of one question the owner asked while T1's storage was being decided — *is the
 right information surviving a power cycle, and are we burning through the write cycles?* That is the
 usual way: `DF23` came from checking whether `G1`'s procedure could be followed, and `DF22` from
@@ -47,10 +48,9 @@ building `N-c`. `J9`, `I2a`, `N-b` and N-d2's correction half all closed on 2026
 `DF22` closed on 2026-08-20, and `DF22` was the only 🔴 the board has had since the register was
 rewritten.
 
-**What remains is six software items and three measurements.** `N-e` is under way — T0, T1 and T2 have
-landed and T3/T4/T6 are next — `N-g` has its plan in the entry, `N-f`, `DF23` and `DF25` each carry a
-decision in the entry, and `DF30` carries a likely fix that nobody has decided. (Earlier versions of
-this sentence left `N-g` out of the count.) The three that need hardware are `G1` (the polling rate),
+**What remains is five software items and three measurements.** `N-e` is under way — T0, T1 and T2 have
+landed and T3/T4/T6 are next — `N-f`, `DF23` and `DF25` each carry a decision in the entry, and `DF30`
+carries a likely fix that nobody has decided. The three that need hardware are `G1` (the polling rate),
 `N-d2`'s remaining half (whether the RTC survives power loss), and `N-c`'s retain check, which lives in that entry's ⏸️ block rather than on a line of its own
 because the rest of `N-c` is built and tested. Cite an ID when you ask about one — this file is the one
 place that says what an ID means. Rule **I3** governs them: append-only, never reused, so a gap means an
@@ -67,7 +67,6 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **N-e** | 🟡 | feature, in progress | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, four questions open; T0, T1 and T2 landed, **T3/T4/T6 next**, and R2.5's MQTT sentence needs amending |
 | **N-f** | 🟡 | feature, specified here | Where the readings live — internal flash or an SD card, human-readable files, persisted session values and rotating telemetry. Five decisions taken, six questions open, not started; question 1 changes a documented register contract and should be answered first |
-| **N-g** | 🟡 | feature, opened 2026-10-01 | A menu pack cannot be built: the `.uipack` writer exists (`packEmitter.ts`) but only a test calls it, so the SD card the wiki now documents holds files nobody can produce. **To do this evening**: an `npm run export:pack` command, then lift the ⚠️ on the wiki SD Card page |
 | **DF30** | 🟡 | defect, found 2026-10-29 | Home Assistant discovery overflows the publish queue: `publishDiscovery()` enqueues 3 messages per channel in service plus 7 with no pump between them, so only 14 fit after a connect's two availability messages, and 16 on any other republish. From three channels a connect refuses the tail; from five, *Board temperature* is in it |
 | **DF25** | 🟡 | defect, found 2026-08-30 | A write to non-volatile storage that fails is reported by nothing. **Detection and publication landed 2026-08-30** (`DF25a`: register 34, MQTT `storageFault`, 49 host checks) — the panel's warning triangle rides with `N-e`'s T5, and three of its four questions were built on the recommendation rather than decided |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
@@ -85,14 +84,14 @@ after T2 and its review: host **2,197 checks across 29 suites**, 0 failures, the
 24.7% / Flash 39.0% — 81,040 and 1,303,457 bytes against T1's 81,008 and 1,301,925, so DF25a with both
 review rounds costs **32 bytes of RAM and 1,532 of flash**. NOT re-run on 2026-08-30 and therefore quoted as the 2026-08-26
 figures: 220 unit, 51 exporter, 51 visual, 0 audit findings. (Both compile figures come from a CLEAN dependency
-cache; the earlier 38.2% came from a stale container, see `platformio.ini`.) Of the six open lines one
-feature is under way, one has not started, two defects have decisions in them and two need hardware that
-has never existed for this project. That is a different condition from "twelve things are broken", which
+cache; the earlier 38.2% came from a stale container, see `platformio.ini`.) Of the seven open lines one
+feature is under way, one has not started, two defects have decisions in them, one defect has a likely
+fix awaiting a decision, and two need hardware that has never existed for this project. That is a different condition from "twelve things are broken", which
 is what this register looked like before the 2026-08-18 rewrite.
 
 ---
 
-## N-g 🟡 A menu pack cannot be built — the SD card holds files nobody can produce
+## ~~N-g~~ ✅ FIXED 2026-10-29 — `npm run export:pack` builds a menu pack, and refuses one the device would not load
 
 Opened 2026-10-01, while answering whether the wiki explains the SD card. It now does (the generated
 **SD Card** page: `/ui/<name>.uipack`, the `/ui/active` pointer, the 64 KB and 64-character limits, read
@@ -102,12 +101,142 @@ from `ui_pack_storage_sd.h` and `ui_pack_loader.h`). But the firmware half is th
   `__tests__/pack_emit.test.ts`, which writes `tests/fixtures/default.uipack` for the host round-trip test.
 - No npm script, exporter flag or designer button produces a pack, so nobody can put a menu on a card.
 
-**To finish** (planned for the evening of 2026-10-01):
+**~~To finish~~ — FIXED 2026-10-29, 16 exporter tests and one CI step.** `npm run export:pack` runs
+`cli.ts --emit-pack web/mockup/dist-pack/default.uipack`, the flag `Loadable_UI_Menu_Packs.md` §5.6 names.
+`--screens` and `--manifest` override the inputs exactly as for `export:firmware`, a second `--emit-pack`
+after `--` replaces the default path (`parseArgs` keeps the last value), `--pack-label` sets the header
+label, and `--dry-run` checks without writing. Paths resolve from the repository root, like every other
+flag of that CLI. `dist-pack/` is gitignored; the report names the file and where it goes on the card.
 
-1. An `npm run export:pack` command (or an exporter flag) that emits `<name>.uipack` from the dataset,
-   through the same gates as `export:firmware`, so a pack that would not load is refused at build time.
-2. Optionally a download button in the designer's Import & Export tab.
-3. Remove the ⚠️ block from the SD Card page in `tools/wiki/sync.sh`, and say how to build a pack there.
+**One sequence of gates, not two.** The dataset gates moved out of `cli.ts` into
+`tools/exporter/exportGates.ts`, and both commands call it: after the schema, the LED legend, the
+hold-to-confirm screen, the diagnostics banner (the standing warning), renderable kinds, ring closure, the
+three manifest coverage checks and the two firmware-resolver checks — the same ten as before, shown by
+re-running `export:firmware` end to end after the move (9 pass, 1 warning, the container compile passing,
+`src/ui/generated` identical bar its timestamps). Then five pack
+checks in `tools/exporter/packRules.ts`, decided in the pure `packExport.ts::buildPack`, which withholds the
+bytes on any failure so a caller cannot write them by forgetting to look at the status:
+
+| Check | Refuses |
+| --- | --- |
+| `pack-file-name` | a name not ending in `kPackSuffix` (compared case-sensitively, as `listPacks` does), longer than `kMaxNameBytes - 1`, starting with `.`, or using anything but ASCII letters, digits, `.`, `-`, `_` |
+| `pack-label` | an explicit `--pack-label` over `PackHeader::kLabelBytes` or outside printable ASCII — refused, not truncated. The label derived from the file name is cut to fit instead (review, below) |
+| `pack-size` | more than `kMaxPackBytes`; exactly at it passes, matching the loader's `>` |
+| `pack-catalogue-abi` | a manifest with no `catalogueAbi`, which the schema allows and a pack cannot be stamped without |
+| `pack-flow-targets` | a flow whose `targetScreenId` names no screen |
+
+**The limits are read, never typed.** `readFirmwarePackLimits` reads `kMaxPackBytes` and `kMaxNameBytes`
+from `ui_pack_loader.h`, `kDirectory` and `kPackSuffix` from `ui_pack_storage_sd.h` and `kLabelBytes` from
+`ui_pack.h` on every run. It understands a string literal and a product of integer literals (`64 * 1024`),
+ignores commented-out definitions, and throws naming the header for anything else, a missing constant or a
+duplicate, so a changed header stops the export instead of falling back to a remembered number.
+`kPackSuffix` is NEW: the suffix was a literal inside `listPacks` in `ui_pack_storage_sd.cpp`, which no
+reader outside that file could see, so it moved into the header and `listPacks` uses it. The wiki's SD
+Card page reads it too, and now also `kMaxEntries` from `ui_pack_selector.h`. That corrected the page's
+"as many packs as you like" to the seven card packs the Select Menu actually lists.
+
+**Two things found on the way.**
+
+1. *An unresolved flow target was a silent dead button.* The emitter writes `NO_TARGET_SCREEN` for a
+   `targetScreenId` it cannot find, and its comment said the screen-coverage gate catches that first. It
+   does not: that gate checks the screens the firmware requires, and ring closure covers UP and DOWN only.
+   A test changes an ENTER target to a name that does not exist: every `export:firmware` gate passes, and
+   `pack-flow-targets` alone refuses it. The C++ tables carry the same typo as a string the router fails
+   to resolve, so `export:firmware` has the same gap. It is left as it was, because changing that
+   command's gate set was not this item.
+2. *The fixture was the library's output, not the command's.* The host `pack_test` and `pack_loader_test`
+   read `tests/fixtures/default.uipack`, which the test wrote with `emitPack` directly. Now
+   `pack_emit.test.ts` writes it by running the CLI, and is its only writer, because `node --test` runs
+   files in parallel. It also asserts the bytes equal `emitPack`'s. So the pack the C++ validates is the
+   command's output.
+
+**What changed in the fixture, and why.** With no `--pack-label`, the label is the file name minus
+`.uipack`: `default`, where the hand-written test passed `Default`. Before the default was switched, the
+command with `--pack-label Default` reproduced the committed fixture byte for byte (`cmp`). After it, the
+fixture differs from the previous one in exactly six bytes: the four CRC bytes and the label's first letter,
+in the header and in the string table. `pack_test`'s label check expects `default`.
+
+**CI now gates freshness.** The web job's new step runs `npm run export:pack` as an author would, `cmp`s
+the result with `tests/fixtures/default.uipack`, and fails on a git diff of the fixture. The firmware-host
+job reads the committed fixture without running npm, so until now a dataset change committed without its
+pack reached it stale (the DF19 shape). Checked locally by putting the previous fixture back: `cmp` exits 1.
+
+**Not part of this, said so where a reader looks:**
+
+- **§5.8's completeness check is not run.** `export:firmware` does not run it either. The shipped dataset
+  satisfies it because `tools/skeleton/generate.mjs` refuses otherwise, but a custom `--screens` is not
+  held to it. The SD Card page, `web/mockup/README.md` and the wiki's Features page all say so. It is
+  N-b's unbuilt neighbour, with §3.3.11a's load-time repair.
+- **§5.5's hard checks are not reimplemented in TypeScript.** A second validator would be a second
+  implementation of the format. The host round trip over this command's own output is the check instead.
+- **No designer button** (§5.6's UI half, optional here). `packEmitter.ts` uses Node's `Buffer` and the
+  gates read firmware source from disk, so a browser button needs either a port or a dev-server endpoint,
+  and CI does not run the Playwright suite that could test it.
+- The file name rule is stricter than the device on purpose; see `kPortableNameCharacter`.
+
+**Checks, 2026-10-29:** `npx tsc --noEmit` clean; `npm run test:unit` 220 passed; `npm run test:exporter`
+**67** passed (51 before: 15 new in `pack_export.test.ts`, 1 in `pack_emit.test.ts`); the host suite, 30
+suites each ALL PASSED and exit 0; `npm run export:pack` on the shipped dataset `ok-with-warnings` (the
+standing banner warning) and byte-identical to the fixture; `npm run export:firmware` as above;
+`tools/wiki/sync.sh` dry run ending "all repo pointers resolve".
+
+**Cost: 0 bytes of firmware**, and 4 bytes of flash after the review below. Container build before and
+after `kPackSuffix`: RAM 81,096 and flash 1,319,301 bytes both times (24.7% / 39.5%). The shipped pack is
+**27,349 bytes for 79 screens**, against the 65,536 `kMaxPackBytes` allows.
+
+**Review, 2026-10-29: eight findings, seven fixed on the branch and one relayed** (the index row and the
+count paragraphs, which this branch deliberately does not edit).
+
+1. *The pack's theme was not the compiled-in table's.* The emitter read `dataset.theme` and converted
+   each colour with a hex-only parser of its own. So `--theme` was accepted and ignored: a pack built with
+   an override was byte-identical to one built without it. And with no `--theme` at all, the shipped
+   `gridMinor` and `gridMajor`, `rgba(124, 162, 206, 0.28)` and `0.55`, were written as opaque black,
+   `0xFF000000`, where `GeneratedUi.cpp` holds `0x477CA2CE` and `0x8C7CA2CE`. The emitter now takes the
+   theme from the `ExportIR` the gates build, the one `cppEmitter` writes `kThemeColors` from, as a
+   required option. §5.2's "both emitters consume the same `ExportIR`" now holds **for the theme block
+   only**: screens, elements and flows are still read from the dataset. `ui_pack.cpp` bounds-checks
+   `themeOffset` and reads nothing behind it yet, so the wrong colours were never drawn. The fixture
+   changed in 12 bytes (`cmp -l`): the 4 CRC bytes and 4 for each grid colour. It is still 27,349 bytes.
+   A test compares every colour of the command's pack with `GeneratedUi.cpp`'s table, and another builds
+   with `--theme` and reads that file's colours back out of the bytes.
+2. *A long file name was refused for its label.* With no `--pack-label`, the label was the whole stem,
+   so a stem longer than `kLabelBytes` was refused although the device lists, loads and shows the file
+   (the Select Menu shows the file name). `service-menu-for-site-b.uipack` could not be built. The
+   derived label is now cut to fit, which is safe because `pack-file-name` holds names to ASCII. An
+   explicit `--pack-label` that does not fit is still refused. Nothing is emitted while the label fails,
+   so the size and flow-target checks wait for a label that fits rather than measuring another one.
+3. *The label field had a second, typed home.* `pack-label` read `kLabelBytes` from `ui_pack.h`, and the
+   emitter wrote with its own `20` and `.slice()`, so a larger header value would have been accepted and
+   then cut without a word. The field size is now `packEmitter.ts::PACK_LABEL_BYTES`, typed because it is
+   layout like the header size, and `buildPack` stops when it differs from the header's. `emitPack` throws
+   instead of cutting, including on a label with fewer characters than the field but more bytes, which
+   `.slice()` counted in UTF-16 units and `write` then ran past offset 62.
+4. *No test held the limits to the headers.* Typing all five back into `readFirmwarePackLimits` left the
+   suite green. A test now writes three fake headers whose values differ from the real ones and asserts
+   the reader returns exactly those; a missing header, or a missing constant, throws naming its
+   repository-relative path.
+5. *A leading zero was read as decimal.* `readHeaderConstant` returned 100 for `0100`, which C++ reads as
+   octal 64. Only `0` or a number not starting with `0` is accepted now; anything else throws.
+6. *The Select Menu's listing rule could not be tested.* It was an expression inside `listPacks`, behind
+   `SD.h`, while the exporter copies it. It is now `SdPackStorage::isListablePackName` in
+   `ui_pack_storage_sd.h`, a pure move (a bare `.uipack` is still listed), driven by the new host
+   `pack_listing_test` (16 checks), which also reads `ui_pack_storage_sd.cpp` as text: `listPacks` must
+   call it and compare no suffix itself. The two `char path[96]` buffers are `kPathBytes`, with a
+   `static_assert` that it holds the directory, a separator and `kMaxNameBytes`.
+7. *`UI_Dataset_Contract.md`'s pipeline diagram* had an unfinished line; it now reads "read by host tests".
+
+Each behavioural fix was reverted once to see its test fail: each of the seven exporter reversions failed
+one to three tests, and each of the four firmware ones failed a host check or the build.
+
+**Checks after the review:** `npx tsc --noEmit` clean; `npm run test:unit` 220 passed;
+`npm run test:exporter` **77** passed (67 before: 9 new in `pack_export.test.ts`, 1 in
+`pack_emit.test.ts`); the host suite, 31 suites each ALL PASSED and exit 0; `npm run export:pack`
+byte-identical to the regenerated fixture; `tools/wiki/sync.sh` dry run ending "all repo pointers
+resolve". Container build: RAM 81,096 and flash 1,319,305 bytes, against 81,096 and 1,319,301 for the
+branch before the review, built the same way on the same day.
+
+**⏸️ Not seen on a board**, like everything else on this device. The first proof is `default.uipack`
+copied to `/ui/` with `/ui/active` naming it, and the panel booting into it with no "menu rejected".
 
 Not part of this item: the SD-card WiFi/MQTT credential file, which is `N8b` in `WiFi_MQTT_Connectivity.md`
 and still unbuilt. The wiki page says so.

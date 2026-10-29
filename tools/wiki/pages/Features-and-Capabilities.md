@@ -74,7 +74,7 @@ fault code that says when the device has stopped keeping its own records, the up
 | Menus on the panel: a page per reading for all eight channels, configuration, diagnostics | built | [[Screen Navigation]], [[Screen Gallery]] |
 | Status LED: red blinks once per 1, 10 or 100 litres, green when every channel in service is calibrated, blue while water is flowing, a colour cycle during boot, and a white blink that speeds up during a reset countdown | built | `docs/Requirements/feature addition/RGB_LED_Behavior.md` |
 | Destructive actions need ENTER held on a confirm screen, from 1.5 s for a session reset to 30 s for a factory reset | built | [[Screen Navigation]] |
-| Swap the whole menu from the SD card, chosen in the Select Menu | partly built: the device reads packs, but no tool can build one yet (`N-g`) | [[SD Card]] |
+| Swap the whole menu from the SD card, chosen in the Select Menu | built: `npm run export:pack` builds a pack, and the device reads and selects it | [[SD Card]] |
 | Report a failing flash store, over Modbus and MQTT | partly built: the warning on the panel is not drawn yet (`DF25`) | [[Modbus Registers]] |
 | A real-time clock, kept in UTC (Coordinated Universal Time, with no time zone), set over Modbus or by network time | built; whether the clock chip keeps time through a power cut is unmeasured (`N-d2`) | [[Modbus Registers]] |
 
@@ -246,7 +246,7 @@ data, and translated into C++ tables that the firmware draws.
 | Ten checks before an export, which refuse a screen, action or value the firmware does not have, an element the firmware cannot draw, or code that does not compile | built |
 | The default menu generated from the firmware's own list of settings, refusing any menu that leaves a setting unreachable | built |
 | A picture of every screen for the [[Screen Gallery]], captured by continuous integration (CI) on every run | built |
-| A menu pack (`.uipack`) for the SD card | partly built: the writer exists, but no command or button produces a pack (`N-g`) |
+| A menu pack (`.uipack`) for the SD card, built by `npm run export:pack` through the same checks as an export, plus the device's size and file name limits read from the firmware | partly built: command line only, with no download button in the Import & Export tab, and a design of your own is not yet checked for an editor per setting. See [[SD Card]] |
 
 **Running it:** `npm ci` and then `npm run dev` in `web/mockup`, then open `http://localhost:5173/`.
 The repository's `docker-compose.yml` runs the same thing in a container: `docker compose up` from the

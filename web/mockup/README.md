@@ -67,6 +67,41 @@ npm run test:exporter     # schema + IR tests (AJV + translator)
 - **Commit the dataset and the regenerated assets together.** CI fails if a fresh export disagrees with the
   committed copy.
 
+## Menu packs for the SD card
+
+```bash
+npm run export:pack       # validate, then write dist-pack/default.uipack for the card's /ui/ folder
+npm run export:pack -- --screens path/to/screens.json --emit-pack web/mockup/dist-pack/service.uipack
+```
+
+- The same translator, with `--emit-pack <path>` instead of the C++ output (**N-g**). It runs every gate
+  `export:firmware` runs, then refuses a pack the device would not load: larger than the firmware's buffer,
+  a file name the Select Menu would not list or the loader would refuse, a label that does not fit the
+  header, a manifest with no `catalogueAbi` to stamp, or a flow whose target screen is not in the pack.
+  Nothing is written when it refuses, and an existing file at that path is left alone.
+- **The limits are read from the firmware headers on every run**, never typed:
+  `src/ui/pack/ui_pack_loader.h`, `ui_pack_storage_sd.h` and `ui_pack.h` under
+  `Water-Flow-Meter-PlatformIO/`. The SD Card wiki page states them, from the same headers.
+- File names are held to ASCII letters, digits, `.`, `-` and `_`, ending in lower-case `.uipack` —
+  stricter than the device, which also takes most other punctuation, because what FAT and the card's code
+  page do with the rest has not been checked. `--pack-label <text>` sets the header label, and one longer
+  than `PackHeader::kLabelBytes` is refused. Without it the label is the file name minus `.uipack`, cut to
+  that length, so any name the device lists can be built. The Select Menu shows the file name.
+- `--theme <file>` reaches the pack as it reaches the C++ tables: both take their colours from the one
+  intermediate representation (`Loadable_UI_Menu_Packs.md` §5.2). Screens, elements and flows are still
+  read from the dataset by the pack emitter, not from that representation.
+- Paths are relative to the repository root, like `--screens`; a second `--emit-pack` after `--` replaces
+  the script's default. `dist-pack/` is ignored by git.
+- No compile step: a pack holds no code, and the device validates it when it loads it. The report says so
+  under `compilation` rather than reporting a pass.
+- **Not checked yet:** that a design has an editor for every setting (`Loadable_UI_Menu_Packs.md` §5.8).
+  The shipped dataset has one for each because the skeleton generator refuses otherwise; a design of your
+  own is not held to it.
+- `tests/fixtures/default.uipack` is this command's output for the shipped dataset, written by
+  `npm run test:exporter` and read back by the firmware's host `pack_test` and `pack_loader_test`. CI
+  fails if the committed copy differs from a fresh build, so commit it with any dataset change.
+- There is no download button in the Import & Export tab yet.
+
 ## Dataset workflow
 
 - **Simulation** — pick a screen in the selector and drive the simulated buttons.
@@ -86,7 +121,7 @@ web/mockup
 ├── vite.config.ts        # Vite (React + TS) and the export endpoint the UI calls
 ├── shared/               # schema definitions shared by the app and the exporter
 ├── tools
-│   ├── exporter/         # dataset -> IR -> C++ , and the export gates
+│   ├── exporter/         # dataset -> IR -> C++ or a .uipack, and the export gates
 │   ├── skeleton/         # generates the default dataset from the firmware catalogues
 │   └── audit/            # screen-geometry.ts and screen-spec.ts geometry audits
 ├── tests

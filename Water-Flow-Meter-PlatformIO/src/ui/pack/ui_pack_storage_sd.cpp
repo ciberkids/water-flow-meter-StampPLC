@@ -131,7 +131,7 @@ long SdPackStorage::packSize(const char* name) {
   if (!name || !mounted_) {
     return -1;
   }
-  char path[96];
+  char path[kPathBytes];
   if (!joinPath(path, sizeof(path), name)) {
     return -1;
   }
@@ -151,7 +151,7 @@ bool SdPackStorage::readPack(const char* name, uint8_t* buffer, std::size_t size
   if (!name || !buffer || !mounted_) {
     return false;
   }
-  char path[96];
+  char path[kPathBytes];
   if (!joinPath(path, sizeof(path), name)) {
     return false;
   }
@@ -189,9 +189,10 @@ std::size_t SdPackStorage::listPacks(char (*names)[ui::PackLoader::kMaxNameBytes
         // basename: some cores hand back a full path here and others just the leaf.
         const char* leaf = std::strrchr(path, '/');
         leaf = leaf ? leaf + 1 : path;
-        const std::size_t length = std::strlen(leaf);
-        if (length >= 7 && std::strcmp(leaf + length - 7, ".uipack") == 0 && length < ui::PackLoader::kMaxNameBytes) {
-          std::memcpy(names[count], leaf, length + 1);
+        // The rule lives in the header, where the host suite can test it; pack_listing_test also reads
+        // this file to check that the decision is still made by that call and nowhere else.
+        if (isListablePackName(leaf)) {
+          std::memcpy(names[count], leaf, std::strlen(leaf) + 1);
           ++count;
         }
       }

@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "build:exporter": "npm run clean:exporter && tsc --project tsconfig.exporter.json",
     "export:firmware": "npm run build:exporter && node dist-exporter/tools/exporter/cli.js",
+    "export:pack": "npm run build:exporter && node dist-exporter/tools/exporter/cli.js --emit-pack web/mockup/dist-pack/default.uipack",
     "test:unit": "vitest run",
     "test:visual": "tsc && vite build && playwright test",
     "test:visual:update": "tsc && vite build && playwright test --update-snapshots",

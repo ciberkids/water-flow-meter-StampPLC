@@ -57,8 +57,8 @@ and has a 240×135 landscape display driven by **three buttons**.
   display, LED and Modbus settings, with destructive resets behind a held button. The LED blinks per litre counted, shows
   whether every channel is calibrated, and shows when water is flowing.
 
-What each feature can do, its status, and what is not built yet (the cascade of one meter feeding
-another, and building a menu pack for the SD card) are on the wiki's
+What each feature can do, its status, and what is not built yet (the largest is the cascade of one
+meter feeding another) are on the wiki's
 **[Features and Capabilities](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/Features-and-Capabilities)**
 page. None of it has run on hardware yet; see the end of this file.
 
@@ -104,7 +104,7 @@ is the reference for anyone connecting to the device rather than changing its co
 | [WiFi](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/WiFi) | Turning WiFi on, provisioning, and the radio's states |
 | [Screen Navigation](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/Screen-Navigation) | Every screen on the panel and how the buttons move between them, generated from the dataset |
 | [Screen Gallery](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/Screen-Gallery) | A picture of every screen in the default menu, captured from the web designer |
-| [SD Card](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/SD-Card) | The microSD card's file layout for menu packs, and what is not built yet |
+| [SD Card](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/SD-Card) | How to build a menu pack, the microSD card's file layout, and what the card cannot hold yet |
 | [UI Dataset Contract](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/UI-Dataset-Contract) | The rules a `screens.json` must follow |
 
 The wiki is not edited by hand. `tools/wiki/sync.sh` builds it from this repository and CI
@@ -293,8 +293,12 @@ register has found more since.
 
 `Loadable_UI_Menu_Packs.md` **is built**: the `.uipack` format, its reader, the SD storage adapter, the
 loader, the firmware-drawn selector, the boot-time selection ladder and the SPI arbitration all exist
-under `Water-Flow-Meter-PlatformIO/src/ui/pack/` and `src/bus/`. What is *not* built is the versioning
-that keeps a third-party pack valid as the catalogue grows — **N-b**.
+under `Water-Flow-Meter-PlatformIO/src/ui/pack/` and `src/bus/`, and `npm run export:pack` in
+`web/mockup` builds a pack, refusing one the device would not load (~~**N-g**~~, closed 2026-10-29). The
+versioning that keeps a third-party pack valid as the catalogue grows is built too (~~**N-b**~~, closed
+2026-08-21). What is *not* built: the check at export that a design has an editor for every setting
+(§5.8) and the repair at load that adds a missing one (§3.3.11a), both recorded in N-b's entry, and a
+download button for a pack in the designer.
 
 The register's own history is preserved verbatim in `docs/archive/open_decisions-closed-2026-08-12.md`,
 including the caveat that used to sit here (✅ meaning *agreed* rather than *landed*). That is history,

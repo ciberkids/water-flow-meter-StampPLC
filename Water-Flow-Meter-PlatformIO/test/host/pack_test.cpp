@@ -84,7 +84,9 @@ void roundTripTests(const std::vector<uint8_t>& bytes) {
 
   check(pack.screenCount() == ui_exporter::kGeneratedScreenCount,
         "screen count matches the generated table");
-  check(std::strcmp(pack.header().label, "Default") == 0, "the label survives the header");
+  // "default", not "Default": since N-g the fixture is written by `npm run export:pack`'s command,
+  // which labels a pack with its file name minus `.uipack` when no --pack-label is given.
+  check(std::strcmp(pack.header().label, "default") == 0, "the label survives the header");
 
   // Every screen, element and flow, compared against what the firmware would otherwise render.
   std::size_t mismatches = 0;

@@ -57,7 +57,7 @@ two to disagree about.
 | Understand the interaction model | `docs/Requirements/feature addition/Display_UI_Requirements.md` |
 | See a specific screen's agreed layout | `docs/Requirements/feature addition/Display_Per_Screen_Spec.md` |
 | Wire something new into the firmware | `docs/Requirements/feature addition/UI_Firmware_Interface.md` |
-| Put a menu pack on the SD card | [[SD Card]] — the card's file layout, and what is not built yet |
+| Put a menu pack on the SD card | [[SD Card]] — how to build a pack, and the card's file layout |
 | Switch the device to a different UI | Hold **UP + DOWN + ENTER for 3 s** — the Select Menu. It is firmware-drawn and in no screen table, so nothing on the panel advertises it; `docs/Requirements/Gesture_Reference.md` §3.6 |
 | Integrate over Modbus | [[Modbus Registers]] — the whole map, generated from the firmware headers |
 | Read telemetry into Home Assistant | [[MQTT]] |
@@ -181,16 +181,27 @@ cp graphics/screens/*.png "$STAGE/screens/"
 #
 # The paths and limits are READ from the firmware headers, never typed here, so the page cannot describe
 # a card layout the reader no longer uses. A constant that cannot be found stops the publish.
+#
+# `npm run export:pack` reads the same constants for the same reason (web/mockup/tools/exporter/
+# packRules.ts), so what this page says a pack may be and what the command refuses come from one place.
 SD_H="Water-Flow-Meter-PlatformIO/src/ui/pack/ui_pack_storage_sd.h"
 LOADER_H="Water-Flow-Meter-PlatformIO/src/ui/pack/ui_pack_loader.h"
+FORMAT_H="Water-Flow-Meter-PlatformIO/src/ui/pack/ui_pack.h"
+SELECTOR_H="Water-Flow-Meter-PlatformIO/src/ui/pack/ui_pack_selector.h"
 sd_const() { sed -nE "s/.*$2 = \"?([^\";]+)\"?;.*/\1/p" "$1" | head -1; }
 SD_DIR="$(sd_const "$SD_H" kDirectory)"
 SD_POINTER="$(sd_const "$SD_H" kPointerPath)"
+SD_SUFFIX="$(sd_const "$SD_H" kPackSuffix)"
 SD_MAX_KB="$(sd_const "$LOADER_H" kMaxPackBytes | sed -E 's/ *\* *1024//')"
 SD_MAX_NAME="$(sd_const "$LOADER_H" kMaxNameBytes)"
-for v in SD_DIR SD_POINTER SD_MAX_KB SD_MAX_NAME; do
+SD_LABEL="$(sd_const "$FORMAT_H" kLabelBytes)"
+SD_MENU_ROWS="$(sd_const "$SELECTOR_H" kMaxEntries)"
+for v in SD_DIR SD_POINTER SD_SUFFIX SD_MAX_KB SD_MAX_NAME SD_LABEL SD_MENU_ROWS; do
   [ -n "${!v}" ] || { echo "SD Card page: could not read $v from the firmware headers" >&2; exit 1; }
 done
+# kMaxNameBytes counts the terminator, and the Select Menu's first row is always the built-in menu.
+SD_NAME_LONGEST=$((SD_MAX_NAME - 1))
+SD_CARD_ROWS=$((SD_MENU_ROWS - 1))
 cat > "$STAGE/SD-Card.md" <<PAGE
 # SD Card
 
@@ -198,10 +209,44 @@ The StampPLC has a microSD slot. Today the firmware uses the card for **one thin
 swap the panel's whole menu without reflashing. With no card, or nothing usable on it, the device runs
 the menu built into the firmware, so a card is never required.
 
-> ⚠️ **Not finished yet — tracked as \`N-g\` in \`docs/active_work/open_decisions.md\`.** The device can
-> read and select packs, but there is **no command yet that builds a \`.uipack\` from the designer**: the
-> pack writer (\`web/mockup/tools/exporter/packEmitter.ts\`) is only called by a test. Until that lands,
-> this page describes the format the firmware reads, not something you can produce.
+## Building a pack
+
+A pack is built from a menu design by the exporter in \`web/mockup\`, the same one that builds the menu
+compiled into the firmware:
+
+\`\`\`
+cd web/mockup
+npm ci
+npm run export:pack
+\`\`\`
+
+That builds the default menu, from \`web/mockup/src/data/screens.json\`, into
+\`web/mockup/dist-pack/default${SD_SUFFIX}\`. Copy the file into \`${SD_DIR}/\` on the card. To build another
+design, or to give the pack another name, add options after \`--\`:
+
+\`\`\`
+npm run export:pack -- --screens path/to/screens.json --emit-pack web/mockup/dist-pack/service${SD_SUFFIX}
+\`\`\`
+
+Paths are taken from the repository root, as for every exporter option. \`--pack-label\` sets the label
+stored inside the pack, at most ${SD_LABEL} characters, and a longer one is refused. Without it the label
+is the file name without \`${SD_SUFFIX}\`, cut to ${SD_LABEL} characters, so a file name within the limit
+below is never refused because of its label. The Select Menu shows the file name, not the label.
+
+**The command refuses to write a pack the device would not load**, and says why. It runs every check
+\`npm run export:firmware\` runs on the design (a screen, action or value the firmware does not have, an
+element it cannot draw, a paging ring that does not close), then the device's own limits, which it reads
+from the firmware headers each time it runs:
+
+- at most **${SD_MAX_KB} KB**;
+- a file name of at most **${SD_NAME_LONGEST} characters**, ending in \`${SD_SUFFIX}\` in lower case and
+  using only letters, digits, \`.\`, \`-\` and \`_\`. The device itself refuses a space at boot;
+- every button that leads to a screen leads to one that is in the pack.
+
+The firmware compile check does not apply: a pack holds no code, and the device checks the file itself
+when it loads it. **One check is not made yet:** that the pack has an editor for every setting
+(\`Loadable_UI_Menu_Packs.md\` §5.8). The default menu is generated with one for each, but a design of your
+own is not checked for it, so test a custom pack's settings pages before relying on it.
 
 ## File layout
 
@@ -210,13 +255,13 @@ Format the card as **FAT32** and put everything in one folder:
 \`\`\`
 ${SD_DIR}/
 ├── active            which pack to load: a text file holding one file name
-├── default.uipack    a menu pack
-└── other.uipack      as many packs as you like
+├── default${SD_SUFFIX}    a menu pack
+└── other${SD_SUFFIX}      more packs; the Select Menu lists up to ${SD_CARD_ROWS}
 \`\`\`
 
 | File | What it is |
 | --- | --- |
-| \`${SD_DIR}/<name>.uipack\` | One complete menu in a single binary file. At most **${SD_MAX_KB} KB**, and the file name must be under **${SD_MAX_NAME} characters**. Only files ending in \`.uipack\` are listed |
+| \`${SD_DIR}/<name>${SD_SUFFIX}\` | One complete menu in a single binary file, built by \`npm run export:pack\`. At most **${SD_MAX_KB} KB**, and a file name of at most **${SD_NAME_LONGEST} characters**. Only files ending in \`${SD_SUFFIX}\` are listed, and the Select Menu shows up to ${SD_CARD_ROWS} of them, in the order the card stores them; it says so when there are more |
 | \`${SD_POINTER}\` | Plain text: the file name of the pack to load, e.g. \`default.uipack\`. A trailing newline from a text editor is fine. The Select Menu writes this file for you |
 
 ## Choosing a pack

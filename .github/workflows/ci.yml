@@ -49,6 +49,23 @@ jobs:
       - name: Exporter tests
         run: npm run test:exporter
 
+      # N-g. The firmware-host job reads web/mockup/tests/fixtures/default.uipack straight from the
+      # checkout and never runs npm, so the pack it validates is the pack `export:pack` builds only while
+      # the committed copy is current. The exporter tests above have just rewritten it through the
+      # command; a diff here means a dataset change was committed without its pack, which is the DF19
+      # shape — six scrollbar heights changed and the committed pack never followed. The npm script is
+      # then run as an author runs it, with its own defaults, and must produce those same bytes.
+      - name: The committed menu pack is the one export:pack builds
+        run: |
+          npm run export:pack
+          cmp dist-pack/default.uipack tests/fixtures/default.uipack
+          cd "$GITHUB_WORKSPACE"
+          if ! git diff --quiet -- web/mockup/tests/fixtures/default.uipack; then
+            echo "::error::web/mockup/tests/fixtures/default.uipack is stale."
+            echo "Run 'npm run test:exporter' in web/mockup and commit the fixture with the dataset."
+            exit 1
+          fi
+
       - name: Build
         run: npm run build
 
