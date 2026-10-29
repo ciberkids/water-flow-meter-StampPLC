@@ -1607,9 +1607,6 @@ void logicTaskCode(void * pvParameters) {
       nvsHealth.noteResult(plc::StorageFault::NetworkSettings, netWritesFailed == 0);
       if (netWritesFailed == 0) {
         netSettingsSavedRevision = netSettings.revision();
-  // Seeded together: an unseeded notified-revision would tell the radio at boot that credentials had
-  // just changed. Harmless — it self-guards on a fingerprint — but a spurious call is a spurious call.
-  netSettingsNotifiedRevision = netSettings.revision();
         netSettingsSaveAttempted = false;  // the next decision gets an immediate attempt
       }
       // The log says what happened rather than asserting success — it used to print "settings saved"
@@ -1862,6 +1859,16 @@ void setup() {
   // never asked to associate with a half-restored SSID.
   plc::loadNetSettings(preferences, netSettings);
   netSettingsSavedRevision = netSettings.revision();
+  // Seeded together: an unseeded notified-revision would tell the radio at boot that credentials had
+  // just changed. Harmless — it self-guards on a fingerprint — but a spurious call is a spurious call.
+  //
+  // HERE, and only here (`DF28`). This seed sat for two months inside the logic loop's save-success
+  // branch instead, where it marked every successfully SAVED revision as already NOTIFIED. A revision
+  // that arrived between the notify check and the save — every configuration-page submission, because
+  // the page is served between the two — was saved and never passed to the WiFi state machine, so the
+  // access point stayed up for its whole window and the device never joined the network it had just
+  // been given. portal_lifecycle_test checks the assignment appears only in the notify block and here.
+  netSettingsNotifiedRevision = netSettings.revision();
   Serial.printf("[net] settings restored (revision %u), wifi=%s mqtt=%s\n",
                 static_cast<unsigned>(netSettings.revision()),
                 netSettings.wifiEnabled() ? "on" : "off",
