@@ -4,11 +4,13 @@
  * `src/firmware.cpp` read as TEXT, for the host tests whose invariant is about the file rather than about
  * anything a runtime assertion can see.
  *
- * Two tests use it, for the same reason. `boot_order_test.cpp` guards the ORDER of two lines in `setup()`
+ * Three tests use it, for the same reason. `boot_order_test.cpp` guards the ORDER of two lines in `setup()`
  * (N-d2), and `portal_lifecycle_test.cpp` guards that a call EXISTS at all (`DF28`): the configuration
  * page's server was declared in `firmware.cpp` and never driven, and no test linked against the firmware
- * glue could have noticed, because no host test can link it. Moved here from `boot_order_test.cpp` when the
- * second user arrived, so the comment-blanking lesson below is learned once.
+ * glue could have noticed, because no host test can link it. `board_temperature_test.cpp` guards both
+ * (`DF29`): that the chip is read at all, on the logic task, and that the reading is handed to the MQTT
+ * snapshot before it is filled. Moved here from `boot_order_test.cpp` when the second user arrived, so the
+ * comment-blanking lesson below is learned once.
  *
  * WHAT IT CANNOT SEE: it does not parse C++. A call moved inside a conditional, or into a function nobody
  * calls, satisfies a presence check. It catches the ordinary refactor, which is the one that happens.

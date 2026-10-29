@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 
 #include "modbus/register_map.h"
 #include "net/mqtt_limits.h"
@@ -171,7 +172,18 @@ struct MqttDiagnosticsTelemetry {
    * (R4.4.6) — a dashboard decision, not a side effect of telling the truth here.
    */
   uint16_t storageFaultCode = 0;
-  float boardTemperatureC = 0.0f;
+  /**
+   * `DF29` — the board's LM75B, in °C, published as `tempC` and announced as Home Assistant's *Board
+   * temperature* entity. `plc::BoardTemperature` (`sensors/board_temperature.h`) decides the value.
+   *
+   * DEFAULTS TO NaN, NOT 0, and that default is half of the fix. This field used to default to `0.0f`
+   * and have no writer, so every device published `"tempC":0.0` and Home Assistant drew the board at
+   * 0 °C, a plausible reading, for the life of the entity. NaN is emitted as JSON `null` by
+   * `jsonNumber`, which Home Assistant shows as `unknown`. So a path that fills a snapshot without
+   * setting this field — `fillMqttSnapshot`'s null-input return, or the next refactor — publishes "no
+   * reading" rather than a temperature nobody measured.
+   */
+  float boardTemperatureC = std::numeric_limits<float>::quiet_NaN();
   uint32_t uptimeSeconds = 0;
   int8_t wifiRssiDbm = 0;
   /**

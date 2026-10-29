@@ -168,28 +168,98 @@ unaffected.
 
 ---
 
-## DF29 🟡 Board temperature is never measured — Home Assistant is told the board is at 0 °C
+## ~~DF29~~ ✅ FIXED 2026-10-29 — the board temperature is read, and published as `null` when there is no reading to trust
 
 Found 2026-10-29, in the same pass as `DF28`. The same shape as `DF23`: **a published field nobody
 assigns**.
 
-**What is missing.** `MqttPublisher`'s diagnostics struct has `float boardTemperatureC = 0.0f`
+**What was missing.** `MqttPublisher`'s diagnostics struct had `float boardTemperatureC = 0.0f`
 (`src/net/mqtt_publisher.h`), the payload prints it as `tempC`, and `ha_discovery.cpp` announces a
-*Board temperature* entity with device class `temperature` and unit °C. Nothing assigns the field. So a
-real device publishes `"tempC":0.0` on every diagnostics message, and Home Assistant draws a flat line at
-0 °C — a plausible reading, which is worse than an empty one. The MQTT wiki page's example shows `41.2`,
+*Board temperature* entity with device class `temperature` and unit °C. Nothing assigned the field. So a
+real device published `"tempC":0.0` on every diagnostics message, and Home Assistant drew a flat line at
+0 °C — a plausible reading, which is worse than an empty one. The MQTT wiki page's example showed `41.2`,
 the same invented-figure pattern that page already confesses for `baselineKhz`.
 
-**The sensor exists.** The StampPLC carries an LM75B at I²C `0x48` on the internal bus, initialised by
-`M5StamPLC.begin()` (`lm75b_init`). The library's `M5StamPLC.getTemp()` should not be used as it stands:
-`LM75B_Class::read16` ignores `readRegister`'s result, so a failed read decodes an uninitialised buffer
-into a confident temperature.
+**The sensor exists.** The StampPLC carries an LM75B at I²C `0x48` on the internal bus. `M5StamPLC.begin()`
+calls `lm75b_init`, which probes the address and writes nothing. The library's `M5StamPLC.getTemp()` is
+not used, on purpose: `LM75B_Class::read16` ignores `readRegister`'s result, so a failed read decodes an
+uninitialised buffer into a confident temperature.
 
-**To fix**, not done: read the two temperature bytes through `m5::In_I2C.readRegister`, which reports
-failure, on the logic task and at a slow cadence — the bus is the one the pulse sampler polls, so each
-read briefly holds the driver mutex the sampler needs. Decode in an Arduino-free function a host test can
-reach, and publish a failed or implausible read as non-finite, which the payload already emits as JSON
-`null`. Then correct the MQTT page's example.
+**~~To fix~~ — FIXED 2026-10-29, 61 host checks.** The rule is `src/sensors/board_temperature.h`, which
+is Arduino-free. `firmware.cpp` supplies the transaction, `m5::In_I2C.readRegister(0x48, 0x00, buf, 2,
+400000)`, whose `bool` is the only thing that can tell a failed read from a cold board, and makes one call
+to `plc::sampleBoardTemperature` from the logic task. The reading reaches the snapshot through a new
+`MqttSnapshotInputs::boardTemperatureC`, which `fillMqttSnapshot` copies without judging it.
+
+- **The decode is the library's, checked rather than trusted.** 11-bit two's complement in the top bits,
+  0.125 °C a step, with the sign extended by hand. `board_temperature_test.cpp` compares it against
+  `LM75B_Class::temp()`'s own arithmetic, transcribed, for all 65,536 inputs.
+- **Plausibility is the chip's operating range**, −55 to +125 °C, the clamp in
+  `LM75B_Class::writeAlertTempHelper`. It catches nonsense codes only. All-zero bytes (0.0 °C) and
+  all-one bytes (−0.125 °C), the two patterns a stuck bus is most likely to produce, both pass it, and
+  the test asserts that they do, so nobody mistakes the range check for a bus check.
+- **One read a minute, and only while MQTT is connected.** R2.1.6 says a device on this bus is polled
+  "only as often as its purpose requires", and this reading's only purpose is the snapshot. So with no
+  broker there is no bus traffic at all, and the sampler's rate with MQTT off is exactly what `G1` and
+  `DF23` will measure. 60 s is `MqttPublisher::kHeartbeatMs`, the staleness bound this firmware already
+  sets for subscribers. A good read is about 49 bit periods, roughly 120 µs on the wire at 400 kHz. That
+  figure is arithmetic from the frame and was not measured.
+- **A failed or implausible read publishes `null` at once.** The previous good value is never kept as a
+  fallback, and the next attempt waits the full minute, not less: the costly failure is a stalled bus,
+  which the driver waits out up to its stall limit, so retrying sooner would multiply exactly the cost
+  the cadence bounds.
+- **No published reading is ever a full read interval old.** Past that it is non-finite however it got
+  there. After an MQTT outage of a minute or more, the first pass after the reconnect re-reads before
+  publishing; after a shorter one, the last reading is still inside its minute and goes out exactly as
+  it would between two reads. The first read also waits out the chip's 100 ms conversion period (`LM75B_Class::POWER_NORMAL`),
+  because nothing read here says what the register holds before the first conversion, and zero would
+  be `DF29` again.
+- **The unassigned case is now `null` at every layer.** `MqttDiagnosticsTelemetry::boardTemperatureC`
+  and the new input both default to NaN, which `jsonNumber` emits as `null`. So a caller that forgets
+  the field, or `fillMqttSnapshot`'s null-input return, publishes "no reading" rather than a number.
+- **The console says what happened**: a `[temp]` line on each failed read, at most one a minute, and one
+  on the first good reading and on each recovery.
+
+**The wiring is gated, not just the rule.** `board_temperature_test.cpp` reads `firmware.cpp` as text
+with comments blanked, the technique `portal_lifecycle_test.cpp` uses. It fails unless all of these hold:
+the sampling call appears exactly once; it sits inside `logicTaskCode`, so never on the sampler's core;
+it sits inside the MQTT connected block; it comes before the one `snapshotInputs.boardTemperatureC =
+boardTemperature.celsius(` assignment, which comes before `fillMqttSnapshot`; the chip is read through
+`m5::In_I2C.readRegister` in one place; and `getTemp(` and `LM75B.temp(` appear nowhere.
+
+**Mutation-tested on exit codes, 13 mutations, every one caught.** The mutations were: dropping the
+assignment, dropping the read, reading through the library, moving the read into `pollingTaskCode`,
+moving it out of the connected block, dropping the snapshot copy, putting either default back to `0.0f`,
+keeping the last good value after a failure, removing the maximum age, removing the sign extension,
+ignoring the bus's `bool`, and removing the range check. **One finding worth keeping:** on the first run
+the "no fallback after a failed read" mutation was caught only by the implausible-read case. At the real
+cadence a failed read lands exactly when the previous value reaches its maximum age, so the two rules
+agree and the bus-failure checks could not tell which one produced the `null`. A separate check now
+records a failure one second after a good read.
+
+**The MQTT page** now shows `"tempC":null` in its example, because no board has reported a figure and
+any number there would be invented. It says what a reader will see: °C to one decimal, read once a
+minute while connected, and `null` (which Home Assistant shows as `unknown`, per its MQTT sensor
+documentation) on a failed, implausible or expired reading. The same edit corrected a sentence that
+said all four device-wide entities carry `entity_category: diagnostic`. Three do, and *Board
+temperature* deliberately does not (`haEntityIsDiagnostic`). README and the Features and Capabilities
+page make no claim about the temperature, so neither changed.
+
+**Verified:** host **2,280 checks across 31 suites**, 0 failures, against 2,219 across 30 at `04e59da2`,
+and the manifest check green. The wiki dry run ends "all repo pointers resolve". The firmware compiles in
+the container.
+
+**Cost: 24 bytes of RAM and 588 of flash.** RAM goes from 81,096 to 81,120 bytes (24.7 % to 24.8 %) and
+flash from 1,319,301 to 1,319,889 bytes (39.5 % either way). Measured by building `04e59da2` and this
+change in the same container from the same copied dependency cache.
+
+**Not done, because each is the owner's decision:** there is no Modbus register for the temperature,
+which sits awkwardly with RS485 being the source of truth, but adding one changes the register contract.
+The panel does not show it either.
+
+**⏸️ Not seen on a board**, like everything else on this device. The first proof is a
+`[temp] board temperature … C` line on the console after MQTT connects, and a number, not `unknown`, on
+the Home Assistant entity.
 
 ---
 
