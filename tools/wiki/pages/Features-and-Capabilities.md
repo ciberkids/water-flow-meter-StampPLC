@@ -149,14 +149,49 @@ Calibration and every setting above can be changed at the panel or over Modbus. 
 settings are shown on the panel but cannot be changed there (most of them are text, and the panel has no
 way to type text), so set them over Modbus. [[Communications]] has the full picture of what each route can do.
 
+### Meters in cascade: in progress, not usable yet
+
+Meters can be installed in **cascade**: a main meter with others downstream of it, for example a main
+meter on the supply and sub-meters on the branches it feeds. The device is designed to handle this
+(open item `N-e`), and about a third of it is built. **Today no screen or register can set a cascade**,
+so every channel is treated as a separate pipe.
+
+**What it will do.** Each channel gets one setting, its *parent*: the meter directly upstream of it, or
+none. From that:
+
+- **The total stops counting water twice.** The device total becomes the sum of the top-level meters
+  only. Without this, a main meter plus two sub-meters reads roughly twice the water delivered.
+- **The difference becomes evidence.** A parent should read the sum of its children. Water that entered
+  a branch and that no child measured is an unmetered outlet or a leak. The device compares the
+  difference over time against a baseline taken when the installation is commissioned, and warns when it
+  moves away from it. A fixed percentage would not work: one unmetered garden tap can exceed 10 % of the
+  water used, so a fixed limit would be either always on or blind to a small overnight leak.
+- **A missing number rather than a wrong one.** If a top-level meter is not calibrated, its branch's
+  total is reported as unknown rather than as a smaller figure.
+- **Taking a meter out of service keeps the shape.** Its children attach to the nearest in-service
+  meter above them, never to the top.
+- **Any shape, no loops.** Up to all eight meters in one chain. A setting that would create a loop, or
+  name a meter as its own parent, is refused and changes nothing.
+
+| Piece | Status |
+| --- | --- |
+| The rules: parents, loop detection, and keeping the arrangement in flash. An arrangement found damaged at boot falls back to every meter independent | built (T1) |
+| The total that counts each litre once, computed beside today's plain sum | built, internal only (T2). Nothing publishes it yet |
+| The comparison against the commissioning baseline, and the warning | not built (T3) |
+| Setting the parents over Modbus, and reading the results | not built (T4). This is the first piece that makes the feature usable |
+| The parent setting and the warning on the panel | not built (T5) |
+| The results in the MQTT diagnostics, read-only | not built (T6) |
+
+Four questions in the specification are still open. MQTT will never be able to set a parent, by
+decision, and the configuration web page is left out of the first version.
+
+**Until it lands:** every per-channel reading is correct, including each channel's lifetime volume in
+Home Assistant. Only the device's total is wrong on a cascaded installation, because it counts the
+downstream water twice; add up the top-level channels yourself. The full design is in
+`docs/Requirements/feature addition/Sensor_Cascade_Topology.md`.
+
 ### Not configurable yet
 
-- **Cascade topology** (`N-e`, in progress). Declaring that one meter sits downstream of another, so the
-  total stops counting the same water twice and the difference between a meter and the meters below it
-  can reveal a leak. The firmware already reads the arrangement from flash at boot, but no screen or
-  register can set it yet, so every channel is treated as a separate pipe and the total is a plain sum. On an installation
-  where one meter feeds another, that total counts the downstream water twice. Specified in
-  `docs/Requirements/feature addition/Sensor_Cascade_Topology.md`.
 - **Settings from a file on the SD card** (`N8b`, planned). See [[SD Card]].
 
 ## 2. Communication
