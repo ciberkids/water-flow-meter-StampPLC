@@ -16,9 +16,12 @@
 #include "net/portal_form.h"
 #include "ui/core/ui_settings_types.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -1038,6 +1041,235 @@ void applyOnlyWhenStagedTests() {
   }
 }
 
+// ────────────────────────────────────────────────────────────────────────────────────
+// DF28 — what a BROWSER sends, as opposed to what a test author types.
+//
+// Every submit() check above hands the parser a body somebody wrote by hand, so none of them could see
+// that the page and the parser disagree about which controls a browser submits. They did: a disabled
+// checkbox's hidden "0" companion was NOT disabled, so on the device — which constructs the form with no
+// settings store, making every per-sensor row read-only — a browser posted eight
+// `config.sensor.connected@n=0` fields that submit() then refused, and the operator who had just
+// successfully set the WiFi credentials was shown "Partly saved ... the device refused these" with eight
+// fields they could not touch.
+//
+// So this section renders the page, submits it the way HTML says a browser does (enabled controls only,
+// a checkbox only when checked, a select's selected option), and asserts the parser accepts it. It also
+// derives the largest legal body from the page, because the adapter now buffers the body itself
+// (`portal_server_arduino.h`) and its bound has to be a fact about this form, not a guess.
+// ────────────────────────────────────────────────────────────────────────────────────
+
+/** One control a browser would submit, or could: its name, its as-rendered value, its longest value. */
+struct FormControl {
+  std::string name;
+  std::string value;
+  bool submitted = true;     // false for an unchecked checkbox: it contributes nothing
+  std::size_t worstBytes = 0;
+};
+
+/** True when `tag` carries the boolean attribute `key` (`disabled`, `checked`, `selected`). */
+bool hasBooleanAttr(const std::string& tag, const char* key) {
+  const std::string needle = std::string(" ") + key;
+  for (std::size_t at = tag.find(needle); at != std::string::npos; at = tag.find(needle, at + 1)) {
+    const char next = at + needle.size() < tag.size() ? tag[at + needle.size()] : '>';
+    if (next == ' ' || next == '>' || next == '=' || next == '/') return true;
+  }
+  return false;
+}
+
+/** The value of `key="..."` in `tag`, HTML-unescaped; empty when absent. */
+std::string attrValue(const std::string& tag, const char* key) {
+  const std::string needle = std::string(" ") + key + "=\"";
+  const std::size_t at = tag.find(needle);
+  if (at == std::string::npos) return std::string();
+  const std::size_t start = at + needle.size();
+  const std::size_t end = tag.find('"', start);
+  std::string raw = tag.substr(start, end == std::string::npos ? std::string::npos : end - start);
+  std::string out;
+  for (std::size_t i = 0; i < raw.size(); ++i) {
+    static const char* const kEntities[][2] = {
+        {"&amp;", "&"}, {"&quot;", "\""}, {"&lt;", "<"}, {"&gt;", ">"}, {"&#39;", "'"}};
+    bool replaced = false;
+    for (const auto& entity : kEntities) {
+      const std::size_t length = std::strlen(entity[0]);
+      if (raw.compare(i, length, entity[0]) == 0) {
+        out += entity[1];
+        i += length - 1;
+        replaced = true;
+        break;
+      }
+    }
+    if (!replaced) out += raw[i];
+  }
+  return out;
+}
+
+/** The controls inside the page's <form>, as HTML defines what a browser submits from them. */
+std::vector<FormControl> formControls(const std::string& html) {
+  std::vector<FormControl> controls;
+  const std::size_t formStart = html.find("<form");
+  const std::size_t formEnd = html.find("</form>");
+  if (formStart == std::string::npos || formEnd == std::string::npos) return controls;
+  std::size_t at = formStart;
+  while (true) {
+    const std::size_t input = html.find("<input", at);
+    const std::size_t select = html.find("<select", at);
+    const std::size_t next = std::min(input, select);
+    if (next == std::string::npos || next > formEnd) break;
+    const std::size_t close = html.find('>', next);
+    const std::string tag = html.substr(next, close - next + 1);
+    at = close + 1;
+    const std::string name = attrValue(tag, "name");
+    if (name.empty() || hasBooleanAttr(tag, "disabled")) continue;  // a disabled control is never sent
+
+    FormControl control;
+    control.name = name;
+    if (next == select) {
+      const std::size_t selectEnd = html.find("</select>", at);
+      std::string first;
+      std::string selected;
+      for (std::size_t option = html.find("<option", at); option < selectEnd;
+           option = html.find("<option", option + 1)) {
+        const std::string optionTag = html.substr(option, html.find('>', option) - option + 1);
+        const std::string value = attrValue(optionTag, "value");
+        if (first.empty()) first = value;
+        if (hasBooleanAttr(optionTag, "selected")) selected = value;
+        control.worstBytes = std::max(control.worstBytes, value.size());
+      }
+      control.value = selected.empty() ? first : selected;
+      at = selectEnd;
+    } else {
+      const std::string type = attrValue(tag, "type");
+      if (type == "submit" || type == "button") continue;
+      control.value = attrValue(tag, "value");
+      if (type == "checkbox") control.submitted = hasBooleanAttr(tag, "checked");
+      const std::string maxLength = attrValue(tag, "maxlength");
+      if (!maxLength.empty()) {
+        control.worstBytes = static_cast<std::size_t>(std::stoul(maxLength));
+      } else if (type == "number") {
+        // A number control's longest legal value is the longer of its bounds as written.
+        control.worstBytes = std::max(attrValue(tag, "min").size(), attrValue(tag, "max").size());
+      } else {
+        control.worstBytes = control.value.size();
+      }
+    }
+    controls.push_back(control);
+  }
+  return controls;
+}
+
+/** application/x-www-form-urlencoded, the encoding a browser uses for a form with no enctype. */
+std::string formEncode(const std::string& in) {
+  static const char* const kHex = "0123456789ABCDEF";
+  std::string out;
+  for (const unsigned char c : in) {
+    if (std::isalnum(c) || c == '*' || c == '-' || c == '.' || c == '_') {
+      out += static_cast<char>(c);
+    } else if (c == ' ') {
+      out += '+';
+    } else {
+      out += '%';
+      out += kHex[c >> 4];
+      out += kHex[c & 0x0F];
+    }
+  }
+  return out;
+}
+
+/** The body a browser posts for `controls`, with `edits` (name, value) applied as a user would type them. */
+std::string browserBody(const std::vector<FormControl>& controls,
+                        const std::vector<std::pair<std::string, std::string>>& edits) {
+  std::string body;
+  for (const FormControl& control : controls) {
+    if (!control.submitted) continue;
+    std::string value = control.value;
+    for (const auto& edit : edits) {
+      if (edit.first == control.name) value = edit.second;
+    }
+    if (!body.empty()) body += '&';
+    body += formEncode(control.name) + '=' + formEncode(value);
+  }
+  return body;
+}
+
+/**
+ * The longest body this page can legally produce: every control submitted, every value at its longest,
+ * every byte percent-encoded (three bytes on the wire for one in the value).
+ */
+std::size_t worstCaseBody(const std::vector<FormControl>& controls) {
+  std::size_t total = 0;
+  for (const FormControl& control : controls) {
+    if (total > 0) ++total;  // '&'
+    total += formEncode(control.name).size() + 1 + 3 * control.worstBytes;
+  }
+  return total;
+}
+
+void browserSubmissionTests() {
+  std::printf("\n[DF28 — the page as a BROWSER submits it, on the device's own construction]\n");
+
+  {
+    // Exactly as firmware.cpp builds it: no settings store, a clock writer.
+    NetSettings net;
+    FakeClock clock;
+    PortalForm form(net, nullptr, plc::kNumSensors, &clock);
+    StringSink sink;
+    form.renderSettingsPage(sink);
+    const auto controls = formControls(sink.text());
+    check(controls.size() >= 10, "the page's form has controls a browser would submit");
+
+    const std::string body = browserBody(
+        controls, {{"config.wifi.ssid", "HomeNet"}, {"config.wifi.psk", "correct horse"}});
+    const uint16_t before = net.revision();
+    const auto result = form.submit(body.c_str());
+    check(result.errorCount == 0,
+          "setting the WiFi credentials on the device's page produces no field errors — no read-only "
+          "row may submit a value the parser then refuses");
+    check(result.ok(), "so the submission is accepted, and the operator is not told nothing was saved");
+    check(result.committed && net.revision() != before, "and it committed the network block");
+    check(liveOf(net, NetField::WifiSsid) == "HomeNet", "with the SSID the operator typed");
+    check(liveOf(net, NetField::WifiPsk) == "correct horse",
+          "and the passphrase, plus-decoded from the browser's space");
+
+    // A CHECKED box must survive the round trip. A boolean renders as a hidden "0" then the checkbox,
+    // and submit() keeps the LAST occurrence, so this holds only while the hidden input comes first.
+    check(net.stageWifiEnabled(true) && net.apply() && net.wifiEnabled(), "WiFi enabled for the next check");
+    StringSink checked;
+    form.renderSettingsPage(checked);
+    const auto checkedResult = form.submit(browserBody(formControls(checked.text()), {}).c_str());
+    check(checkedResult.ok() && net.wifiEnabled(),
+          "a checked box submitted unchanged stays on — the hidden 0 must precede the checkbox");
+    const auto unchecked = form.submit(
+        browserBody(formControls(checked.text()), {{"config.wifi.enabled", "0"}}).c_str());
+    check(unchecked.ok() && !net.wifiEnabled(), "and unticking it turns it off");
+
+    const std::size_t worst = worstCaseBody(controls);
+    std::printf("      largest legal body on the device's page: %zu bytes (bound %zu)\n", worst,
+                PortalForm::kMaxSubmitBytes);
+    check(worst <= PortalForm::kMaxSubmitBytes,
+          "the device page's largest legal body fits the adapter's buffer bound");
+  }
+
+  {
+    // The page the day a settings store is injected: every per-sensor row enabled. The bound must
+    // already cover it, or wiring the store would make long but legal submissions fail.
+    NetSettings net;
+    FakeStore store;
+    FakeClock clock;
+    PortalForm form(net, &store, plc::kNumSensors, &clock);
+    StringSink sink;
+    form.renderSettingsPage(sink);
+    const auto controls = formControls(sink.text());
+    const auto result = form.submit(browserBody(controls, {}).c_str());
+    check(result.errorCount == 0, "with a store, submitting the page unchanged produces no field errors");
+
+    const std::size_t worst = worstCaseBody(controls);
+    std::printf("      largest legal body with every row enabled: %zu bytes (bound %zu)\n", worst,
+                PortalForm::kMaxSubmitBytes);
+    check(worst <= PortalForm::kMaxSubmitBytes,
+          "and the bound covers the page with every row enabled, not just today's");
+  }
+}
+
 int main() {
   std::printf("plc::PortalForm — the configuration portal's form logic (§7.6, §7.9a, §8)\n\n");
   coverageTests();
@@ -1054,6 +1286,7 @@ int main() {
   capacityAgreementTests();
   constantTimeTests();
   applyOnlyWhenStagedTests();
+  browserSubmissionTests();
   std::printf("\n%s (%d checks, %d failures)\n", failures == 0 ? "ALL PASSED" : "FAILURES", checks,
               failures);
   return failures == 0 ? 0 : 1;

@@ -50,6 +50,7 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "net/mqtt_transport_esp.h"
 #include "net/net_status.h"
 #include "net/portal_form.h"
+#include "net/portal_lifecycle.h"
 #include "net/portal_server_arduino.h"
 #include "net/wifi_manager.h"
 #include "net/wifi_radio_arduino.h"
@@ -1522,6 +1523,12 @@ void logicTaskCode(void * pvParameters) {
       netSettingsNotifiedRevision = netSettings.revision();
       wifiManager.noteProvisioningComplete(now);
     }
+
+    // The configuration page (`DF28`): up exactly while the access point is, and served from this task.
+    // AFTER the provisioning notice above, so the pass in which a submitted form closes the access point
+    // is also the pass that stops the page, rather than serving one more pass on an interface going away.
+    plc::drivePortal(portalServer, wifiManager.state() == plc::WifiState::ApPortal,
+                     wifiManager.apIpAddress());
     // `now - last >= interval` rather than `now >= deadline`, which is the idiom every other timer in
     // this file uses and the only one that survives the ~49-day `millis()` rollover.
     if (netSettings.revision() != netSettingsSavedRevision &&
@@ -1532,9 +1539,6 @@ void logicTaskCode(void * pvParameters) {
       nvsHealth.noteResult(plc::StorageFault::NetworkSettings, netWritesFailed == 0);
       if (netWritesFailed == 0) {
         netSettingsSavedRevision = netSettings.revision();
-  // Seeded together: an unseeded notified-revision would tell the radio at boot that credentials had
-  // just changed. Harmless — it self-guards on a fingerprint — but a spurious call is a spurious call.
-  netSettingsNotifiedRevision = netSettings.revision();
         netSettingsSaveAttempted = false;  // the next decision gets an immediate attempt
       }
       // The log says what happened rather than asserting success — it used to print "settings saved"
@@ -1787,6 +1791,17 @@ void setup() {
   // never asked to associate with a half-restored SSID.
   plc::loadNetSettings(preferences, netSettings);
   netSettingsSavedRevision = netSettings.revision();
+  // Seeded together: an unseeded notified-revision would tell the radio at boot that credentials had
+  // just changed. Harmless — it self-guards on a fingerprint — but a spurious call is a spurious call.
+  //
+  // HERE, and only here (`DF28`). This seed sat for two months inside the logic loop's save-success
+  // branch instead, where it marked every successfully SAVED revision as already NOTIFIED. A revision
+  // that arrived between the notify check and the save — every configuration-page submission, because
+  // the page is served between the two — was saved and not passed to the WiFi state machine, so the
+  // access point stayed up for the rest of its ten-minute window and only then did the device join the
+  // network it had been given. portal_lifecycle_test checks the shadow is assigned only in the notify
+  // block and in setup()'s body.
+  netSettingsNotifiedRevision = netSettings.revision();
   Serial.printf("[net] settings restored (revision %u), wifi=%s mqtt=%s\n",
                 static_cast<unsigned>(netSettings.revision()),
                 netSettings.wifiEnabled() ? "on" : "off",

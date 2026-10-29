@@ -11,7 +11,7 @@ which are generated from the firmware or checked against it.
 > this page is explained.
 
 **Status words used here:** *built* works in the firmware or the tools; *partly built* has a missing
-piece, which is named; *not working* is built but broken; *planned* is specified and not built.
+piece, which is named; *planned* is specified and not built.
 
 ## 1. What the project is for
 
@@ -147,7 +147,7 @@ behind a 30 s hold. Home Assistant offers the session and totals resets as butto
 
 Calibration and every setting above can be changed at the panel or over Modbus. The WiFi and MQTT
 settings are shown on the panel but cannot be changed there (most of them are text, and the panel has no
-way to type text), so set them over Modbus. [[Communications]] has the full picture of what each route can do.
+way to type text), so set them over Modbus or on the configuration web page. [[Communications]] has the full picture of what each route can do.
 
 ### Meters in cascade: in progress, not usable yet
 
@@ -202,10 +202,11 @@ downstream water twice; add up the top-level channels yourself. The full design 
 | **MQTT** | Telemetry for each channel, the total and the device's health; Home Assistant discovery, so every entity appears without any YAML; three Home Assistant buttons: reset session, reset totals, republish discovery | built; one check waits for hardware (`N-c`) | [[MQTT]] |
 | **WiFi** | Carries MQTT and network time. Off until enabled, joins your network with automatic retries, and offers a provisioning access point when it has no credentials | built | [[WiFi]] |
 | **Network time** (NTP, the Network Time Protocol) | Sets the clock once WiFi is connected, and again every six hours | built | — |
-| **Configuration web page** | A login-protected form for the WiFi and MQTT settings and the clock, on the provisioning access point | **not working**: the page is built but the firmware never starts it, so nothing answers on the access point (`DF28`) | [[WiFi]] |
+| **Configuration web page** | A login-protected form for the WiFi and MQTT settings and the clock, served on the provisioning access point while it is up | built; fixed on 2026-10-29 after it had never been started (`DF28`) | [[WiFi]] |
 
-**To put a device on a network today, use Modbus.** The WiFi page's *Configuring it over Modbus* section
-gives the exact write sequence.
+**Two ways to put a device on a network:** join its provisioning access point with a phone and fill in
+the configuration page, or write the settings over Modbus, which needs nobody at the device. The WiFi
+page gives both, including the exact Modbus write sequence.
 
 What holds across every route:
 
