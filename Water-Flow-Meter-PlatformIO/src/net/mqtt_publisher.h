@@ -253,8 +253,15 @@ class MqttPublisher {
    *  Cost: 16 x (128 + 1152 + a few) is ~20.5 KB of static RAM, and the discovery bound above is
    *  what most of it buys. Paid deliberately and statically — the alternative is a heap allocation
    *  on a device whose §2.1 budget is the measurement itself. A discovery burst is larger than any
-   *  sane capacity (kNumSensors x 3 + 4 entities), so the caller pumps as it enqueues rather than
-   *  this number growing to hold one. */
+   *  sane capacity (`kHaMaxEntities`, 31 with every channel in service), so the caller is meant to
+   *  pump as it enqueues rather than this number growing to hold one.
+   *
+   *  IT DOES NOT, YET. `publishDiscovery()` in firmware.cpp enqueues the whole burst with no pump in
+   *  between. On a connect it lands behind the two availability messages, so 14 discovery messages
+   *  fit and, with three or more channels in service, the rest are refused. Every republish starts
+   *  again from the first, and one outside a connect has 16 slots at most, so from four channels part
+   *  of the set is never published at all. That is `DF30`, open. This sentence said "the caller
+   *  pumps as it enqueues" until `DF29`'s review read the caller. */
   static constexpr std::size_t kQueueCapacity = 16;
 
   /**

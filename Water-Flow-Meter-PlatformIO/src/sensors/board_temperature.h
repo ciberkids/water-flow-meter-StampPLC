@@ -130,13 +130,23 @@ enum class BoardTemperatureRead : uint8_t {
  * 4. the last good read is `kReadIntervalMs` old or older. In normal operation that cannot happen,
  *    because the caller samples before it asks, in the same pass, so the read due at that moment has
  *    either just replaced the value or just failed. It is the backstop for a caller that stopped
- *    sampling: across an MQTT outage nothing is read, and a value a full interval old must not go out
- *    on the reconnect. A reading from before a SHORTER outage is still inside its interval and is
- *    published exactly as it would be between two reads; that is the sampling interval, not a stale
- *    value, and the rule below is what bounds it.
+ *    sampling: across an MQTT outage nothing is read, and no snapshot assembled on the reconnect may
+ *    carry a value a full interval old. A reading from before a SHORTER outage is still inside its
+ *    interval and goes into the snapshot exactly as it would between two reads; that is the sampling
+ *    interval, not a stale value, and the rule below is what bounds it.
  *
- * So a published temperature is never a full read interval old. Between reads it is the last reading,
- * which is the sampling interval and not staleness.
+ * So no snapshot is ever ASSEMBLED with a reading a full read interval old. Between reads it carries the
+ * last reading, which is the sampling interval and not staleness.
+ *
+ * WHAT THIS DOES NOT BOUND: a message already queued. `MqttPublisher` keeps its queue across a
+ * disconnect: `pump()` does nothing while the link is down, and neither `onDisconnected()` nor
+ * `onConnected()` clears the queue. So a diagnostics payload queued just before a drop is the first one
+ * sent after the reconnect, carrying the reading from before the outage however long the outage was,
+ * and the next diagnostics publish replaces it. That next one is normally the reconnect's own full set,
+ * queued in the same pass. When `DF30`'s discovery burst has filled the queue, that full set is refused
+ * and the replacement waits a publish period. Both were replayed against the real publisher; the `DF29`
+ * entry in `docs/active_work/open_decisions.md` has the runs. This is the queue every telemetry field
+ * shares, not a rule about this reading, and changing it is not `DF29`.
  *
  * `nowMs` is `millis()`. Every age is `now - then`, which survives the ~49-day rollover.
  */

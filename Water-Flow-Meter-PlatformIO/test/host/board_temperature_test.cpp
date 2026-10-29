@@ -9,9 +9,11 @@
  * - the POLICY (`plc::BoardTemperature`): when to read, and the four cases in which there is no
  *   reading to publish. The case that matters most is a failed read after a good one, because keeping
  *   the old value there is how a plausible wrong number gets published again;
- * - the WIRING: that `firmware.cpp` calls the rule at all, from the logic task's MQTT block, and hands
- *   the result to the snapshot. Read as text, like `portal_lifecycle_test.cpp`, because "a published
- *   field nobody assigns" is invisible to every test that links against a fake.
+ * - the WIRING: that `firmware.cpp` calls the rule at all, from the logic task's MQTT block, with the
+ *   reader that returns the bus's own verdict, and hands the result to the snapshot once, with nothing
+ *   writing over it. Read as text, like `portal_lifecycle_test.cpp`, because "a published field nobody
+ *   assigns" is invisible to every test that links against a fake. Whole statements are compared, not
+ *   prefixes: review showed five prefix-passing edits, one of which published 0.0 C again.
  */
 #include <cmath>
 #include <cstdint>
@@ -131,8 +133,10 @@ void aGoodReadIsPublishedForOneIntervalAndNoLonger() {
   // The backstop: the caller stopped sampling — an MQTT outage, or a refactor that dropped the call.
   check(std::isnan(t.celsius(1000 + kInterval)),
         "a reading nobody refreshed goes non-finite at one interval, never stale-as-fresh");
+  // What this bounds is the SNAPSHOT. A diagnostics message already queued before an outage is the
+  // publisher's, and goes out first on the reconnect; board_temperature.h says so.
   check(std::isnan(t.celsius(1000 + 60u * kInterval)),
-        "so a value from before an hour-long outage cannot go out on the reconnect");
+        "so no snapshot after an hour-long outage is filled with the value from before it");
 }
 
 void aFailedReadDoesNotFallBackToTheLastGoodOne() {
@@ -255,13 +259,55 @@ void firmwareReadsItAndPublishesIt() {
   if (raw.empty()) return;
   // Comments blanked, so the paragraphs explaining these calls cannot satisfy the checks for them.
   const std::string source = firmware_source::withoutCommentsOrStrings(raw);
+  // The same text with no whitespace at all, for the checks that compare a WHOLE statement. A reformat
+  // is not a defect and must not fail them.
+  const std::string compact = firmware_source::withoutWhitespace(source);
 
-  const auto samples = firmware_source::offsetsOf(source, "plc::sampleBoardTemperature(boardTemperature");
-  check(samples.size() == 1, "firmware.cpp calls plc::sampleBoardTemperature(boardTemperature, ...) once");
-  const auto assigns =
-      firmware_source::offsetsOf(source, "snapshotInputs.boardTemperatureC = boardTemperature.celsius(");
+  // ── The one call, and the reader it is handed ──
+  //
+  // This used to check the call's PREFIX, `plc::sampleBoardTemperature(boardTemperature`, and a
+  // review's mutation run passed every host check with `[](uint8_t*) { return true; }` in place of
+  // the reader: a lambda that never touches the bus and always says it succeeded.
+  // sampleBoardTemperature zeroes its buffer, 0x0000 decodes to 0.0 C, and 0.0 C passes the range
+  // check (asserted above, on purpose). So that one argument published "tempC":0.0 as a good reading
+  // every minute, which is DF29's original symptom, with the gate green. The whole call is compared now.
+  const auto samples = firmware_source::offsetsOf(source, "sampleBoardTemperature(");
+  check(samples.size() == 1, "firmware.cpp calls sampleBoardTemperature once");
+  check(firmware_source::offsetsOf(
+            compact, "plc::sampleBoardTemperature(boardTemperature,now,readBoardTemperatureBytes)")
+                .size() == 1,
+        "with (boardTemperature, now, readBoardTemperatureBytes) and nothing else");
+
+  // The reader's whole body, compared as one statement. Until then the only check on it was the route
+  // check at the bottom, `m5::In_I2C.readRegister(plc::kLm75bAddress` in one place, and that let three
+  // more mutations through, each a build that works and publishes a wrong number: the bus's bool thrown
+  // away and `true` returned (LM75B_Class::read16's defect, back in the one place this fix moved the
+  // read to), the configuration register read in place of the temperature, and one byte read instead
+  // of two. `|| true`, a second statement and another bus speed are the same shape. Anything but this
+  // one statement fails, so the bool the reader returns is the bus's own.
+  const std::string readerBody =
+      firmware_source::functionBody(source, "bool readBoardTemperatureBytes(uint8_t* out)");
+  check(firmware_source::withoutWhitespace(readerBody) ==
+            "returnm5::In_I2C.readRegister(plc::kLm75bAddress,plc::kLm75bTemperatureRegister,out,2,"
+            "plc::kLm75bBusFrequencyHz);",
+        "the reader is defined once and is only `return m5::In_I2C.readRegister(...)`");
+  check(firmware_source::offsetsOf(source, "readBoardTemperatureBytes").size() == 2,
+        "and named only twice, defined and handed over: no read off the cadence");
+
+  // ── Handed on once, and nothing writes over it ──
+  //
+  // Review's fifth mutation kept the assignment and added `snapshotInputs.boardTemperatureC = 41.2f;`
+  // after it, and the old check, which looked for the assignment's prefix, still found it. So the
+  // field's NAME may appear only once in firmware.cpp's code. That also refuses a write to
+  // `snapshot.diagnostics.boardTemperatureC` after the fill, which a check on `snapshotInputs.` would
+  // miss. And that one appearance must be the whole statement, with this pass's `now`.
+  const auto assigns = firmware_source::offsetsOf(source, "boardTemperatureC");
   check(assigns.size() == 1,
-        "and assigns snapshotInputs.boardTemperatureC from boardTemperature.celsius() once");
+        "boardTemperatureC appears once in firmware.cpp: one writer, no overwrite");
+  check(firmware_source::offsetsOf(
+            compact, "snapshotInputs.boardTemperatureC=boardTemperature.celsius(now);")
+                .size() == 1,
+        "and it is snapshotInputs.boardTemperatureC = boardTemperature.celsius(now)");
   const auto fills = firmware_source::offsetsOf(source, "plc::fillMqttSnapshot(snapshot");
   check(fills.size() == 1, "and fills the MQTT snapshot in one place");
   if (samples.empty() || assigns.empty() || fills.empty()) return;
