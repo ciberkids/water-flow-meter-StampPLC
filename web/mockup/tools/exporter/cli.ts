@@ -5,23 +5,20 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { spawn } from "node:child_process";
-import { ensureValidDataset, ensureValidTheme, ExportValidationError } from "./schema.js";
-import { buildIntermediateRepresentation } from "./ir.js";
+import { ExportValidationError } from "./schema.js";
 import { emitCpp } from "./cppEmitter.js";
-import { checkRenderableElementKinds, runExportValidations } from "./validation.js";
-import {
-  checkFirmwareBindingCoverage,
-  checkManifestResolvable,
-  scrapeFirmwareBindings
-} from "./firmwareActions.js";
-import { loadManifest } from "./manifestLoader.js";
+import { runDatasetGates } from "./exportGates.js";
+import { buildPack } from "./packExport.js";
+import { readFirmwarePackLimits } from "./packRules.js";
 import type {
   AutomationCheck,
   BackupSummary,
   ExportIR,
+  FirmwareManifest,
   ManifestSummary,
   ValidationReport
 } from "./types.js";
+import type { ScreenDataset } from "../../src/types.js";
 
 interface CliOptions {
   screens: string;
@@ -30,6 +27,13 @@ interface CliOptions {
   dryRun: boolean;
   manifest?: string;
   allowMissingToolchain: boolean;
+  /**
+   * `--emit-pack <path>`: build a `.uipack` for the SD card INSTEAD of the C++ tables (N-g,
+   * Loadable_UI_Menu_Packs §5.6). Nothing under the firmware tree is touched and nothing is compiled.
+   */
+  emitPack?: string;
+  /** `--pack-label <text>`: the header label. Defaults to the file name minus `.uipack`. */
+  packLabel?: string;
 }
 
 interface CommandResult {
@@ -66,11 +70,6 @@ function resolvePath(base: string, candidate: string): string {
     return candidate;
   }
   return path.resolve(base, candidate);
-}
-
-async function readJsonFile<T>(filePath: string): Promise<T> {
-  const raw = await fs.readFile(filePath, "utf-8");
-  return JSON.parse(raw) as T;
 }
 
 async function directoryExists(dirPath: string): Promise<boolean> {
@@ -161,7 +160,12 @@ function parseCliArgs(projectRoot: string, workspaceRoot: string): CliOptions {
       out: { type: "string", default: outDefault },
       "dry-run": { type: "boolean", default: false },
       manifest: { type: "string", default: manifestDefault },
-      "allow-missing-toolchain": { type: "boolean", default: false }
+      "allow-missing-toolchain": { type: "boolean", default: false },
+      // No default: its presence is what selects the pack path. `npm run export:pack` passes
+      // web/mockup/dist-pack/default.uipack, and a second --emit-pack after `--` replaces it, because
+      // parseArgs keeps the last value of a repeated option.
+      "emit-pack": { type: "string" },
+      "pack-label": { type: "string" }
     }
   });
 
@@ -171,7 +175,17 @@ function parseCliArgs(projectRoot: string, workspaceRoot: string): CliOptions {
     out: resolvePath(projectRoot, values.out as string),
     dryRun: Boolean(values["dry-run"]),
     manifest: (values.manifest as string) ? resolvePath(projectRoot, values.manifest as string) : undefined,
-    allowMissingToolchain: Boolean(values["allow-missing-toolchain"])
+    allowMissingToolchain: Boolean(values["allow-missing-toolchain"]),
+    // Resolved against the repository root like every other path here, so `--emit-pack` and
+    // `--screens` mean the same thing by a relative path.
+    // PRESENCE selects the pack path, not truthiness: an empty `--emit-pack ""` must not fall through
+    // to export:firmware, which rewrites the firmware tree and compiles it. An empty path resolves to
+    // the repository root, whose name fails the file name rule, so it is refused like any other.
+    emitPack:
+      values["emit-pack"] !== undefined
+        ? resolvePath(projectRoot, values["emit-pack"] as string)
+        : undefined,
+    packLabel: values["pack-label"] as string | undefined
   };
 }
 
@@ -355,6 +369,82 @@ function validationFailurePayload(report?: ValidationReport) {
   );
 }
 
+/**
+ * `--emit-pack`: the dataset has passed every gate `export:firmware` runs; now build the pack, refuse it
+ * if the device would not load it, and only then write it.
+ *
+ * The limits come from the firmware headers on every run (packRules.ts). A header that cannot be read
+ * throws, which `run()` reports as an error with exit code 1 — the export stops rather than falling back
+ * to a remembered number.
+ */
+async function writePack(
+  options: CliOptions,
+  projectRoot: string,
+  dataset: ScreenDataset,
+  manifest: FirmwareManifest | null,
+  manifestSummary: ManifestSummary,
+  validationReport: ValidationReport
+) {
+  const outPath = options.emitPack as string;
+  const limits = await readFirmwarePackLimits(projectRoot);
+  const fileName = path.basename(outPath);
+  const outcome = buildPack({ dataset, manifest, fileName, label: options.packLabel, limits });
+
+  for (const check of outcome.checks) {
+    validationReport.checks.push(check);
+    if (check.status === "fail") {
+      validationReport.status = "fail";
+      validationReport.issues.push(check.message);
+    }
+    validationReport.log += `\n[${check.status.toUpperCase()}] ${check.title} — ${check.message}`;
+  }
+  if (outcome.status === "fail" || !outcome.pack) {
+    throw new ExportValidationError("Pack validation failed", validationReport.issues, validationReport);
+  }
+
+  if (!options.dryRun) {
+    await fs.mkdir(path.dirname(outPath), { recursive: true });
+    await fs.writeFile(outPath, outcome.pack.bytes);
+  }
+
+  const warnings = validationReport.checks
+    .filter((check) => check.status === "warning")
+    .map((check) => `${check.title}: ${check.message}`);
+
+  console.log(
+    JSON.stringify(
+      {
+        status: warnings.length > 0 ? "ok-with-warnings" : "ok",
+        summary: {
+          pack: options.dryRun ? "(dry-run)" : outPath,
+          fileName,
+          bytes: outcome.pack.bytes.length,
+          maxBytes: limits.maxPackBytes,
+          screens: outcome.pack.screenCount,
+          label: outcome.label,
+          catalogueAbi: outcome.catalogueAbi,
+          copyTo: `${limits.cardDirectory}/${fileName}`,
+          limitsReadFrom: limits.sources
+        },
+        warnings,
+        validation: validationReport,
+        manifest: manifestSummary,
+        // Stated, not skipped silently and not reported as a pass: the compile gate proves generated C++
+        // builds, and a pack has none. What a pack must satisfy instead is §3.3, which the firmware checks
+        // when it loads the file and the host round trip checks against this command's own output.
+        compilation: {
+          status: "not-applicable",
+          message:
+            "A menu pack is data the firmware validates when it loads it (Loadable_UI_Menu_Packs §3.3); " +
+            "there is no C++ to compile."
+        }
+      },
+      null,
+      2
+    )
+  );
+}
+
 async function run() {
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
   const workspaceRoot = await resolveWorkspaceRoot(currentDir);
@@ -362,43 +452,21 @@ async function run() {
   const options = parseCliArgs(projectRoot, workspaceRoot);
 
   try {
-    const dataset = ensureValidDataset(await readJsonFile(options.screens));
-    const themeTokens = options.theme
-      ? ensureValidTheme(await readJsonFile(options.theme))
-      : dataset.theme;
-
-    // Must run before buildIntermediateRepresentation: the IR converter throws a
-    // bare Error on an unmappable element kind, so checking first is what turns
-    // that into a reportable validation failure instead of a stack trace.
-    const kindCheck = checkRenderableElementKinds(dataset);
-    if (kindCheck.status === "fail") {
-      throw new ExportValidationError("Post-export validation failed", [kindCheck.message], {
-        status: "fail",
-        checks: [kindCheck],
-        issues: [kindCheck.message],
-        log: `[FAIL] ${kindCheck.title} — ${kindCheck.message}\n${kindCheck.recommendation ?? ""}`
-      });
-    }
-
-    const ir = buildIntermediateRepresentation(dataset, themeTokens);
-
-    // Load manifest (optional) and build the manifest status summary.
-    const manifestResult = await loadManifest(options.manifest);
-    const manifestSummary: ManifestSummary = {
-      status: manifestResult.status,
-      path: manifestResult.path,
-      actionCount: manifestResult.actionCount,
-      error: manifestResult.error
-    };
+    const gates = await runDatasetGates({
+      projectRoot,
+      screensPath: options.screens,
+      themePath: options.theme,
+      manifestPath: options.manifest
+    });
 
     // Block export if manifest was explicitly provided but failed to load.
-    if (manifestResult.status === "invalid") {
+    if (gates.kind === "manifest-invalid") {
       console.error(
         JSON.stringify(
           {
             status: "validation-error",
-            message: `Manifest is invalid: ${manifestResult.error}`,
-            manifest: manifestSummary
+            message: `Manifest is invalid: ${gates.manifestSummary.error}`,
+            manifest: gates.manifestSummary
           },
           null,
           2
@@ -407,42 +475,11 @@ async function run() {
       process.exitCode = 2;
       return;
     }
+    const { ir, manifestSummary, validationReport } = gates;
 
-    const validationReport = runExportValidations(dataset, ir, manifestResult.manifest);
-
-    // manifest -> firmware for the values the dataset binds. The action direction is now
-    // covered without scraping: the firmware static_asserts its catalogue against its
-    // handler table, and CI diffs the committed manifest against a fresh generation from
-    // that catalogue. See the note in firmwareActions.ts.
-    const usedBindings = new Map<string, string[]>();
-    for (const screen of dataset.screens) {
-      for (const element of screen.elements) {
-        if (!element.binding) continue;
-        const where = usedBindings.get(element.binding) ?? [];
-        where.push(`${screen.id}/${element.id}`);
-        usedBindings.set(element.binding, where);
-      }
-    }
-    // Scraped once and shared: both checks ask the same question of the resolver, one for
-    // the bindings this design uses and one for everything the manifest advertises.
-    const bindingScrape = await scrapeFirmwareBindings(projectRoot);
-    const bindingCheck = checkFirmwareBindingCoverage(usedBindings, bindingScrape);
-    const advertisedCheck = checkManifestResolvable(manifestResult.manifest, bindingScrape);
-    for (const check of [bindingCheck, advertisedCheck]) {
-      validationReport.checks.push(check);
-      if (check.status === "fail") {
-        validationReport.status = "fail";
-        validationReport.issues.push(check.message);
-      }
-      validationReport.log += `\n[${check.status.toUpperCase()}] ${check.title} — ${check.message}`;
-    }
-
-    if (validationReport.status === "fail") {
-      throw new ExportValidationError(
-        "Post-export validation failed",
-        validationReport.issues,
-        validationReport
-      );
+    if (options.emitPack) {
+      await writePack(options, projectRoot, gates.dataset, gates.manifest, manifestSummary, validationReport);
+      return;
     }
 
     let backupLocation: string | null = null;

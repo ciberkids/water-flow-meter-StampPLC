@@ -90,7 +90,7 @@ is what this register looked like before the 2026-08-18 rewrite.
 
 ---
 
-## N-g 🟡 A menu pack cannot be built — the SD card holds files nobody can produce
+## ~~N-g~~ ✅ FIXED 2026-10-29 — `npm run export:pack` builds a menu pack, and refuses one the device would not load
 
 Opened 2026-10-01, while answering whether the wiki explains the SD card. It now does (the generated
 **SD Card** page: `/ui/<name>.uipack`, the `/ui/active` pointer, the 64 KB and 64-character limits, read
@@ -100,12 +100,91 @@ from `ui_pack_storage_sd.h` and `ui_pack_loader.h`). But the firmware half is th
   `__tests__/pack_emit.test.ts`, which writes `tests/fixtures/default.uipack` for the host round-trip test.
 - No npm script, exporter flag or designer button produces a pack, so nobody can put a menu on a card.
 
-**To finish** (planned for the evening of 2026-10-01):
+**~~To finish~~ — FIXED 2026-10-29, 16 exporter tests and one CI step.** `npm run export:pack` runs
+`cli.ts --emit-pack web/mockup/dist-pack/default.uipack`, the flag `Loadable_UI_Menu_Packs.md` §5.6 names.
+`--screens` and `--manifest` override the inputs exactly as for `export:firmware`, a second `--emit-pack`
+after `--` replaces the default path (`parseArgs` keeps the last value), `--pack-label` sets the header
+label, and `--dry-run` checks without writing. Paths resolve from the repository root, like every other
+flag of that CLI. `dist-pack/` is gitignored; the report names the file and where it goes on the card.
 
-1. An `npm run export:pack` command (or an exporter flag) that emits `<name>.uipack` from the dataset,
-   through the same gates as `export:firmware`, so a pack that would not load is refused at build time.
-2. Optionally a download button in the designer's Import & Export tab.
-3. Remove the ⚠️ block from the SD Card page in `tools/wiki/sync.sh`, and say how to build a pack there.
+**One sequence of gates, not two.** The dataset gates moved out of `cli.ts` into
+`tools/exporter/exportGates.ts`, and both commands call it: after the schema, the LED legend, the
+hold-to-confirm screen, the diagnostics banner (the standing warning), renderable kinds, ring closure, the
+three manifest coverage checks and the two firmware-resolver checks — the same ten as before, shown by
+re-running `export:firmware` end to end after the move (9 pass, 1 warning, the container compile passing,
+`src/ui/generated` identical bar its timestamps). Then five pack
+checks in `tools/exporter/packRules.ts`, decided in the pure `packExport.ts::buildPack`, which withholds the
+bytes on any failure so a caller cannot write them by forgetting to look at the status:
+
+| Check | Refuses |
+| --- | --- |
+| `pack-file-name` | a name not ending in `kPackSuffix` (compared case-sensitively, as `listPacks` does), longer than `kMaxNameBytes - 1`, starting with `.`, or using anything but ASCII letters, digits, `.`, `-`, `_` |
+| `pack-label` | a label over `PackHeader::kLabelBytes` or outside printable ASCII — refused, not truncated |
+| `pack-size` | more than `kMaxPackBytes`; exactly at it passes, matching the loader's `>` |
+| `pack-catalogue-abi` | a manifest with no `catalogueAbi`, which the schema allows and a pack cannot be stamped without |
+| `pack-flow-targets` | a flow whose `targetScreenId` names no screen |
+
+**The limits are read, never typed.** `readFirmwarePackLimits` reads `kMaxPackBytes` and `kMaxNameBytes`
+from `ui_pack_loader.h`, `kDirectory` and `kPackSuffix` from `ui_pack_storage_sd.h` and `kLabelBytes` from
+`ui_pack.h` on every run. It understands a string literal and a product of integer literals (`64 * 1024`),
+ignores commented-out definitions, and throws naming the header for anything else, a missing constant or a
+duplicate, so a changed header stops the export instead of falling back to a remembered number.
+`kPackSuffix` is NEW: the suffix was a literal inside `listPacks` in `ui_pack_storage_sd.cpp`, which no
+reader outside that file could see, so it moved into the header and `listPacks` uses it. The wiki's SD
+Card page reads it too, and now also `kMaxEntries` from `ui_pack_selector.h`. That corrected the page's
+"as many packs as you like" to the seven card packs the Select Menu actually lists.
+
+**Two things found on the way.**
+
+1. *An unresolved flow target was a silent dead button.* The emitter writes `NO_TARGET_SCREEN` for a
+   `targetScreenId` it cannot find, and its comment said the screen-coverage gate catches that first. It
+   does not: that gate checks the screens the firmware requires, and ring closure covers UP and DOWN only.
+   A test changes an ENTER target to a name that does not exist: every `export:firmware` gate passes, and
+   `pack-flow-targets` alone refuses it. The C++ tables carry the same typo as a string the router fails
+   to resolve, so `export:firmware` has the same gap. It is left as it was, because changing that
+   command's gate set was not this item.
+2. *The fixture was the library's output, not the command's.* The host `pack_test` and `pack_loader_test`
+   read `tests/fixtures/default.uipack`, which the test wrote with `emitPack` directly. Now
+   `pack_emit.test.ts` writes it by running the CLI, and is its only writer, because `node --test` runs
+   files in parallel. It also asserts the bytes equal `emitPack`'s. So the pack the C++ validates is the
+   command's output.
+
+**What changed in the fixture, and why.** With no `--pack-label`, the label is the file name minus
+`.uipack`: `default`, where the hand-written test passed `Default`. Before the default was switched, the
+command with `--pack-label Default` reproduced the committed fixture byte for byte (`cmp`). After it, the
+fixture differs from the previous one in exactly six bytes: the four CRC bytes and the label's first letter,
+in the header and in the string table. `pack_test`'s label check expects `default`.
+
+**CI now gates freshness.** The web job's new step runs `npm run export:pack` as an author would, `cmp`s
+the result with `tests/fixtures/default.uipack`, and fails on a git diff of the fixture. The firmware-host
+job reads the committed fixture without running npm, so until now a dataset change committed without its
+pack reached it stale (the DF19 shape). Checked locally by putting the previous fixture back: `cmp` exits 1.
+
+**Not part of this, said so where a reader looks:**
+
+- **§5.8's completeness check is not run.** `export:firmware` does not run it either. The shipped dataset
+  satisfies it because `tools/skeleton/generate.mjs` refuses otherwise, but a custom `--screens` is not
+  held to it. The SD Card page, `web/mockup/README.md` and the wiki's Features page all say so. It is
+  N-b's unbuilt neighbour, with §3.3.11a's load-time repair.
+- **§5.5's hard checks are not reimplemented in TypeScript.** A second validator would be a second
+  implementation of the format. The host round trip over this command's own output is the check instead.
+- **No designer button** (§5.6's UI half, optional here). `packEmitter.ts` uses Node's `Buffer` and the
+  gates read firmware source from disk, so a browser button needs either a port or a dev-server endpoint,
+  and CI does not run the Playwright suite that could test it.
+- The file name rule is stricter than the device on purpose; see `kPortableNameCharacter`.
+
+**Checks, 2026-10-29:** `npx tsc --noEmit` clean; `npm run test:unit` 220 passed; `npm run test:exporter`
+**67** passed (51 before: 15 new in `pack_export.test.ts`, 1 in `pack_emit.test.ts`); the host suite, 30
+suites each ALL PASSED and exit 0; `npm run export:pack` on the shipped dataset `ok-with-warnings` (the
+standing banner warning) and byte-identical to the fixture; `npm run export:firmware` as above;
+`tools/wiki/sync.sh` dry run ending "all repo pointers resolve".
+
+**Cost: 0 bytes of firmware.** Container build before and after `kPackSuffix`: RAM 81,096 and flash
+1,319,301 bytes both times (24.7% / 39.5%). The shipped pack is **27,349 bytes for 79 screens**, against
+the 65,536 `kMaxPackBytes` allows.
+
+**⏸️ Not seen on a board**, like everything else on this device. The first proof is `default.uipack`
+copied to `/ui/` with `/ui/active` naming it, and the panel booting into it with no "menu rejected".
 
 Not part of this item: the SD-card WiFi/MQTT credential file, which is `N8b` in `WiFi_MQTT_Connectivity.md`
 and still unbuilt. The wiki page says so.

@@ -178,6 +178,7 @@ std::size_t SdPackStorage::listPacks(char (*names)[ui::PackLoader::kMaxNameBytes
     return 0;
   }
   std::size_t count = 0;
+  const std::size_t suffixLength = std::strlen(kPackSuffix);
   if (File dir = SD.open(kDirectory)) {
     while (count < capacity) {
       File entry = dir.openNextFile();
@@ -190,7 +191,8 @@ std::size_t SdPackStorage::listPacks(char (*names)[ui::PackLoader::kMaxNameBytes
         const char* leaf = std::strrchr(path, '/');
         leaf = leaf ? leaf + 1 : path;
         const std::size_t length = std::strlen(leaf);
-        if (length >= 7 && std::strcmp(leaf + length - 7, ".uipack") == 0 && length < ui::PackLoader::kMaxNameBytes) {
+        if (length >= suffixLength && std::strcmp(leaf + length - suffixLength, kPackSuffix) == 0 &&
+            length < ui::PackLoader::kMaxNameBytes) {
           std::memcpy(names[count], leaf, length + 1);
           ++count;
         }

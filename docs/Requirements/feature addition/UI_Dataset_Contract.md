@@ -31,13 +31,14 @@ did not expect.
  │   THE DATASET             │     │   the firmware source of truth   │
  │   geometry + navigation   │     └──────────────────────────────────┘
  └───────────┬───────────────┘
-             │ npm run export:firmware
+             │ npm run export:firmware (the tables), npm run export:pack (a .uipack)
              ▼
- ┌───────────────────────────────────────────────────────────┐
+ ┌────────────────────────────────────────────────────────────┐
  │ src/ui/generated/GeneratedUi.{h,cpp}   compiled-in tables  │
  │ src/ui/generated/ui_export_ir.json     debugging IR        │
- │ tests/fixtures/default.uipack          loadable pack       │
- └───────────────────────────────────────────────────────────┘
+ │ dist-pack/<name>.uipack                an SD-card pack     │
+ │ tests/fixtures/default.uipack          the default menu's  │
+ └────────────────────────────────────────────────────────────┘
 ```
 
 Two rules follow from the shape, and both have bitten this project:
@@ -248,6 +249,8 @@ forgotten — it caught four breaks that `tsc`, the unit tests and a PlatformIO 
 | `screen-geometry.ts` | Collisions, overflow past 240 × 135, an icon with no `assetId`. Uses `worst`. |
 | `screen-values.ts` | An unresolved `{{binding}}`, a value outside its descriptor's domain, a range hint on a screen with no setting. Checks the TEXT, which nothing did before. |
 | host `pack_test` round trip | The emitted pack and the compiled table disagree — **field by field**, including `visibleWhen`. A round-trip test is only as good as the fields it knows to look at. |
+| `pack-file-name`, `pack-label`, `pack-size`, `pack-catalogue-abi`, `pack-flow-targets` | `export:pack` only (N-g), after every gate above: a name the Select Menu would not list or the loader would refuse, a label that does not fit the header, a pack over the loader's limit, a manifest with no ABI to stamp, or a flow target that names no screen. The limits are read from `src/ui/pack/*.h`, never typed. |
+| pack freshness | `tests/fixtures/default.uipack` differs from a fresh `npm run export:pack`, so `pack_test` would be checking a pack nobody can build. |
 | host `interaction_test` | The completeness rule, the gesture contract, the reset paths. |
 
 ---

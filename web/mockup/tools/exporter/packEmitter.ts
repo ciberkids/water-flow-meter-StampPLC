@@ -114,6 +114,14 @@ export interface PackResult {
   stringBytes: number;
   /** Bytes saved by deduplication, for the export report. */
   dedupSaved: number;
+  /**
+   * Flows whose `targetScreenId` names no screen in the dataset, as `screen/flow:id -> "target"`.
+   *
+   * Each was written as NO_TARGET_SCREEN, which the firmware reads as "does not navigate", so each is a
+   * dead button. Reported rather than thrown so `export:pack` can name them all in one refusal
+   * (`pack-flow-targets` in packRules.ts); a caller that ignores this list ships the dead buttons.
+   */
+  unresolvedTargets: string[];
 }
 
 export function emitPack(dataset: ScreenDataset, options: PackOptions): PackResult {
@@ -137,9 +145,10 @@ export function emitPack(dataset: ScreenDataset, options: PackOptions): PackResu
     flows: Buffer;
   }
 
+  const unresolvedTargets: string[] = [];
   const bodies: Body[] = screens.map((screen) => ({
     elements: encodeElements(screen, intern),
-    flows: encodeFlows(screen, indexById, intern)
+    flows: encodeFlows(screen, indexById, intern, unresolvedTargets)
   }));
 
   // ── Offsets ──
@@ -206,7 +215,8 @@ export function emitPack(dataset: ScreenDataset, options: PackOptions): PackResu
     bytes: Buffer.concat([header, payload]),
     screenCount: screens.length,
     stringBytes: finalStrings.length,
-    dedupSaved: Math.max(0, rawStringBytes - finalStrings.length)
+    dedupSaved: Math.max(0, rawStringBytes - finalStrings.length),
+    unresolvedTargets
   };
 }
 
@@ -233,7 +243,8 @@ function encodeElements(
 function encodeFlows(
   screen: ScreenDefinition,
   indexById: Map<string, number>,
-  intern: (value: string | undefined | null) => number
+  intern: (value: string | undefined | null) => number,
+  unresolvedTargets: string[]
 ): Buffer {
   const flows = screen.flows ?? [];
   const out = Buffer.alloc(flows.length * FLOW_RECORD_BYTES);
@@ -268,7 +279,12 @@ function encodeFlows(
     const target = flow.targetScreenId ? indexById.get(flow.targetScreenId) : undefined;
     // Resolved to an index at build time, so the device bounds-checks one integer per press
     // instead of doing a string lookup. An unresolvable target is a build error, not a runtime
-    // surprise — the exporter's screen-coverage gate is what catches it first.
+    // surprise — but NOT because the screen-coverage gate catches it, which this comment used to
+    // claim: that gate checks the screens the firmware requires, not where flows point, and
+    // ring closure covers UP and DOWN only. It is recorded here and `export:pack` refuses it (N-g).
+    if (flow.targetScreenId && target === undefined) {
+      unresolvedTargets.push(`${screen.id}/flow:${flow.id} -> "${flow.targetScreenId}"`);
+    }
     out.writeUInt16LE(target ?? NO_TARGET_SCREEN, at + 8);
     out.writeUInt32LE(intern(flow.actionId), at + 12);
   });

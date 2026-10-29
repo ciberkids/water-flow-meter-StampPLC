@@ -32,6 +32,17 @@ class SdPackStorage : public ui::PackStorage {
   static constexpr const char* kPointerPath = "/ui/active";
 
   /**
+   * The ending a file must have for `listPacks` to offer it in the Select Menu (§3.1).
+   *
+   * Compared byte for byte, so `MENU.UIPACK` is not listed even though FAT would open it under either
+   * case. A constant rather than the literal `listPacks` used to carry, because two other places have
+   * to agree with it and both READ it from here: `npm run export:pack`
+   * (`web/mockup/tools/exporter/packRules.ts`), which refuses to build a pack the device would never
+   * list, and the wiki's SD Card page. A literal in the `.cpp` was a fact only this file could see (N-g).
+   */
+  static constexpr const char* kPackSuffix = ".uipack";
+
+  /**
    * `csPin` is the card's chip select — 10 on the StampPLC, where the LCD holds 12.
    * `arbiter` must outlive this object.
    */
