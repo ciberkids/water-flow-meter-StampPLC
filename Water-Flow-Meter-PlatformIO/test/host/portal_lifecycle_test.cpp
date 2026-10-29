@@ -78,13 +78,15 @@ void servedWhileTheAccessPointIsUp() {
 }
 
 void waitsForTheAddress() {
-  std::printf("\n[no address yet: wait, rather than tell every DNS reply to point at 0.0.0.0]\n");
+  std::printf("\n[no address: do not tell every DNS reply to point at 0.0.0.0]\n");
 
   FakeServer server;
   plc::drivePortal(server, true, 0);
   check(server.begins == 0, "ApPortal with address 0 does not start the page");
+  // A guard, not a recovery path: WifiManager reads the address once, so on the device a 0 would hold
+  // for the window. Stated so this check is not read as proof the firmware waits for one.
   plc::drivePortal(server, true, kApIp);
-  check(server.begins == 1 && server.beganWith == kApIp, "the next pass, with an address, does");
+  check(server.begins == 1 && server.beganWith == kApIp, "and a pass that has an address does");
 }
 
 void stopsWhenTheAccessPointCloses() {
@@ -103,7 +105,10 @@ void stopsWhenTheAccessPointCloses() {
 }
 
 void aFailedStartIsRetried() {
-  std::printf("\n[a start that fails is retried next pass, not latched for the whole window]\n");
+  // The real server reports this since DF28's review: ArduinoPortalServer::begin() returns false when
+  // ListeningWebServer says the socket is not listening. Before that it returned true on every path,
+  // and this check certified a retry the hardware class could never trigger.
+  std::printf("\n[a start that reports failure is retried next pass, not latched for the window]\n");
 
   FakeServer server;
   server.beginSucceeds = false;
@@ -137,12 +142,48 @@ void firmwareDrivesIt() {
   check(!stateUpdates.empty() && stateUpdates.front() < calls.front(),
         "and the call follows wifiManager.update(), so it acts on this pass's state");
 
+  // The ARGUMENTS, not just the call. A call with `true` for the first one would serve the page on the
+  // station network, which is the DNS hijack the rule exists to prevent; one with a constant address
+  // would point every reply somewhere else. Checked on the call's own text, up to its closing `;`.
+  const std::size_t callEnd = source.find(';', calls.front());
+  const std::string call = source.substr(calls.front(), callEnd - calls.front());
+  check(call.find("wifiManager.state() == plc::WifiState::ApPortal") != std::string::npos,
+        "and passes 'the state machine is in ApPortal' as the condition");
+  check(call.find("wifiManager.apIpAddress()") != std::string::npos,
+        "and the access point's own address");
+
   // Nothing else may start or stop the page behind the rule's back — that is how a second, disagreeing
   // copy of "when is the page up" would arrive.
   check(firmware_source::offsetsOf(source, "portalServer.begin(").empty() &&
             firmware_source::offsetsOf(source, "portalServer.end(").empty() &&
             firmware_source::offsetsOf(source, "portalServer.update(").empty(),
         "and nothing else in firmware.cpp starts, stops or services the page directly");
+
+  /**
+   * The provisioning notice, without which serving the page achieves nothing.
+   *
+   * DF28's review found `netSettingsNotifiedRevision = netSettings.revision();` inside the logic loop's
+   * save-success branch, a seed meant for setup(). The page applies a submission between the notify
+   * check and the save, so that line marked every submission as already notified, and the access point
+   * stayed up for its whole window with the device never joining the network it had been given. So the
+   * shadow may be written in exactly two places: right inside the notify check, and in setup().
+   */
+  const auto writes = firmware_source::offsetsOf(source, "netSettingsNotifiedRevision = netSettings.revision()");
+  const auto setupAt = firmware_source::offsetsOf(source, "void setup()");
+  const auto notifyChecks =
+      firmware_source::offsetsOf(source, "if (netSettings.revision() != netSettingsNotifiedRevision)");
+  check(writes.size() == 2, "netSettingsNotifiedRevision is assigned in exactly two places");
+  check(!setupAt.empty() && !notifyChecks.empty(), "setup() and the notify check are found");
+  if (writes.size() != 2 || setupAt.empty() || notifyChecks.empty()) return;
+  std::size_t inSetup = 0;
+  std::size_t inNotify = 0;
+  for (const std::size_t at : writes) {
+    if (at > setupAt.front()) ++inSetup;
+    // Within the notify block's first statement: the check's own line plus one short line.
+    if (at > notifyChecks.front() && at - notifyChecks.front() < 120) ++inNotify;
+  }
+  check(inNotify == 1, "one is the first statement inside the notify check");
+  check(inSetup == 1, "and the other is in setup(), the seed — never in the save path");
 }
 
 }  // namespace

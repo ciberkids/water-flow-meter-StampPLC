@@ -235,6 +235,24 @@ class PortalForm {
    */
   static constexpr std::size_t kMaxValueBytes = 192;
 
+  /**
+   * Longest POST body the adapter will buffer and hand to submit(), in bytes on the wire (`DF28`).
+   *
+   * The adapter buffers the body itself, because WebServer parses a urlencoded body into decoded
+   * arguments and keeps no copy of it, and submit()'s own decoder is the one the host checks cover.
+   * A bound is therefore needed, and it is a FACT ABOUT THIS FORM rather than a round number:
+   * `portal_form_test.cpp` renders the page, takes every control at its longest legal value with every
+   * byte percent-encoded, and fails if that body would not fit — on the device's page as constructed
+   * today and on the page with every per-sensor row enabled. A body over the bound is refused with an
+   * error page, never truncated: a truncated urlencoded body is a valid shorter one.
+   *
+   * Set at about twice the largest legal body that test measures with every row enabled, so adding a
+   * setting or two to the catalogue does not trip it, while a body far past anything this form can
+   * produce is refused before it costs heap. The buffer grows only to the body's real size, so the
+   * bound costs nothing until something that large arrives.
+   */
+  static constexpr std::size_t kMaxSubmitBytes = 8192;
+
   /** Longest `Authorization:` payload decoded. 64 user + ':' + 64 password is more than ample. */
   static constexpr std::size_t kMaxAuthBytes = 160;
 

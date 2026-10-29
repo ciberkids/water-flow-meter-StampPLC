@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 
 #include "modbus/sensor_types.h"
 #include "net/mqtt_publisher.h"
@@ -39,6 +40,12 @@ struct MqttSnapshotInputs {
 
   float pollingRateKhz = 0.0f;
   uint16_t undersamplingFlags = 0;
+  /**
+   * `DF29` — `plc::BoardTemperature::celsius()`, which is already NaN whenever there is no reading to
+   * believe. NaN by default for the reason `MqttDiagnosticsTelemetry::boardTemperatureC` is: a caller
+   * that forgets this input publishes `null`, not the `0.0` that shipped.
+   */
+  float boardTemperatureC = std::numeric_limits<float>::quiet_NaN();
   uint32_t uptimeSeconds = 0;
   int8_t wifiRssiDbm = 0;
   MqttCommandResult lastCommandResult = MqttCommandResult::Idle;
@@ -131,6 +138,9 @@ inline void fillMqttSnapshot(MqttSnapshot& out,
   // DF25. Passed in rather than derived: the health object lives beside the `Preferences` instance in
   // firmware.cpp, and this assembly is deliberately Arduino-free.
   out.diagnostics.storageFaultCode = inputs.storageFaultCode;
+  // DF29. Copied, not judged: whether a reading is fresh enough to publish is `BoardTemperature`'s
+  // decision, made where the read happens, so there is one rule and not a second one here.
+  out.diagnostics.boardTemperatureC = inputs.boardTemperatureC;
   out.diagnostics.uptimeSeconds = inputs.uptimeSeconds;
   out.diagnostics.wifiRssiDbm = inputs.wifiRssiDbm;
   // R4.4.2d's remote half. Sticky, so it describes the last command rather than the last tick.

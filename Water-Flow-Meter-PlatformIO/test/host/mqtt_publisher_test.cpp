@@ -722,6 +722,13 @@ void payloadTests() {
   check(brokenPayload.find("nan") == std::string::npos &&
             brokenPayload.find("inf") == std::string::npos,
         "and never as nan/inf, which HA would reject whole");
+
+  // DF29. `broken` never set the board temperature, which is the state every device shipped in: the
+  // field defaulted to 0.0 and nothing assigned it, so Home Assistant drew the board at 0 C. The
+  // default is NaN now, so an unassigned temperature says "no reading" on the wire.
+  const std::string diagnosticsPayload = lastPayloadFor(nanSink, "wm/diagnostics/state");
+  check(diagnosticsPayload.find("\"tempC\":null") != std::string::npos,
+        "an unassigned board temperature publishes \"tempC\":null, never \"tempC\":0.0");
 }
 
 void classTests() {

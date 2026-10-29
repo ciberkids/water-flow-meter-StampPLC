@@ -633,9 +633,17 @@ void PortalForm::renderRow(PortalSink& out,
       // something. Without it, "unchecked" and "this form never carried the field" are the same wire
       // representation, and a partial POST would silently switch off every boolean it omitted.
       // submit() treats any truthy occurrence as true, so the order of the two is irrelevant.
+      //
+      // The companion is disabled WITH its checkbox (`DF28`). A disabled hidden input is not submitted,
+      // and it must not be: it used to stay enabled, so on the device — which has no settings store,
+      // making every per-sensor row read-only — every browser submission carried eight
+      // `config.sensor.connected@n=0` fields that submit() refused, and an operator who had just set
+      // the WiFi credentials successfully was told nothing was saved.
       out.writeText("<input type=\"hidden\" name=\"");
       portalWriteEscaped(out, name);
-      out.writeText("\" value=\"0\"><input id=\"");
+      out.writeText("\" value=\"0\"");
+      if (disabled) out.writeText(" disabled");
+      out.writeText("><input id=\"");
       portalWriteEscaped(out, name);
       out.writeText("\" name=\"");
       portalWriteEscaped(out, name);

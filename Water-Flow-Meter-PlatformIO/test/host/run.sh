@@ -233,6 +233,13 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/boot_order_test" \
 g++ "${CXXFLAGS[@]}" -o "$OUT/portal_lifecycle_test" \
   test/host/portal_lifecycle_test.cpp
 
+# DF29 — the board temperature, published as `tempC` and assigned by nothing, so every board reported
+# 0 °C. The decode is checked against the vendored LM75B driver's own arithmetic for all 65,536 inputs,
+# the policy against a fake bus, and the wiring (a read on the logic task, inside the MQTT block, handed
+# to the snapshot) by reading firmware.cpp as text. Header-only.
+g++ "${CXXFLAGS[@]}" -o "$OUT/board_temperature_test" \
+  test/host/board_temperature_test.cpp
+
 # N5 — the MQTT publish policy: cadence, the drop order, topic construction.
 g++ "${CXXFLAGS[@]}" -o "$OUT/mqtt_publisher_test" \
   test/host/mqtt_publisher_test.cpp \
@@ -346,6 +353,8 @@ echo
 "$OUT/boot_order_test"
 echo
 "$OUT/portal_lifecycle_test"
+echo
+"$OUT/board_temperature_test"
 echo
 "$OUT/ui_walk_test"
 echo
