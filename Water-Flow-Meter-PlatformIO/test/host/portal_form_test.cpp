@@ -1049,8 +1049,8 @@ void applyOnlyWhenStagedTests() {
 // checkbox's hidden "0" companion was NOT disabled, so on the device — which constructs the form with no
 // settings store, making every per-sensor row read-only — a browser posted eight
 // `config.sensor.connected@n=0` fields that submit() then refused, and the operator who had just
-// successfully set the WiFi credentials was shown "Nothing was saved. Fix these and submit again" with a
-// list of fields they could not touch.
+// successfully set the WiFi credentials was shown "Partly saved ... the device refused these" with eight
+// fields they could not touch.
 //
 // So this section renders the page, submits it the way HTML says a browser does (enabled controls only,
 // a checkbox only when checked, a select's selected option), and asserts the parser accepts it. It also
@@ -1229,6 +1229,18 @@ void browserSubmissionTests() {
     check(liveOf(net, NetField::WifiSsid) == "HomeNet", "with the SSID the operator typed");
     check(liveOf(net, NetField::WifiPsk) == "correct horse",
           "and the passphrase, plus-decoded from the browser's space");
+
+    // A CHECKED box must survive the round trip. A boolean renders as a hidden "0" then the checkbox,
+    // and submit() keeps the LAST occurrence, so this holds only while the hidden input comes first.
+    check(net.stageWifiEnabled(true) && net.apply() && net.wifiEnabled(), "WiFi enabled for the next check");
+    StringSink checked;
+    form.renderSettingsPage(checked);
+    const auto checkedResult = form.submit(browserBody(formControls(checked.text()), {}).c_str());
+    check(checkedResult.ok() && net.wifiEnabled(),
+          "a checked box submitted unchanged stays on — the hidden 0 must precede the checkbox");
+    const auto unchecked = form.submit(
+        browserBody(formControls(checked.text()), {{"config.wifi.enabled", "0"}}).c_str());
+    check(unchecked.ok() && !net.wifiEnabled(), "and unticking it turns it off");
 
     const std::size_t worst = worstCaseBody(controls);
     std::printf("      largest legal body on the device's page: %zu bytes (bound %zu)\n", worst,

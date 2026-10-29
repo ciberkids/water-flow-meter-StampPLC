@@ -1865,9 +1865,10 @@ void setup() {
   // HERE, and only here (`DF28`). This seed sat for two months inside the logic loop's save-success
   // branch instead, where it marked every successfully SAVED revision as already NOTIFIED. A revision
   // that arrived between the notify check and the save — every configuration-page submission, because
-  // the page is served between the two — was saved and never passed to the WiFi state machine, so the
-  // access point stayed up for its whole window and the device never joined the network it had just
-  // been given. portal_lifecycle_test checks the assignment appears only in the notify block and here.
+  // the page is served between the two — was saved and not passed to the WiFi state machine, so the
+  // access point stayed up for the rest of its ten-minute window and only then did the device join the
+  // network it had been given. portal_lifecycle_test checks the shadow is assigned only in the notify
+  // block and in setup()'s body.
   netSettingsNotifiedRevision = netSettings.revision();
   Serial.printf("[net] settings restored (revision %u), wifi=%s mqtt=%s\n",
                 static_cast<unsigned>(netSettings.revision()),

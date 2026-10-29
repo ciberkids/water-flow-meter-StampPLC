@@ -121,8 +121,8 @@ name with the device's own address. The rule is `src/net/portal_lifecycle.h`.
 
 > **Fixed 2026-10-29, not yet seen working on a board (`DF28`).** Until then the firmware built this
 > page and never started it, so the access point came up and nothing answered on it. Behind that were
-> three older defects that would have stopped a submission saving anything, and they are fixed too: the
-> form's body was never read, a successful save never reached the WiFi state machine, and every
+> three older defects that would have spoiled a submission, and they are fixed too: the form's body was
+> never read, a successful save did not reach the WiFi state machine until the window ran out, and every
 > submission reported errors for read-only rows. The rules are host-tested, including a simulated browser
 > submitting the page and a check that the firmware calls the rule correctly. What no host test can show
 > is a phone getting the page and the device then joining your network, so if that does not happen,
