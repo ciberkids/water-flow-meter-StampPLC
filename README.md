@@ -1,8 +1,8 @@
 # Water Flow Meter — StampPLC
 
 A water-flow meter on an **M5Stack StampPLC** (ESP32-S3). It measures up to eight pulse-output
-flow sensors, publishes readings over **Modbus RTU**, and has a 240×135 landscape display driven
-by **three buttons**.
+flow sensors, publishes readings over **Modbus RTU** and **MQTT** (with Home Assistant discovery),
+and has a 240×135 landscape display driven by **three buttons**.
 
 <table align="center">
   <tr>
@@ -32,6 +32,38 @@ by **three buttons**.
     </td>
   </tr>
 </table>
+
+### What the flow meter does
+
+- **Counts up to eight meters at once.** Each of the eight opto-isolated inputs takes one
+  pulse-output meter. The pulse sampler has a processor core to itself, so talking on the bus or
+  the radio never makes it miss a pulse.
+- **Turns pulses into flow and volume**, per channel: instant flow in litres per minute, the
+  volume since the last reset, the lifetime volume (kept across power cuts, saved to flash about
+  once a minute) and the peak flow since the last reset. Each channel is put in service on its own,
+  so any mix of meters can share one device.
+- **Takes either kind of datasheet.** A channel is calibrated by one pulses-per-litre figure (476
+  for the YF-B10) or by a straight-line formula `F = m × Q + c`, plus the meter's maximum flow. A
+  calibration the sampler could not keep up with, or one that would read flow on a dry pipe, is
+  refused rather than accepted quietly.
+- **Speaks Modbus RTU over RS485 as its complete interface.** A PLC or SCADA master can read every
+  reading and write every setting, the WiFi and MQTT ones included. Configuration changes are
+  staged and committed together, so the bus settings can be changed over the bus itself.
+- **Publishes to MQTT and Home Assistant over WiFi.** Readings per channel, the total and the
+  device's health; Home Assistant finds every entity on its own and gets buttons to reset the
+  session or the totals. WiFi stays off until someone turns it on, and the clock sets itself from
+  network time once it is.
+- **Has its own panel and status light.** The screen shows every reading and edits the meter,
+  display, LED and Modbus settings, with destructive resets behind a held button. The LED blinks per litre counted, shows
+  whether every channel is calibrated, and shows when water is flowing.
+
+What each feature can do, its status, and what is not built yet (the cascade of one meter feeding
+another, building a menu pack for the SD card, and the configuration web page, which is built but
+never started) are on the wiki's
+**[Features and Capabilities](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/Features-and-Capabilities)**
+page. None of it has run on hardware yet; see the end of this file.
+
+### How the screens are made
 
 The distinctive part, and the thing to understand before changing anything: **the on-device UI
 is designed in a web app, exported to JSON, and translated into `constexpr` C++ tables that the
@@ -66,6 +98,7 @@ is the reference for anyone connecting to the device rather than changing its co
 | Page | Covers |
 | --- | --- |
 | [Home](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki) | Orientation: where to look for each task |
+| [Features and Capabilities](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/Features-and-Capabilities) | What the project is for, how the meters can be configured, how it communicates, and the web app, with each feature's status |
 | [Communications](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/Communications) | The three ways to talk to the device (Modbus RTU, MQTT, WiFi), what each can do, and units on every wire |
 | [Modbus Registers](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/Modbus-Registers) | The register map, generated from the firmware headers |
 | [MQTT](https://github.com/ciberkids/water-flow-meter-StampPLC/wiki/MQTT) | Telemetry topics, payloads and Home Assistant discovery |

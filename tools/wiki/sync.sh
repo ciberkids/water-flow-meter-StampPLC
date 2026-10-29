@@ -50,6 +50,7 @@ two to disagree about.
 
 | If you want to | Read |
 | --- | --- |
+| See everything the project offers: its purpose, meter configuration, communication and the web app | [[Features and Capabilities]] |
 | Edit anything about the panel's screens | [[UI Dataset Contract]] — **read this first**, two of the four JSON files are generated |
 | See every screen and how to move between them | [[Screen Navigation]] — the menu tree, generated from the dataset |
 | See what every screen looks like | [[Screen Gallery]] — a picture of each, from the web designer |

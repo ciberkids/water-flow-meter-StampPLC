@@ -34,7 +34,10 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 
 ## The index — cite the ID, not the heading
 
-**Seven open lines: three features, two defects and two measurements.** `N-g` opened on 2026-10-01, when documenting the SD card showed a pack cannot yet be built. `N-f` and `DF25` opened on
+**Nine open lines: three features, four defects and two measurements.** `DF28` and `DF29` opened on
+2026-10-29, when writing the wiki's Features and Capabilities page showed the configuration web page is
+never started and the board temperature never measured.
+`N-g` opened on 2026-10-01, when documenting the SD card showed a pack cannot yet be built. `N-f` and `DF25` opened on
 2026-08-30, both out of one question the owner asked while T1's storage was being decided — *is the
 right information surviving a power cycle, and are we burning through the write cycles?* That is the
 usual way: `DF23` came from checking whether `G1`'s procedure could be followed, and `DF22` from
@@ -42,8 +45,9 @@ building `N-c`. `J9`, `I2a`, `N-b` and N-d2's correction half all closed on 2026
 `DF22` closed on 2026-08-20, and `DF22` was the only 🔴 the board has had since the register was
 rewritten.
 
-**What remains is four software items and three measurements.** `N-e` is under way — T0 and T1 have
-landed and T2 is next — and `N-f`, `DF23` and `DF25` each carry a decision in the entry. The three that
+**What remains is six software items and three measurements.** `N-e` is under way — T0 and T1 have
+landed and T2 is next — and `N-f`, `DF23` and `DF25` each carry a decision in the entry; `DF28` and
+`DF29` carry their fixes in the entry, not yet applied. The three that
 need hardware are `G1` (the polling rate), `N-d2`'s remaining half (whether the RTC survives power
 loss), and `N-c`'s retain check, which lives in that entry's ⏸️ block rather than on a line of its own
 because the rest of `N-c` is built and tested. Cite an ID when you ask about one — this file is the one
@@ -62,6 +66,8 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | **N-e** | 🟡 | feature, in progress | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, four questions open; T0, T1 and T2 landed, **T3/T4/T6 next**, and R2.5's MQTT sentence needs amending |
 | **N-f** | 🟡 | feature, specified here | Where the readings live — internal flash or an SD card, human-readable files, persisted session values and rotating telemetry. Five decisions taken, six questions open, not started; question 1 changes a documented register contract and should be answered first |
 | **N-g** | 🟡 | feature, opened 2026-10-01 | A menu pack cannot be built: the `.uipack` writer exists (`packEmitter.ts`) but only a test calls it, so the SD card the wiki now documents holds files nobody can produce. **To do this evening**: an `npm run export:pack` command, then lift the ⚠️ on the wiki SD Card page |
+| **DF29** | 🟡 | defect, found 2026-10-29 | Board temperature is never measured: `boardTemperatureC` has no writer, so MQTT publishes `tempC: 0.0` and Home Assistant's *Board temperature* entity reads zero. The board's LM75B sensor is never read |
+| **DF28** | 🟡 | defect, found 2026-10-29 | The configuration web page is never started: `portalServer` is constructed in `firmware.cpp` and nothing calls its `begin()` or `update()`, so the provisioning access point comes up and nothing answers on it. Provisioning works over Modbus only |
 | **DF25** | 🟡 | defect, found 2026-08-30 | A write to non-volatile storage that fails is reported by nothing. **Detection and publication landed 2026-08-30** (`DF25a`: register 34, MQTT `storageFault`, 49 host checks) — the panel's warning triangle rides with `N-e`'s T5, and three of its four questions were built on the recommendation rather than decided |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
@@ -104,6 +110,66 @@ from `ui_pack_storage_sd.h` and `ui_pack_loader.h`). But the firmware half is th
 
 Not part of this item: the SD-card WiFi/MQTT credential file, which is `N8b` in `WiFi_MQTT_Connectivity.md`
 and still unbuilt. The wiki page says so.
+
+---
+
+## DF28 🟡 The configuration web page is never started — the provisioning access point serves nothing
+
+Found 2026-10-29 while writing the wiki's **Features and Capabilities** page, by checking that the page
+it was about to describe could actually be reached.
+
+**What is missing.** `firmware.cpp` constructs `plc::ArduinoPortalServer portalServer(portalForm)` and
+never touches it again. `ArduinoPortalServer` has `begin(apIp)`, `update()` and `end()`
+(`src/net/portal_server_arduino.h`), and no file calls any of them. `git log -S"portalServer"` returns
+one commit, `31b22383`, whose message says the portal "is served now, but only while the provisioning AP
+is up" — and whose diff adds the include and the two declarations and nothing else. So the code that
+runs it in `WifiState::ApPortal` was described and never committed.
+
+**What a user sees.** Enable WiFi on a device with no credentials: the access point
+`water_flow_meter_<6 digits>` comes up for its ten minutes, a phone joins it, and nothing answers on
+port 80 and no captive-portal DNS reply is sent, because the DNS responder lives in the same unstarted
+object. Everything `PortalForm` does — the form generated from the settings catalogue, Basic auth, the
+clock route through `FirmwarePortalClock` — is unreachable. The login reset at register `710` still
+works, because it is a Modbus write; it resets a login nobody can reach.
+
+**Why nothing caught it.** The same blind spot `portal_server_arduino.h` names twice: `PortalForm`'s
+host checks exercise the form against strings, and the adapter that would serve it is the part no host
+test can construct. `ce67ef8f` fixed the adapter's `/save` routing on 2026-08-14 without noticing that
+the adapter itself never runs.
+
+**Consequence for the docs.** The wiki's WiFi page described the page as working with one routing
+defect; it now says the page is not served. Provision over Modbus — the WiFi page's *Configuring it over
+Modbus* sequence — which is the route that works.
+
+**To fix**, not done: call `portalServer.begin(wifiRadio.apIpAddress())` when `wifiManager.state()`
+enters `ApPortal`, `portalServer.update()` on every logic pass while it is up, and `portalServer.end()`
+when the state leaves it — the commit message's own design. It needs the bench as much as the code: the
+first proof it works is a phone joining the access point.
+
+---
+
+## DF29 🟡 Board temperature is never measured — Home Assistant is told the board is at 0 °C
+
+Found 2026-10-29, in the same pass as `DF28`. The same shape as `DF23`: **a published field nobody
+assigns**.
+
+**What is missing.** `MqttPublisher`'s diagnostics struct has `float boardTemperatureC = 0.0f`
+(`src/net/mqtt_publisher.h`), the payload prints it as `tempC`, and `ha_discovery.cpp` announces a
+*Board temperature* entity with device class `temperature` and unit °C. Nothing assigns the field. So a
+real device publishes `"tempC":0.0` on every diagnostics message, and Home Assistant draws a flat line at
+0 °C — a plausible reading, which is worse than an empty one. The MQTT wiki page's example shows `41.2`,
+the same invented-figure pattern that page already confesses for `baselineKhz`.
+
+**The sensor exists.** The StampPLC carries an LM75B at I²C `0x48` on the internal bus, initialised by
+`M5StamPLC.begin()` (`lm75b_init`). The library's `M5StamPLC.getTemp()` should not be used as it stands:
+`LM75B_Class::read16` ignores `readRegister`'s result, so a failed read decodes an uninitialised buffer
+into a confident temperature.
+
+**To fix**, not done: read the two temperature bytes through `m5::In_I2C.readRegister`, which reports
+failure, on the logic task and at a slow cadence — the bus is the one the pulse sampler polls, so each
+read briefly holds the driver mutex the sampler needs. Decode in an Arduino-free function a host test can
+reach, and publish a failed or implausible read as non-finite, which the payload already emits as JSON
+`null`. Then correct the MQTT page's example.
 
 ---
 

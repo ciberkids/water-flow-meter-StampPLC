@@ -11,8 +11,8 @@ is the operator's and integrator's view.
 
 Two rules, and everything below follows from them:
 
-- **WiFi is enabled only by a setting the operator changed** — `kWifiEnabled`, register `500`, or the
-  panel. A device that has never been configured does not power the radio at all, so it costs the
+- **WiFi is enabled only by a setting the operator changed** — `kWifiEnabled`, register `500`. The
+  panel shows the setting and has no editor for it. A device that has never been configured does not power the radio at all, so it costs the
   measurement nothing.
 - **AP mode is never entered automatically, and never on a timer.** It is a consequence of enabling
   WiFi on a device that has no credentials.
@@ -80,7 +80,7 @@ Raised when WiFi is enabled on a device with no stored credentials.
 | SSID | `water_flow_meter_<6 digits>` — stable for the life of the board |
 | Security | WPA2, a 12-character passphrase |
 | Window | **10 minutes**, then the AP shuts down and the device goes Idle |
-| Device address | Register `708`; the captive portal answers on it |
+| Device address | Register `708`; the configuration page is meant to answer on it, and does not yet (`DF28`) |
 
 The AP passphrase is **readable in clear** — on the panel and over Modbus (register `692`) — while the
 WiFi passphrase the operator gave the device never reads back at all. That asymmetry is deliberate: the
@@ -88,7 +88,8 @@ AP password describes an access point the device is broadcasting, which anyone i
 already see, and a remote operator needs it to direct somebody standing at the panel. The other is a
 secret the device was trusted with.
 
-Every DNS name resolves to the device while the AP is up, and any unknown path redirects to `/`, which
+As designed, and once `DF28` below is fixed: every DNS name resolves to the device while the AP is up,
+and any unknown path redirects to `/`, which
 is what makes a phone pop the portal without anyone typing an address. Both stop the moment the AP does
 — hijacking name resolution for a device that is merely on a network would be a different thing
 entirely.
@@ -114,21 +115,22 @@ somebody gets half-way through. It grants a Modbus master nothing new: register 
 set the password outright — the command exists because "reset to a known default" is a different
 intention from "set to this string" and deserves to be expressible.
 
-> ### Known defect: the form's submission is dropped
+> ### Known defect: the page is never served (`DF28`)
 >
-> The rendered form posts to **`/save`** (`PortalForm::kFormAction`, whose own comment says "the
-> adapter must route this exact path"), but `portal_server_arduino.h` registers `POST` on **`/`** only.
-> ESP32's `WebServer` matches URIs by exact string equality, so the submission falls through to the
-> catch-all, gets a `302` to `/`, and the browser re-issues it as a `GET` — the settings are never
-> applied and the operator lands back on an empty form with no error.
+> The firmware builds this page and never starts it. `portalServer` is constructed in `firmware.cpp`
+> and nothing calls its `begin()` or `update()`, so while the access point is up nothing answers on
+> port 80 and no captive-portal reply is sent: a phone joins the network and finds nothing there.
+> Everything this section describes is the design, and none of it is reachable yet.
 >
-> Until it is fixed, provision over **Modbus** (see [Modbus registers](Modbus-Registers)) rather than
-> through this page. The 226 host checks over `PortalForm` cannot see this: they exercise the form
-> against strings, and the routing lives in the Arduino adapter that no host test can construct.
+> Until it is fixed, provision over **Modbus** (see below, and [Modbus registers](Modbus-Registers)).
+> The 226 host checks over `PortalForm` cannot see this: they exercise the form against strings, and
+> serving it is the job of the Arduino adapter, which no host test can construct. An earlier version of
+> this note described the form posting to a path nobody routed; that was fixed on 2026-08-14, inside an
+> adapter that never runs.
 
 ## Configuring it over Modbus
 
-The fully remote path, and currently the reliable one. Write the credentials, commit, and the device
+The fully remote path, and currently the only one that works. Write the credentials, commit, and the device
 associates without any AP at all:
 
 ```
@@ -157,7 +159,7 @@ associate and has forgotten how it used to.
 The panel is a **reader** of WiFi and MQTT configuration. It shows the state, SSID, address, signal
 strength, the broker's state, and the AP details while a portal is open — and it cannot edit any of
 it, because there is no on-device text entry and an SSID is text. Every configurable network field is
-set over the portal or over Modbus.
+set over the portal or over Modbus, and until `DF28` is fixed that means Modbus.
 
 What the panel does configure is its own behaviour and the Modbus link: Configuration → Modbus for the
 serial parameters, Configuration → Display for the LED and the flow unit shown on screen.

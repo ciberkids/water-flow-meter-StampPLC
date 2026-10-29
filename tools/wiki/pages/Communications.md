@@ -7,7 +7,7 @@ Three ways to talk to the device, with different jobs. Pick by what you are doin
 | **For** | Control and integration | Observation and Home Assistant | Carrying MQTT, and provisioning |
 | **Read telemetry** | yes | yes | — |
 | **Write configuration** | yes, all of it | no | — |
-| **Command a reset** | yes | **no** | — |
+| **Command a reset** | yes | session and totals only | — |
 | **Works without a network** | yes | no | — |
 | **Reference** | [Modbus registers](Modbus-Registers) | [MQTT](MQTT) | [WiFi](WiFi) |
 
@@ -15,13 +15,16 @@ Three ways to talk to the device, with different jobs. Pick by what you are doin
 reachable over RS485 — including the WiFi and MQTT configuration, so a device can be provisioned
 entirely remotely without anyone joining its access point.
 
-**MQTT is read-only in practice.** Command topics are specified and not implemented; the only
-subscription is Home Assistant's birth message. Anything that changes the device happens over Modbus
-or at the panel.
+**MQTT can reset measurements, and nothing more.** Three command topics (reset session, reset totals,
+republish discovery) appear in Home Assistant as buttons. Nothing that changes configuration is
+reachable over MQTT, deliberately; [MQTT](MQTT) explains the security position under *Commands*.
 
 **The panel is a reader of network configuration.** There is no on-device text entry, so an SSID or a
-broker host cannot be typed at the device. It configures its own display behaviour and the Modbus
-serial parameters, and reports everything else.
+broker host cannot be typed at the device. It configures the meters, its own display behaviour and the
+Modbus serial parameters, and reports the network settings.
+
+**The configuration web page is not served yet** (`DF28`): the firmware builds it and never starts it.
+Until that is fixed, Modbus is the only route to the WiFi and MQTT settings; see [WiFi](WiFi).
 
 ## Units, in one place
 
