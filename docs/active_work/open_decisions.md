@@ -38,7 +38,8 @@ Status legend: 🔴 blocks work now · 🟡 blocks a later slice · ⏸️ waiti
 2026-10-29, when writing the wiki's Features and Capabilities page showed the configuration web page is
 never started and the board temperature never measured; both closed the same day. `DF30` opened in
 `DF29`'s review, when checking that the *Board temperature* entity could appear at all showed that Home
-Assistant discovery overflows the publish queue.
+Assistant discovery overflowed the publish queue, and closed on 2026-10-30. `DF31` opened the same day out
+of `DF30`'s design study, which read what esp-mqtt does with a message after the firmware hands it over.
 `N-g` opened on 2026-10-01, when documenting the SD card showed a pack could not be built, and closed on
 2026-10-29: `npm run export:pack` builds one and refuses a pack the device would not load. `N-f` and `DF25` opened on
 2026-08-30, both out of one question the owner asked while T1's storage was being decided — *is the
@@ -49,8 +50,8 @@ building `N-c`. `J9`, `I2a`, `N-b` and N-d2's correction half all closed on 2026
 rewritten.
 
 **What remains is five software items and three measurements.** `N-e` is under way — T0, T1 and T2 have
-landed and T3/T4/T6 are next — `N-f`, `DF23` and `DF25` each carry a decision in the entry, and `DF30`
-carries a likely fix that nobody has decided. The three that need hardware are `G1` (the polling rate),
+landed and T3/T4/T6 are next — `N-f`, `DF23` and `DF25` each carry a decision in the entry, and `DF31`
+carries a likely fix that should not be decided before a board has measured it. The three that need hardware are `G1` (the polling rate),
 `N-d2`'s remaining half (whether the RTC survives power loss), and `N-c`'s retain check, which lives in that entry's ⏸️ block rather than on a line of its own
 because the rest of `N-c` is built and tested. Cite an ID when you ask about one — this file is the one
 place that says what an ID means. Rule **I3** governs them: append-only, never reused, so a gap means an
@@ -67,7 +68,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **N-e** | 🟡 | feature, in progress | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, four questions open; T0, T1 and T2 landed, **T3/T4/T6 next**, and R2.5's MQTT sentence needs amending |
 | **N-f** | 🟡 | feature, specified here | Where the readings live — internal flash or an SD card, human-readable files, persisted session values and rotating telemetry. Five decisions taken, six questions open, not started; question 1 changes a documented register contract and should be answered first |
-| **DF30** | 🟡 | defect, found 2026-10-29 | Home Assistant discovery overflows the publish queue: `publishDiscovery()` enqueues 3 messages per channel in service plus 7 with no pump between them, so only 14 fit after a connect's two availability messages, and 16 on any other republish. From three channels a connect refuses the tail; from five, *Board temperature* is in it |
+| **DF31** | 🟡 | defect, found 2026-10-30 | What esp-mqtt does after the hand-over, read in its source: QoS 0 telemetry drains at about one message a second, the second QoS 0 message of a burst goes out last and can expire, every item expires silently 30 s after it was enqueued, and an enqueue or subscribe can hold the logic task up to 10 s. Telemetry at QoS 1, already a setting, would avoid the pacing and the misfire by the source's reading; measure on a board, then decide |
 | **DF25** | 🟡 | defect, found 2026-08-30 | A write to non-volatile storage that fails is reported by nothing. **Detection and publication landed 2026-08-30** (`DF25a`: register 34, MQTT `storageFault`, 49 host checks) — the panel's warning triangle rides with `N-e`'s T5, and three of its four questions were built on the recommendation rather than decided |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
@@ -86,7 +87,7 @@ review rounds costs **32 bytes of RAM and 1,532 of flash**. NOT re-run on 2026-0
 figures: 220 unit, 51 exporter, 51 visual, 0 audit findings. (Both compile figures come from a CLEAN dependency
 cache; the earlier 38.2% came from a stale container, see `platformio.ini`.) Of the seven open lines one
 feature is under way, one has not started, two defects have decisions in them, one defect has a likely
-fix awaiting a decision, and two need hardware that has never existed for this project. That is a different condition from "twelve things are broken", which
+fix that waits on a board measurement, and two need hardware that has never existed for this project. That is a different condition from "twelve things are broken", which
 is what this register looked like before the 2026-08-18 rewrite.
 
 ---
@@ -410,9 +411,11 @@ to `plc::sampleBoardTemperature` from the logic task. The reading reaches the sn
   queued just before a drop goes out first after the reconnect, with the reading from before the
   outage. In the review's replay (eight channels, discovery off, a ten-minute outage, the board at
   25.0 °C before it and 30.0 °C after) the reconnect sent `"tempC":25.0` and then `"tempC":30.0`, the
-  second from the reconnect's own full set, queued in the same pass. When `DF30`'s discovery burst fills
-  the queue that set is refused, and in a second replay the next diagnostics message went out one
-  publish period (10 s) after the reconnect. Changing the queue is not this item.
+  second from the reconnect's own full set, queued in the same pass. When `DF30`'s discovery burst filled
+  the queue that set was refused, and in a second replay the next diagnostics message went out one
+  publish period (10 s) after the reconnect. Since `DF30`'s fix (2026-10-30) the set is held only while
+  the connect's discovery is queued, at most 13 passes, and is never refused. Changing the queue is not
+  this item.
 - **The first read waits out the chip's 100 ms conversion period** (`LM75B_Class::POWER_NORMAL`),
   because nothing read here says what the register holds before the first conversion, and zero would
   be `DF29` again.
@@ -487,28 +490,30 @@ The panel does not show it either.
 
 **⏸️ Not seen on a board**, like everything else on this device. The first proof is a
 `[temp] board temperature … C` line on the console after MQTT connects, and a number, not `unknown`, on
-the Home Assistant entity. **Until `DF30` is fixed, the Home Assistant half of that check is reliable
-only with four or fewer channels in service:** from five, the *Board temperature* discovery message is
-refused on every connect, and the entity exists only if an earlier, smaller set or a republish outside a
-connect published it (from six, no republish can). The console line and `tempC` on
-`<base>/diagnostics/state` do not depend on discovery, so they are the check on a fuller device.
+the Home Assistant entity. **Until `DF30` was fixed, the Home Assistant half of that check was reliable
+only with four or fewer channels in service:** from five, the *Board temperature* discovery message was
+refused on every connect. Since 2026-10-30 every config is handed to the MQTT client with any number of
+channels, which is not the same as delivered (`DF31`). The console line and `tempC` on
+`<base>/diagnostics/state` do not depend on discovery, so they remain the check that does not.
 
 ---
 
-## DF30 🟡 Home Assistant discovery overflows the publish queue — from three channels in service, every connect refuses part of it
+## ~~DF30~~ ✅ FIXED 2026-10-30 — Home Assistant discovery is queued as a job across logic passes, and a channel change no longer stops telemetry
 
 Found 2026-10-29 in `DF29`'s review, by asking whether the *Board temperature* entity that `DF29`'s bench
 check reads could appear at all on a fully populated device. Not caused by `DF29`: `publishDiscovery()`
-is older than it and outside its diff.
+was older than it and outside its diff. It was worse than this entry first said, and worse than its 🟡:
+a design study on 2026-10-30 — three fact-finders, five analysts each designing one fix and five reviewers
+told to refute them, all replaying the real classes on a host — found telemetry stopping until a reboot.
 
-**What happens.** `publishDiscovery()` (`src/firmware.cpp`) enqueues every discovery message for the
+**What happened.** `publishDiscovery()` (`src/firmware.cpp`) enqueued every discovery message for the
 connected sensors in one loop, with no `pump()` between enqueues. `HaDiscovery::enumerateEntities`
 orders them three per channel in service, then the four device-wide entities with *Board temperature*
 first, then the three buttons: 3k + 7 messages for k channels, which is `kHaMaxEntities`' shape.
 `MqttPublisher::kQueueCapacity` is 16, and R4.1.3 never evicts a Discovery message, so once the queue
-holds only availability and discovery, every further message is **refused**. On a connect two
-availability messages are already queued, one from `MqttPublisher::onConnected()` and a second from
-`firmware.cpp`'s connect latch, so 14 discovery messages fit:
+held only availability and discovery, every further message was **refused**. On a connect two
+availability messages were already queued, one from `MqttPublisher::onConnected()` and a second, byte
+for byte the same, from `firmware.cpp`'s connect latch, so 14 discovery messages fitted:
 
 | Channels in service | Discovery messages | Queued on a connect | Refused |
 | --- | --- | --- | --- |
@@ -518,54 +523,275 @@ availability messages are already queued, one from `MqttPublisher::onConnected()
 | 5 | 22 | 14 | channel 5's *Lifetime volume*, all four device-wide entities and all three buttons |
 | 8 | 31 | 14 | channel 5's *Lifetime volume*, channels 6–8 entirely, the four device-wide entities and the buttons |
 
-The counts were measured by replaying that connect order (`onConnected`, the second availability
-enqueue, then 3k + 7 Discovery enqueues) against the real `MqttPublisher` for every k from 0 to 8; the
-names follow from `enumerateEntities`' order. A bench sees it on the console at every connect:
-`[mqtt] discovery: 14 of 31 entities queued` with all eight channels in service.
+The counts were measured by replaying that connect order against the real `MqttPublisher` for every k
+from 0 to 8, and the study's own replay reproduced them row by row; the names follow from
+`enumerateEntities`' order. A bench would have read `[mqtt] discovery: 14 of 31 entities queued` at every
+connect with all eight channels in service.
 
-**No retry gets further than 16.** `HaRepublishPolicy::notePublished` is called only when the whole set
-was accepted, and `onSensorBitmap` answers `None` until it has been. Every route that does republish — a
-reconnect, Home Assistant's birth message, `cmd/republish` — runs the same loop from the first entity
-again. A reconnect has the same 14 slots. A republish outside a connect, with the queue otherwise empty,
-has all 16: enough for three channels' 16, not for four's 19. So from four channels part of the set is
-never published by any route, and from six that part includes *Board temperature*, which is message
-3k + 1 of the set: the 16th with five channels, the 19th with six. On a connect with three or more, the *Republish discovery* button is
-itself one of the refused entities.
+**A per-pass storm, which this entry missed.** `HaRepublishPolicy::onSensorBitmap` answered
+`SensorsChanged` whenever the bitmap differed from the last one FULLY published, and `notePublished` was
+reached only when a whole set had been accepted. So once any complete publish had happened, a channel
+change whose set no longer fitted made `publishDiscovery()` run on EVERY connected pass: 3k + 7 payloads
+built, the same first four messages handed over, the rest refused, and two console lines. Telemetry was
+0 messages in 130 s of replay, at k = 4 and at k = 8, and only a reboot or the bitmap returning to the
+recorded value ended it. **Ordinary commissioning reached it:** enabling channels one at a time while
+connected published 1, 2 and 3 fully and stormed at the fourth. With discovery switched off the same
+comparison printed the "connected sensors changed" line on every pass, 70,000 lines in 70 s of replay.
 
-**What a user sees depends on the device's history**, because discovery is retained (R4.4.5). A refused
-message is simply not published, so an entity whose config an earlier, smaller set already published
-stays in Home Assistant from the broker's retained copy. A device commissioned with all its channels at
-once shows the losses in the table; one whose channels were added later may show none of them.
+**Three sentences in this entry were wrong**, and are corrected here rather than quietly rewritten:
 
-**It also costs the reconnect's telemetry.** `onConnected()` arms a full set for the next `tick()`,
-which runs later in the same pass, after the burst. Measured in a replay at the default 10 s publish
-period, with the payload's `uptimeS` changing each second as `firmware.cpp` sets it: with discovery on
-and two channels, channel 1's state topic first went out 60 s after the reconnect, at the next
-heartbeat (its values did not change in the replay), because the burst left one free slot and each
-later message in the set evicted the one before it; with three or more channels, the first diagnostics
-message went out 10 s after the reconnect, because the whole set was refused. With discovery off,
-channel 1's state and the diagnostics both went out within 2 ms of the reconnect.
+- "`onSensorBitmap` answers `None` until it has been [published]" was true only of a device never fully
+  published. Once one had been, it answered `SensorsChanged` on every pass: the storm above.
+- "A device commissioned with all its channels at once shows the losses in the table; one whose channels
+  were added later may show none of them" was backwards. Adding channels one at a time while connected
+  was the route INTO the storm, and only entities 1–16 were ever delivered.
+- "with three or more channels, the first diagnostics message went out 10 s after the reconnect" described
+  the first connect after boot. On a RECONNECT the change-detection baselines survive (esp-mqtt reconnects
+  by itself and `configure()` does not run), so with k ≥ 3 the unchanged sensor and total topics waited
+  for the 60 s heartbeat, and only diagnostics, whose `uptimeS` moves, went at 10 s. The `cmd/republish`
+  acknowledgement (R4.4.2d, R4.4.4) waited 10 s from k = 3 for the same reason.
 
-**Why nothing caught it.** The comment on `kQueueCapacity` in `mqtt_publisher.h` said "the caller pumps
-as it enqueues", and the caller does not. `ha_discovery_test` checks every payload and
-`mqtt_publisher_test` the queue's policy, each on its own; nothing runs the firmware's connect order
-against the real queue, because that order lives in `firmware.cpp`, which no host test links. The same
-blind spot as `DF28` and `DF29`. Both source comments now point here.
+**Four more, found on the way**, each fixed below: the bitmap was read twice, to enumerate the set and to
+record it, while the priority-8 Modbus task can write it in between; the connect latch's second
+availability message cost one slot of sixteen and said nothing new; `onMqttData` latched a birth without
+looking at the retain flag, so a broker holding a retained `homeassistant/status online` replayed it at
+our subscribe and doubled every connect's set; and when a connect and a disconnect were both latched by
+the time the logic task reached them, the connect was consumed first, which for the usual real order — a
+drop, then esp-mqtt's reconnect 10 s later behind a long pass — left the policy and the ladder believing a
+working link was down, and R4.4.6 silent for the rest of the session.
 
-**The wiki is wrong about it, and is not edited here.** The MQTT page says "31 entities on a fully
-populated device", which is what is announced, not what arrives. The Features and Capabilities page
-says Home Assistant discovery is there "so every entity appears without any YAML", which is false for a
-device commissioned with three or more channels. The fix should correct both.
+**Why nothing caught it.** The comment on `kQueueCapacity` in `mqtt_publisher.h` said "the caller pumps as
+it enqueues", and the caller did not. `ha_discovery_test` checked every payload and `mqtt_publisher_test`
+the queue's policy, each on its own; nothing ran the firmware's connect order against the real queue,
+because that order lived in `firmware.cpp`, which no host test links. The same blind spot as `DF28` and
+`DF29`. And one check in `ha_discovery_test` asserted the storm's own rule: "keeps asking until the
+publish is noted — a -1 publish must not be forgotten".
 
-**Likely fix, not decided.** Either pump while enqueuing in `publishDiscovery`, as the header promised,
-bounded for the same reason `pump(4)` is (the logic pass also owns the display's 100 ms acknowledgement
-budget, §7); or queue discovery across passes, a slice at a time, and call `notePublished` when the
-last slice is accepted. Either way it wants a host test that enumerates eight channels, runs the connect
-order and asserts all 31 reach the sink, which means moving the burst out of `firmware.cpp` into an
-Arduino-free header, the way `DF24` moved the snapshot.
+**~~Likely fix, not decided~~ — FIXED 2026-10-30.** The study recommended the second fix this entry named,
+a cursor across passes, with amendments, and the owner took it with the decisions marked below. The rule
+is `src/net/ha_discovery_job.h`, header-only and Arduino-free:
 
-**⏸️ Not seen on a board.** With three or more channels in service, the console line above should read
-fewer queued than announced on every connect.
+- **A job, not a burst.** `HaDiscoveryJob` captures the bitmap once when a set starts and keeps the index
+  of the next entity; each topic and payload is built at the moment it is enqueued, so nothing is stored
+  but the cursor. At most `MqttPublisher::kMessagesPerPass` builds per pass — 4, the `pump()` figure,
+  which `firmware.cpp` carried as a literal and which now has a name — counted as attempts, as `pump()`
+  counts them.
+- **An admission window.** Before EVERY enqueue there must be a free slot — `enqueue()` evicts telemetry
+  and still returns true, so its result cannot be the test — and fewer than `kAdmissionWindow`
+  availability-plus-discovery messages queued. Derived, with a `static_assert`: 16 −
+  `kFullTelemetrySetMessages` (10) − one availability message per connect = **5**, so a full telemetry
+  set and the next connect's availability always fit beside whatever discovery is queued. One
+  availability message per connect, because the duplicate is gone.
+- **Discovery first on a connect (owner decision B).** Stepping the job before `tick()` puts only the
+  first slice ahead of telemetry, so the full set `onConnected()` arms is HELD — `tick()` is not called —
+  until the set that connect started has queued its last entity; then every config is ahead of every
+  state in a first-in, first-out queue. The hold is that one set's: a rerun, a birth or a stream of
+  `cmd/republish` does not extend it. It is bounded at `kConnectHoldPassLimit` = 4 + 8 + 1 = **13** passes —
+  four for `pump()` to drain a queue the previous session left full, eight to queue the largest set at four
+  a pass, one for the connect pass — so a stuck set can never silence telemetry. The worst leftover route
+  in the host test holds for 9.
+- **The policy compares against the REQUESTED bitmap.** `HaRepublishPolicy::noteRequested` records it at
+  every trigger — connect, birth, `cmd/republish`, bitmap change, retry — including while discovery is
+  switched off, and `onSensorBitmap` compares against that, so a change is answered once.
+- **What "published" means (owner decision A).** A set is recorded with `notePublished` only when every
+  entity was accepted, no Discovery-class message is left in the publisher queue, and a new counter,
+  `MqttPublisher::discoveryPublishFailures()`, has not moved since the set started: `pump()` pops a
+  message even when the sink returns −1, so that counter is the only evidence one was lost. That is
+  **handed to esp-mqtt, not delivered**, and the code says so — esp-mqtt can still expire it silently at
+  30 s, and the transport discards `MQTT_EVENT_PUBLISHED` (`DF31`).
+- **A bounded retry.** A set that ends incomplete — a config too long for its buffer, or a sink failure —
+  is retried after 60 s, `kHeartbeatMs`: never every pass, and never only "at the next reconnect".
+- **Coalescing.** A birth, `cmd/republish` or bitmap change while a set is being queued lets it finish and
+  then runs ONE more, for the latest bitmap; while the set has handed nothing over yet it is retargeted.
+- **A disconnect pauses the set**, and the next connect starts it again from entity 0.
+- **The latches are consumed disconnect first**, in `consumeMqttLinkLatches`, which moved into the header so
+  a host test drives both orders. Really disconnect-then-connect ends connected, as it is. Really
+  connect-then-disconnect ends with the policy, publisher and ladder believing a down link is up. The
+  policy and the job are harmless there, because everything that publishes runs in the connected block,
+  gated on the transport's own `connected()`. The two subscribes were not: they ran on the report alone,
+  and `esp_mqtt_client_subscribe` takes the client's lock before it checks the state (esp-mqtt `bb9c8af`
+  `mqtt_client.c:1708`, then `:1709`), which a reconnecting client holds through DNS, the TCP connect and
+  the CONNACK wait. They now run only if the transport still says connected; the next real CONNECTED
+  subscribes. The ladder makes no attempt while it believes it is connected, which is harmless **only
+  because esp-mqtt's auto-reconnect is on**: the transport never sets
+  `disable_auto_reconnect`, although owner decision 3B says it should. If 3B is ever honoured, that case
+  needs revisiting.
+- **A teardown drops the old session.** `firmware.cpp`'s two `end()` sites are one `stopMqttClient()`, which
+  cancels the job, clears the WHOLE publisher queue (`MqttPublisher::discardQueue()`: everything in it
+  carries the old base topic and prefix, and `configure()` keeps the queue) and clears all four latches, so
+  a CONNECTED latched just before `end()` cannot queue an `online` under the old topic. Every settings
+  apply bumps the revision and comes through here, which is how discovery being switched off, or its
+  prefix changed, reaches the job.
+- **Retained births are refused**, in `HaRepublishPolicy::onStatusMessage`, which now takes the flag. MQTT
+  3.1.1 §3.3.1.3: a broker sets RETAIN on a message sent because a subscription was just made and clears it
+  when forwarding to an existing one, so a real Home Assistant restart is still answered. This rests on
+  esp-mqtt's `retain` field — present in the installed 4.4.7 `mqtt_client.h`, and already passed by the
+  transport — which R4.4.2c rests on too, with the same bench check in `N-c`'s ⏸️ block. If that flag were
+  wrong, R4.4.7 would stop answering births, silently.
+- **The connected block waits while a CONNECTED is latched but unconsumed.** esp-mqtt sets the
+  transport's flag and then the latch from its own task, so one landing after this pass read the latches
+  and before the block's gate would run the block for a session the pass had not started: `tick()` would
+  queue the already-armed full set ahead of the connect's discovery, which breaks decision B on the first
+  connect after boot, where Home Assistant has no configs. The cost is one pass.
+- `firmware.cpp` keeps the wiring: one read of the bitmap per pass, each latch read and cleared only if it
+  was set, `consumeMqttLinkLatches` before `serviceMqttCommand`, and one `serviceMqttConnectedPass` —
+  triggers, one step, `tick()` unless held, `pump(kMessagesPerPass)` — after the snapshot is filled.
+
+**The checks, and that they fire.** `test/host/ha_discovery_job_test.cpp`, **137 checks**, links the real
+`mqtt_publisher.cpp`, `ha_discovery.cpp`, `mqtt_command_router.cpp` and `mqtt_reconnect.cpp` and drives the
+header's entry points in the firmware's order, for every k from 0 to 8, on every route: first connect;
+reconnect with baselines kept; a drop 1, 2, 3, 5, 8 and 12 passes into the set; three connects in a row
+that drop before their first `pump()`; a drop with a full telemetry set still queued; HA birth; a
+retained birth; `cmd/republish`; `cmd/republish` on every pass for 2,000 passes; channels commissioned one
+at a time 0 → 8; every jump 0 → k; 2 → k while disconnected; 8 → k; a change mid-set; discovery switched
+off by a teardown and in place; a teardown that moves the base topic and the prefix; both latch orders; a
+CONNECTED landing between the latch read and the block's gate; truncation; and a sink failure. It asserts
+that every one of the
+3k + 7 configs reaches the sink; that `publishedBitmap()` equals the bitmap; one set per change and none in
+the 5 s after; on every connect, each config before its entity's first state of that session; the full
+telemetry set within 4 passes of the hold; nothing refused or evicted; at most 4 builds and 4 sink calls
+in any pass; and a stuck job released at exactly 13 passes. Truncation is reached through a real seam, the
+job's payload-limit constructor argument: at 463 bytes exactly *Board temperature* and *Polling rate* do
+not fit. It also reads `firmware.cpp` as text, with whole statements compared: no `publishDiscovery`, no
+`mqttPublisher.enqueue(`, `tick(` or `pump(` of its own, both entry points called once with their whole
+argument lists, the service call after `fillMqttSnapshot`, `mqttTransport.end()` in one place inside
+`stopMqttClient`, whose whole body is compared, the retain flag handed to the birth test, both gates by
+their exact text, and both subscribes inside the second. `board_temperature_test` finds the connected block
+by its gate's text too, and was updated with it.
+
+- **It fails against the code it replaces.** Built with `-DDF30_TODAY`, which swaps the glue for a
+  transcription of `firmware.cpp` at `65b36f0e` and links that commit's sources, **107 of its 129 checks
+  fail** (the eight on the hold have no counterpart there): among them the tail from k = 3, the storm from
+  the fourth channel, the line on every pass with discovery off, the set doubled by a retained birth, the
+  ladder left disconnected by the latch order, and a set recorded although a config was refused.
+- **Twenty-one mutations, every one caught by a named check**, each applied to a fresh copy, three suites
+  built with `run.sh`'s flags, and a mutation counted only on a non-zero exit. The policy put back to the
+  published bitmap: 15 checks fail, among them "one channel at a time 0 -> 8: exactly one set and one
+  R4.4.6 answer per change", and 2 in `ha_discovery_test`. No admission window: 5, among them "drop 1-12
+  passes into the set, then reconnect: nothing refused, no telemetry evicted". The step moved after
+  `tick()`: 2, among them "cmd/republish every pass for 2000 passes: every config still reaches the sink
+  during it". No hold: 27, "each config reaches the sink before its entity's first state" on every connect
+  route. No queue clear at teardown: "teardown mid-set: nothing under the old base topic or prefix reaches
+  the sink after it". The teardown call taken out of `stopMqttClient`: its source check. And twelve more of
+  the same shapes: the CONNECTED consumed first, retained births latched again, `false` handed for the flag,
+  a set recorded despite a failure, a set recorded before its last config left the queue, no retry, no
+  coalescing, no bound on the hold, the duplicate availability restored, a direct `end()` restored, the
+  global bitmap read again, and the bitmap trigger not recorded as a request. And three on the two gates:
+  the connected block's latch condition removed from `firmware.cpp` (its source checks) and from the
+  test's own model of the block ("a CONNECTED landing between the latch read and the gate: no channel's
+  state ever reaches the sink before a config for it"), and the subscribes' link check removed. Two
+  needed the routes sharpened first: a verdict that did not wait for the queue to drain survived, because
+  the refused config was long gone by then, and latched retained births were caught only by the policy's
+  unit test, because the birth arrived in the connect pass, where a set that has handed nothing over
+  absorbs it. The routes now also refuse the last config, and deliver the retained birth two passes in,
+  as a broker's round trip does.
+- `ha_discovery_test`'s policy block is rewritten for the requested bitmap and the retained birth (267
+  checks, 262 before), and `mqtt_publisher_test` checks the new counts, the counter and `discardQueue()`
+  (202, 192 before).
+
+**Not reachable by any host check**, stated so it is not overclaimed: what esp-mqtt does after the
+hand-over — pacing, the QoS 0 misfire, the 30 s expiry, lock waits — is `DF31`; the retain flag is
+`N-c`'s; and `firmware.cpp` itself is checked by compiling it and by reading it, not by running it.
+
+**What it does not do**, each read from the code and none measured:
+
+- a channel enabled while connected is not held: its first state goes out on the next `tick()`, a few
+  passes before the set reaches its three configs, so Home Assistant shows it from the next publish — 10 s
+  if a value moves, otherwise the 60 s heartbeat. Owner decision B was taken for the connect, and the other
+  routes were given the admission window only;
+- a channel taken out of service mid-set still has its configs handed over, retained, by the set being
+  queued — the ghost entities the spec already accepts as a cost of retain;
+- esp-mqtt's outbox holds more than it did. For the closest design it replayed, the study's model put the
+  peak of one connect at 19,896 bytes (43 entries) and a connect with a coalesced rerun at 37,704 (74),
+  against 8,424 (16) when 14 of 31 were refused (MODEL). Free heap has never been measured on this board.
+
+**Cost: 24 bytes of RAM and 1,744 of flash.** RAM 81,152 → 81,176 bytes and flash 1,320,789 → 1,322,533
+(24.8 % either way; 39.5 % → 39.6 %), measured by building `65b36f0e` and this change in one build
+container from one dependency cache, espressif32 7.1.3. CI's figures differ by a few hundred bytes of
+embedded paths. The job is 20 bytes and the Discovery failure counter 4.
+
+**Verified:** host **2,572 checks across 34 suites**, 0 failures, against 2,420 across 33 at `65b36f0e`
+(the sum of the figures the suites print; three suites that print none add 55 `ok` lines either way), and
+the manifest check green. The wiki dry run ends "all repo pointers resolve". The firmware compiles in the
+container.
+
+**The wiki** said "31 entities on a fully populated device" on the MQTT page and "every entity appears
+without any YAML" on Features and Capabilities. Both now say what is announced, that every config is
+handed to the MQTT client with any number of channels, and that what happens to it after that is `DF31`'s.
+
+**⏸️ Not seen on a board**, like everything else on this device. With all eight channels in service the
+console should read `[mqtt] discovery: all 31 entities handed to the MQTT client` once per connect, Home
+Assistant should list 31 entities, and enabling a channel while connected should print one "connected
+sensors changed" line, not one a pass.
+
+---
+
+## DF31 🟡 What esp-mqtt does with a message after the hand-over: QoS 0 telemetry is paced, reordered and silently expired — measure on a board, then choose
+
+Found 2026-10-30 by `DF30`'s design study, which read the esp-mqtt this firmware links to say what "handed
+over" is worth. Not caused by `DF30` and not fixed by it: everything here happens after
+`esp_mqtt_client_enqueue` has returned, which is where every host check in this repository stops. Each fact
+says how it is known: READ from the source at the cited line; MEASURED in a host replay against esp-mqtt's
+real outbox code; MODEL, that replay with an assumed broker round trip.
+
+**Which code.** espressif32 7.1.3 resolves Arduino-ESP32 2.0.17 on ESP-IDF v4.4.7 (`38eeba213a`), whose
+esp-mqtt submodule is commit `bb9c8af`. Its `include/mqtt_client.h` is byte-identical to the installed
+header, and every error string of the branches its `sdkconfig` compiles in is in the shipped `libmqtt.a`.
+The line numbers below are that commit's. None of it can be changed from `platformio.ini`: the library is
+prebuilt, with REPORT_DELETED, MSG_ID_INCREMENTAL and the custom outbox settings all off.
+
+- **QoS 0 drains at about one message a second.** READ. Each pass of esp-mqtt's task, while connected,
+  sends at most ONE queued item (`mqtt_client.c:1512-1516`), then waits in `esp_transport_poll_read` for up
+  to `MQTT_POLL_READ_TIMEOUT_MS`, 1,000 ms (`:1563-1568`, `lib/include/mqtt_config.h:16`) — a `select()`
+  that wakes only on data to read. A QoS 1 message's PUBACK wakes it; a QoS 0 message gets no reply. So a
+  10-message telemetry set at the default QoS 0 takes about 10 s on the wire (MODEL), and the "within 2 ms"
+  `DF30`'s entry quoted for telemetry was the hand-over, not the wire.
+- **The QoS 0 misfire.** READ, and confirmed in the shipped binary's disassembly and in a replay. After a QoS
+  0 item is sent, `mqtt_resend_queued` deletes it (`:1398-1404`), and `:1515` then marks
+  `pending_msg_id` TRANSMITTED — an id of 0, which every QoS 0 message has, so `outbox_get(0)`
+  (`lib/mqtt_outbox.c:56-65`) finds the NEXT unsent QoS 0 item and marks it transmitted without sending it.
+  That item goes out only through the retransmit path, which runs when nothing is queued, at most once per
+  1,000 ms (`:1518-1524`). In a burst the second QoS 0 message goes out last — MEASURED, five went out in the
+  order 1, 3, 4, 5, 2 — and if queued items keep arriving about once a second for 30 s, it never gets a turn
+  and expires.
+- **Every item expires 30 s after it was ENQUEUED, silently.** READ. `mqtt_delete_expired_messages` runs
+  before each send (`:1509`) and, with REPORT_DELETED off, takes the branch that dispatches no
+  `MQTT_EVENT_DELETED` (`:1424`, `lib/mqtt_outbox.c:193-207`); `OUTBOX_EXPIRED_TIMEOUT_MS` falls back to
+  30,000 (`lib/include/mqtt_config.h:85-89`). Any state, any QoS: QoS 1 here means "retried for at most
+  30 s from enqueue". `EspMqttTransport` discards `MQTT_EVENT_PUBLISHED`, the only delivery signal, so
+  nothing on the device can tell a delivered message from an expired one.
+- **An enqueue or a subscribe can block the logic task for up to about 10 s.** READ.
+  `esp_mqtt_client_enqueue` takes the client's lock with `portMAX_DELAY` (`:1939`), and esp-mqtt's task
+  holds it for its loop body (`:1455-1562`), which includes one blocking socket write bounded by
+  `network_timeout_ms`, 10 s here. `esp_mqtt_client_subscribe` writes synchronously in the caller's task
+  under the same lock (`:1708`, the write at `:1732`), and the connect latch calls it twice. The typical
+  wait is unmeasured; the bound is the network timeout, against §7's 100 ms, on the pass that consumes a
+  connect and on any `pump()`.
+- **A steady QoS 0 backlog.** ARITHMETIC, then MODEL. With channels flowing, telemetry arrives at
+  (k + 2) / P messages a second against a drain of about one: with eight channels that is any publish period
+  under 10 s, and the default 10 s is the edge. The study's model put the steady outbox at about 20.6 KB at
+  P = 10 s up to 76 KB at P = 1 s with every value changing, and a Home Assistant birth's set queued behind
+  that backlog lost most or all of its configs to expiry, depending on the period and the phase — while the
+  device recorded the set as handed over, which is all `DF30`'s "published" claims.
+
+**What would avoid most of it, read from the source and not measured.** Telemetry's QoS is already a
+setting, `config.mqtt.qos` (§6.1, default 0; owner decision 8A puts discovery and availability at 1
+whatever it says). At QoS 1 every telemetry message gets a non-zero id and a PUBACK: the PUBACK wakes the
+task, so the one-a-second pacing goes, and the misfire, which keys on id 0, cannot happen. The cost is that
+every message stays in the outbox, on the heap, until it is acknowledged or expires; and ids are random, so
+with 33 in flight two collide about 0.8 % of the time (COMPUTED, the birthday product over 65,534 ids), and
+one PUBACK then settles the wrong item. Whether the default should change is the decision this item is
+for, and it should be taken on measurements.
+
+**To measure on a board**, before deciding: `esp_mqtt_client_get_outbox_size()` (bytes; the only
+back-pressure signal the 4.4 API has) and `esp_get_free_heap_size()` and
+`heap_caps_get_largest_free_block()` at a connect with eight channels, and in steady flow at P = 10 s and
+P = 1 s; the time from handing over a 10-message set to its arrival at the broker, at QoS 0 and at QoS 1;
+whether `sensor/2/state` arrives last at QoS 0; and the longest single `pump()` and connect-latch pass.
+None of these is read anywhere on this device yet, and the free heap never has been.
+
+**Blocks.** Nothing in software. It bounds what `DF30`'s fix can claim — handed over, not delivered — and
+what any telemetry figure can.
 
 ---
 
@@ -1671,7 +1897,9 @@ a future batch takes `J` or a new two-letter prefix, never a letter that once me
 
       grep -cE '^## (~~)?(DF|J|N-|G[0-9]|I[0-9])' docs/active_work/open_decisions.md
 
-  It reports **13** today: six open, five struck through in place, and the two standing rules.
+  It reports **20** on 2026-10-30, after `DF30` closed and `DF31` opened: seven open, eleven struck
+  through in place, and the two standing rules. (It said 13, six open and five struck through, and
+  had not been recounted as items were added after `DF25a`, which last set it.)
 - **The index at the top is maintained by hand and must match the headings.** Closing an item is two
   edits in one commit: strike the heading, delete the index row. An index that lists a fixed item is
   the same failure as the status emoji this register was rewritten to fix — one fact with two homes.
