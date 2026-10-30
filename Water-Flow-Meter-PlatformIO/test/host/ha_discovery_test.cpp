@@ -775,6 +775,19 @@ void republishPolicyTests() {
 
   checkStr(plc::haRepublishReasonText(HaRepublishReason::SensorsChanged), "sensor bitmap changed",
            "every reason has text, so a storm is visible in the log");
+
+  // Bits 8-15 of register 10 name no channel, and the register keeps them as a master wrote them, so
+  // a request can be RECORDED with one set. The comparison masks both sides: masked on the live side
+  // only, 0x0003 against a recorded 0x0103 would answer SensorsChanged on every pass, and every config
+  // would be handed over again each time — a retained-config flood, though telemetry keeps flowing.
+  HaRepublishPolicy masked;
+  masked.onConnected();
+  masked.noteRequested(0x0103);
+  check(masked.onSensorBitmap(0x0003) == HaRepublishReason::None &&
+            masked.onSensorBitmap(0x0103) == HaRepublishReason::None,
+        "a request recorded with bit 8 set: the same channels with or without it ask for nothing");
+  check(masked.onSensorBitmap(0x0007) == HaRepublishReason::SensorsChanged,
+        "and a real channel change beside it still asks");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
