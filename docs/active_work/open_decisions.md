@@ -69,7 +69,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **N-e** | 🟡 | feature, in progress | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, four questions open; T0, T1 and T2 landed, **T3/T4/T6 next**, and R2.5's MQTT sentence needs amending |
 | **N-f** | 🟡 | feature, specified here | Where the readings live — internal flash or an SD card, human-readable files, persisted session values and rotating telemetry. Five decisions taken, six questions open, not started; question 1 changes a documented register contract and should be answered first |
-| **DF31** | 🟡 | defect, found 2026-10-30 | What esp-mqtt does after the hand-over, read in its source: telemetry at QoS (quality of service) 0 drains at about one message a second, the second QoS 0 message of a burst goes out last and can expire, every item expires silently 30 s after it was enqueued, and an enqueue or a subscribe can hold the logic task for whole network timeouts of 10 s — a subscribe about two, and a connect attempt longer, with a name lookup the network timeout does not bound (upper bounds read from the source). Telemetry at QoS 1, already a setting, would avoid the pacing and the misfire by the source's reading; measure on a board, then decide |
+| **DF31** | 🟡 | defect, found 2026-10-30 | What esp-mqtt does after the hand-over, read in its source: telemetry at QoS (quality of service) 0 drains at about one message a second, the second QoS 0 message of a burst goes out last and can expire, every item expires silently 30 s after it was enqueued, and an enqueue or a subscribe can hold the logic task for as long as esp-mqtt's loop body holds its lock — while connected, a large inbound message's reads, a PUBACK, a resend or retransmit, or else a ping, each bounded by the 10 s network timeout, and during a connect attempt a name lookup that timeout does not bound — and a subscribe then writes its own packet (read from the source, not measured). Telemetry at QoS 1, already a setting, would avoid the pacing and the misfire by the source's reading; measure on a board, then decide |
 | **DF25** | 🟡 | defect, found 2026-08-30 | A write to non-volatile storage that fails is reported by nothing. **Detection and publication landed 2026-08-30** (`DF25a`: register 34, MQTT `storageFault`, 49 host checks) — the panel's warning triangle rides with `N-e`'s T5, and three of its four questions were built on the recommendation rather than decided |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
@@ -669,8 +669,8 @@ is `src/net/ha_discovery_job.h`, header-only and Arduino-free:
   discovery, which breaks decision B, and on the first connect after boot Home Assistant has no configs.
   The gate this entry first closed with, `connected() && !mqttConnectLatched`, did not close it: between
   `EspMqttTransport::onEvent`'s store of `connected_` and its latch, a few instructions and a call,
-  `connected()` is true and the latch still clear, and no order of reading the two helps (the review
-  round, `INT-1`). Swapping the two stores would let a consume see the latch before `connected_` and skip
+  `connected()` is true and the latch still clear, and no order of reading the two helps, as the review
+  round found. Swapping the two stores would let a consume see the latch before `connected_` and skip
   the subscribes on a link that then stays up, so they stay as they are. The gate is now
   `plc::mqttConnectedPassMayRun(connected(), mqttSessionStarted, mqttConnectLatched,
   mqttDisconnectLatched)`. `mqttSessionStarted` belongs to the logic task alone: `consumeMqttLinkLatches`
@@ -684,15 +684,21 @@ is `src/net/ha_discovery_job.h`, header-only and Arduino-free:
   DISCONNECTED is latched by then — `onEvent` latches it before esp-mqtt begins its 10 s reconnect wait —
   and it is consumed at the top of the next pass, so it shuts the gate for that one pass at most. The
   cost is one pass either way.
-- **`step()` keeps its buffers in a frame of its own** (the review round, `INT-3`). Defined `inline` in
+- **`step()` keeps its buffers in a frame of its own**, which the review round found it did not. Defined `inline` in
   the header and called once, it and `serviceMqttConnectedPass` were folded into `logicTaskCode` at -Os,
   so the entity table and the 128- and 1,152-byte build buffers sat in LogicTask's frame for the whole
   pass and every other deep chain — the UI, the portal, WiFi — started about 1.1 KB deeper. Measured with
   `-fstack-usage` in the build container: `logicTaskCode` was 1,328 bytes at `65b36f0e` and 2,464 at
   `d5efac64`. `step()` is now `noinline`, and `logicTaskCode` is 1,376 with `step()` out of line at
-  1,440, against `publishDiscovery()`'s 1,424 at `65b36f0e`.
-- **A config the publish queue refuses despite the window is printed**, on every pass it happens (the
-  review round, `LOGIC-4`). Unreachable today — the free-slot and window checks and the builder's bounds
+  1,440, against `publishDiscovery()`'s 1,424 at `65b36f0e`. Behaviour is identical either way, so no
+  route can see the attribute go — a re-review removed it and every suite stayed green. Two things pin it
+  now: a source-text check that the attribute stands immediately before `step()`'s one definition, and a
+  CI step after the firmware compile, which passes `-fstack-usage` to that same build and fails if
+  `logicTaskCode`'s static frame is over 1,600 bytes (`tools/stack_budget/check.sh`, which gives the
+  budget's basis: 224 bytes above today's frame, 864 below the inlined one). `-fstack-usage` only
+  reports: the RAM and flash figures are the same with it and without it.
+- **A config the publish queue refuses despite the window is printed**, on every pass it happens, where
+  the review round found the count was kept and read by nothing. Unreachable today — the free-slot and window checks and the builder's bounds
   keep every config inside what `enqueue()` accepts — and not guarded against: if it became reachable,
   the set would try the same entity every pass, never reach a verdict and so never get the retry's
   backoff, and on a connect only the hold's bound would release telemetry. The line is how that would be
@@ -702,7 +708,7 @@ is `src/net/ha_discovery_job.h`, header-only and Arduino-free:
   `serviceMqttConnectedPass` — triggers, one step, `tick()` unless held, `pump(kMessagesPerPass)` — after
   the snapshot is filled.
 
-**The checks, and that they fire.** `test/host/ha_discovery_job_test.cpp`, **236 checks** (137 until the
+**The checks, and that they fire.** `test/host/ha_discovery_job_test.cpp`, **261 checks** (137 until the
 review round), links the real `mqtt_publisher.cpp`, `ha_discovery.cpp`, `mqtt_command_router.cpp` and
 `mqtt_reconnect.cpp` and drives the header's entry points in the firmware's order, for every k from 0 to
 8, on every route: first connect; reconnect with baselines kept; a drop 1, 2, 3, 5, 8 and 12 passes into
@@ -712,21 +718,25 @@ birth, and a birth while a set awaits its verdict and while one awaits its retry
 `cmd/republish`; `cmd/republish` on every pass for 2,000 passes; channels commissioned one at a time
 0 → 8; every jump 0 → k; 2 → k while disconnected; 8 → k; a change mid-set, a change while a set awaits
 its verdict, and a birth, a birth and a change inside the connect's set; a bit above the channels flipped
-ten times; discovery switched off by a teardown and in place; a teardown that moves the base topic and
+ten times, and a connect and a birth that record the bitmap with such a bit set; discovery switched
+off by a teardown and in place; a teardown that moves the base topic and
 the prefix; both latch orders; a CONNECTED landing between the latch read and the block's gate, and one
 caught half-stored there on a first connect and on a reconnect; a drop and a half-stored reconnect both
-between a pass's consume and its gate; a CONNECTED consumed after its link dropped again; truncation; and a sink failure, those two also from 20 s, 90 s and 150 s before
+between a pass's consume and its gate; a CONNECTED consumed after its link dropped again, and one
+consumed with its DISCONNECTED in the same pass, followed by a reconnect caught half-stored; truncation; and a sink failure, those two also from 20 s, 90 s and 150 s before
 `millis()` wraps. It asserts that every one of the 3k + 7 configs reaches the sink; that
 `publishedBitmap()` equals the bitmap; one set per change and none in the 5 s after, and exactly one extra
 set for any number of requests mid-set; on every connect, each config before its entity's first state of
-that session, and the hold ended on the pass its own set was queued and never at its bound; the full
+that session, a started session reported and the subscribes made before that session's first hand-over,
+and the hold ended on the pass its own set was queued and never at its bound; the full
 telemetry set within 4 passes of the hold; nothing refused or evicted, and on a reconnect onto a full
 queue nothing evicted but the slot its `online` takes; at most 4 builds and 4 sink calls in any pass,
 the builds counted by the cursor as well as by the job's own report; no step, on any pass of any route,
 admitting past the window; one step against a hand-filled queue admitting exactly 1 with 4 reliable
 messages queued, 0 with 5, and 0 with 15 telemetry and 1 availability; a retry once a minute across the
-wrap; nothing reaching the sink while a CONNECTED is half-stored; and a stuck job released at exactly 13
-passes. Truncation is reached through a real seam, the job's payload-limit constructor argument: at 463
+wrap; nothing reaching the sink while a CONNECTED is half-stored, and the session flag left clear by a
+CONNECTED consumed on a dead link; `consumeMqttLinkLatches` itself reporting and setting the session for
+a connect with the link up, and neither with it down; and a stuck job released at exactly 13 passes. Truncation is reached through a real seam, the job's payload-limit constructor argument: at 463
 bytes exactly *Board temperature* and *Polling rate* do not fit. It also reads `firmware.cpp` as text,
 with whole statements compared: no `publishDiscovery`, no `mqttPublisher.enqueue(`, `tick(` or `pump(` of
 its own, both entry points called once with their whole argument lists, the transport read after the
@@ -735,14 +745,18 @@ one place each inside `stopMqttClient`, whose whole body is compared, the retain
 test, the gate by its exact text, both subscribes inside `link.sessionStarted`, the refused line in the
 console report, and a whitelist: `haDiscoveryJob`, `haRepublish` and `mqttSessionStarted` may be named
 only where those statements name them. `board_temperature_test` finds the connected block by its gate's
-text too, and was updated with it. Not checked, as `firmware_source_text.h` says it cannot be: the
-conditions around the two teardown calls.
+text too, and was updated with it. Not checked, as `firmware_source_text.h` says it cannot be: whether
+a call sits inside a conditional. Any call moved behind an `if` still passes a presence check — the
+conditions around the two teardown calls, and the consume and subscribe block itself, are the cases the
+mutations below show. It also reads `ha_discovery_job.h` for one thing: `__attribute__((noinline))`
+immediately before `step()`'s one definition.
 
 - **It fails against the code it replaces.** Built with `-DDF30_TODAY`, which swaps the glue for a
   transcription of `firmware.cpp` at `65b36f0e` and links that commit's sources — the recipe is in the
-  test's header — **124 of its 193 behavioural checks fail**, and **25 of its 26 text checks** when it is
+  test's header — **126 of its 214 behavioural checks fail**, and **26 of its 27 text checks** when it is
   run from `65b36f0e`'s tree, so that they read that commit's `firmware.cpp`; run from this tree, they read
-  this one's and pass. The other 17 checks — the hold, the window, the job's phases — have no
+  this one's and pass. The other 20 checks — the hold, the window, the job's phases, the consume's
+  session — have no
   counterpart there. Among the failures: the tail from k = 3, the storm from the fourth channel, the line
   on every pass with discovery off, the set doubled by a retained birth, the ladder left disconnected by
   the latch order, a set recorded although a config was refused, telemetry ahead of the `online` on a
@@ -770,7 +784,7 @@ conditions around the two teardown calls.
   unit test, because the birth arrived in the connect pass, where a set that has handed nothing over
   absorbs it. The routes now also refuse the last config, and deliver the retained birth two passes in,
   as a broker's round trip does.
-- **And the review round's, 32 of 32 caught** by the same method, four suites this time
+- **And the review round's, 36 of 36 caught** by the same method, four suites this time
   (`board_temperature_test` added), each run from its copy. The independent review had found sixteen that
   the suite above passed, and every one is caught now, by the checks the round added: a request lost while
   a set awaits its verdict or its retry ("HA birth while the set awaits its verdict…", "bitmap change while
@@ -795,11 +809,26 @@ conditions around the two teardown calls.
   pass"), or in `stopMqttClient`; the transport read before the latches; the subscribes back on
   `link.connected`; a session started on a dead link ("…the connect starts no session, so nothing
   subscribes"); no channel mask ("a bit above the channels flipped ten times…"); and the refused line
-  gone. Two of the review's others still pass, as it classed them: an unused second read of the bitmap,
-  and a teardown made conditional on `false`, the presence-check limit `firmware_source_text.h`
-  documents.
-- `ha_discovery_test`'s policy block is rewritten for the requested bitmap and the retained birth (267
-  checks, 262 before), and `mqtt_publisher_test` checks the new counts, the counter and `discardQueue()`
+  gone. A re-review then found four more the suite passed, each caught now: the consume never reporting
+  a started session, so that nothing would ever subscribe on a board ("…the connect starts a session and
+  subscribes before its first hand-over", on every connect route, and the direct check of
+  `consumeMqttLinkLatches`); the channel mask on the live side of the comparison only, a retained-config
+  flood with telemetry still flowing ("a connect recorded with a bit above the channels…", and the
+  policy's own check in `ha_discovery_test`); `step()` without `noinline` (the header's source-text
+  check, and CI's frame-budget step would fail too); and the session flag set by a CONNECTED
+  consumed on a dead link ("connect then drop inside one pass: the session flag is left clear").
+  Seven of the review's mutations still pass, each for a stated reason. Two are the presence-check
+  limit `firmware_source_text.h` documents, and are NOT equivalent: the consume and the subscribe block
+  moved behind `if (connectLatched)`, which would read and clear a DISCONNECTED arriving on its own pass
+  without ever consuming it — the lost DISCONNECTED `mqtt_reconnect.h` was rewritten for — and a teardown
+  made conditional on `false`. One is a no-op: an unused second read of the bitmap. Four are equivalent
+  under the current wiring: a consumed DISCONNECTED cancelling the job (the connect restarts it from
+  entity 0 anyway), `endMqttSession` telling neither the publisher nor the policy (`onConnected` re-arms
+  both), the connect recording its request only with discovery on (with discovery off the policy's
+  answer starts nothing and prints nothing), and `step()` not pausing while the link is down (its only
+  caller runs behind the `connected()` gate).
+- `ha_discovery_test`'s policy block is rewritten for the requested bitmap, the retained birth and a
+  request recorded with a bit above the channels (269 checks, 262 before), and `mqtt_publisher_test` checks the new counts, the counter and `discardQueue()`
   (202, 192 before).
 
 **Not reachable by any host check**, stated so it is not overclaimed: what esp-mqtt does after the
@@ -836,7 +865,7 @@ the Discovery failure counter 4 and the policy's requested bitmap 4 — `request
 linked image of the first version grew 24; the review round adds `mqttSessionStarted`, 1 byte, and the
 image grew 32 in all.
 
-**Verified:** host **2,671 checks across 34 suites**, 0 failures, against 2,420 across 33 at `65b36f0e`
+**Verified:** host **2,698 checks across 34 suites**, 0 failures, against 2,420 across 33 at `65b36f0e`
 (the sum of the figures the suites print; three suites that print none add 55 `ok` lines either way), and
 the manifest check green. The wiki dry run ends "all repo pointers resolve". The firmware compiles in the
 container.
@@ -892,15 +921,27 @@ prebuilt, with REPORT_DELETED, MSG_ID_INCREMENTAL and the custom outbox settings
   nothing on the device can tell a delivered message from an expired one.
 - **An enqueue or a subscribe can block the logic task for whole network timeouts.** READ — upper bounds
   from the source, none measured. `esp_mqtt_client_enqueue` takes the client's lock with `portMAX_DELAY`
-  (`:1939`), and esp-mqtt's task holds it for its loop body (`:1455-1562`). While connected that body
-  includes one blocking socket write bounded by `network_timeout_ms`, 10 s here. During a connect attempt
-  it is the whole attempt (`:1472-1486`): a name lookup, `getaddrinfo` with no timeout (IDF 4.4.7
-  `esp_tls.c:148`), so `network_timeout_ms` does not bound it; then the TCP connect, the CONNECT write and
-  the CONNACK read, each bounded by it. `esp_mqtt_client_subscribe` waits for that same body and then
-  writes its own packet in the caller's task under the lock (`:1708`, the write at `:1732`): about two
-  timeouts while connected, and the connect latch calls it twice. All of it against §7's 100 ms, on the
-  pass that consumes a connect and on any `pump()`. (This said "up to about 10 s … the bound is the
-  network timeout" until `DF30`'s review read it again.)
+  (`:1939`), and esp-mqtt's task holds it for its loop body (`:1455-1562`). While connected, one body can
+  hold it across, in order:
+  - one inbound message processed (`:1503`). For a PUBLISH larger than the 1,024-byte input buffer
+    (`EspMqttTransport::kInBufferBytes`), the rest is read in chunks, each read bounded by
+    `network_timeout_ms` (`:1036-1049`). Then a PUBACK write, only if the sender published at QoS 1 or
+    more (`:1310-1326`) — the granted QoS is the lower of the two, so this firmware's QoS 1 subscriptions
+    are not enough on their own;
+  - then one resend (`:1512-1516`) or one retransmit (`:1518-1524`), never both;
+  - then a PINGREQ (`:1526` → `:625` → `:1694`), only if no write happened in that body: every
+    successful write resets the keepalive timer (`mqtt_write_data`, `:957-967`).
+  Each write is `esp_mqtt_write` (`:637-656`), which loops over partial writes and gives each send a
+  fresh `network_timeout_ms`, 10 s here, so even one write is not bounded by one timeout. During a connect
+  attempt the body is the whole attempt (`:1472-1486`): a name lookup, `getaddrinfo` with no timeout (IDF
+  4.4.7 `esp_tls.c:148`), so `network_timeout_ms` does not bound it; then the TCP connect, the CONNECT
+  write and the CONNACK read, each bounded by it. An enqueue waits for that body.
+  `esp_mqtt_client_subscribe` waits for it too and then writes its own packet in the caller's task under
+  the lock (`:1708`, the write at `:1732`), and the connect latch calls it twice. No total is given: the
+  terms depend on what arrives and what is queued. All of it against §7's 100 ms, on the pass that
+  consumes a connect and on any `pump()`. (This said "up to about 10 s … the bound is the network
+  timeout" until `DF30`'s review read it again, and "one blocking socket write … about two timeouts
+  while connected" until its re-review did.)
 - **A steady QoS 0 backlog.** ARITHMETIC, then MODEL. With channels flowing, telemetry arrives at
   (k + 2) / P messages a second against a drain of about one: with eight channels that is any publish period
   under 10 s, and the default 10 s is the edge. The study's model put the steady outbox at about 20.6 KB at
