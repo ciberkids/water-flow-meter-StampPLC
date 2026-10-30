@@ -662,8 +662,8 @@ is `src/net/ha_discovery_job.h`, header-only and Arduino-free:
   esp-mqtt's `retain` field — present in the installed 4.4.7 `mqtt_client.h`, and already passed by the
   transport — which R4.4.2c rests on too, with the same bench check in `N-c`'s ⏸️ block. If that flag were
   wrong, R4.4.7 would stop answering births, silently.
-- **The connected block runs only for a session the logic task started**, and not while a CONNECTED is
-  latched but unconsumed. esp-mqtt sets the transport's flag and then the latch from its own task, so one
+- **The connected block runs only for a session the logic task started**, and not while a CONNECTED or a
+  DISCONNECTED is latched but unconsumed. esp-mqtt sets the transport's flag and then the latch from its own task, so one
   landing after this pass read the latches would otherwise run the block for a session the pass had not
   started: `tick()` would queue the already-armed full set ahead of the connect's `online` and its
   discovery, which breaks decision B, and on the first connect after boot Home Assistant has no configs.
@@ -672,11 +672,18 @@ is `src/net/ha_discovery_job.h`, header-only and Arduino-free:
   `connected()` is true and the latch still clear, and no order of reading the two helps (the review
   round, `INT-1`). Swapping the two stores would let a consume see the latch before `connected_` and skip
   the subscribes on a link that then stays up, so they stay as they are. The gate is now
-  `plc::mqttConnectedPassMayRun(connected(), mqttSessionStarted, mqttConnectLatched)`. `mqttSessionStarted`
-  belongs to the logic task alone: `consumeMqttLinkLatches` sets it when it consumes a CONNECTED while the
-  transport — read once, AFTER the connect latch, so a CONNECTED is never consumed against a stale
-  `false` — says connected, and clears it when it consumes a DISCONNECTED, before the connect is handled;
-  `stopMqttClient()` clears it too. The cost is one pass.
+  `plc::mqttConnectedPassMayRun(connected(), mqttSessionStarted, mqttConnectLatched,
+  mqttDisconnectLatched)`. `mqttSessionStarted` belongs to the logic task alone: `consumeMqttLinkLatches`
+  sets it when it consumes a CONNECTED while the transport — read once, AFTER the connect latch, so a
+  CONNECTED is never consumed against a stale `false` — says connected, and clears it when it consumes a
+  DISCONNECTED, before the connect is handled; `stopMqttClient()` clears it too. The DISCONNECTED term
+  closes the one case the flag cannot: the flag is the dropped session's until a DISCONNECTED is
+  consumed, so a drop AND esp-mqtt's reconnect landing between a pass's consume and its gate, read
+  between the reconnect's `connected_` store and its latch, would open the gate for a session nobody had
+  consumed and hand that pass's telemetry to the new connection ahead of its `online`. The drop's
+  DISCONNECTED is latched by then — `onEvent` latches it before esp-mqtt begins its 10 s reconnect wait —
+  and it is consumed at the top of the next pass, so it shuts the gate for that one pass at most. The
+  cost is one pass either way.
 - **`step()` keeps its buffers in a frame of its own** (the review round, `INT-3`). Defined `inline` in
   the header and called once, it and `serviceMqttConnectedPass` were folded into `logicTaskCode` at -Os,
   so the entity table and the 128- and 1,152-byte build buffers sat in LogicTask's frame for the whole
@@ -695,7 +702,7 @@ is `src/net/ha_discovery_job.h`, header-only and Arduino-free:
   `serviceMqttConnectedPass` — triggers, one step, `tick()` unless held, `pump(kMessagesPerPass)` — after
   the snapshot is filled.
 
-**The checks, and that they fire.** `test/host/ha_discovery_job_test.cpp`, **227 checks** (137 until the
+**The checks, and that they fire.** `test/host/ha_discovery_job_test.cpp`, **236 checks** (137 until the
 review round), links the real `mqtt_publisher.cpp`, `ha_discovery.cpp`, `mqtt_command_router.cpp` and
 `mqtt_reconnect.cpp` and drives the header's entry points in the firmware's order, for every k from 0 to
 8, on every route: first connect; reconnect with baselines kept; a drop 1, 2, 3, 5, 8 and 12 passes into
@@ -707,8 +714,8 @@ birth, and a birth while a set awaits its verdict and while one awaits its retry
 its verdict, and a birth, a birth and a change inside the connect's set; a bit above the channels flipped
 ten times; discovery switched off by a teardown and in place; a teardown that moves the base topic and
 the prefix; both latch orders; a CONNECTED landing between the latch read and the block's gate, and one
-caught half-stored there on a first connect and on a reconnect; a CONNECTED consumed after its link
-dropped again; truncation; and a sink failure, those two also from 20 s, 90 s and 150 s before
+caught half-stored there on a first connect and on a reconnect; a drop and a half-stored reconnect both
+between a pass's consume and its gate; a CONNECTED consumed after its link dropped again; truncation; and a sink failure, those two also from 20 s, 90 s and 150 s before
 `millis()` wraps. It asserts that every one of the 3k + 7 configs reaches the sink; that
 `publishedBitmap()` equals the bitmap; one set per change and none in the 5 s after, and exactly one extra
 set for any number of requests mid-set; on every connect, each config before its entity's first state of
@@ -733,7 +740,7 @@ conditions around the two teardown calls.
 
 - **It fails against the code it replaces.** Built with `-DDF30_TODAY`, which swaps the glue for a
   transcription of `firmware.cpp` at `65b36f0e` and links that commit's sources — the recipe is in the
-  test's header — **118 of its 184 behavioural checks fail**, and **25 of its 26 text checks** when it is
+  test's header — **124 of its 193 behavioural checks fail**, and **25 of its 26 text checks** when it is
   run from `65b36f0e`'s tree, so that they read that commit's `firmware.cpp`; run from this tree, they read
   this one's and pass. The other 17 checks — the hold, the window, the job's phases — have no
   counterpart there. Among the failures: the tail from k = 3, the storm from the fourth channel, the line
@@ -763,7 +770,7 @@ conditions around the two teardown calls.
   unit test, because the birth arrived in the connect pass, where a set that has handed nothing over
   absorbs it. The routes now also refuse the last config, and deliver the retained birth two passes in,
   as a broker's round trip does.
-- **And the review round's, 30 of 30 caught** by the same method, four suites this time
+- **And the review round's, 32 of 32 caught** by the same method, four suites this time
   (`board_temperature_test` added), each run from its copy. The independent review had found sixteen that
   the suite above passed, and every one is caught now, by the checks the round added: a request lost while
   a set awaits its verdict or its retry ("HA birth while the set awaits its verdict…", "bitmap change while
@@ -778,9 +785,12 @@ conditions around the two teardown calls.
   counted as a build ("the cursor moves at most 4 entities in any pass of one set"); and in `firmware.cpp`
   a second consume and a job request on every pass (the whitelist, and "consumeMqttLinkLatches is called
   once"). The five mutations this entry names first — the policy reverted, no window, the step after
-  `tick()`, no hold, no queue clear at teardown — were run again on this code and caught. And nine for
+  `tick()`, no hold, no queue clear at teardown — were run again on this code and caught. And eleven for
   the round's own fixes: the gate without the session flag, in the header (the half-stored routes) and
-  in `firmware.cpp` (its source checks, and `board_temperature_test`'s); the flag not cleared on a
+  in `firmware.cpp` (its source checks, and `board_temperature_test`'s); the gate without its DISCONNECTED
+  term, in the header ("a drop and a half-stored reconnect between the consume and the gate: nothing
+  reaches the sink on that pass") and with `false` handed for it in `firmware.cpp` (the same source
+  checks); the flag not cleared on a
   consumed DISCONNECTED ("reconnect caught half-stored at the gate: nothing reaches the sink on that
   pass"), or in `stopMqttClient`; the transport read before the latches; the subscribes back on
   `link.connected`; a session started on a dead link ("…the connect starts no session, so nothing
@@ -808,24 +818,25 @@ hand-over — pacing, the QoS 0 misfire, the 30 s expiry, lock waits — is `DF3
 - esp-mqtt's outbox holds more than it did. For the closest design it replayed, the study's model put the
   peak of one connect at 19,896 bytes (43 entries) and a connect with a coalesced rerun at 37,704 (74),
   against 8,424 (16) when 14 of 31 were refused (MODEL). Free heap has never been measured on this board;
-- the gate leaves one window open: the session flag is the PREVIOUS session's until a DISCONNECTED is
-  consumed, so if a drop and esp-mqtt's reconnect — which waits 10 s — both land after a pass consumed
-  the latches and before its gate, and the gate reads between the reconnect's `connected_` store and its
-  latch, it opens for one pass. The drop's DISCONNECTED is latched by then; adding `!mqttDisconnectLatched`
-  to the gate would close it, and is left to the owner;
+- ~~the gate leaves one window open~~ — CLOSED the same day, after the review round: a drop and esp-mqtt's reconnect
+  both landing after a pass consumed the latches and before its gate, read between the reconnect's
+  `connected_` store and its latch, opened the gate for one pass, because the session flag was still the
+  dropped session's. The gate now also waits while a DISCONNECTED is latched (above), and the host test
+  has that interleaving as a route;
 - a config the publish queue refused would be retried on every pass with no backoff (above): printed,
   not prevented.
 
-**Cost: 32 bytes of RAM and 1,708 of flash.** RAM 81,152 → 81,184 bytes and flash 1,320,789 → 1,322,497
-(24.8 % either way; 39.5 % → 39.6 %), measured by building `65b36f0e` and the review round's commit in
-one build container from one dependency cache, espressif32 7.1.3; the first version measured 81,176 and
-1,322,533 the same way. CI's figures differ by a few hundred bytes of embedded paths. The job is 20 bytes,
+**Cost: 32 bytes of RAM and 1,728 of flash.** RAM 81,152 → 81,184 bytes and flash 1,320,789 → 1,322,517
+(24.8 % either way; 39.5 % → 39.6 %), measured by building `65b36f0e` and the commit that added the
+gate's DISCONNECTED term in one build container from one dependency cache, espressif32 7.1.3. The same
+way, the first version measured 81,176 and 1,322,533, and the review round before that term 81,184 and
+1,322,497: the term costs 20 bytes of flash and no RAM, and leaves the frames above as they were. CI's figures differ by a few hundred bytes of embedded paths. The job is 20 bytes,
 the Discovery failure counter 4 and the policy's requested bitmap 4 — `requested_` and
 `requestedBitmap_` take `HaRepublishPolicy` from 4 bytes to 8, alignment 2 — so 28 by layout, where the
 linked image of the first version grew 24; the review round adds `mqttSessionStarted`, 1 byte, and the
 image grew 32 in all.
 
-**Verified:** host **2,662 checks across 34 suites**, 0 failures, against 2,420 across 33 at `65b36f0e`
+**Verified:** host **2,671 checks across 34 suites**, 0 failures, against 2,420 across 33 at `65b36f0e`
 (the sum of the figures the suites print; three suites that print none add 55 `ok` lines either way), and
 the manifest check green. The wiki dry run ends "all repo pointers resolve". The firmware compiles in the
 container.
