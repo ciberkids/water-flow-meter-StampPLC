@@ -24,7 +24,8 @@ namespace plc {
  *
  * ── Why the caller supplies the buffer ────────────────────────────────────────────────
  * A discovery payload is built, published and forgotten. Handing the buffer in means the MQTT
- * task can reuse one scratch buffer for all ~28 entities, and it means this module never has to
+ * task can reuse one scratch buffer for every entity (`kHaMaxEntities`, 31 with all eight channels),
+ * and it means this module never has to
  * guess a size — see `kMqttOutBufferSize` below, which is the one number R4.4.8 is about.
  */
 
@@ -310,8 +311,9 @@ class HaDiscovery {
    *
    * The topic is compared exactly, which is load-bearing rather than pedantic: the device's OWN
    * availability topic `<base>/status` carries the payload `online` too (R4.5.1), and treating that
-   * as a birth would make every one of our own availability publishes trigger a full 28-entity
-   * republish — a self-sustaining storm on the radio §2.1 is trying to protect.
+   * as a birth would make every one of our own availability publishes trigger a republish of the
+   * whole set (31 entities with all eight channels) — a self-sustaining storm on the radio §2.1 is
+   * trying to protect.
    */
   bool isHaBirth(const char* topic, const char* payload) const;
 
@@ -338,33 +340,81 @@ class HaDiscovery {
  * When discovery must be (re)published — R4.4.6 and R4.4.7 as a state machine rather than as
  * conditions scattered through the MQTT event handler.
  *
- * `notePublished` is what closes the loop: the bitmap is recorded only once the publish has
- * actually happened, so a failed publish (§4.4.7 returns -1) leaves the policy still asking for a
- * republish instead of believing the entities exist.
+ * TWO bitmaps, and the difference between them is `DF30`:
+ *
+ *  - the REQUESTED one, recorded by `noteRequested` whenever a publish is asked for, by any route.
+ *    This is the one `onSensorBitmap` compares against. A change is therefore answered exactly
+ *    once, whatever then happens to the publish it asked for;
+ *  - the PUBLISHED one, recorded by `notePublished` only when a set completed. Observability, and
+ *    the reason text: nothing triggers on it any more.
+ *
+ * Until `DF30` this class had only the second, and the comment here said that a failed publish
+ * "leaves the policy still asking for a republish instead of believing the entities exist". It
+ * did, on every pass: once a channel change made the set too big for the publisher's queue, the
+ * whole set was rebuilt every connected pass and telemetry stopped until a reboot. Recovering a set
+ * that did not complete is no longer this class's job. `HaDiscoveryJob` (net/ha_discovery_job.h)
+ * retries it on a fixed interval, which is a bounded rate rather than the logic loop's.
  */
 class HaRepublishPolicy {
  public:
   /** Always a reason — R4.4.6 republishes on every reconnect. */
   HaRepublishReason onConnected();
 
-  /** R4.4.7. Delegates the topic and payload test to `HaDiscovery::isHaBirth`. */
+  /**
+   * R4.4.7. Delegates the topic and payload test to `HaDiscovery::isHaBirth`, and refuses a
+   * RETAINED birth.
+   *
+   * MQTT 3.1.1 §3.3.1.3: a broker sets the RETAIN flag on a message it sends because a
+   * subscription was just made, and clears it on one it forwards to an existing subscription. So a
+   * retained `online` here is the broker replaying the copy it holds, at our own subscribe — not
+   * Home Assistant restarting — and the connect that made the subscription is already publishing
+   * every config. Before `DF30` that replay was latched like a real birth and every connect to such
+   * a broker published the whole set twice. A real restart, retained by Home Assistant or not,
+   * reaches an existing subscription with the flag clear and is still answered.
+   *
+   * The flag is esp-mqtt's `MQTT_EVENT_DATA` `retain`, the same field R4.4.2c's command refusal
+   * rests on, and no host test can reach it (`N-c` carries the bench check).
+   */
   HaRepublishReason onStatusMessage(const HaDiscovery& discovery, const char* topic,
-                                    const char* payload) const;
+                                    const char* payload, bool retained) const;
 
-  /** R4.4.6. `SensorsChanged` only when the bitmap actually differs from the published one. */
+  /**
+   * R4.4.6. `SensorsChanged` only while connected, after the first request, and when the bitmap
+   * differs from the one most recently REQUESTED — not the one last published (see the class
+   * comment). The caller records the change with `noteRequested` on the same pass, which is what
+   * makes the answer `None` on the next one.
+   */
   HaRepublishReason onSensorBitmap(uint16_t connectedBitmap) const;
 
-  /** Call after the whole set has been published successfully. */
+  /**
+   * A publish of `connectedBitmap` was asked for: a connect, a birth, `cmd/republish`, a bitmap
+   * change, or a retry.
+   *
+   * Recorded at every trigger, INCLUDING while discovery is switched off. Otherwise a changed bitmap
+   * with discovery off would compare unequal on every pass for ever, and the caller's "connected
+   * sensors changed" line would print a thousand times a second, which is what `DF30`'s design study
+   * measured.
+   */
+  void noteRequested(uint16_t connectedBitmap);
+
+  /**
+   * A whole set for `connectedBitmap` was handed to the MQTT client. HANDED, not delivered: see
+   * `HaDiscoveryJob`, which is the only caller, for what it checks first and what it cannot.
+   */
   void notePublished(uint16_t connectedBitmap);
 
   void noteDisconnected();
 
+  bool everRequested() const { return requested_; }
+  uint16_t requestedBitmap() const { return requestedBitmap_; }
   bool everPublished() const { return published_; }
   uint16_t publishedBitmap() const { return bitmap_; }
 
  private:
   bool connected_ = false;
+  bool requested_ = false;
   bool published_ = false;
+  uint16_t requestedBitmap_ = 0;
   uint16_t bitmap_ = 0;
 };
 

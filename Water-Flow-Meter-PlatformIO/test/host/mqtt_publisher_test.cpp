@@ -632,6 +632,63 @@ void publishFailureTests() {
   check(r.publishFailures() == 0, "a down link is a normal condition, not a publish failure");
 }
 
+// ── DF30 — what the discovery job reads from the queue, and the teardown ───────────────────
+
+void discoveryJobSupportTests() {
+  std::printf("\n[DF30 — the per-class counts, the Discovery failure counter, and discardQueue()]\n");
+
+  FakeSink sink;
+  MqttPublisher p(sink);
+  p.configure("wm", 10, 0);
+  p.onConnected();  // one availability message
+  check(p.enqueue(MqttClass::Discovery, "homeassistant/sensor/n/a/config", "{}", true) &&
+            p.enqueue(MqttClass::Discovery, "homeassistant/sensor/n/b/config", "{}", true),
+        "two discovery messages queue");
+  p.tick(0, oneSensorSnapshot());  // three telemetry messages
+  check(p.queued() == 6 && p.queuedOfClass(MqttClass::Telemetry) == 3 &&
+            p.queuedOfClass(MqttClass::Discovery) == 2 &&
+            p.queuedOfClass(MqttClass::Availability) == 1,
+        "queuedOfClass counts each class");
+  check(p.queuedNeverEvicted() == 3,
+        "queuedNeverEvicted is availability plus discovery: the job's admission window counts these");
+
+  // pump() pops a message whatever the sink says, so the counter is the only trace.
+  sink.failNext = 2;  // the availability message, then the first discovery message
+  p.pump(2);
+  check(p.publishFailures() == 2 && p.discoveryPublishFailures() == 1,
+        "a -1 on a Discovery message is counted again on its own, and on Availability is not");
+  check(p.queuedOfClass(MqttClass::Discovery) == 1, "and the failed message is gone from the queue");
+  p.pump();
+  check(p.discoveryPublishFailures() == 1, "a successful discovery publish does not move it");
+
+  sink.failNext = 3;
+  p.tick(70000, oneSensorSnapshot());  // the heartbeat: three telemetry messages, all failing
+  p.pump();
+  check(p.publishFailures() == 5 && p.discoveryPublishFailures() == 1,
+        "failed TELEMETRY does not move it: the heartbeat heals those, discovery must not republish");
+
+  // A teardown: everything queued was built for the client being stopped.
+  FakeSink down;
+  down.up = false;
+  MqttPublisher q(down);
+  q.configure("wm", 10, 0);
+  q.onConnected();
+  q.enqueue(MqttClass::Discovery, "homeassistant/sensor/n/a/config", "{}", true);
+  q.tick(0, oneSensorSnapshot());
+  const uint32_t dropped = q.droppedTelemetry();
+  const uint32_t rejected = q.rejectedMessages();
+  q.discardQueue();
+  check(q.queued() == 0 && q.queuedNeverEvicted() == 0,
+        "discardQueue drops every class, availability and discovery included");
+  check(q.droppedTelemetry() == dropped && q.rejectedMessages() == rejected,
+        "and counts nothing as dropped or refused: the queue's policy lost nothing");
+  // configure() still keeps the queue: a fresh boot configures through it, and only a teardown, which
+  // knows the old client is gone, may throw the old session away.
+  q.onConnected();
+  q.configure("other", 10, 0);
+  check(q.queued() == 1, "configure() still does NOT clear the queue; only a teardown does");
+}
+
 // ── §4.2 payload shape ──────────────────────────────────────────────────────────────
 
 void payloadTests() {
@@ -1038,6 +1095,7 @@ int main() {
   availabilityTests();
   dropPolicyTests();
   publishFailureTests();
+  discoveryJobSupportTests();
   payloadTests();
   commandResultTests();
   classTests();

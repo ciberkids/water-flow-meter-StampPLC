@@ -330,8 +330,11 @@ void firmwareReadsItAndPublishesIt() {
         "the read is inside logicTaskCode, on core 1 — never in pollingTaskCode on the sampler's core");
 
   // Inside the connected block: R2.1.6's "only as often as its purpose requires", and the purpose is
-  // the snapshot. The nearest connected() test before the fill must also precede the read.
-  const auto connectedTests = firmware_source::offsetsOf(source, "if (mqttTransport.connected()) {");
+  // the snapshot. The nearest connected() test before the fill must also precede the read. The block's
+  // gate also waits while a CONNECTED is latched but unconsumed since DF30 (ha_discovery_job_test holds
+  // that), so it is matched by that exact text: a gate that is neither would fail here, not pass.
+  const auto connectedTests =
+      firmware_source::offsetsOf(source, "if (mqttTransport.connected() && !mqttConnectLatched) {");
   std::size_t nearest = std::string::npos;
   for (std::size_t at : connectedTests) {
     if (at < fills.front()) nearest = at;

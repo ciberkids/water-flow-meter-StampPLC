@@ -43,6 +43,7 @@ static_assert(WIFI_TASK_CORE_ID == plc::core_layout::kWifiTaskCore,
 #include "net/net_settings.h"
 #include "net/net_settings_nvs.h"
 #include "net/ha_discovery.h"
+#include "net/ha_discovery_job.h"
 #include "net/mqtt_publisher.h"
 #include "net/mqtt_snapshot.h"
 #include "net/mqtt_reconnect.h"
@@ -312,11 +313,19 @@ plc::HaDiscovery haDiscovery;
  * When and why to republish (R4.4.6, R4.4.7).
  *
  * A separate object from HaDiscovery, and the separation earns its keep: it owns the three triggers —
- * reconnect, Home Assistant's birth message, and the connected-sensor bitmap moving — and it records
- * the published bitmap only AFTER a publish succeeded, so a failed one leaves it still asking rather
- * than believing the entities exist.
+ * reconnect, Home Assistant's birth message, and the connected-sensor bitmap moving. Since `DF30` it
+ * compares the bitmap against the one a publish was last ASKED for, so a change is answered once;
+ * it used to compare against the last one fully published, and a set too big for the queue made it
+ * ask again on every pass.
  */
 plc::HaRepublishPolicy haRepublish;
+
+/**
+ * Discovery as a job across logic passes (`DF30`, net/ha_discovery_job.h): it holds the cursor into
+ * the set being published, the connect's hold on telemetry, and the retry of a set that did not
+ * complete. Everything it does is driven from the MQTT section of the logic pass.
+ */
+plc::HaDiscoveryJob haDiscoveryJob;
 
 // ── The configuration portal (N8a, §7.6) ─────────────────────────────────────────────
 //
@@ -448,7 +457,12 @@ void onMqttData(void*, const char* topic, std::size_t topicLength, const char* d
   if (!payloadOverlong) {
     std::memcpy(d, data, dataLength);
   }
-  if (haRepublish.onStatusMessage(haDiscovery, t, d) != plc::HaRepublishReason::None) {
+  // `retained` goes to the policy, which refuses a retained birth (DF30): that is the broker replaying
+  // the copy it holds at our own subscribe, and the connect that subscribed is already publishing every
+  // config. A refused one falls through to the command check below, which returns at once because
+  // Home Assistant's status topic is not under `<base>/cmd/` — and if an operator's prefix ever put it
+  // there, the router refuses it as a retained command (R4.4.2c), which is still not a republish.
+  if (haRepublish.onStatusMessage(haDiscovery, t, d, retained) != plc::HaRepublishReason::None) {
     // R4.4.7 — and now the PRIMARY discovery mechanism rather than the backstop, since Home
     // Assistant's own docs prefer birth-triggered republish over relying on retained configs.
     haBirthLatched = true;
@@ -564,53 +578,73 @@ void refreshNetStatusCache() {
 }
 
 /**
- * Publishes every discovery config for the currently connected sensors (§4.4.b).
+ * The console's account of one connected pass's discovery work (§4.4.7: the failure mode is silence).
  *
- * `DF30`, OPEN: this enqueues the whole set, 3 per channel in service plus 7, with no pump in between,
- * and the queue has 16 slots. On a connect, two availability messages are already in it, so 14 fit and
- * with three or more channels the tail is refused. A republish with the queue otherwise empty has all
- * 16, which still refuses it with four or more. `notePublished` below is reached only when nothing was
- * refused, and every republish starts again from the first entity. The queue was sized on the promise,
- * in `mqtt_publisher.h`'s `kQueueCapacity` comment, that the caller pumps as it enqueues; this caller
- * does not, yet.
+ * Only printing. What the job does lives in net/ha_discovery_job.h, where a host test runs it; this
+ * replaced `publishDiscovery()`, which enqueued the whole set in one loop and was `DF30`. At most a
+ * few lines per pass, and only on a pass where something happened: a set starts, finishes, skips an
+ * entity, or has its hold ended by the bound.
  */
-void publishDiscovery() {
-  if (!netSettings.mqttHaDiscovery() || !haDiscovery.configured()) {
-    return;
+void reportDiscoveryPass(const plc::MqttConnectedPassReport& pass, bool discoveryEnabled) {
+  if (pass.birthHandled && discoveryEnabled) {
+    Serial.println("[mqtt] Home Assistant restarted or republish asked; republishing discovery (R4.4.7)");
   }
-  plc::HaEntityRef refs[plc::kHaMaxEntities] = {};
-  const std::size_t count =
-      haDiscovery.enumerateEntities(connectedSensorsBitmap, refs, plc::kHaMaxEntities);
-  std::size_t accepted = 0;
-  for (std::size_t i = 0; i < count; ++i) {
-    char topic[plc::MqttPublisher::kMaxTopicBytes] = {};
-    char payload[plc::MqttPublisher::kMaxPayloadBytes] = {};
-    const auto t = haDiscovery.discoveryTopic(refs[i], topic, sizeof(topic));
-    const auto p = haDiscovery.discoveryPayload(refs[i], payload, sizeof(payload));
-    if (!t.complete || !p.complete) {
-      // Truncation is REPORTED, never published. A truncated topic publishes successfully to the
-      // wrong place and a truncated payload is malformed JSON — either way HA shows nothing and the
-      // broker reports success (§4.4.7). R4.4.8's host test exists to make this unreachable; this is
-      // the belt to its braces.
-      Serial.printf("[mqtt] discovery %u would truncate (topic %u/%u payload %u/%u); NOT sent\n",
-                    static_cast<unsigned>(i), static_cast<unsigned>(t.required),
-                    static_cast<unsigned>(sizeof(topic)), static_cast<unsigned>(p.required),
-                    static_cast<unsigned>(sizeof(payload)));
-      continue;
+  if (pass.sensorsChanged && discoveryEnabled) {
+    // Once per change of the bitmap, because the policy compares against the bitmap last REQUESTED.
+    Serial.println("[mqtt] connected sensors changed; republishing discovery (R4.4.6)");
+  }
+  const plc::HaDiscoveryStepReport& step = pass.step;
+  if (step.truncated > 0) {
+    // Truncation is REPORTED, never published (§4.4.7); see the job's step().
+    Serial.printf("[mqtt] discovery %u would truncate (topic %u/%u payload %u/%u); NOT sent\n",
+                  static_cast<unsigned>(step.truncatedIndex),
+                  static_cast<unsigned>(step.truncatedTopicBytes),
+                  static_cast<unsigned>(plc::MqttPublisher::kMaxTopicBytes),
+                  static_cast<unsigned>(step.truncatedPayloadBytes),
+                  static_cast<unsigned>(plc::MqttPublisher::kMaxPayloadBytes));
+  }
+  if (step.holdLimitReached) {
+    Serial.printf("[mqtt] discovery still queuing after %u passes; telemetry released\n",
+                  static_cast<unsigned>(plc::HaDiscoveryJob::kConnectHoldPassLimit));
+  }
+  if (step.started == plc::HaDiscoveryStart::Retry) {
+    Serial.println("[mqtt] retrying discovery: the last set did not complete");
+  }
+  if (step.finished) {
+    // "Handed to the MQTT client", not "published": the outbox can still expire it (DF31).
+    if (step.complete) {
+      Serial.printf("[mqtt] discovery: all %u entities handed to the MQTT client\n",
+                    static_cast<unsigned>(step.announced));
+    } else {
+      Serial.printf("[mqtt] discovery: the set of %u entities did not complete (%u too long, %lu"
+                    " refused by the MQTT client); retrying in %lu s\n",
+                    static_cast<unsigned>(step.announced), static_cast<unsigned>(step.skipped),
+                    static_cast<unsigned long>(step.failures),
+                    static_cast<unsigned long>(plc::HaDiscoveryJob::kRetryIntervalMs / 1000u));
     }
-    // Retained (R4.4.5), and MqttClass::Discovery so R4.1.3 never evicts it.
-    if (mqttPublisher.enqueue(plc::MqttClass::Discovery, topic, payload, true)) {
-      ++accepted;
-    }
   }
-  // Recorded only when the WHOLE set was accepted. A partial publish that claimed success would
-  // leave HA missing an entity with the policy convinced it exists — the failure R4.4.6's republish
-  // is meant to recover from.
-  if (accepted == count && count > 0) {
-    haRepublish.notePublished(connectedSensorsBitmap);
-  }
-  Serial.printf("[mqtt] discovery: %u of %u entities queued\n", static_cast<unsigned>(accepted),
-                static_cast<unsigned>(count));
+}
+
+/**
+ * Stops the MQTT client, and with it everything that belonged to its session (`DF30`).
+ *
+ * The ONE place `mqttTransport.end()` is called, so the two teardowns — MQTT switched off, and a
+ * settings change that recreates the client — cannot drift apart. After `end()` returns, esp-mqtt's
+ * task has stopped, so no callback can latch anything new; but one latched just BEFORE it would be
+ * consumed on the next pass, against a publisher not yet reconfigured, and a CONNECTED there would
+ * queue a retained `online` under the old base topic for the new client to publish. So all four
+ * latches go, and `plc::endMqttSession` drops the job and the queued messages built for the old
+ * topics.
+ */
+void stopMqttClient() {
+  mqttTransport.end();
+  plc::endMqttSession(haDiscoveryJob, mqttPublisher, haRepublish);
+  mqttConnectLatched = false;
+  mqttDisconnectLatched = false;
+  haBirthLatched = false;
+  mqttCommandLatched = false;
+  mqttClientUp = false;
+  mqttReconnect.reset();
 }
 
 /**
@@ -1283,15 +1317,47 @@ void logicTaskCode(void * pvParameters) {
     const bool mqttWanted = netSettings.mqttEnabled() && netSettings.mqttConfigured() &&
                             wifiManager.state() == plc::WifiState::Connected;
 
+    // The connected sensors, read ONCE for the whole MQTT section of this pass. The Modbus task
+    // (priority 8) writes the global at any moment, and `publishDiscovery()` used to read it twice —
+    // once to enumerate the set and once to record it — so a write in between recorded a bitmap whose
+    // entities were never enumerated (`DF30`). Every decision below sees this one value.
+    const uint16_t sensorsBitmap = connectedSensorsBitmap;
+
     // Ordered deliberately: consume the latched events FIRST, then tick the ladder, then act on its
     // edge. Ticking before consuming would let the ladder judge a rung against state one pass stale.
-    if (mqttConnectLatched) {
-      mqttConnectLatched = false;
-      mqttReconnect.noteConnected();
-      mqttPublisher.onConnected();
-
+    //
+    // Each latch is read, and cleared only if it was set, so an event esp-mqtt's task latches between
+    // the read and the clear is kept for the next pass rather than lost: a lost DISCONNECTED is the
+    // blocker mqtt_reconnect.h was rewritten for. The DISCONNECTED is consumed before the CONNECTED,
+    // and plc::consumeMqttLinkLatches says why that order and not the other.
+    const bool disconnectLatched = mqttDisconnectLatched;
+    if (disconnectLatched) mqttDisconnectLatched = false;
+    const bool connectLatched = mqttConnectLatched;
+    if (connectLatched) mqttConnectLatched = false;
+    if (disconnectLatched) {
+      // R4.4.5 — a command that arrived just before the drop is discarded, not held for the
+      // reconnect. The consumer re-checks the link as well; this is the earlier of the two, so the
+      // stale command does not sit in the slot shadowing a fresh one.
+      mqttCommandLatched = false;
+    }
+    // The ladder, the publisher (R4.5.1's retained `online` and an armed full set), the policy and the
+    // discovery job, for both latches. Moved into net/ha_discovery_job.h so a host test drives the two
+    // orders the latches can really have happened in.
+    const plc::MqttLinkLatchReport link = plc::consumeMqttLinkLatches(
+        disconnectLatched, connectLatched, netSettings.mqttHaDiscovery(), sensorsBitmap,
+        haDiscovery, mqttReconnect, mqttPublisher, haRepublish, haDiscoveryJob);
+    // Only if the link is STILL up. When the CONNECTED and a later DISCONNECTED were both latched by the
+    // time this pass read them, the connect is consumed second and `link.connected` is true for a link
+    // that is down. Subscribing then is not harmless the way the publisher's half is:
+    // esp_mqtt_client_subscribe takes the client's lock BEFORE it checks the state (esp-mqtt bb9c8af,
+    // mqtt_client.c:1708, then :1709), and a client that is reconnecting holds that lock through DNS,
+    // the TCP connect and the CONNACK wait, 10 s each at most, all on this pass. Skipping loses
+    // nothing: the next real CONNECTED latches again and subscribes then.
+    if (link.connected && mqttTransport.connected()) {
       // R4.4.7 — subscribe BEFORE announcing ourselves, so a birth message that arrives in the same
-      // instant is not missed.
+      // instant is not missed. The announcement and the discovery set are only QUEUED above; nothing
+      // queued reaches the client before this pass's pump(), at the end of the connected block, while
+      // a subscribe is written at once. So on the wire the subscriptions still come first.
       char statusTopic[plc::MqttPublisher::kMaxTopicBytes] = {};
       if (haDiscovery.haStatusTopic(statusTopic, sizeof(statusTopic)).complete) {
         mqttTransport.subscribe(statusTopic, 1);
@@ -1310,27 +1376,12 @@ void logicTaskCode(void * pvParameters) {
         mqttTransport.subscribe(cmdTopic, 1);
       }
 
-      // R4.5.1 — availability, retained, so a subscriber that joins later still learns we are up.
-      // MqttClass::Availability, so R4.1.3 never evicts it.
-      mqttPublisher.enqueue(plc::MqttClass::Availability, mqttPublisher.availabilityTopic(),
-                            "online", true);
-
-      const plc::HaRepublishReason why = haRepublish.onConnected();
-      if (why != plc::HaRepublishReason::None) {
+      // R4.5.1's availability message is queued by MqttPublisher::onConnected() alone. This latch
+      // queued a second, byte-identical one until DF30, which cost a slot of sixteen.
+      if (link.discoveryStarted) {
         Serial.printf("[mqtt] connected; republishing discovery (%s)\n",
-                      plc::haRepublishReasonText(why));
-        publishDiscovery();
+                      plc::haRepublishReasonText(link.connectReason));
       }
-    }
-    if (mqttDisconnectLatched) {
-      mqttDisconnectLatched = false;
-      mqttReconnect.noteDisconnected();
-      mqttPublisher.onDisconnected();
-      haRepublish.noteDisconnected();
-      // R4.4.5 — a command that arrived just before the drop is discarded, not held for the
-      // reconnect. The consumer re-checks the link as well; this is the earlier of the two, so the
-      // stale command does not sit in the slot shadowing a fresh one.
-      mqttCommandLatched = false;
     }
     // Register 561, from the one function that decides this (net_status.h). Written every pass rather
     // than on an edge: `syncGlobalRegisters` republishes the whole 233-register network block and
@@ -1355,18 +1406,16 @@ void logicTaskCode(void * pvParameters) {
     }
 
     if (!mqttWanted && mqttClientUp) {
-      mqttTransport.end();
-      mqttClientUp = false;
-      mqttReconnect.reset();
+      stopMqttClient();
       Serial.println("[mqtt] client stopped");
     }
 
     if (mqttWanted && mqttClientUp && mqttConfiguredRevision != netSettings.revision()) {
       // A settings change while connected: tear down rather than mutate a live client. esp-mqtt's
-      // config is read at start, so a broker or credential change cannot take effect in place.
-      mqttTransport.end();
-      mqttClientUp = false;
-      mqttReconnect.reset();
+      // config is read at start, so a broker or credential change cannot take effect in place. Every
+      // settings apply bumps the revision, so this is also how discovery being switched off, or its
+      // prefix changed, reaches the job: stopMqttClient() cancels it and drops what it had queued.
+      stopMqttClient();
       Serial.println("[mqtt] settings changed; client will be recreated");
     }
 
@@ -1441,18 +1490,18 @@ void logicTaskCode(void * pvParameters) {
       mqttReconnect.noteConnected();
     }
 
-    if (mqttTransport.connected()) {
-      if (haBirthLatched) {
-        haBirthLatched = false;
-        Serial.println("[mqtt] Home Assistant restarted; republishing discovery (R4.4.7)");
-        publishDiscovery();
-      }
-      // R4.4.6 — enabling a sensor must make its entity appear. The policy answers None unless the
-      // bitmap actually differs from the published one, so this is not a per-pass republish.
-      if (haRepublish.onSensorBitmap(connectedSensorsBitmap) != plc::HaRepublishReason::None) {
-        Serial.println("[mqtt] connected sensors changed; republishing discovery (R4.4.6)");
-        publishDiscovery();
-      }
+    // NOT while a CONNECTED is latched but unconsumed (`DF30`). esp-mqtt sets the transport's flag and
+    // then the latch, from its own task, at any moment; one that lands after the latches were read at
+    // the top of this section and before this line would otherwise run the block for a session this
+    // pass has not started: tick() would queue the full set already armed (by configure() at boot, or by
+    // the last disconnect) AHEAD of the discovery set the connect is about to start — owner decision B
+    // broken, and on the first connect after boot, where Home Assistant has no configs yet. Waiting costs one pass; the next one consumes
+    // the latch and holds telemetry as a connect should.
+    if (mqttTransport.connected() && !mqttConnectLatched) {
+      // R4.4.7's birth and an accepted `cmd/republish` share this latch (serviceMqttCommand sets it).
+      // Read and cleared only if set, for the reason the link latches are; passed by value below.
+      const bool birthLatched = haBirthLatched;
+      if (birthLatched) haBirthLatched = false;
 
       // Telemetry. tick() owns the cadence — publish-on-change rate-limited to publishPeriod, plus
       // §4.3.2's full set at least every 60 s — so this hands it the state and lets it decide.
@@ -1508,11 +1557,17 @@ void logicTaskCode(void * pvParameters) {
 
       plc::MqttSnapshot snapshot;
       plc::fillMqttSnapshot(snapshot, sensors, configs, kNumSensors, snapshotInputs);
-      mqttPublisher.tick(now, snapshot);
 
-      // Drain a bounded number per pass. Unbounded would let a full queue monopolise a logic pass
-      // that also owns the display's 100 ms acknowledgement budget (§7).
-      mqttPublisher.pump(4);
+      // Discovery, then telemetry, then the drain, in ONE call so a host test runs the same order
+      // (`DF30`, net/ha_discovery_job.h). The two republish triggers (R4.4.7's birth latch and
+      // R4.4.6's bitmap, which now answers once per change), one bounded step of the discovery job,
+      // tick() unless the job a connect started is still queuing its set (owner decision B:
+      // discovery before telemetry on a connect), and pump(MqttPublisher::kMessagesPerPass), bounded
+      // because this pass also owns the display's 100 ms acknowledgement budget (§7).
+      const plc::MqttConnectedPassReport discoveryPass = plc::serviceMqttConnectedPass(
+          haDiscoveryJob, haDiscovery, mqttPublisher, haRepublish, birthLatched,
+          netSettings.mqttHaDiscovery(), mqttTransport.connected(), sensorsBitmap, now, snapshot);
+      reportDiscoveryPass(discoveryPass, netSettings.mqttHaDiscovery());
     }
 
     // The WiFi state machine (N4). On core 1 with the logic task, at priority 1 — it must never be

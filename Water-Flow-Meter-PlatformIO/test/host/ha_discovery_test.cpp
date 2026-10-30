@@ -214,7 +214,12 @@ void worstCaseBufferTests() {
   // connected so the highest sensor index is included.
   HaEntityRef entities[plc::kHaMaxEntities];
   const std::size_t count = ha.enumerateEntities(0xFFFF, entities, plc::kHaMaxEntities);
-  check(count == plc::kHaMaxEntities, "all 28 entities enumerate with every sensor connected");
+  // The count is printed from the constant rather than written into the text: this line said "all 28"
+  // for as long as the buttons and Board temperature had been in the set, while checking 31.
+  char enumerated[96] = {};
+  std::snprintf(enumerated, sizeof(enumerated), "all %zu entities enumerate with every sensor connected",
+                plc::kHaMaxEntities);
+  check(count == plc::kHaMaxEntities, enumerated);
 
   std::size_t worstPayload = 0;
   std::size_t worstTopic = 0;
@@ -616,8 +621,11 @@ void jsonValidityTests() {
     const std::string payload = payloadOf(ha, entities[i]);
     if (payload.empty() || !jsonWellFormed(payload.c_str())) allValid = false;
   }
-  check(count == plc::kHaMaxEntities && allValid,
-        "all 28 payloads are well-formed: braces, brackets and quotes all balance");
+  char wellFormed[96] = {};
+  std::snprintf(wellFormed, sizeof(wellFormed),
+                "all %zu payloads are well-formed: braces, brackets and quotes all balance",
+                plc::kHaMaxEntities);
+  check(count == plc::kHaMaxEntities && allValid, wellFormed);
 
   check(!jsonWellFormed("{\"a\":\"b}"), "and the checker itself rejects an unterminated string");
   check(!jsonWellFormed("{\"a\":1,}"), "and a trailing comma");
@@ -706,7 +714,14 @@ void birthMessageTests() {
 //
 // The bitmap checks assert a CHANGE rather than a value: the same bitmap twice must yield None the
 // second time. A policy that always said SensorsChanged would pass a value assertion and republish
-// 28 retained messages on every telemetry cycle.
+// 31 retained messages on every telemetry cycle.
+//
+// `DF30` found this policy doing that by another route, and these checks used to assert the route.
+// It compared against the bitmap last PUBLISHED, and "keeps asking until the publish is noted — a -1
+// publish must not be forgotten" was one of the checks below. A set too big for the publisher's queue
+// was never noted, so the policy asked on every connected pass and telemetry stopped until a reboot.
+// It compares against the bitmap last REQUESTED now, so a change is answered once; a set that does
+// not complete is retried by `HaDiscoveryJob` on a timer, and ha_discovery_job_test holds that.
 void republishPolicyTests() {
   std::printf("\n[R4.4.6 — first connect, reconnect, birth, and a bitmap that moved]\n");
 
@@ -717,23 +732,36 @@ void republishPolicyTests() {
         "a bitmap change before the first connect asks for nothing — the connect will publish");
   check(policy.onConnected() == HaRepublishReason::FirstConnect, "the first connect publishes");
   check(policy.onSensorBitmap(0x05) == HaRepublishReason::None,
-        "a change between that connect and its publish adds nothing — the publish owes it");
-  policy.notePublished(0x01);
-  check(policy.everPublished() && policy.publishedBitmap() == 0x01,
-        "and the published bitmap is recorded only once the publish happened");
+        "until the connect's request is recorded, a bitmap asks for nothing — the connect owes it");
+  policy.noteRequested(0x01);
+  check(policy.everRequested() && policy.requestedBitmap() == 0x01 && !policy.everPublished(),
+        "the connect's request is recorded, and a request is not a publish");
 
   check(policy.onSensorBitmap(0x01) == HaRepublishReason::None,
-        "the same bitmap again asks for nothing");
+        "the requested bitmap again asks for nothing");
   check(policy.onSensorBitmap(0x03) == HaRepublishReason::SensorsChanged,
         "a sensor appearing asks for a republish, so its entity appears (R4.4.6)");
-  check(policy.onSensorBitmap(0x03) == HaRepublishReason::SensorsChanged,
-        "and keeps asking until the publish is noted — a -1 publish must not be forgotten");
+  policy.noteRequested(0x03);
+  check(policy.onSensorBitmap(0x03) == HaRepublishReason::None,
+        "and once that is recorded as requested it asks nothing more, published or not (DF30)");
+  check(!policy.everPublished(),
+        "the published bitmap stays unrecorded until a whole set was handed over");
   policy.notePublished(0x03);
-  check(policy.onSensorBitmap(0x03) == HaRepublishReason::None, "after which it goes quiet");
+  check(policy.everPublished() && policy.publishedBitmap() == 0x03,
+        "and is recorded once it was, which drives nothing but the reason text");
+  check(policy.onSensorBitmap(0x07) == HaRepublishReason::SensorsChanged,
+        "a second change asks once more");
+  policy.noteRequested(0x07);
+  check(policy.onSensorBitmap(0x07) == HaRepublishReason::None && policy.publishedBitmap() == 0x03,
+        "and a set that never completes does not make it ask again — that was the per-pass storm");
 
-  check(policy.onStatusMessage(ha, "homeassistant/status", "online") == HaRepublishReason::HaBirth,
+  check(policy.onStatusMessage(ha, "homeassistant/status", "online", false) ==
+            HaRepublishReason::HaBirth,
         "HA restarting republishes everything (R4.4.7)");
-  check(policy.onStatusMessage(ha, "watermeter/a1b2c3/status", "online") ==
+  check(policy.onStatusMessage(ha, "homeassistant/status", "online", true) ==
+            HaRepublishReason::None,
+        "a RETAINED online is the broker replaying its copy at our subscribe, not HA restarting");
+  check(policy.onStatusMessage(ha, "watermeter/a1b2c3/status", "online", false) ==
             HaRepublishReason::None,
         "our own availability publish does not");
 
@@ -742,6 +770,8 @@ void republishPolicyTests() {
         "a bitmap change while disconnected asks for nothing — there is nowhere to publish");
   check(policy.onConnected() == HaRepublishReason::Reconnect,
         "and the reconnect republishes regardless, which is R4.4.6's real guarantee");
+  check(policy.requestedBitmap() == 0x07 && policy.publishedBitmap() == 0x03,
+        "both bitmaps survive the disconnect, for the reconnect's request to replace");
 
   checkStr(plc::haRepublishReasonText(HaRepublishReason::SensorsChanged), "sensor bitmap changed",
            "every reason has text, so a storm is visible in the log");
