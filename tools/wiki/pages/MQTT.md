@@ -5,8 +5,9 @@ commands over MQTT — see [What MQTT cannot do](#what-mqtt-cannot-do) before yo
 
 **Where the detail lives.** The behaviour is specified in
 `docs/Requirements/feature addition/WiFi_MQTT_Connectivity.md` §4, and implemented in
-`src/net/mqtt_publisher.cpp` (topics, cadence, queue) and `src/net/ha_discovery.cpp`
-(discovery payloads). Both headers carry the reasoning for every constant named here. This page is the
+`src/net/mqtt_publisher.cpp` (topics, cadence, queue), `src/net/ha_discovery.cpp` (discovery payloads)
+and `src/net/ha_discovery_job.h` (how discovery is fed to the queue). The headers carry the reasoning for
+every constant named here. This page is the
 integrator's view: what appears on the wire and what you can rely on.
 
 ## Identity
@@ -148,6 +149,13 @@ to the wrong place, so the broker accepts it and nothing reports a fault. The pu
 rejections and failures, and remembers the last failed topic — all of it because the natural failure
 mode here is silence.
 
+**Discovery never arrives as a burst.** A full set is up to 31 messages and the queue has sixteen slots,
+so discovery is fed in a few messages per pass of the firmware's loop, and only while availability and
+discovery together hold fewer than five slots: a full telemetry set, ten messages with every channel in
+service, always fits beside it. On a connect, the telemetry waits until every config is queued — a few
+passes, tens of milliseconds — so Home Assistant learns each entity before its first reading. Until
+2026-10-30 the whole set went in at once and the tail was refused from three channels up (`DF30`).
+
 ## Commands
 
 Home Assistant can act on the device, not only observe it. Three topics, discovered as `button`
@@ -197,7 +205,12 @@ from Home Assistant, from the panel's confirm screen and from the bus are one im
 
 ## Home Assistant discovery
 
-31 entities on a fully populated device: three per channel, four device-wide, and three buttons.
+Three entities per channel in service, four device-wide, and three buttons: 3k + 7 for k channels, so 31
+with all eight. That is what the device announces, and since 2026-10-30 (`DF30`) it hands every one of
+those config messages to its MQTT client on each republish, whatever the number of channels; before, from
+three channels up, part of the set was refused on every connect. Handed over is not the same as received:
+the MQTT client can still expire a message 30 s after the hand-over without reporting it (`DF31`), so the
+proof that an entity arrived is Home Assistant's entity list, not the device's console.
 
 | Entity | `object_id` | JSON key | Device class | Unit | State class |
 | --- | --- | --- | --- | --- | --- |
@@ -232,12 +245,16 @@ decimals and renders a litres-per-minute reading as a bare integer.
 **Discovery is republished** on first connect, on every reconnect, when Home Assistant's birth message
 arrives on `<prefix>/status`, when `<base>/cmd/republish` is pressed, and when the connected-sensor
 bitmap changes — that last one is how a
-channel wired up after commissioning gets its entities without a reboot.
+channel wired up after commissioning gets its entities without a reboot. Each change of the bitmap is
+answered once. A set that could not be completed — a config too long for its buffer, or one the MQTT
+client refused — is tried again a minute later, not on every pass. A *retained* `online` on
+`<prefix>/status` is not treated as a birth: that is the broker replaying its stored copy the moment the
+device subscribes, and the connect that subscribed is already publishing everything.
 
 The device subscribes to `<prefix>/status` and to `<base>/cmd/#` *before* announcing itself, so a birth message arriving in
 the same instant is not missed. Its own availability topic also carries `online`, and that is
-deliberately not treated as a birth — otherwise every availability publish would trigger a full
-31-entity republish.
+deliberately not treated as a birth — otherwise every availability publish would trigger a republish
+of every entity.
 
 ## What MQTT cannot do
 
