@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Fails if logicTaskCode's static stack frame is over its budget, read from a -fstack-usage build.
 #
-#   check.sh [firmware.cpp.su]   default: .pio/build/m5stack-stamplc/src/firmware.cpp.su
+#   check.sh [firmware.cpp.su]   default: .pio/build/m5stack-stamplc/src/firmware.cpp.su, relative to
+#                                Water-Flow-Meter-PlatformIO/; a path given is taken from where you run it
 #
 # WHY (`DF30`). `HaDiscoveryJob::step()` keeps an entity table and two build buffers, 128 and 1,152
 # bytes, on the stack. Defined inline in a header and called once, GCC folded it into logicTaskCode
@@ -24,9 +25,11 @@
 # (measured for DF30, 81,184 and 1,322,517 bytes either way), so CI passes it to its one firmware
 # build through PLATFORMIO_BUILD_FLAGS, which PlatformIO adds to platformio.ini's build_flags.
 set -euo pipefail
+# A path given on the command line means the caller's directory, so resolve it before moving.
+SU=""
+if [[ $# -ge 1 ]]; then SU="$(realpath -m -- "$1")"; fi
 cd "$(dirname "$0")/../.."
-
-SU="${1:-.pio/build/m5stack-stamplc/src/firmware.cpp.su}"
+SU="${SU:-.pio/build/m5stack-stamplc/src/firmware.cpp.su}"
 FUNCTION="void logicTaskCode(void*)"
 BUDGET=1600
 

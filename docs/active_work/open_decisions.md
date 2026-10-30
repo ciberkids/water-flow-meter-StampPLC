@@ -69,7 +69,7 @@ The **Shape** column is the one that answers *can I just say go ahead?*
 | --- | --- | --- | --- |
 | **N-e** | 🟡 | feature, in progress | Sensor cascade topology — a parent per channel, a total that is the sum of roots, and verification against a commissioned baseline. Six decisions taken, four questions open; T0, T1 and T2 landed, **T3/T4/T6 next**, and R2.5's MQTT sentence needs amending |
 | **N-f** | 🟡 | feature, specified here | Where the readings live — internal flash or an SD card, human-readable files, persisted session values and rotating telemetry. Five decisions taken, six questions open, not started; question 1 changes a documented register contract and should be answered first |
-| **DF31** | 🟡 | defect, found 2026-10-30 | What esp-mqtt does after the hand-over, read in its source: telemetry at QoS (quality of service) 0 drains at about one message a second, the second QoS 0 message of a burst goes out last and can expire, every item expires silently 30 s after it was enqueued, and an enqueue or a subscribe can hold the logic task for as long as esp-mqtt's loop body holds its lock — while connected, a large inbound message's reads, a PUBACK, a resend or retransmit, or else a ping, each bounded by the 10 s network timeout, and during a connect attempt a name lookup that timeout does not bound — and a subscribe then writes its own packet (read from the source, not measured). Telemetry at QoS 1, already a setting, would avoid the pacing and the misfire by the source's reading; measure on a board, then decide |
+| **DF31** | 🟡 | defect, found 2026-10-30 | What esp-mqtt does after the hand-over, read in its source: telemetry at QoS (quality of service) 0 drains at about one message a second, the second QoS 0 message of a burst goes out last and can expire, every item expires silently 30 s after it was enqueued, and an enqueue or a subscribe can hold the logic task for as long as esp-mqtt's loop body holds its lock — while connected, a large inbound message's reads, a PUBACK, a resend or retransmit, or a keepalive ping when no write has happened for half the keepalive, each read or send bounded by the 10 s network timeout, and during a connect attempt a name lookup that timeout does not bound — and a subscribe then writes its own packet (read from the source, not measured). Telemetry at QoS 1, already a setting, would avoid the pacing and the misfire by the source's reading; measure on a board, then decide |
 | **DF25** | 🟡 | defect, found 2026-08-30 | A write to non-volatile storage that fails is reported by nothing. **Detection and publication landed 2026-08-30** (`DF25a`: register 34, MQTT `storageFault`, 49 host checks) — the panel's warning triangle rides with `N-e`'s T5, and three of its four questions were built on the recommendation rather than decided |
 | **DF23** | 🟡 | defect, found 2026-08-21 | `baselineKhz` is published as `0.000` — R2.1.2's radio-off baseline is recorded by nothing, so R2.1.1's 5 % test and half of G1's procedure have no reference |
 | **G1** | ⏸️ | measurement | The 3.3 kHz polling rate has never been measured on a board; the procedure is written down and waiting |
@@ -708,7 +708,7 @@ is `src/net/ha_discovery_job.h`, header-only and Arduino-free:
   `serviceMqttConnectedPass` — triggers, one step, `tick()` unless held, `pump(kMessagesPerPass)` — after
   the snapshot is filled.
 
-**The checks, and that they fire.** `test/host/ha_discovery_job_test.cpp`, **261 checks** (137 until the
+**The checks, and that they fire.** `test/host/ha_discovery_job_test.cpp`, **262 checks** (137 until the
 review round), links the real `mqtt_publisher.cpp`, `ha_discovery.cpp`, `mqtt_command_router.cpp` and
 `mqtt_reconnect.cpp` and drives the header's entry points in the firmware's order, for every k from 0 to
 8, on every route: first connect; reconnect with baselines kept; a drop 1, 2, 3, 5, 8 and 12 passes into
@@ -727,8 +727,8 @@ consumed with its DISCONNECTED in the same pass, followed by a reconnect caught 
 `millis()` wraps. It asserts that every one of the 3k + 7 configs reaches the sink; that
 `publishedBitmap()` equals the bitmap; one set per change and none in the 5 s after, and exactly one extra
 set for any number of requests mid-set; on every connect, each config before its entity's first state of
-that session, a started session reported and the subscribes made before that session's first hand-over,
-and the hold ended on the pass its own set was queued and never at its bound; the full
+that session, a started session reported and the subscribes made (that they come before the session's
+first hand-over is pinned by a firmware.cpp text check: after the consume, before the gate), and the hold ended on the pass its own set was queued and never at its bound; the full
 telemetry set within 4 passes of the hold; nothing refused or evicted, and on a reconnect onto a full
 queue nothing evicted but the slot its `online` takes; at most 4 builds and 4 sink calls in any pass,
 the builds counted by the cursor as well as by the job's own report; no step, on any pass of any route,
@@ -817,6 +817,10 @@ immediately before `step()`'s one definition.
   policy's own check in `ha_discovery_test`); `step()` without `noinline` (the header's source-text
   check, and CI's frame-budget step would fail too); and the session flag set by a CONNECTED
   consumed on a dead link ("connect then drop inside one pass: the session flag is left clear").
+  A last review of that round found the route model's "before its first hand-over" true by
+  construction, so the subscribe block moved below the connected block, after the pump, passed; it is
+  caught now by a source-text check of where the block sits ("and after the consume, before the
+  connected block's gate: written before this pass's pump").
   Seven of the review's mutations still pass, each for a stated reason. Two are the presence-check
   limit `firmware_source_text.h` documents, and are NOT equivalent: the consume and the subscribe block
   moved behind `if (connectLatched)`, which would read and clear a DISCONNECTED arriving on its own pass
@@ -865,7 +869,7 @@ the Discovery failure counter 4 and the policy's requested bitmap 4 — `request
 linked image of the first version grew 24; the review round adds `mqttSessionStarted`, 1 byte, and the
 image grew 32 in all.
 
-**Verified:** host **2,698 checks across 34 suites**, 0 failures, against 2,420 across 33 at `65b36f0e`
+**Verified:** host **2,699 checks across 34 suites**, 0 failures, against 2,420 across 33 at `65b36f0e`
 (the sum of the figures the suites print; three suites that print none add 55 `ok` lines either way), and
 the manifest check green. The wiki dry run ends "all repo pointers resolve". The firmware compiles in the
 container.
@@ -929,8 +933,10 @@ prebuilt, with REPORT_DELETED, MSG_ID_INCREMENTAL and the custom outbox settings
     more (`:1310-1326`) — the granted QoS is the lower of the two, so this firmware's QoS 1 subscriptions
     are not enough on their own;
   - then one resend (`:1512-1516`) or one retransmit (`:1518-1524`), never both;
-  - then a PINGREQ (`:1526` → `:625` → `:1694`), only if no write happened in that body: every
-    successful write resets the keepalive timer (`mqtt_write_data`, `:957-967`).
+  - then a PINGREQ (the client's keepalive ping) (`:1526` → `:625` → `:1694`), sent when half the
+    keepalive interval has passed since the last successful write (`process_keepalive`, `:609-635`).
+    Every successful write in the body, the PUBACK included, resets that timer (`mqtt_write_data`,
+    `:957-967`), so a ping follows only a body that wrote nothing before it.
   Each write is `esp_mqtt_write` (`:637-656`), which loops over partial writes and gives each send a
   fresh `network_timeout_ms`, 10 s here, so even one write is not bounded by one timeout. During a connect
   attempt the body is the whole attempt (`:1472-1486`): a name lookup, `getaddrinfo` with no timeout (IDF

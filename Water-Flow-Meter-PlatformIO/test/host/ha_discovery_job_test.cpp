@@ -777,7 +777,9 @@ void expectConnect(const std::string& route, int k, const Device& d, const Devic
   // The positive half of `link.sessionStarted`, which firmware.cpp subscribes on: a connect consumed
   // with the link up starts a session and subscribes, before anything of that session is handed
   // over. Without it no birth would be answered (R4.4.7) and no §4.4.1 button would work, with
-  // telemetry and discovery flowing as if nothing were wrong.
+  // telemetry and discovery flowing as if nothing were wrong. The "before" half holds by
+  // construction here, because runPass records the subscribes at the consume; what holds firmware.cpp
+  // to that place is the text check "and after the consume, before the connected block's gate".
   expectK(route + ": the connect starts a session and subscribes before its first hand-over", k,
           !c.transportUpAtConsume ||
               (c.sessionReported && c.subscribed && c.subscribedAtCall == c.firstCall));
@@ -1777,6 +1779,16 @@ void firmwareWiringTests() {
   check(countOf(code, "mqttTransport.subscribe(") == 2 &&
             countOf(subscribeBlock, "mqttTransport.subscribe(") == 2,
         "both subscribes run only on a consumed connect whose link was still up");
+  // Where they run is what puts them first on the wire (R4.4.7): a subscribe is written at once, while
+  // the pass's `online` and configs are only queued until the connected block's pump(). The route
+  // model above records the subscribes at the consume because this is where firmware.cpp makes them;
+  // this check is what holds firmware.cpp to it. Moved below the gate, they would follow the pump's
+  // first hand-overs, and a birth or a cmd/ press landing in between would be missed.
+  const std::size_t subscribeAt = onlyOffsetOf(flat, "if(link.sessionStarted){");
+  const std::size_t gateAt = onlyOffsetOf(flat, "if(plc::mqttConnectedPassMayRun(");
+  check(consume != std::string::npos && subscribeAt != std::string::npos &&
+            gateAt != std::string::npos && consume < subscribeAt && subscribeAt < gateAt,
+        "and after the consume, before the connected block's gate: written before this pass's pump");
   const std::size_t birthRead = block.find("constboolbirthLatched=haBirthLatched;");
   const std::size_t birthClear = block.find("if(birthLatched)haBirthLatched=false;");
   const std::size_t fill = block.find("plc::fillMqttSnapshot(");

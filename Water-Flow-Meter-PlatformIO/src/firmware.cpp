@@ -1389,9 +1389,9 @@ void logicTaskCode(void * pvParameters) {
     // `network_timeout_ms`, 10 s here. Skipping loses nothing: the next real CONNECTED latches again and
     // subscribes then. Even on a link that IS up, each subscribe below first waits for esp-mqtt's loop
     // body, which can hold the lock across an inbound message's reads and its PUBACK, then a resend or a
-    // retransmit, or else a ping — each bounded by that same timeout, under conditions `DF31` lists —
-    // and then writes its own packet under it (:1708, :1732); there are two. All of these are upper
-    // bounds read from the source, not measurements.
+    // retransmit, or a keepalive ping — each read or send bounded by that same timeout, a write looping
+    // over partial sends, under conditions `DF31` lists — and then writes its own packet under it
+    // (:1708, :1732); there are two. All of these are upper bounds read from the source, not measurements.
     if (link.sessionStarted) {
       // R4.4.7 — subscribe BEFORE announcing ourselves, so a birth message that arrives in the same
       // instant is not missed. The announcement and the discovery set are only QUEUED above; nothing
