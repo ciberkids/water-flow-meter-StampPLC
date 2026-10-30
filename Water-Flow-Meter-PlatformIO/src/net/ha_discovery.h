@@ -381,8 +381,9 @@ class HaRepublishPolicy {
   /**
    * R4.4.6. `SensorsChanged` only while connected, after the first request, and when the bitmap
    * differs from the one most recently REQUESTED — not the one last published (see the class
-   * comment). The caller records the change with `noteRequested` on the same pass, which is what
-   * makes the answer `None` on the next one.
+   * comment) — in its CHANNEL bits: bits from `kNumSensors` up name no entity, so a write that flips
+   * only those is not a change. The caller records the change with `noteRequested` on the same pass,
+   * which is what makes the answer `None` on the next one.
    */
   HaRepublishReason onSensorBitmap(uint16_t connectedBitmap) const;
 

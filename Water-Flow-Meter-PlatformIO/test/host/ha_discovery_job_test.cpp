@@ -17,9 +17,24 @@
 // Built two ways. Normally against this tree. With -DDF30_TODAY, the firmware glue below is swapped
 // for a transcription of firmware.cpp at 65b36f0e — the connect-first latch order, the duplicate
 // availability message, `publishDiscovery()`, retained births latched, a teardown that clears
-// nothing — and the binary is linked against that commit's sources, so the same checks can be shown
-// to FAIL against the behaviour this replaced. That variant is a test of the test and is not in
-// run.sh.
+// nothing, a connected block gated on `connected()` alone — and the binary is linked against that
+// commit's sources, so the same checks can be shown to FAIL against the behaviour this replaced.
+// That variant is a test of the test and is not in run.sh. Built and run like this, from
+// Water-Flow-Meter-PlatformIO/:
+//
+//   T=$(mktemp -d)
+//   git -C .. archive 65b36f0e Water-Flow-Meter-PlatformIO | tar -x -C "$T"   # from the repo root:
+//   M="$T/Water-Flow-Meter-PlatformIO"   # run in a subdirectory, git archive takes only that one
+//   N="$M/src/net"
+//   SOURCES=("$N/mqtt_publisher.cpp" "$N/ha_discovery.cpp" "$N/mqtt_command_router.cpp")
+//   SOURCES+=("$N/mqtt_reconnect.cpp")
+//   FLAGS=(-std=gnu++17 -Wall -Wextra -Werror -DDF30_TODAY -I "$M/src")
+//   g++ "${FLAGS[@]}" -o "$T/today" test/host/ha_discovery_job_test.cpp "${SOURCES[@]}"
+//   (cd "$M" && "$T/today")   # the text checks read 65b36f0e's firmware.cpp: everything at main
+//   "$T/today"                # run from here, they read this tree's: the behavioural failures only
+//
+// The WORKING DIRECTORY decides which firmware.cpp the text checks at the end read
+// (firmware_source_text.h's `loadSource`), so the two runs differ by exactly those checks.
 //
 // Time is a host model: one pass is `kPassMs`, the logic task's floor (`vTaskDelay(1)` at 1 kHz).
 // Pass counts are what the job's bounds are about; the 10 s period, the 60 s heartbeat and the 60 s
@@ -131,6 +146,24 @@ constexpr std::size_t kTruncatingPayloadLimit = 463;
 
 uint16_t bitmapOf(int k) { return static_cast<uint16_t>((1u << k) - 1u); }
 
+#ifndef DF30_TODAY
+/** The two per-pass bounds counted on EVERY pass of every route, not only in the routes that call
+ *  `expectBounded`: requirement 2's window and the build cap hold on every pass, so every pass is
+ *  where they are checked. Read once, at the end, by `everyPassInvariants`. */
+uint32_t windowOverrunsInAnyRoute = 0;
+std::size_t cursorAdvanceInAnyRoute = 0;
+/** And the longest hold, counted only on passes whose pump() could drain: the one route that stalls
+ *  the sink for its whole run is the stuck job the bound exists for, and is checked on its own. */
+std::size_t longestHealthyHoldInAnyRoute = 0;
+
+/** The availability messages one connect queues, the slot the window leaves for them. */
+constexpr std::size_t kAvailabilityPerConnect = plc::HaDiscoveryJob::kAvailabilityPerConnect;
+std::size_t telemetryQueued(const MqttPublisher& pub) { return pub.queuedOfClass(MqttClass::Telemetry); }
+#else
+constexpr std::size_t kAvailabilityPerConnect = 1;  // what 65b36f0e should have queued; it queued 2
+std::size_t telemetryQueued(const MqttPublisher& pub) { return pub.queued(); }  // no class count there
+#endif
+
 struct Capture {
   uint32_t pass = 0;
   std::string topic;
@@ -203,11 +236,22 @@ struct Device {
   bool connectLatched = false;
   bool disconnectLatched = false;
   bool birthLatched = false;
+  // firmware.cpp's `mqttSessionStarted`, which only the logic task writes.
+  bool sessionStarted = false;
   bool commandNextPass = false;  // one accepted `cmd/republish`
   bool commandEveryPass = false;
-  /** The race seam: esp-mqtt's CONNECTED lands AFTER this pass read the latches and BEFORE the
-   *  connected block's gate, so the transport says connected while the latch is still unconsumed. */
+  /** A race seam: esp-mqtt's CONNECTED lands, both stores, AFTER this pass read the latches and
+   *  BEFORE the connected block's gate, so the transport says connected and the latch is set. */
   bool connectArrivesBeforeGate = false;
+  /**
+   * The other race seam, the one `DF30`'s review found: esp-mqtt's task has stored the transport's
+   * `connected_` but not yet called the listener that latches the CONNECTED when the gate reads them,
+   * so `connected()` is true and the latch still clear. The latch store lands after the block.
+   */
+  bool connectHalfStoredAtGate = false;
+  /** A CONNECTED is latched with the link already down again, and the drop's DISCONNECTED lands just
+   *  AFTER this pass read the latches, so this pass consumes the connect alone against a dead link. */
+  bool disconnectAfterLatchRead = false;
   MqttCommandResult lastCommand = MqttCommandResult::Idle;
 
   uint32_t now = 0;
@@ -222,16 +266,32 @@ struct Device {
   std::size_t maxSinkCallsPerPass = 0;
   std::size_t longestHold = 0;
   std::size_t currentHold = 0;
+  /** Builds per pass counted WITHOUT the job's report: how far the cursor moved within one set on a
+   *  pass that started nothing. A build the job forgot to count still moves the cursor. */
+  std::size_t maxCursorAdvancePerPass = 0;
+  /** Passes on which the step admitted a reliable message that took the queue's never-evicted count
+   *  past `kAdmissionWindow`. Requirement 2 says none, ever. */
+  uint32_t windowOverruns = 0;
+  /** Sink calls on the pass a seam made the gate's reads land in a CONNECTED's half-stored state. */
+  std::size_t sinkCallsOnHalfStoredPass = 0;
+  /** Connects consumed against a link already down that still reported a STARTED session — on which
+   *  firmware.cpp would subscribe, blocking on esp-mqtt's lock through a reconnect attempt. */
+  uint32_t sessionsStartedOnDeadLink = 0;
   struct Connect {
     uint32_t pass = 0;
     uint32_t generation = 0;
     std::size_t firstCall = 0;
     uint32_t releasePass = 0;  // first pass tick() ran after this connect
     bool released = false;
+    bool discoveryStarted = false;
+    uint32_t queuedPass = 0;  // the pass this connect's set had queued its last entity
+    bool queued = false;
   };
   std::vector<Connect> connects;
 
-  explicit Device(int k, std::size_t payloadLimitBytes = MqttPublisher::kMaxPayloadBytes)
+  /** `startMs` is where the clock starts, so a route can run across millis()'s 2^32 wrap. */
+  explicit Device(int k, std::size_t payloadLimitBytes = MqttPublisher::kMaxPayloadBytes,
+                  uint32_t startMs = 0)
 #ifndef DF30_TODAY
       : job(payloadLimitBytes)
 #endif
@@ -239,6 +299,7 @@ struct Device {
 #ifdef DF30_TODAY
     payloadLimit = payloadLimitBytes;
 #endif
+    now = startMs;
     bitmap = bitmapOf(k);
     configureClient(kBaseA, kPrefixA);
   }
@@ -293,9 +354,14 @@ struct Device {
     return s;
   }
 
-  void noteConnectConsumed() {
+  void noteConnectConsumed(bool discoveryStarted) {
     ++generation;
-    connects.push_back({pass, generation, sink.calls.size(), 0, false});
+    Connect c;
+    c.pass = pass;
+    c.generation = generation;
+    c.firstCall = sink.calls.size();
+    c.discoveryStarted = discoveryStarted;
+    connects.push_back(c);
     // A hold is per connect: one the link dropped in the middle of is over, and the job starts the
     // new connect's budget from the top.
     currentHold = 0;
@@ -307,15 +373,35 @@ struct Device {
     }
   }
 
-  /** serviceMqttCommand (firmware.cpp) for an accepted `cmd/republish`: R4.4.2d's full set for every
-   *  result, then the birth latch. Dropped unless the link is up (R4.4.5). */
+  void noteConnectSetQueued() {
+    if (!connects.empty() && connects.back().discoveryStarted && !connects.back().queued) {
+      connects.back().queued = true;
+      connects.back().queuedPass = pass;
+    }
+  }
+
+  /** The race seams' first half, between this pass's latch reads and the connected block's gate. */
   void connectRace() {
-    if (!connectArrivesBeforeGate) return;
-    connectArrivesBeforeGate = false;
-    sink.up = true;
+    if (connectArrivesBeforeGate) {
+      connectArrivesBeforeGate = false;
+      sink.up = true;
+      connectLatched = true;
+    }
+    if (connectHalfStoredAtGate) {
+      sink.up = true;  // EspMqttTransport::onEvent: `connected_ = true;` — the listener has not run
+    }
+  }
+
+  /** ... and the half-stored seam's second half, after the block: the listener latches the CONNECTED. */
+  void connectRaceCompletes(std::size_t callsAtPassStart) {
+    if (!connectHalfStoredAtGate) return;
+    connectHalfStoredAtGate = false;
+    sinkCallsOnHalfStoredPass = sink.calls.size() - callsAtPassStart;
     connectLatched = true;
   }
 
+  /** serviceMqttCommand (firmware.cpp) for an accepted `cmd/republish`: R4.4.2d's full set for every
+   *  result, then the birth latch. Dropped unless the link is up (R4.4.5). */
   void serviceCommand() {
     if (!(commandNextPass || commandEveryPass)) return;
     commandNextPass = false;
@@ -330,52 +416,99 @@ struct Device {
   void runPass() {
     sink.pass = pass;
     sink.callsThisPass = 0;
+    const std::size_t callsAtPassStart = sink.calls.size();
     const uint16_t sensorsBitmap = bitmap;  // firmware.cpp reads the global once per pass
     const bool d = disconnectLatched;
     if (d) disconnectLatched = false;
     const bool c = connectLatched;
     if (c) connectLatched = false;
+    if (disconnectAfterLatchRead) {
+      disconnectAfterLatchRead = false;
+      disconnectLatched = true;  // the drop's DISCONNECTED, latched just after the reads above
+    }
+    // `const bool transportConnected = mqttTransport.connected();`, AFTER the latches.
+    const bool transportConnected = sink.up;
     const plc::MqttLinkLatchReport link = plc::consumeMqttLinkLatches(
-        d, c, discoveryEnabled, sensorsBitmap, ha, ladder, pub, policy, job);
-    if (link.connected) noteConnectConsumed();
+        d, c, transportConnected, discoveryEnabled, sensorsBitmap, ha, ladder, pub, policy, job,
+        sessionStarted);
+    if (link.connected) noteConnectConsumed(link.discoveryStarted);
+    if (link.sessionStarted && !transportConnected) ++sessionsStartedOnDeadLink;
     if (link.discoveryStarted) ++starts;
     serviceCommand();
     connectRace();
-    if (sink.up && !connectLatched) {  // `if (mqttTransport.connected() && !mqttConnectLatched)`
+    if (plc::mqttConnectedPassMayRun(sink.up, sessionStarted, connectLatched)) {
       const bool birth = birthLatched;
       if (birth) birthLatched = false;
+      const std::size_t reliableBefore = pub.queuedNeverEvicted();
+      const std::size_t cursorBefore = job.nextEntity();
+      const bool enqueuingBefore = job.phase() == plc::HaDiscoveryJob::Phase::Enqueuing;
       const plc::MqttConnectedPassReport r = plc::serviceMqttConnectedPass(
           job, ha, pub, policy, birth, discoveryEnabled, sink.up, sensorsBitmap, now, snapshot());
       if (r.requestStarted) ++starts;
       if (r.step.started != plc::HaDiscoveryStart::None) ++starts;
       if (r.sensorsChanged) ++sensorsChangedAnswers;
       if (r.step.holdLimitReached) ++holdLimitHits;
+      if (r.step.allEnqueued) noteConnectSetQueued();
       maxBuildsPerPass = std::max<std::size_t>(maxBuildsPerPass, r.step.built);
+      // Requirement 2, seen from outside the call. Nothing else in serviceMqttConnectedPass queues a
+      // reliable message before the step, and tick() and pump() run after it, so the never-evicted
+      // count right after the step is the count before the call plus what the step admitted. It may
+      // START above the window — an unpumped drop's leftovers plus the reconnect's `online` — and then
+      // the step must admit nothing.
+      if (r.step.enqueued > 0 && reliableBefore + r.step.enqueued > plc::HaDiscoveryJob::kAdmissionWindow) {
+        ++windowOverruns;
+        ++windowOverrunsInAnyRoute;
+      }
+      // Builds counted by the cursor, on a pass inside one set: nothing started, so nothing reset it.
+      const bool startedSomething = link.discoveryStarted || r.requestStarted ||
+                                    r.step.started != plc::HaDiscoveryStart::None;
+      if (enqueuingBefore && !startedSomething && job.nextEntity() >= cursorBefore) {
+        maxCursorAdvancePerPass = std::max(maxCursorAdvancePerPass, job.nextEntity() - cursorBefore);
+        cursorAdvanceInAnyRoute = std::max(cursorAdvanceInAnyRoute, maxCursorAdvancePerPass);
+      }
       if (r.telemetryHeld) {
         longestHold = std::max(longestHold, ++currentHold);
+        if (!sink.stalled) {
+          longestHealthyHoldInAnyRoute = std::max(longestHealthyHoldInAnyRoute, currentHold);
+        }
       } else {
         currentHold = 0;
         noteTicked();
       }
     }
+    connectRaceCompletes(callsAtPassStart);
     maxSinkCallsPerPass = std::max(maxSinkCallsPerPass, sink.callsThisPass);
     now += kPassMs;
     ++pass;
   }
 
-  /** stopMqttClient() (firmware.cpp): end(), then the session and all four latches go. */
+  /** stopMqttClient() (firmware.cpp): end(), then the session, all four latches and the session flag
+   *  go — AFTER end(), because esp-mqtt can still latch a CONNECTED or a DISCONNECTED while end()
+   *  runs (a connect attempt finishing under the lock stop() waits for, or a poll error on the last
+   *  iteration), never after it returns. */
   void teardown(const char* newBase, const char* newPrefix) {
-    sink.up = false;  // EspMqttTransport::end() clears connected_ and dispatches nothing
+    sink.up = false;  // EspMqttTransport::end() clears connected_ once esp-mqtt's task has stopped
     plc::endMqttSession(job, pub, policy);
     connectLatched = false;
     disconnectLatched = false;
     birthLatched = false;
     commandNextPass = false;
+    sessionStarted = false;
     ladder.reset();
     configureClient(newBase, newPrefix);
   }
 
   bool jobIdle() const { return !job.active(); }
+
+  /** Runs passes until the job is in `phase` at the end of one, at most `guard` of them. */
+  bool runUntilPhase(plc::HaDiscoveryJob::Phase phase, int guard) {
+    for (int i = 0; i < guard && job.phase() != phase; ++i) runPass();
+    return job.phase() == phase;
+  }
+  /** A set is being queued and has handed something over: a request now is folded into a rerun. */
+  bool midSet() const {
+    return job.phase() == plc::HaDiscoveryJob::Phase::Enqueuing && job.nextEntity() > 0;
+  }
 #else
   // ── firmware.cpp at 65b36f0e, transcribed ─────────────────────────────────────────────
   /** :577-614 */
@@ -395,6 +528,7 @@ struct Device {
     }
     buildsThisPass += count;
     if (accepted == count && count > 0) policy.notePublished(bitmap);
+    noteConnectSetQueued();  // all of it, or all of it that fitted, in this one pass
   }
   std::size_t buildsThisPass = 0;
 
@@ -402,6 +536,7 @@ struct Device {
     sink.pass = pass;
     sink.callsThisPass = 0;
     buildsThisPass = 0;
+    const std::size_t callsAtPassStart = sink.calls.size();
     // :1288-1323, the CONNECTED consumed first
     if (connectLatched) {
       connectLatched = false;
@@ -409,8 +544,14 @@ struct Device {
       pub.onConnected();
       // :1315-1316, the second availability message
       pub.enqueue(MqttClass::Availability, pub.availabilityTopic(), "online", true);
-      noteConnectConsumed();
+      noteConnectConsumed(discoveryEnabled && ha.configured());
       if (policy.onConnected() != HaRepublishReason::None) publishDiscovery();
+    }
+    if (disconnectAfterLatchRead) {
+      // Read after the connect here, so a DISCONNECTED landing between the two reads is consumed
+      // in this same pass.
+      disconnectAfterLatchRead = false;
+      disconnectLatched = true;
     }
     // :1325-1334
     if (disconnectLatched) {
@@ -434,6 +575,7 @@ struct Device {
       noteTicked();
       pub.pump(4);  // :1515
     }
+    connectRaceCompletes(callsAtPassStart);
     maxBuildsPerPass = std::max(maxBuildsPerPass, buildsThisPass);
     maxSinkCallsPerPass = std::max(maxSinkCallsPerPass, sink.callsThisPass);
     now += kPassMs;
@@ -448,6 +590,7 @@ struct Device {
   }
 
   bool jobIdle() const { return true; }
+  bool midSet() const { return true; }  // 65b36f0e had no set in progress to be in the middle of
 #endif
 
   void run(uint32_t passes) {
@@ -598,11 +741,20 @@ void expectConnect(const std::string& route, int k, const Device& d, const Devic
   expectK(route + ": the full telemetry set reaches the sink within 4 passes of the hold", k,
           d.fullSetSoonAfterRelease(c));
   expectK(route + ": the set is recorded, publishedBitmap() == the bitmap", k, d.recorded());
+  // The bound is never what ends a working hold (kConnectHoldPassLimit's claim), and the hold is the
+  // connect's set's only: the first tick comes on the pass that set queued its last entity, not later.
+  expectK(route + ": the hold ends with the connect's own set, never at its bound", k,
+          d.holdLimitHits == 0 &&
+              (!c.discoveryStarted || (c.queued && c.released && c.releasePass <= c.queuedPass)));
 }
 
 void expectBounded(const std::string& route, int k, const Device& d) {
   expectK(route + ": at most 4 builds and 4 sink calls in any pass", k,
           d.maxBuildsPerPass <= kPerPass && d.maxSinkCallsPerPass <= kPerPass);
+  // The same bound, counted by the cursor rather than taken from the job's own report.
+  expectK(route + ": the cursor moves at most 4 entities in any pass of one set", k,
+          d.maxCursorAdvancePerPass <= kPerPass);
+  expectK(route + ": no step admits past the window (requirement 2)", k, d.windowOverruns == 0);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
@@ -667,6 +819,63 @@ void connectRoutes() {
       expectConnect("a CONNECTED landing between the latch read and the gate", k, d, d.connects.at(0));
     }
     {
+      // The same, caught HALF-STORED, the state DF30's review found: onEvent has set the transport's
+      // `connected_` and not yet latched the CONNECTED, so `connected()` is true and the latch clear.
+      // A gate on those two alone opens here and hands the full set configure() armed to esp-mqtt
+      // ahead of the `online` and every config. The session flag keeps it shut.
+      Device d(k);
+      d.connectHalfStoredAtGate = true;
+      d.runPass();
+      const std::size_t raced = d.sinkCallsOnHalfStoredPass;
+      d.run(300);
+      const std::string route = "first connect caught half-stored at the gate";
+      expectK(route + ": nothing reaches the sink on that pass", k, raced == 0);
+      expectConnect(route, k, d, d.connects.at(0));
+      expectK(route + ": the first message handed over is the connect's `online`", k,
+              !d.sink.calls.empty() && d.sink.calls.front().topic == d.pub.availabilityTopic());
+    }
+    {
+      // ... and on a RECONNECT, which needs the flag CLEARED by the drop's consumed DISCONNECTED: left
+      // set, the old session's flag would open the gate for the new session's half-stored CONNECTED,
+      // and the full set onDisconnected() armed would go out ahead of the reconnect's `online`.
+      // expectConnect alone cannot see that: the racing states carry the old session's tag, and the
+      // first session's configs are already out.
+      Device d(k);
+      d.brokerConnects();
+      d.run(2000);
+      d.brokerDrops();
+      d.run(10);
+      const std::size_t first = d.sink.calls.size();
+      d.connectHalfStoredAtGate = true;
+      d.runPass();
+      const std::size_t raced = d.sinkCallsOnHalfStoredPass;
+      d.run(300);
+      const std::string route = "reconnect caught half-stored at the gate";
+      expectK(route + ": nothing reaches the sink on that pass", k, raced == 0);
+      expectK(route + ": the first message handed over after it is the reconnect's `online`", k,
+              d.sink.calls.size() > first && d.sink.calls[first].topic == d.pub.availabilityTopic());
+      expectConnect(route, k, d, d.connects.back());
+    }
+    {
+      // A CONNECTED consumed while the link is ALREADY down again, with the drop's DISCONNECTED landing
+      // just after this pass read the latches. No session starts, so nothing is subscribed or sent on a
+      // dead link — and the gate must open on the NEXT connect, never stay shut for good.
+      Device d(k);
+      d.connectLatched = true;  // esp-mqtt connected, and dropped again before this pass
+      d.disconnectAfterLatchRead = true;
+      d.run(10);
+      const std::size_t whileDown = d.sink.calls.size();
+      d.brokerConnects();
+      d.run(300);
+      const std::string route = "a CONNECTED consumed after its link dropped, then the next connect";
+      expectK(route + ": nothing reaches the sink while the link is down", k, whileDown == 0);
+      expectK(route + ": no session is started on the dead link, so nothing subscribes there", k,
+              d.sessionsStartedOnDeadLink == 0);
+      expectConnect(route, k, d, d.connects.back());
+      expectK(route + ": two connects consumed, the second one's session running", k,
+              d.connects.size() == 2 && d.connects.back().released);
+    }
+    {
       // Three connects in a row that drop before their first pump(), each leaving its retained
       // `online` queued, then one that stays. The design study measured this pushing a telemetry-first
       // design's full set out to the 60 s heartbeat from the third such connect; the hold keeps the set
@@ -691,18 +900,71 @@ void connectRoutes() {
               d.pub.rejectedMessages() == r0 && d.pub.droppedTelemetry() == e0);
     }
     {
-      // A drop right after a forced full set, so the reconnect finds telemetry from the old session
-      // queued ahead of everything: the worst leftover the hold's bound is derived for.
+      // The reconnect finds the queue FULL, all sixteen of them telemetry from the old session, ahead
+      // of everything: the worst leftover the hold's bound is derived for (its first term). Reached
+      // the way a board reaches it: forced full sets ticked on passes whose pump() found the link down
+      // — esp-mqtt clears `connected` at any moment, so between the gate and the pump too — until
+      // nothing more fits. This route used to force one set and run a whole pass, whose pump took
+      // four, so it dropped with six queued at k = 8.
       Device d(k);
       d.brokerConnects();
       d.run(2000);
-      d.pub.requestFullPublish();
-      d.run(1);
+      for (int guard = 0; guard < 20 && d.pub.queued() < MqttPublisher::kQueueCapacity; ++guard) {
+        d.pub.requestFullPublish();
+        d.sink.stalled = true;
+        d.runPass();
+      }
+      d.sink.stalled = false;
+      const bool fullAtDrop = d.pub.queued() == MqttPublisher::kQueueCapacity &&
+                              telemetryQueued(d.pub) == MqttPublisher::kQueueCapacity;
       d.brokerDrops();
       d.run(5);
+      const uint32_t r0 = d.pub.rejectedMessages();
+      const uint32_t e0 = d.pub.droppedTelemetry();
       d.brokerConnects();
+      d.runPass();  // the connect pass: onConnected's `online`, then one step against a full queue
+      const uint32_t evictedByConnectPass = d.pub.droppedTelemetry() - e0;
       d.run(300);
-      expectConnect("drop with a full set still queued, then reconnect", k, d, d.connects.at(1));
+      const std::string route = "drop with the queue full of telemetry, then reconnect";
+      expectConnect(route, k, d, d.connects.at(1));
+      expectK(route + ": the queue really was full, sixteen telemetry messages", k, fullAtDrop);
+      expectK(route + ": the connect pass evicts only for its `online`; discovery waits for a free slot",
+              k, evictedByConnectPass <= kAvailabilityPerConnect);
+      expectK(route + ": nothing is refused", k, d.pub.rejectedMessages() == r0);
+      expectBounded(route, k, d);
+    }
+    for (uint32_t birthLead : {0u, 1u, 2u, 3u, 5u, 8u}) {
+      for (uint32_t forcedLead : {0u, 1u, 2u, 3u, 5u, 8u}) {
+        // A birth's set part-queued with telemetry ahead of it, a forced full set (a heartbeat or a
+        // command's acknowledgement), then ANOTHER forced set ticked on a pass whose pump() finds the
+        // link down, then the drop. Whatever the window left queued, the reconnect's `online` must
+        // fit beside it without taking a reading's place beyond its own one slot, and nothing may be
+        // refused: the slot the derivation's `- kAvailabilityPerConnect` reserves.
+        Device d(k);
+        d.brokerConnects();
+        d.run(2000);
+        d.haBirth(false);
+        d.run(birthLead);
+        d.pub.requestFullPublish();
+        d.run(1 + forcedLead);
+        d.pub.requestFullPublish();
+        d.sink.stalled = true;
+        d.runPass();
+        d.sink.stalled = false;
+        d.brokerDrops();
+        d.run(3);
+        const uint32_t r0 = d.pub.rejectedMessages();
+        const uint32_t e0 = d.pub.droppedTelemetry();
+        d.brokerConnects();
+        d.runPass();
+        const std::string route = "a pass whose pump finds the link down mid-set, then a drop and reconnect";
+        expectK(route + ": the connect pass evicts at most its `online`'s slot and refuses nothing", k,
+                d.pub.droppedTelemetry() - e0 <= kAvailabilityPerConnect &&
+                    d.pub.rejectedMessages() == r0);
+        d.run(300);
+        expectConnect(route, k, d, d.connects.back());
+        expectBounded(route, k, d);
+      }
     }
   }
   flushChecks();
@@ -726,6 +988,35 @@ void republishRoutes() {
       expectK("HA birth: one more set started", k, d.starts == 2);
       expectBounded("HA birth", k, d);
     }
+#ifndef DF30_TODAY
+    {
+      // A birth in the pass or two the job waits for its VERDICT (all queued, the last of it not yet
+      // handed over). `request()` supersedes the set waiting there with a new one; dropping the
+      // request instead shipped green, because every other birth route fires while the job is idle.
+      Device d(k);
+      d.brokerConnects();
+      const bool reached = d.runUntilPhase(plc::HaDiscoveryJob::Phase::AwaitingVerdict, 200);
+      const std::size_t first = d.sink.calls.size();
+      const uint32_t s0 = d.starts;
+      d.haBirth(false);
+      d.run(2000);
+      expectK("HA birth while the set awaits its verdict: a second set, every config again, recorded",
+              k, reached && d.starts - s0 == 1 && d.everyConfigSince(first, d.bitmap) && d.recorded());
+    }
+    {
+      // A birth while a set that did not complete waits for its retry: answered at once, not when the
+      // minute is up.
+      Device d(k, kTruncatingPayloadLimit);
+      d.brokerConnects();
+      d.run(300);
+      const bool waiting = d.job.phase() == plc::HaDiscoveryJob::Phase::AwaitingRetry;
+      const uint32_t s0 = d.starts;
+      d.haBirth(false);
+      d.run(3);
+      expectK("HA birth while a set awaits its retry: a set starts within 3 passes, not at the minute",
+              k, waiting && d.starts - s0 == 1);
+    }
+#endif
     for (uint32_t roundTrip : {0u, 2u}) {
       // A broker holding a retained `homeassistant/status online` replays it at our subscribe. MQTT
       // 3.1.1 §3.3.1.3 sets the RETAIN flag on exactly that delivery. It arrives a round trip after the
@@ -803,7 +1094,7 @@ void bitmapRoutes() {
       const std::size_t first = d.sink.calls.size();
       d.bitmap = bitmapOf(k);
       d.run(500);
-      expectK("one channel at a time 0 -> 8: exactly one set and one R4.4.6 answer per change", k,
+      expectK("one channel at a time 0 -> 8: exactly one set and one sensors-changed answer per change", k,
               d.starts - s0 == 1 && d.sensorsChangedAnswers - a0 == 1);
       expectK("one channel at a time 0 -> 8: every config of the new set reaches the sink", k,
               d.everyConfigSince(first, d.bitmap));
@@ -876,6 +1167,72 @@ void bitmapRoutes() {
       expectK("change 3 passes into the connect's set: every config of the new bitmap, recorded", k,
               d.everyConfigSince(0, d.bitmap) && d.recorded());
       expectK("change 3 passes into the connect's set: at most one extra set", k, d.starts <= 2);
+      const Device::Connect& c = d.connects.at(0);
+      expectK("change 3 passes into the connect's set: the hold ends with the connect's set, not the rerun's",
+              k, d.holdLimitHits == 0 && c.queued && c.released && c.releasePass <= c.queuedPass);
+    }
+    {
+      // SEVERAL requests in the middle of the connect's set — a birth, another birth and a bitmap
+      // change, each consumed while the set is being queued past its first entity. Requirement 8: the
+      // set finishes and exactly ONE more runs, for the latest bitmap, however many arrived; and the
+      // connect's hold is that connect's set's alone, so the rerun does not extend it. The precondition
+      // is checked too, or a set that finished early would make "two" pass for the wrong reason.
+      Device d(8);
+      d.brokerConnects();
+      d.run(1);
+      bool allMidSet = d.midSet();
+      d.haBirth(false);
+      d.run(1);
+      allMidSet = allMidSet && d.midSet();
+      d.haBirth(false);
+      d.run(1);
+      allMidSet = allMidSet && d.midSet();
+      d.bitmap = bitmapOf(k);
+      d.run(1);
+      d.run(1000);
+      const std::string route = "a birth, a birth and a bitmap change during the connect's set";
+      expectK(route + ": each one lands mid-set, and exactly one extra set runs", k,
+              allMidSet && d.starts == 2);
+      expectK(route + ": every config of the latest bitmap, recorded", k,
+              d.everyConfigSince(0, d.bitmap) && d.recorded());
+      const Device::Connect& c = d.connects.at(0);
+      expectK(route + ": the hold ends with the connect's set, never at its bound", k,
+              d.holdLimitHits == 0 && c.queued && c.released && c.releasePass <= c.queuedPass);
+    }
+#ifndef DF30_TODAY
+    {
+      // A bitmap change in the pass or two the job waits for its VERDICT. `serviceMqttConnectedPass`
+      // records the request (noteRequested) before it asks the job, so the policy will never ask for
+      // this bitmap again: if the job dropped the request, the set would be recorded for the OLD
+      // bitmap and the new channel's entities would never appear until a reconnect — DF30's own
+      // symptom. At k = 8 there is no channel left to commission, so one is taken out of service.
+      Device d(k);
+      d.brokerConnects();
+      const bool reached = d.runUntilPhase(plc::HaDiscoveryJob::Phase::AwaitingVerdict, 200);
+      const std::size_t first = d.sink.calls.size();
+      d.bitmap = k < 8 ? bitmapOf(k + 1) : bitmapOf(k - 1);
+      d.run(2000);
+      expectK("bitmap change while the set awaits its verdict: every new config after it, recorded", k,
+              reached && d.everyConfigSince(first, d.bitmap) && d.recorded());
+    }
+#endif
+    {
+      // Bits 8-15 of register 10 name no channel: the register keeps whatever a master wrote, and
+      // enumerateEntities ignores them, so flipping one describes the same device. It starts no set,
+      // gets no sensors-changed answer, and hands nothing over (DF30's review: it used to republish a
+      // byte-identical set per write).
+      Device d(k);
+      d.brokerConnects();
+      d.run(500);
+      const uint32_t s0 = d.starts;
+      const uint32_t a0 = d.sensorsChangedAnswers;
+      const std::size_t first = d.sink.calls.size();
+      for (unsigned toggle = 0; toggle < 10; ++toggle) {
+        d.bitmap = static_cast<uint16_t>(d.bitmap ^ (1u << (plc::kNumSensors + toggle % 8u)));
+        d.run(300);
+      }
+      expectK("a bit above the channels flipped ten times: no set, no answer, no config handed over", k,
+              d.starts == s0 && d.sensorsChangedAnswers == a0 && d.discoveryCallsSince(first) == 0);
     }
   }
   flushChecks();
@@ -966,7 +1323,7 @@ void latchOrderRoutes() {
       const std::size_t first = d.sink.calls.size();
       d.bitmap = static_cast<uint16_t>(bitmapOf(k) ^ 0x80u);
       d.run(500);
-      expectK("drop and reconnect inside one pass: a later bitmap change still republishes (R4.4.6)", k,
+      expectK("drop and reconnect inside one pass: a later bitmap change still republishes", k,
               d.starts - s0 == 1 && d.everyConfigSince(first, d.bitmap));
     }
     {
@@ -982,6 +1339,8 @@ void latchOrderRoutes() {
       d.run(200);
       expectK("connect then drop inside one pass: nothing reaches the sink while the link is down", k,
               d.sink.calls.size() == first);
+      expectK("connect then drop inside one pass: the connect starts no session, so nothing subscribes", k,
+              d.sessionsStartedOnDeadLink == 0);
       d.brokerConnects();
       d.run(500);
       expectConnect("connect then drop inside one pass, then a real reconnect", k, d, d.connects.back());
@@ -992,10 +1351,17 @@ void latchOrderRoutes() {
 
 void incompleteRoutes() {
   std::printf("\n[DF30 — a set that does not complete is not recorded, and is retried once a minute]\n");
+  // Each route from a clock at 0, and from 20 s, 90 s and 150 s before millis() wraps at 2^32 (49.7
+  // days on the board), so a retry window straddles the wrap: from 20 s a set's FIRST retry is due
+  // after it, from 90 s and 150 s a later one is. Two plausible rewrites of the retry test that are
+  // not wrap-safe — `now < from + interval`, which retries at once, and one that waits for `now` to
+  // catch up with `from`, which never retries — shipped green while every route started at 0.
+  constexpr uint32_t kBeforeTheWrap[] = {0u, 0xFFFFFFFFu - 20000u + 1u, 0xFFFFFFFFu - 90000u + 1u,
+                                         0xFFFFFFFFu - 150000u + 1u};
   for (int k = 0; k <= 8; ++k) {
-    {
+    for (uint32_t startMs : kBeforeTheWrap) {
       // Truncation through the payload-limit seam: two configs do not fit.
-      Device d(k, kTruncatingPayloadLimit);
+      Device d(k, kTruncatingPayloadLimit, startMs);
       d.brokerConnects();
       d.run(300);
       const std::string boardTemperature = d.prefix + "/sensor/wfm_a1b2c3/board_temperature/config";
@@ -1018,26 +1384,90 @@ void incompleteRoutes() {
     // so only the Discovery-class failure counter knows. Board temperature, the entity DF29's bench
     // check reads, and the LAST entity of the set, which is still queued when the cursor reaches the
     // end: a verdict that did not wait for the queue to drain would record the set before it failed.
-    for (const char* refused : {"/sensor/wfm_a1b2c3/board_temperature/config",
-                                "/button/wfm_a1b2c3/cmd_republish/config"}) {
-      Device d(k);
-      d.sink.failTopic = d.prefix + refused;
-      d.sink.failTimes = 1;
-      d.brokerConnects();
-      d.run(300);
-      expectK("a refused config, mid-set or last: the set is not recorded", k, !d.policy.everPublished());
-      d.run(59000);
-      expectK("a refused config, mid-set or last: not retried before the minute is up", k, d.starts == 1);
-      const std::size_t first = d.sink.calls.size();
-      d.run(2000);
-      expectK("a refused config, mid-set or last: retried after it, every config again, then recorded", k,
-              d.starts == 2 && d.everyConfigSince(first, d.bitmap) && d.recorded());
+    for (uint32_t startMs : kBeforeTheWrap) {
+      for (const char* refused : {"/sensor/wfm_a1b2c3/board_temperature/config",
+                                  "/button/wfm_a1b2c3/cmd_republish/config"}) {
+        Device d(k, MqttPublisher::kMaxPayloadBytes, startMs);
+        d.sink.failTopic = d.prefix + refused;
+        d.sink.failTimes = 1;
+        d.brokerConnects();
+        d.run(300);
+        expectK("a refused config, mid-set or last: the set is not recorded", k, !d.policy.everPublished());
+        d.run(59000);
+        expectK("a refused config, mid-set or last: not retried before the minute is up", k, d.starts == 1);
+        const std::size_t first = d.sink.calls.size();
+        d.run(2000);
+        expectK("a refused config, mid-set or last: retried after it, every config again, then recorded", k,
+                d.starts == 2 && d.everyConfigSince(first, d.bitmap) && d.recorded());
+      }
     }
   }
   flushChecks();
 }
 
 #ifndef DF30_TODAY
+/**
+ * Requirement 2's two conditions, each pinned by one step against a queue filled BY HAND, because the
+ * routes alone could not tell 5 from 6: `<=` for `<` against the window, the window written as
+ * `kQueueCapacity - kFullTelemetrySetMessages`, and the free-slot half removed, all shipped green
+ * with only the literal `kAdmissionWindow == 5` to catch the constant itself.
+ */
+void admissionTests() {
+  std::printf("\n[DF30 — the admission window and the free slot, one step against a hand-filled queue]\n");
+  using Phase = plc::HaDiscoveryJob::Phase;
+  for (std::size_t reliable : {std::size_t{4}, std::size_t{5}}) {
+    Device d(8);
+    for (std::size_t i = 0; i < reliable; ++i) {
+      d.pub.enqueue(MqttClass::Availability, d.pub.availabilityTopic(), "online", true);
+    }
+    d.job.request(d.bitmap, d.pub);  // a set at its first entity, nothing handed over
+    const plc::HaDiscoveryStepReport r =
+        d.job.step(true, true, d.now, d.bitmap, d.ha, d.pub, d.policy);
+    const std::size_t expected = plc::HaDiscoveryJob::kAdmissionWindow - reliable;
+    char what[120];
+    std::snprintf(what, sizeof(what),
+                  "%zu reliable messages queued: one step admits exactly %zu, leaving %zu", reliable,
+                  expected, plc::HaDiscoveryJob::kAdmissionWindow);
+    check(d.job.phase() == Phase::Enqueuing && r.enqueued == expected &&
+              d.pub.queuedNeverEvicted() == plc::HaDiscoveryJob::kAdmissionWindow,
+          what);
+  }
+  {
+    // Fifteen telemetry messages and one availability message: sixteen queued, one of them reliable,
+    // so the window has room and the QUEUE does not. A reconnect onto a queue the previous session
+    // left full looks like this. Admitting would evict a reading to make room, which `enqueue()`
+    // does and still returns true — the reason its result cannot be the test.
+    Device d(8);
+    for (std::size_t i = 0; i < MqttPublisher::kQueueCapacity - 1; ++i) {
+      char topic[MqttPublisher::kMaxTopicBytes] = {};
+      std::snprintf(topic, sizeof(topic), "%s/sensor/%zu/state", kBaseA, i + 1);
+      d.pub.enqueue(MqttClass::Telemetry, topic, "{}", false);
+    }
+    d.pub.enqueue(MqttClass::Availability, d.pub.availabilityTopic(), "online", true);
+    const uint32_t e0 = d.pub.droppedTelemetry();
+    const uint32_t r0 = d.pub.rejectedMessages();
+    d.job.request(d.bitmap, d.pub);
+    const plc::HaDiscoveryStepReport r =
+        d.job.step(true, true, d.now, d.bitmap, d.ha, d.pub, d.policy);
+    check(d.pub.queued() == MqttPublisher::kQueueCapacity && r.enqueued == 0 && r.built == 0 &&
+              d.pub.droppedTelemetry() == e0 && d.pub.rejectedMessages() == r0,
+          "16 queued, 1 of them reliable: the step admits nothing, evicts nothing, refuses nothing");
+  }
+}
+
+void everyPassInvariants() {
+  std::printf("\n[DF30 — the per-pass bounds, on every pass of every route above]\n");
+  std::printf("  (most entities the cursor moved in one pass of one set: %zu)\n", cursorAdvanceInAnyRoute);
+  std::printf("  (longest hold on a healthy connect, any route: %zu passes; the bound is %zu)\n",
+              longestHealthyHoldInAnyRoute, plc::HaDiscoveryJob::kConnectHoldPassLimit);
+  check(windowOverrunsInAnyRoute == 0,
+        "no step, on any pass of any route, admitted a message past the admission window");
+  check(cursorAdvanceInAnyRoute <= plc::HaDiscoveryJob::kMaxBuildsPerPass,
+        "no pass of any route moved the cursor more than kMaxBuildsPerPass entities");
+  check(longestHealthyHoldInAnyRoute < plc::HaDiscoveryJob::kConnectHoldPassLimit,
+        "no healthy connect on any route, the full-queue reconnect included, reaches the hold's bound");
+}
+
 void holdRoutes() {
   std::printf("\n[DF30 — the connect's hold on telemetry is bounded]\n");
   {
@@ -1110,6 +1540,22 @@ std::size_t onlyOffsetOf(const std::string& code, const char* needle) {
   return at.size() == 1 ? at.front() : std::string::npos;
 }
 
+/** Occurrences of `name` as a whole identifier: `haRepublish` but not `haRepublishReasonText`. For
+ *  the whitelist, which counts every mention of an object, so a longer name must not pass for it. */
+std::size_t countOfName(const std::string& code, const char* name) {
+  const auto isIdentifier = [](char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
+  };
+  const std::size_t length = std::strlen(name);
+  std::size_t n = 0;
+  for (std::size_t at : firmware_source::offsetsOf(code, name)) {
+    const bool startsClean = at == 0 || !isIdentifier(code[at - 1]);
+    const bool endsClean = at + length >= code.size() || !isIdentifier(code[at + length]);
+    if (startsClean && endsClean) ++n;
+  }
+  return n;
+}
+
 void firmwareWiringTests() {
   std::printf("\n[DF30 — firmware.cpp calls the job, and nothing that bypasses it]\n");
   using firmware_source::functionBody;
@@ -1126,11 +1572,32 @@ void firmwareWiringTests() {
   check(countOf(code, "mqttPublisher.tick(") == 0 && countOf(code, "mqttPublisher.pump(") == 0,
         "tick() and pump() are called only through serviceMqttConnectedPass");
   check(countOf(code, ".notePublished(") == 0 && countOf(code, ".onSensorBitmap(") == 0 &&
-            countOf(code, "haRepublish.onConnected(") == 0 &&
-            countOf(code, "haRepublish.noteDisconnected(") == 0,
-        "the policy is driven only through the job's entry points");
+            countOf(code, ".noteRequested(") == 0,
+        "no policy object anywhere is asked or told about a set outside the job's entry points");
   check(countOf(flat, "plc::HaDiscoveryJobhaDiscoveryJob;") == 1,
         "one job, with the default payload limit (the seam is for the host test only)");
+
+  // A WHITELIST, not a list of forbidden calls (DF30's review): the job and the policy may be named
+  // in firmware.cpp only where these checks expect them, so a call that bypasses the entry points — a
+  // request every pass, a second consume, a cancel on a disconnect — has nowhere to go. Each site is
+  // compared as a whole statement below; here every OTHER mention is refused by counting them all.
+  //   haDiscoveryJob:     its declaration, and the three entry points' argument lists.
+  //   haRepublish:        its declaration, the birth test in onMqttData, and the same three.
+  //   mqttSessionStarted: its declaration, the consume, the gate, and stopMqttClient.
+  check(countOfName(code, "haDiscoveryJob") == 4 &&
+            countOf(flat, "plc::serviceMqttConnectedPass(haDiscoveryJob,") == 1 &&
+            countOf(flat, "plc::endMqttSession(haDiscoveryJob,mqttPublisher,haRepublish);") == 1 &&
+            countOf(flat, "haRepublish,haDiscoveryJob,mqttSessionStarted);") == 1,
+        "haDiscoveryJob is named only at its declaration and in the three entry points' arguments");
+  check(countOf(code, "haRepublish.") == 1 &&
+            countOf(flat, "haRepublish.onStatusMessage(haDiscovery,t,d,retained)") == 1 &&
+            countOfName(code, "haRepublish") == 5 &&
+            countOf(flat, "plc::HaRepublishPolicyhaRepublish;") == 1,
+        "haRepublish is named only at its declaration, the birth test and the three entry points");
+  check(countOfName(code, "mqttSessionStarted") == 4 &&
+            countOf(flat, "boolmqttSessionStarted=false;") == 1 &&
+            countOf(flat, "volatileboolmqttSessionStarted") == 0,
+        "mqttSessionStarted is the logic task's own: declared once, not volatile, used in three places");
 
   const std::size_t bitmapRead = onlyOffsetOf(flat, "constuint16_tsensorsBitmap=connectedSensorsBitmap;");
   check(bitmapRead != std::string::npos, "the connected sensors are read once into sensorsBitmap");
@@ -1145,28 +1612,34 @@ void firmwareWiringTests() {
             readDisconnect < clearDisconnect && clearDisconnect < readConnect &&
             readConnect < clearConnect,
         "each link latch is read, then cleared only if it was set, the disconnect first");
+  const std::size_t transportRead =
+      onlyOffsetOf(flat, "constbooltransportConnected=mqttTransport.connected();");
 
   const std::size_t consume = onlyOffsetOf(
       flat,
       "constplc::MqttLinkLatchReportlink=plc::consumeMqttLinkLatches(disconnectLatched,connectLatched,"
-      "netSettings.mqttHaDiscovery(),sensorsBitmap,haDiscovery,mqttReconnect,mqttPublisher,"
-      "haRepublish,haDiscoveryJob);");
-  check(consume != std::string::npos && bitmapRead < consume && clearConnect < consume,
+      "transportConnected,netSettings.mqttHaDiscovery(),sensorsBitmap,haDiscovery,mqttReconnect,"
+      "mqttPublisher,haRepublish,haDiscoveryJob,mqttSessionStarted);");
+  check(countOf(code, "consumeMqttLinkLatches(") == 1 && consume != std::string::npos &&
+            bitmapRead < consume && clearConnect < consume,
         "consumeMqttLinkLatches is called once, with this pass's latches and bitmap");
+  check(transportRead != std::string::npos && clearConnect < transportRead && transportRead < consume,
+        "and with the transport read AFTER the connect latch: never a CONNECTED against a stale false");
   const std::size_t command = onlyOffsetOf(flat, "serviceMqttCommand(now);");
   check(consume != std::string::npos && command != std::string::npos && consume < command,
         "and before serviceMqttCommand, so a command arriving with a connect sees the connect");
 
-  const std::string connectedBlock =
-      functionBody(code, "if (mqttTransport.connected() && !mqttConnectLatched)");
+  const std::string connectedBlock = functionBody(
+      code,
+      "if (plc::mqttConnectedPassMayRun(mqttTransport.connected(), mqttSessionStarted, "
+      "mqttConnectLatched))");
   const std::string block = withoutWhitespace(connectedBlock);
-  check(!block.empty(),
-        "the connected block is found, once, and waits while a CONNECTED is latched but unconsumed");
-  const std::string subscribeBlock =
-      functionBody(code, "if (link.connected && mqttTransport.connected())");
+  check(!block.empty() && countOf(code, "mqttConnectedPassMayRun(") == 1,
+        "the connected block is found, once, behind the gate that asks for a session this task started");
+  const std::string subscribeBlock = functionBody(code, "if (link.sessionStarted)");
   check(countOf(code, "mqttTransport.subscribe(") == 2 &&
             countOf(subscribeBlock, "mqttTransport.subscribe(") == 2,
-        "both subscribes run only on a consumed connect whose link is still up");
+        "both subscribes run only on a consumed connect whose link was still up");
   const std::size_t birthRead = block.find("constboolbirthLatched=haBirthLatched;");
   const std::size_t birthClear = block.find("if(birthLatched)haBirthLatched=false;");
   const std::size_t fill = block.find("plc::fillMqttSnapshot(");
@@ -1189,16 +1662,26 @@ void firmwareWiringTests() {
         "and it is the block's last MQTT work: only the console report follows it");
 
   check(countOf(code, "mqttTransport.end()") == 1, "mqttTransport.end() is called in one place");
+  check(countOf(code, "endMqttSession(") == 1, "endMqttSession is called in one place");
   const std::string stopBody = withoutWhitespace(functionBody(code, "void stopMqttClient()"));
   check(stopBody ==
             "mqttTransport.end();plc::endMqttSession(haDiscoveryJob,mqttPublisher,haRepublish);"
             "mqttConnectLatched=false;mqttDisconnectLatched=false;haBirthLatched=false;"
-            "mqttCommandLatched=false;mqttClientUp=false;mqttReconnect.reset();",
-        "stopMqttClient: end(), then the job, the queue and all four latches of that session go");
+            "mqttCommandLatched=false;mqttSessionStarted=false;mqttClientUp=false;"
+            "mqttReconnect.reset();",
+        "stopMqttClient: end(), then the job, the queue, all four latches and the session flag go");
   check(countOf(code, "stopMqttClient();") == 2,
         "and both teardowns call it: MQTT switched off, and a settings change");
   check(countOf(flat, "haRepublish.onStatusMessage(haDiscovery,t,d,retained)") == 1,
         "onMqttData hands the retain flag to the birth test");
+
+  // DF30's review: a refusal by the publish queue repeats every pass if it ever becomes reachable,
+  // so the console must say so. Source text only: no host route can reach the refusal.
+  const std::string report = withoutWhitespace(functionBody(
+      code, "void reportDiscoveryPass(const plc::MqttConnectedPassReport& pass, bool discoveryEnabled)"));
+  check(report.find("if(step.refused>0){Serial.printf(") != std::string::npos &&
+            report.find("static_cast<unsigned>(step.refused)") != std::string::npos,
+        "the console report prints a config refused by the publish queue (step.refused)");
 }
 
 }  // namespace
@@ -1216,7 +1699,9 @@ int main() {
   latchOrderRoutes();
   incompleteRoutes();
 #ifndef DF30_TODAY
+  admissionTests();
   holdRoutes();
+  everyPassInvariants();
 #endif
   firmwareWiringTests();
 

@@ -766,14 +766,35 @@ HaRepublishReason HaRepublishPolicy::onStatusMessage(const HaDiscovery& discover
                                              : HaRepublishReason::None;
 }
 
+namespace {
+
+static_assert(kNumSensors < 16, "the connected-sensors bitmap is a uint16_t with a bit per channel");
+
+/**
+ * The bits of the connected-sensors bitmap that are channels, and so the only ones a discovery set
+ * depends on.
+ *
+ * Register 10 is stored as written, all sixteen bits (modbus_manager.cpp, `REG_CONNECTED_SENSORS_BITMAP`),
+ * and the panel's toggle keeps whatever it found above the channels. `enumerateEntities` ignores those
+ * bits, so a write that flips only them describes the same device: compared whole, it answered
+ * `SensorsChanged` and republished a byte-identical set, once per such write (`DF30`'s review). The
+ * mask is applied HERE, in the comparison, and nowhere else — the register and what the panel and the
+ * bus show keep every bit a master wrote.
+ */
+constexpr uint16_t kChannelBits = static_cast<uint16_t>((1u << kNumSensors) - 1u);
+
+}  // namespace
+
 HaRepublishReason HaRepublishPolicy::onSensorBitmap(uint16_t connectedBitmap) const {
   // Before the first request there is nothing to re-publish: the connect that makes the first
   // request publishes the whole set, so asking here as well would double it.
   if (!connected_ || !requested_) return HaRepublishReason::None;
   // Against the REQUESTED bitmap (DF30). Against the published one, a set that could not complete
-  // left the two unequal and this answered SensorsChanged on every connected pass.
-  return connectedBitmap != requestedBitmap_ ? HaRepublishReason::SensorsChanged
-                                             : HaRepublishReason::None;
+  // left the two unequal and this answered SensorsChanged on every connected pass. Channel bits only,
+  // on both sides: see kChannelBits.
+  return (connectedBitmap & kChannelBits) != (requestedBitmap_ & kChannelBits)
+             ? HaRepublishReason::SensorsChanged
+             : HaRepublishReason::None;
 }
 
 void HaRepublishPolicy::noteRequested(uint16_t connectedBitmap) {

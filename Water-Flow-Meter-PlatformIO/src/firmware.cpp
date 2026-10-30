@@ -426,6 +426,18 @@ uint16_t mqttConfiguredRevision = 0;
 volatile bool mqttDisconnectLatched = false;
 volatile bool mqttConnectLatched = false;
 
+/**
+ * True once the logic task has CONSUMED a CONNECTED with the link still up, until it consumes a
+ * DISCONNECTED or stops the client (`DF30`'s review).
+ *
+ * Not `volatile` and not a latch: only the logic task reads or writes it, which is the point.
+ * `plc::consumeMqttLinkLatches` sets and clears it, `stopMqttClient()` clears it, and the connected
+ * block's gate, `plc::mqttConnectedPassMayRun`, asks for it — because the transport's own
+ * `connected()` turns true a few instructions BEFORE esp-mqtt's task latches the CONNECTED, and a
+ * gate on those two alone opened for a session this task had not started.
+ */
+bool mqttSessionStarted = false;
+
 void onMqttState(void*, bool connected) {
   // Called from esp-mqtt's own task (priority 1, R4.1.5). Set a flag and return — anything more here
   // runs on a task that must never be the reason the sampler or Modbus waits.
@@ -583,7 +595,7 @@ void refreshNetStatusCache() {
  * Only printing. What the job does lives in net/ha_discovery_job.h, where a host test runs it; this
  * replaced `publishDiscovery()`, which enqueued the whole set in one loop and was `DF30`. At most a
  * few lines per pass, and only on a pass where something happened: a set starts, finishes, skips an
- * entity, or has its hold ended by the bound.
+ * entity, has a config refused by the publish queue, or has its hold ended by the bound.
  */
 void reportDiscoveryPass(const plc::MqttConnectedPassReport& pass, bool discoveryEnabled) {
   if (pass.birthHandled && discoveryEnabled) {
@@ -602,6 +614,15 @@ void reportDiscoveryPass(const plc::MqttConnectedPassReport& pass, bool discover
                   static_cast<unsigned>(plc::MqttPublisher::kMaxTopicBytes),
                   static_cast<unsigned>(step.truncatedPayloadBytes),
                   static_cast<unsigned>(plc::MqttPublisher::kMaxPayloadBytes));
+  }
+  if (step.refused > 0) {
+    // The PUBLISH QUEUE refused a config its admission window had let through: unreachable today,
+    // and not the sink's -1 that `step.failures` counts below. The job tries the same entity again
+    // next pass, so this prints on every pass it happens — deliberately, so a change that makes it
+    // reachable shows as a repeating line instead of a set that silently never finishes.
+    Serial.printf("[mqtt] discovery: %u config(s) refused by the publish queue despite the"
+                  " admission window; the same one is tried again next pass\n",
+                  static_cast<unsigned>(step.refused));
   }
   if (step.holdLimitReached) {
     Serial.printf("[mqtt] discovery still queuing after %u passes; telemetry released\n",
@@ -629,12 +650,16 @@ void reportDiscoveryPass(const plc::MqttConnectedPassReport& pass, bool discover
  * Stops the MQTT client, and with it everything that belonged to its session (`DF30`).
  *
  * The ONE place `mqttTransport.end()` is called, so the two teardowns — MQTT switched off, and a
- * settings change that recreates the client — cannot drift apart. After `end()` returns, esp-mqtt's
- * task has stopped, so no callback can latch anything new; but one latched just BEFORE it would be
- * consumed on the next pass, against a publisher not yet reconfigured, and a CONNECTED there would
- * queue a retained `online` under the old base topic for the new client to publish. So all four
- * latches go, and `plc::endMqttSession` drops the job and the queued messages built for the old
- * topics.
+ * settings change that recreates the client — cannot drift apart.
+ *
+ * The latches are cleared AFTER `end()`, and that order is load-bearing. esp-mqtt can still deliver
+ * a CONNECTED or a DISCONNECTED WHILE `end()` runs — a connect attempt in progress finishes under the
+ * lock `esp_mqtt_client_stop` waits for, and a poll error on the last iteration aborts the
+ * connection — but never after it returns (plc::endMqttSession cites the lines). A latch set before
+ * or during `end()` would otherwise be consumed on the next pass, against a publisher not yet
+ * reconfigured, and a CONNECTED there would queue a retained `online` under the old base topic for
+ * the new client to publish. So all four latches go after it, `mqttSessionStarted` with them, and
+ * `plc::endMqttSession` drops the job and the queued messages built for the old topics.
  */
 void stopMqttClient() {
   mqttTransport.end();
@@ -643,6 +668,7 @@ void stopMqttClient() {
   mqttDisconnectLatched = false;
   haBirthLatched = false;
   mqttCommandLatched = false;
+  mqttSessionStarted = false;
   mqttClientUp = false;
   mqttReconnect.reset();
 }
@@ -1340,20 +1366,32 @@ void logicTaskCode(void * pvParameters) {
       // stale command does not sit in the slot shadowing a fresh one.
       mqttCommandLatched = false;
     }
-    // The ladder, the publisher (R4.5.1's retained `online` and an armed full set), the policy and the
-    // discovery job, for both latches. Moved into net/ha_discovery_job.h so a host test drives the two
-    // orders the latches can really have happened in.
+    // AFTER the connect latch was read and cleared, never before: a CONNECTED landing in between would
+    // otherwise be consumed against a stale `false`, start no session, and on a link that then stays up
+    // leave the connected block shut for good. plc::consumeMqttLinkLatches says why.
+    const bool transportConnected = mqttTransport.connected();
+    // The ladder, the publisher (R4.5.1's retained `online` and an armed full set), the policy, the
+    // discovery job and `mqttSessionStarted`, for both latches. Moved into net/ha_discovery_job.h so a
+    // host test drives the two orders the latches can really have happened in.
     const plc::MqttLinkLatchReport link = plc::consumeMqttLinkLatches(
-        disconnectLatched, connectLatched, netSettings.mqttHaDiscovery(), sensorsBitmap,
-        haDiscovery, mqttReconnect, mqttPublisher, haRepublish, haDiscoveryJob);
-    // Only if the link is STILL up. When the CONNECTED and a later DISCONNECTED were both latched by the
-    // time this pass read them, the connect is consumed second and `link.connected` is true for a link
-    // that is down. Subscribing then is not harmless the way the publisher's half is:
-    // esp_mqtt_client_subscribe takes the client's lock BEFORE it checks the state (esp-mqtt bb9c8af,
-    // mqtt_client.c:1708, then :1709), and a client that is reconnecting holds that lock through DNS,
-    // the TCP connect and the CONNACK wait, 10 s each at most, all on this pass. Skipping loses
-    // nothing: the next real CONNECTED latches again and subscribes then.
-    if (link.connected && mqttTransport.connected()) {
+        disconnectLatched, connectLatched, transportConnected, netSettings.mqttHaDiscovery(),
+        sensorsBitmap, haDiscovery, mqttReconnect, mqttPublisher, haRepublish, haDiscoveryJob,
+        mqttSessionStarted);
+    // Only if the link was STILL up when the connect was consumed. When the CONNECTED and a later
+    // DISCONNECTED were both latched by the time this pass read them, the connect is consumed second
+    // and `link.connected` is true for a link that is down; `link.sessionStarted` is not. Subscribing
+    // then is not harmless the way the publisher's half is: esp_mqtt_client_subscribe takes the
+    // client's lock BEFORE it checks the state (esp-mqtt bb9c8af, mqtt_client.c:1708, then :1709), and
+    // a client that is reconnecting holds that lock for its whole connect attempt (:1455, :1472-1486):
+    // the name lookup, which `network_timeout_ms` does not bound (IDF 4.4.7 esp_tls.c:148 calls
+    // getaddrinfo with no timeout), then the TCP (transmission control protocol) connect, the CONNECT
+    // write and the CONNACK (the broker's answer to a connect) read, each bounded by
+    // `network_timeout_ms`, 10 s here. Skipping loses nothing: the next real CONNECTED latches again and
+    // subscribes then. Even on a link that IS up, each subscribe below first waits for esp-mqtt's loop
+    // body, which holds the lock across one write bounded by that same timeout, then writes its own
+    // packet under it (:1708, :1732): about two timeouts each, and there are two. All of these are upper
+    // bounds read from the source, not measurements (`DF31`).
+    if (link.sessionStarted) {
       // R4.4.7 — subscribe BEFORE announcing ourselves, so a birth message that arrives in the same
       // instant is not missed. The announcement and the discovery set are only QUEUED above; nothing
       // queued reaches the client before this pass's pump(), at the end of the connected block, while
@@ -1490,14 +1528,19 @@ void logicTaskCode(void * pvParameters) {
       mqttReconnect.noteConnected();
     }
 
-    // NOT while a CONNECTED is latched but unconsumed (`DF30`). esp-mqtt sets the transport's flag and
-    // then the latch, from its own task, at any moment; one that lands after the latches were read at
-    // the top of this section and before this line would otherwise run the block for a session this
-    // pass has not started: tick() would queue the full set already armed (by configure() at boot, or by
-    // the last disconnect) AHEAD of the discovery set the connect is about to start — owner decision B
-    // broken, and on the first connect after boot, where Home Assistant has no configs yet. Waiting costs one pass; the next one consumes
-    // the latch and holds telemetry as a connect should.
-    if (mqttTransport.connected() && !mqttConnectLatched) {
+    // Only for a session this task has STARTED, and not while a CONNECTED is latched but unconsumed
+    // (`DF30`). esp-mqtt sets the transport's flag and then the latch, from its own task, at any
+    // moment. A CONNECTED that lands after the latches were read at the top of this section would
+    // otherwise run the block for a session this pass has not started: tick() would queue the full set
+    // already armed (by configure() at boot, or by the last disconnect) AHEAD of the connect's `online`
+    // and its discovery set — owner decision B broken, and on the first connect after boot, where Home
+    // Assistant has no configs yet. The latch alone did not close that: between onEvent's `connected_`
+    // store and its latch, `connected()` is true and the latch still clear, no read order helps, and so
+    // the order of this gate's reads must not be relied on. `mqttSessionStarted` is what closes it,
+    // because only this task sets it. What it leaves open — a drop AND a reconnect landing between this
+    // pass's latch reads and this line — is in plc::mqttConnectedPassMayRun. Waiting costs one pass; the
+    // next one consumes the latch and holds telemetry as a connect should.
+    if (plc::mqttConnectedPassMayRun(mqttTransport.connected(), mqttSessionStarted, mqttConnectLatched)) {
       // R4.4.7's birth and an accepted `cmd/republish` share this latch (serviceMqttCommand sets it).
       // Read and cleared only if set, for the reason the link latches are; passed by value below.
       const bool birthLatched = haBirthLatched;
@@ -1559,8 +1602,8 @@ void logicTaskCode(void * pvParameters) {
       plc::fillMqttSnapshot(snapshot, sensors, configs, kNumSensors, snapshotInputs);
 
       // Discovery, then telemetry, then the drain, in ONE call so a host test runs the same order
-      // (`DF30`, net/ha_discovery_job.h). The two republish triggers (R4.4.7's birth latch and
-      // R4.4.6's bitmap, which now answers once per change), one bounded step of the discovery job,
+      // (`DF30`, net/ha_discovery_job.h). The two republish triggers (R4.4.7's birth latch and a
+      // change of the connected sensors, now answered once per change), one bounded step of the job,
       // tick() unless the job a connect started is still queuing its set (owner decision B:
       // discovery before telemetry on a connect), and pump(MqttPublisher::kMessagesPerPass), bounded
       // because this pass also owns the display's 100 ms acknowledgement budget (§7).

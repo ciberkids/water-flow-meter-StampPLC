@@ -76,8 +76,17 @@ struct HaDiscoveryStepReport {
   uint8_t truncatedIndex = 0;
   uint16_t truncatedTopicBytes = 0;
   uint16_t truncatedPayloadBytes = 0;
-  /** Refused by `enqueue()` despite the window. Unreachable by the checks before it; counted, so
-   *  a change that makes it reachable is seen rather than spinning. */
+  /**
+   * Refused by `enqueue()` despite the window. Unreachable today: the free-slot and window checks
+   * before every enqueue, and the builder's own bounds on topic and payload, keep every config
+   * inside what `enqueue()` accepts.
+   *
+   * It is NOT protected against. If a change made it reachable, `step()` would stop at that entity
+   * and try the SAME one again next pass, and every pass after: the set never reaches its verdict, so
+   * it never gets `kRetryIntervalMs`'s backoff either, and on a connect only `kConnectHoldPassLimit`
+   * would release telemetry. What this count buys is that the spin is SEEN: firmware.cpp's console
+   * report prints it on every pass it happens.
+   */
   uint8_t refused = 0;
   bool allEnqueued = false;       /**< The cursor reached the end of its set in this step. */
   bool holdLimitReached = false;  /**< The connect's hold was ended by its bound, not by the job. */
@@ -153,8 +162,10 @@ class HaDiscoveryJob {
    *  - 1 for the connect pass itself.
    *
    * In passes, not milliseconds, because the job advances once per pass however long a pass takes:
-   * a bound in time would release a slow pass's hold early and a fast pass's late. At the logic
-   * task's pace this is tens of milliseconds. The host test holds both halves of the claim: no route
+   * a bound in time would release a slow pass's hold early and a fast pass's late. What 13 passes
+   * are in milliseconds is not known: a pass has never been timed on hardware (`DF31` lists the
+   * longest one among its board measurements), and the host test's 1 ms pass is the logic task's
+   * floor, `vTaskDelay(1)`, not a measurement. The host test holds both halves of the claim: no route
    * reaches the bound, and a job stalled on purpose is released exactly at it.
    */
   static constexpr std::size_t kConnectHoldPassLimit =
@@ -188,8 +199,8 @@ class HaDiscoveryJob {
    *
    * Always from entity 0, even when a set was half-queued before the drop: esp-mqtt's outbox may
    * already have expired what was handed over, and a reconnect republishes every config anyway
-   * (R4.4.6). What the previous session left in the publisher queue still goes out, first, which costs
-   * at most `kAdmissionWindow` duplicates.
+   * (`HaRepublishPolicy::onConnected` always gives a reason). What the previous session left in the
+   * publisher queue still goes out, first, which costs at most `kAdmissionWindow` duplicates.
    */
   void startForConnect(uint16_t bitmap, const MqttPublisher& publisher) {
     begin(bitmap, publisher);
@@ -252,8 +263,24 @@ class HaDiscoveryJob {
    * expires every item 30 s after it was enqueued, silently (esp-mqtt bb9c8af lib/mqtt_outbox.c:193-207,
    * called from mqtt_client.c:1509, with no `MQTT_EVENT_DELETED` because REPORT_DELETED is not
    * configured), and `EspMqttTransport` discards `MQTT_EVENT_PUBLISHED`, the only delivery signal there
-   * is. A set lost there is recovered by the next reconnect, birth or `cmd/republish`. `DF31` is the
-   * open item about what esp-mqtt does with messages after the hand-over.
+   * is. A set lost there is usually recovered by the next reconnect, birth or `cmd/republish` — not
+   * where the cause repeats (`DF31`), which is the open item about what esp-mqtt does with messages
+   * after the hand-over.
+   *
+   * NOT INLINED, on purpose, and the attribute on the definition below is load-bearing. This
+   * function keeps an entity table and the two build buffers — `refs[kHaMaxEntities]`,
+   * `topic[kMaxTopicBytes]` and `payload[kMaxPayloadBytes]`, about 1.3 KB — on the stack.
+   * `publishDiscovery()`, which it replaced, was an ordinary out-of-line function, so those bytes were
+   * on LogicTask's stack only while it ran. Defined `inline` in a header and called once, from
+   * `serviceMqttConnectedPass`, which is itself called once from `logicTaskCode`, GCC folded both
+   * into `logicTaskCode` at -Os, and the buffers became part of that function's own frame for the
+   * WHOLE pass: measured with -fstack-usage, `logicTaskCode`'s frame went from 1,328 bytes at
+   * 65b36f0e to 2,464, so every other deep chain of the pass — the UI renderer, the portal's POST
+   * handler, WiFi — started about 1.1 KB deeper, in a 10,000-byte task whose high-water mark nobody
+   * has measured. `noinline` puts them back in a frame of their own that exists only during the
+   * call. A GCC attribute, which the host build's g++ accepts too; on the definition and not on this
+   * declaration, because GCC warns (-Wattributes) when an `inline` definition follows a `noinline`
+   * declaration.
    */
   HaDiscoveryStepReport step(bool canPublish, bool linkUp, uint32_t nowMs, uint16_t bitmap,
                              const HaDiscovery& discovery, MqttPublisher& publisher,
@@ -291,10 +318,10 @@ class HaDiscoveryJob {
   uint32_t retryFromMs_ = 0;
 };
 
-inline HaDiscoveryStepReport HaDiscoveryJob::step(bool canPublish, bool linkUp, uint32_t nowMs,
-                                                  uint16_t bitmap, const HaDiscovery& discovery,
-                                                  MqttPublisher& publisher,
-                                                  HaRepublishPolicy& policy) {
+// noinline: see the declaration. Its buffers must not live in the caller's frame.
+__attribute__((noinline)) inline HaDiscoveryStepReport HaDiscoveryJob::step(
+    bool canPublish, bool linkUp, uint32_t nowMs, uint16_t bitmap, const HaDiscovery& discovery,
+    MqttPublisher& publisher, HaRepublishPolicy& policy) {
   HaDiscoveryStepReport report;
   if (phase_ == Phase::Idle) return report;
   if (!canPublish) {
@@ -402,6 +429,12 @@ inline HaDiscoveryStepReport HaDiscoveryJob::step(bool canPublish, bool linkUp, 
 struct MqttLinkLatchReport {
   bool disconnected = false;
   bool connected = false;
+  /**
+   * The CONNECTED was consumed while the transport still said connected, so this pass STARTED a
+   * session: firmware.cpp subscribes on it, and `sessionStarted` was set. False for a CONNECTED
+   * consumed after its link had already dropped again.
+   */
+  bool sessionStarted = false;
   HaRepublishReason connectReason = HaRepublishReason::None;
   bool discoveryStarted = false;
 };
@@ -414,29 +447,48 @@ struct MqttLinkLatchReport {
  * order has to be chosen, and only this one leaves a working session correct:
  *  - really disconnect then connect, the usual case: the session ends up connected, as it is. The
  *    order this replaced, connect first, left the ladder and the policy believing the link was down
- *    while it was up, so R4.4.6 stayed silent for the rest of the session;
+ *    while it was up, so a later change of the connected sensors went unpublished for the rest of
+ *    the session;
  *  - really connect then disconnect: the policy, the publisher and the ladder end up believing a
  *    down link is up. The policy and the job are harmless, because everything that publishes runs
- *    in the connected block, which firmware.cpp gates on the transport's own `connected()`. The
- *    report's `connected` is true here too, so firmware.cpp subscribes only if the transport still
- *    says connected: a subscribe takes esp-mqtt's lock before it checks the state, and a client
- *    that is reconnecting holds that lock through its whole connect attempt. The ladder makes no
- *    attempt while it believes it is connected, and that is harmless ONLY because esp-mqtt's own
- *    auto-reconnect is on: `EspMqttTransport` never sets `disable_auto_reconnect`, although
- *    `mqtt_reconnect.h`'s contract (owner decision 3B) says it should. The library's next attempt
- *    latches a fresh event either way. If 3B is ever honoured, this case needs revisiting.
+ *    in the connected block, which firmware.cpp gates on the transport's own `connected()` AND on
+ *    `sessionStarted`, which this consume leaves false. The report's `connected` is true here too,
+ *    which is why firmware.cpp subscribes on `sessionStarted` rather than on `connected`: a
+ *    subscribe takes esp-mqtt's lock before it checks the state, and a client that is reconnecting
+ *    holds that lock through its whole connect attempt. The ladder makes no attempt while it
+ *    believes it is connected, and that is harmless ONLY because esp-mqtt's own auto-reconnect is
+ *    on: `EspMqttTransport` never sets `disable_auto_reconnect`, although `mqtt_reconnect.h`'s
+ *    contract (owner decision 3B) says it should. The library's next attempt latches a fresh event
+ *    either way. If 3B is ever honoured, this case needs revisiting.
+ *
+ * ── `sessionStarted`, the flag the connected block's gate needs (`DF30`'s review) ──────────
+ *
+ * Owned by the logic task: esp-mqtt's task never writes it, so it has none of the latches' races.
+ * Cleared here when a DISCONNECTED is consumed, BEFORE the connect below is handled, and set when a
+ * CONNECTED is consumed with `transportConnected` true; firmware.cpp's `stopMqttClient()` clears it
+ * too. See `mqttConnectedPassMayRun` for why the gate cannot do without it.
+ *
+ * `transportConnected` must be read AFTER the connect latch was read and cleared. Read before, a
+ * CONNECTED that lands in between is consumed against a stale `false`: no session starts, and on a
+ * link that then stays up no later CONNECTED ever arrives to start one, so the connected block would
+ * stay shut for good. Read after, a `false` means the link dropped again after that CONNECTED, and
+ * the drop's own DISCONNECTED, and the next connect's CONNECTED, are still to come.
  *
  * The request is recorded on every connect, discovery on or off (see `noteRequested`).
  */
 inline MqttLinkLatchReport consumeMqttLinkLatches(bool disconnectLatched, bool connectLatched,
-                                                  bool discoveryEnabled, uint16_t sensorsBitmap,
+                                                  bool transportConnected, bool discoveryEnabled,
+                                                  uint16_t sensorsBitmap,
                                                   const HaDiscovery& discovery,
                                                   MqttReconnect& reconnect,
                                                   MqttPublisher& publisher,
-                                                  HaRepublishPolicy& policy, HaDiscoveryJob& job) {
+                                                  HaRepublishPolicy& policy, HaDiscoveryJob& job,
+                                                  bool& sessionStarted) {
   MqttLinkLatchReport report;
   if (disconnectLatched) {
     report.disconnected = true;
+    // First, so the connect below decides the flag for the session that follows.
+    sessionStarted = false;
     reconnect.noteDisconnected();
     publisher.onDisconnected();
     policy.noteDisconnected();
@@ -445,6 +497,10 @@ inline MqttLinkLatchReport consumeMqttLinkLatches(bool disconnectLatched, bool c
   }
   if (connectLatched) {
     report.connected = true;
+    if (transportConnected) {
+      sessionStarted = true;
+      report.sessionStarted = true;
+    }
     reconnect.noteConnected();
     // R4.5.1's retained `online`, and the full telemetry set armed for the first tick that is not
     // held. The only availability message a connect queues (kAvailabilityPerConnect).
@@ -461,10 +517,42 @@ inline MqttLinkLatchReport consumeMqttLinkLatches(bool disconnectLatched, bool c
   return report;
 }
 
+/**
+ * The connected block's gate: the transport says connected, this task has started that session,
+ * and no CONNECTED is latched but unconsumed.
+ *
+ * WHY THE FLAG. `EspMqttTransport::onEvent` stores the transport's `connected_` and THEN calls the
+ * listener that latches the CONNECTED, two stores from esp-mqtt's task with instructions and a call
+ * between them; the logic task can read both in that window. A gate on `connected()` and the latch
+ * alone then opens for a CONNECTED this pass has not consumed, and `tick()` hands the full set that
+ * `configure()` or the last disconnect armed to esp-mqtt AHEAD of the retained `online` and of every
+ * config: owner decision B broken on that connect, and on the first connect after boot Home Assistant
+ * has no configs at all. Swapping the two stores in `onEvent` would close that window and open a worse
+ * one: a latch seen before `connected_` makes the consume skip the subscribes, on a link that then
+ * stays up with no later CONNECTED to subscribe it. So the gate also asks for `sessionStarted`, which
+ * only this task sets, and only when it CONSUMES a CONNECTED — so never while that CONNECTED is still
+ * half-stored.
+ *
+ * THE ORDER OF THE THREE READS DECIDES NOTHING, and must not be relied on: arguments are evaluated
+ * in an unspecified order, and with only `connected()` and the latch, neither order closes the
+ * window. The flag is what closes it, and it is not shared with esp-mqtt's task.
+ *
+ * WHAT IT DOES NOT CLOSE. The flag is the PREVIOUS session's until a DISCONNECTED is consumed. If a
+ * drop and esp-mqtt's reconnect both land after this pass consumed the latches and before the gate —
+ * the reconnect waits 10 s, so only on a pass that long — and the gate reads in the instructions
+ * between the reconnect's `connected_` store and its latch, the stale flag opens it for one pass.
+ * The DISCONNECTED latched by that drop is set by then; adding `!disconnectLatched` would close it
+ * too, and is not done here.
+ */
+inline bool mqttConnectedPassMayRun(bool transportConnected, bool sessionStarted,
+                                    bool connectLatched) {
+  return transportConnected && sessionStarted && !connectLatched;
+}
+
 /** What one connected pass did. */
 struct MqttConnectedPassReport {
   bool birthHandled = false;    /**< A birth or an accepted `cmd/republish` was consumed. */
-  bool sensorsChanged = false;  /**< R4.4.6 fired: at most once per change of the bitmap. */
+  bool sensorsChanged = false;  /**< The connected sensors changed: answered once per change. */
   bool requestStarted = false;  /**< ... and one of them started a set rather than being folded in. */
   HaDiscoveryStepReport step;
   bool telemetryHeld = false;   /**< `tick()` was skipped: the connect's discovery is still queuing. */
@@ -494,7 +582,8 @@ inline MqttConnectedPassReport serviceMqttConnectedPass(
     policy.noteRequested(sensorsBitmap);
     if (canPublish && job.request(sensorsBitmap, publisher)) report.requestStarted = true;
   }
-  // R4.4.6. Once per change: the request is recorded before the next pass compares again.
+  // A change of the connected sensors, answered once per change: the request is recorded before the
+  // next pass compares again.
   if (policy.onSensorBitmap(sensorsBitmap) != HaRepublishReason::None) {
     report.sensorsChanged = true;
     policy.noteRequested(sensorsBitmap);
@@ -519,8 +608,19 @@ inline MqttConnectedPassReport serviceMqttConnectedPass(
  * Everything queued was built for the client being stopped, under its base topic and discovery
  * prefix, so it goes: `configure()` keeps the queue, and the new client would otherwise publish
  * retained availability and discovery under topics nothing will ever clear. The job goes with it;
- * the next connect starts a new one. `end()` dispatches no DISCONNECTED (esp-mqtt bb9c8af
- * `esp_mqtt_client_stop`, mqtt_client.c:1650-1684), so the policy and publisher are told here.
+ * the next connect starts a new one. The policy and publisher are told here because nothing else
+ * reliably tells them: the session is over whether or not esp-mqtt dispatched an event for it.
+ *
+ * esp-mqtt CAN still deliver a CONNECTED or a DISCONNECTED WHILE `end()` runs, never after it
+ * returns (esp-mqtt bb9c8af). `esp_mqtt_client_stop` waits for the client's lock
+ * (mqtt_client.c:1656), which esp-mqtt's task holds for a whole loop body (:1455), and a connect
+ * attempt in progress finishes under it: it dispatches CONNECTED, or fails and dispatches
+ * DISCONNECTED (:1472-1490). And a last iteration whose poll fails aborts the connection, dispatching
+ * DISCONNECTED (:1563-1567), after stop() has cleared the run flag. Only once the loop has exited does the task set the bit
+ * stop() waits for (:1571-1573), so nothing is dispatched after `end()` returns. That is why
+ * firmware.cpp's `stopMqttClient()` clears the latches AFTER `end()` and this call, and why that
+ * order is load-bearing: a latch set during `end()` is cleared, rather than consumed next pass
+ * against a publisher not yet reconfigured.
  */
 inline void endMqttSession(HaDiscoveryJob& job, MqttPublisher& publisher, HaRepublishPolicy& policy) {
   job.cancel();
