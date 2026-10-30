@@ -2006,7 +2006,7 @@ the bottom of this file, verbatim in
 | `I` | menu packs — and where the standing rules ended up | I1–I3 | **I2, I3 are standing rules**; I1 closed |
 | `N-` | the batch opened after the 2026-08-12 rewrite, lettered `a`–`d` so it could not collide with the numbered groups | N-a–N-g | **N-d2, N-e, N-f open**; N-a, N-b, N-c, N-d1 and N-g closed |
 | `DF` | defect — opened 2026-08-18 | DF1–DF31 | **DF23, DF25, DF31 open**; the rest fixed |
-| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J8 | **all eight closed** the same day |
+| `J` | residue and hygiene — opened 2026-08-18, consolidated out of `MEMORY.md` §6 and `docs/backlog/` | J1–J9 | **all closed**; J1–J8 the same day, J9 on 2026-08-21 |
 
 **`DF`, not `D`, and the reason is this rule's own point.** `D0`–`D5` already mean the display-and-dataset
 group — they are in the closed table at the bottom of this file and throughout the archive. The defect
@@ -2017,7 +2017,7 @@ a future batch takes `J` or a new two-letter prefix, never a letter that once me
 
 - **Never renumber, never reuse.** `DF1`–`DF31` are in the order the defects were found; the fixed ones
   keep theirs, struck through in place. A gap in the open list means an item closed.
-- **New items take the next free identifier** — `DF22` onward for defects, `J9` onward for residue, `N-e` onward for entries in
+- **New items take the next free identifier** — `DF32` onward for defects, `J10` onward for residue, `N-h` onward for entries in
   the upper section. Never fill a gap.
 - **A split keeps the parent and adds a suffix** (`N-d` → `N-d1`, `N-d2`), so an ID cited from outside
   this file still resolves. `G1`, `N-b`, `N-c` and `I2` are cited from `README.md`, four requirement
