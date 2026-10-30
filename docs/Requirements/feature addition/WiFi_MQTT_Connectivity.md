@@ -612,10 +612,14 @@ device (R4.4.2):
 
 HA also offers a newer **device-based** discovery format — a single
 `homeassistant/device/<id>/config` carrying every component at once. **Rejected**, and for the
-reason R4.1.6 exists: 8 sensors × 5 metrics is 40 components in one payload, which would run to
-several kilobytes and is exactly the shape that overruns the client buffer and vanishes without a
-diagnostic. Forty small retained messages cost nothing after the first connect and each stays
-comfortably inside the buffer. `unique_id` follows the pattern the reference implementation on the
+reason R4.1.6 exists: three entities per channel, four device-wide and §4.4.1's three buttons is 31
+components in one payload with all eight channels (`kHaMaxEntities`, 3k + 7 for k channels). Built from
+the real payloads with today's keys it measured about 10.9 KB, more than five times the 2,048-byte client
+buffer, which is exactly the shape that overruns the buffer and vanishes without a diagnostic. (This said
+"8 sensors × 5 metrics is 40 components" until `DF30`'s design study counted them.) Thirty-one small
+retained messages each stay comfortably inside the buffer. They are not free on a connect: `DF30` found
+that queuing all of them at once overflowed the 16-slot publish queue, which is why they are fed to it a
+few at a time (`src/net/ha_discovery_job.h`). `unique_id` follows the pattern the reference implementation on the
 live instance uses (`<device>_<metric>_<origin>`), which is what lets a user rename an entity in
 the HA UI and keep the rename across restarts (R4.4.3).
 

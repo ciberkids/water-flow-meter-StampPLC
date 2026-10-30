@@ -182,8 +182,10 @@ Edge cases, matching what the panel shows:
 | Peak on sensor 3 | 140.40 | 3 | `Max Flow:  140.40 L/m (S3)` |
 
 **Deferred, pending context** — whether these four also become Home Assistant entities. They are cheap to
-publish over MQTT, but `kHaMaxEntities = kNumSensors * 3 + 4` (`ha_discovery.h:120`) budgets exactly four
-globals, so adding four more changes that constant and the discovery payload's size.
+publish over MQTT, but `kHaMaxEntities = kNumSensors * 3 + 4 + 3` (`ha_discovery.h:135`) budgets exactly four
+globals beside §4.4.1's three buttons, so adding four more changes that constant and the discovery payload's
+size. Not the publish queue any more: since `DF30` a set of any size is fed to it a few messages per pass, and
+the discovery job's bounds derive from the constant.
 
 ## 2c. The warning banner lives in the footer row, and a commissioning gap raises it  *(decided, implemented)*
 
@@ -1263,7 +1265,7 @@ with its litres pages and its 43 overflowing footers. Closing that gap, in order
    - **Four dots in a chase**, with the inactive dot painted from the panel background and the colours taken
      from the palette (§3.2).
 3. Volumes in both litres and m³ on MQTT and Home Assistant (§2a.1). Partly mapped only — the entity budget
-   `kHaMaxEntities = kNumSensors * 3 + 4` and the discovery payload size are the open questions, and
+   `kHaMaxEntities = kNumSensors * 3 + 4 + 3` and the discovery payload size are the open questions, and
    `<base>/total/state` publishes a permanently-zero m³ total because `firmware.cpp` never assigns it.
 
 Already done, ahead of the rest: the `isReady` cache is deleted, so a reboot no longer discards pulses or
