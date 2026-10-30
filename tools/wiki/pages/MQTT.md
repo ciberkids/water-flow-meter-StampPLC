@@ -152,8 +152,9 @@ mode here is silence.
 **Discovery never arrives as a burst.** A full set is up to 31 messages and the queue has sixteen slots,
 so discovery is fed in a few messages per pass of the firmware's loop, and only while availability and
 discovery together hold fewer than five slots: a full telemetry set, ten messages with every channel in
-service, always fits beside it. On a connect, the telemetry waits until every config is queued — a few
-passes, tens of milliseconds — so Home Assistant learns each entity before its first reading. Until
+service, always fits beside it. On a connect, the telemetry waits until every config is queued — at
+most 13 passes of the loop, a time nobody has measured on a board — so each config is handed to the
+MQTT client ahead of its entity's first reading. Until
 2026-10-30 the whole set went in at once and the tail was refused from three channels up (`DF30`).
 
 ## Commands
