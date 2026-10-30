@@ -1528,19 +1528,21 @@ void logicTaskCode(void * pvParameters) {
       mqttReconnect.noteConnected();
     }
 
-    // Only for a session this task has STARTED, and not while a CONNECTED is latched but unconsumed
-    // (`DF30`). esp-mqtt sets the transport's flag and then the latch, from its own task, at any
-    // moment. A CONNECTED that lands after the latches were read at the top of this section would
+    // Only for a session this task has STARTED, and not while a CONNECTED or a DISCONNECTED is latched
+    // but unconsumed (`DF30`). esp-mqtt sets the transport's flag and then the latch, from its own task,
+    // at any moment. A CONNECTED that lands after the latches were read at the top of this section would
     // otherwise run the block for a session this pass has not started: tick() would queue the full set
     // already armed (by configure() at boot, or by the last disconnect) AHEAD of the connect's `online`
     // and its discovery set — owner decision B broken, and on the first connect after boot, where Home
     // Assistant has no configs yet. The latch alone did not close that: between onEvent's `connected_`
     // store and its latch, `connected()` is true and the latch still clear, no read order helps, and so
     // the order of this gate's reads must not be relied on. `mqttSessionStarted` is what closes it,
-    // because only this task sets it. What it leaves open — a drop AND a reconnect landing between this
-    // pass's latch reads and this line — is in plc::mqttConnectedPassMayRun. Waiting costs one pass; the
-    // next one consumes the latch and holds telemetry as a connect should.
-    if (plc::mqttConnectedPassMayRun(mqttTransport.connected(), mqttSessionStarted, mqttConnectLatched)) {
+    // because only this task sets it; and a latched DISCONNECTED closes the one case the flag cannot, a
+    // drop AND a reconnect landing between this pass's latch reads and this line, while the flag is still
+    // the dropped session's (plc::mqttConnectedPassMayRun). Waiting costs one pass; the next one consumes
+    // the latches and, for a connect, holds telemetry as a connect should.
+    if (plc::mqttConnectedPassMayRun(mqttTransport.connected(), mqttSessionStarted, mqttConnectLatched,
+                                     mqttDisconnectLatched)) {
       // R4.4.7's birth and an accepted `cmd/republish` share this latch (serviceMqttCommand sets it).
       // Read and cleared only if set, for the reason the link latches are; passed by value below.
       const bool birthLatched = haBirthLatched;

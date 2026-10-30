@@ -252,6 +252,13 @@ struct Device {
   /** A CONNECTED is latched with the link already down again, and the drop's DISCONNECTED lands just
    *  AFTER this pass read the latches, so this pass consumes the connect alone against a dead link. */
   bool disconnectAfterLatchRead = false;
+  /**
+   * A whole drop AND a reconnect land after this pass consumed the latches and before the gate, the
+   * reconnect caught half-stored: the DISCONNECTED is latched, `connected()` is true again, the CONNECTED
+   * latch still clear — and the session flag still the dropped session's, because no consume has run
+   * since. The CONNECTED latch lands after the block.
+   */
+  bool dropAndReconnectHalfStoredAtGate = false;
   MqttCommandResult lastCommand = MqttCommandResult::Idle;
 
   uint32_t now = 0;
@@ -390,12 +397,18 @@ struct Device {
     if (connectHalfStoredAtGate) {
       sink.up = true;  // EspMqttTransport::onEvent: `connected_ = true;` — the listener has not run
     }
+    if (dropAndReconnectHalfStoredAtGate) {
+      sink.up = false;           // the drop: `connected_ = false;`
+      disconnectLatched = true;  // ... and its DISCONNECTED, latched before the reconnect wait begins
+      sink.up = true;            // the reconnect, half-stored: `connected_ = true;`, no latch yet
+    }
   }
 
   /** ... and the half-stored seam's second half, after the block: the listener latches the CONNECTED. */
   void connectRaceCompletes(std::size_t callsAtPassStart) {
-    if (!connectHalfStoredAtGate) return;
+    if (!connectHalfStoredAtGate && !dropAndReconnectHalfStoredAtGate) return;
     connectHalfStoredAtGate = false;
+    dropAndReconnectHalfStoredAtGate = false;
     sinkCallsOnHalfStoredPass = sink.calls.size() - callsAtPassStart;
     connectLatched = true;
   }
@@ -436,7 +449,7 @@ struct Device {
     if (link.discoveryStarted) ++starts;
     serviceCommand();
     connectRace();
-    if (plc::mqttConnectedPassMayRun(sink.up, sessionStarted, connectLatched)) {
+    if (plc::mqttConnectedPassMayRun(sink.up, sessionStarted, connectLatched, disconnectLatched)) {
       const bool birth = birthLatched;
       if (birth) birthLatched = false;
       const std::size_t reliableBefore = pub.queuedNeverEvicted();
@@ -854,6 +867,29 @@ void connectRoutes() {
       expectK(route + ": nothing reaches the sink on that pass", k, raced == 0);
       expectK(route + ": the first message handed over after it is the reconnect's `online`", k,
               d.sink.calls.size() > first && d.sink.calls[first].topic == d.pub.availabilityTopic());
+      expectConnect(route, k, d, d.connects.back());
+    }
+    {
+      // A whole drop AND a reconnect between this pass's consume and its gate, the reconnect caught
+      // half-stored. The session flag is still the dropped session's — no consume has run since — so
+      // `connected()`, the flag and a clear CONNECTED latch would open the gate for a session nobody
+      // has consumed; only the latched DISCONNECTED keeps it shut. A full set is armed first, as a
+      // command's acknowledgement or the heartbeat arms one, so an open gate would show at the sink.
+      Device d(k);
+      d.brokerConnects();
+      d.run(2000);
+      d.pub.requestFullPublish();
+      const std::size_t first = d.sink.calls.size();
+      d.dropAndReconnectHalfStoredAtGate = true;
+      d.runPass();
+      const std::size_t raced = d.sinkCallsOnHalfStoredPass;
+      d.run(300);
+      const std::string route = "a drop and a half-stored reconnect between the consume and the gate";
+      expectK(route + ": nothing reaches the sink on that pass", k, raced == 0);
+      expectK(route + ": the first message handed over after it is the reconnect's `online`", k,
+              d.sink.calls.size() > first && d.sink.calls[first].topic == d.pub.availabilityTopic());
+      expectK(route + ": the next pass consumes both latches, the reconnect last", k,
+              d.connects.size() == 2 && d.connects.back().pass == d.connects.front().pass + 2001);
       expectConnect(route, k, d, d.connects.back());
     }
     {
@@ -1629,13 +1665,13 @@ void firmwareWiringTests() {
   check(consume != std::string::npos && command != std::string::npos && consume < command,
         "and before serviceMqttCommand, so a command arriving with a connect sees the connect");
 
-  const std::string connectedBlock = functionBody(
-      code,
-      "if (plc::mqttConnectedPassMayRun(mqttTransport.connected(), mqttSessionStarted, "
-      "mqttConnectLatched))");
-  const std::string block = withoutWhitespace(connectedBlock);
+  // Found in the flattened text, because the call spans two lines; the body comes back flattened too.
+  const std::string block = functionBody(
+      flat,
+      "if(plc::mqttConnectedPassMayRun(mqttTransport.connected(),mqttSessionStarted,mqttConnectLatched,"
+      "mqttDisconnectLatched))");
   check(!block.empty() && countOf(code, "mqttConnectedPassMayRun(") == 1,
-        "the connected block is found, once, behind the gate that asks for a session this task started");
+        "the connected block is found, once, behind the gate: a started session, no latch unconsumed");
   const std::string subscribeBlock = functionBody(code, "if (link.sessionStarted)");
   check(countOf(code, "mqttTransport.subscribe(") == 2 &&
             countOf(subscribeBlock, "mqttTransport.subscribe(") == 2,

@@ -519,7 +519,7 @@ inline MqttLinkLatchReport consumeMqttLinkLatches(bool disconnectLatched, bool c
 
 /**
  * The connected block's gate: the transport says connected, this task has started that session,
- * and no CONNECTED is latched but unconsumed.
+ * and neither a CONNECTED nor a DISCONNECTED is latched but unconsumed.
  *
  * WHY THE FLAG. `EspMqttTransport::onEvent` stores the transport's `connected_` and THEN calls the
  * listener that latches the CONNECTED, two stores from esp-mqtt's task with instructions and a call
@@ -533,20 +533,25 @@ inline MqttLinkLatchReport consumeMqttLinkLatches(bool disconnectLatched, bool c
  * only this task sets, and only when it CONSUMES a CONNECTED — so never while that CONNECTED is still
  * half-stored.
  *
- * THE ORDER OF THE THREE READS DECIDES NOTHING, and must not be relied on: arguments are evaluated
- * in an unspecified order, and with only `connected()` and the latch, neither order closes the
- * window. The flag is what closes it, and it is not shared with esp-mqtt's task.
+ * AND NOT WHILE A DISCONNECTED IS LATCHED BUT UNCONSUMED. The flag is the PREVIOUS session's until a
+ * DISCONNECTED is consumed. If a drop and esp-mqtt's reconnect both land after this pass consumed the
+ * latches and before the gate — the reconnect waits 10 s, so only on a pass that long — and the gate
+ * reads in the instructions between the reconnect's `connected_` store and its latch, `connected()`
+ * is true, the CONNECTED latch still clear and the flag still set from the session that dropped: the
+ * three terms above would open the gate for a session nobody has consumed, and hand that pass's
+ * telemetry to the new connection ahead of its `online`. The drop's DISCONNECTED is latched by then —
+ * `onEvent` latches it before esp-mqtt even starts its reconnect wait — so the gate also waits while
+ * it is set. It costs nothing else: a DISCONNECTED latch is consumed at the top of the very next pass,
+ * so it can shut the gate for at most the one pass before that consume.
  *
- * WHAT IT DOES NOT CLOSE. The flag is the PREVIOUS session's until a DISCONNECTED is consumed. If a
- * drop and esp-mqtt's reconnect both land after this pass consumed the latches and before the gate —
- * the reconnect waits 10 s, so only on a pass that long — and the gate reads in the instructions
- * between the reconnect's `connected_` store and its latch, the stale flag opens it for one pass.
- * The DISCONNECTED latched by that drop is set by then; adding `!disconnectLatched` would close it
- * too, and is not done here.
+ * THE ORDER OF THE READS DECIDES NOTHING, and must not be relied on: arguments are evaluated in an
+ * unspecified order, and with only `connected()` and the CONNECTED latch, neither order closes the
+ * window. The flag and the DISCONNECTED latch are what close it: the flag is not shared with
+ * esp-mqtt's task, and the DISCONNECTED latch is stored long before the reconnect's `connected_`.
  */
 inline bool mqttConnectedPassMayRun(bool transportConnected, bool sessionStarted,
-                                    bool connectLatched) {
-  return transportConnected && sessionStarted && !connectLatched;
+                                    bool connectLatched, bool disconnectLatched) {
+  return transportConnected && sessionStarted && !connectLatched && !disconnectLatched;
 }
 
 /** What one connected pass did. */
