@@ -242,27 +242,52 @@ class MqttPublisher {
   static constexpr std::size_t kMaxPayloadBytes = 1152;
 
   /** Telemetry payloads are ~110 bytes; this bounds the per-topic change-detection baseline, of
-   *  which there are `kNumSensors + 2`. Kept separate from `kMaxPayloadBytes` so the baselines do
-   *  not pay for discovery's size. */
+   *  which there are `kFullTelemetrySetMessages`. Kept separate from `kMaxPayloadBytes` so the
+   *  baselines do not pay for discovery's size. */
   static constexpr std::size_t kMaxTelemetryPayloadBytes = 256;
 
-  /** A full set is `kNumSensors + 2` = 10 messages, plus the availability publish on connect. 16
-   *  therefore holds a complete set with headroom while still being small enough that the eviction
-   *  path of R4.1.3 is reachable in practice rather than theoretical.
+  /**
+   * One state topic per sensor, plus `<base>/total/state` and `<base>/diagnostics/state`: the
+   * number of messages one forced `tick()` queues with every channel in service, and the number of
+   * change-detection baselines below.
+   *
+   * Public because `HaDiscoveryJob` (net/ha_discovery_job.h) derives its admission window from it:
+   * the room discovery must leave free is exactly one of these sets. A copy of the number there would
+   * drift the day a telemetry topic is added (`N-e`'s T6 may add one), and the window would then let
+   * discovery refuse the set it exists to protect.
+   */
+  static constexpr std::size_t kFullTelemetrySetMessages = kNumSensors + 2;
+
+  /** A full set is `kFullTelemetrySetMessages` = 10 messages, plus the availability publish on
+   *  connect. 16 therefore holds a complete set with headroom while still being small enough that
+   *  the eviction path of R4.1.3 is reachable in practice rather than theoretical.
    *
    *  Cost: 16 x (128 + 1152 + a few) is ~20.5 KB of static RAM, and the discovery bound above is
    *  what most of it buys. Paid deliberately and statically — the alternative is a heap allocation
    *  on a device whose §2.1 budget is the measurement itself. A discovery burst is larger than any
-   *  sane capacity (`kHaMaxEntities`, 31 with every channel in service), so the caller is meant to
-   *  pump as it enqueues rather than this number growing to hold one.
+   *  sane capacity (`kHaMaxEntities`, 31 with every channel in service), so discovery is NOT queued
+   *  as a burst. `HaDiscoveryJob` (net/ha_discovery_job.h) feeds it in across logic passes, at most
+   *  `kMessagesPerPass` a pass, and only while the messages this queue never evicts stay inside a
+   *  window that leaves a full telemetry set and a connect's availability message their room.
    *
-   *  IT DOES NOT, YET. `publishDiscovery()` in firmware.cpp enqueues the whole burst with no pump in
-   *  between. On a connect it lands behind the two availability messages, so 14 discovery messages
-   *  fit and, with three or more channels in service, the rest are refused. Every republish starts
-   *  again from the first, and one outside a connect has 16 slots at most, so from four channels part
-   *  of the set is never published at all. That is `DF30`, open. This sentence said "the caller
-   *  pumps as it enqueues" until `DF29`'s review read the caller. */
+   *  That is `DF30`, fixed 2026-10-30. This comment said "the caller pumps as it enqueues" until
+   *  `DF29`'s review read the caller, which did not: `publishDiscovery()` enqueued the whole set with
+   *  no pump in between, so on a connect 14 of 31 fitted and the rest were refused, and once a channel
+   *  change made the set too big for the queue it re-ran on every connected pass. Growing this
+   *  number instead was weighed in DF30's design study and refused: the smallest capacity that
+   *  survived its replay was 42 slots, about 33 KB more static RAM, and only with same-topic
+   *  coalescing added as well. */
   static constexpr std::size_t kQueueCapacity = 16;
+
+  /**
+   * How many messages the logic task hands to the sink per pass: `pump(kMessagesPerPass)`.
+   *
+   * Bounded because the same pass owns the display's 100 ms acknowledgement budget (§7), and each
+   * hand-over is one `esp_mqtt_client_enqueue`, which takes the client's lock. A full queue drained
+   * in one pass would be sixteen of those; four was the figure firmware.cpp carried as a literal
+   * before `DF30`, which named it so the discovery job could derive its own per-pass bound from it.
+   */
+  static constexpr std::size_t kMessagesPerPass = 4;
 
   /**
    * R4.1.6 — what the transport sets `out_buffer_size` to.
@@ -271,7 +296,15 @@ class MqttPublisher {
    * independent 2048 that the R4.4.8 worst-case test measured against. Both headers claimed to be
    * the single source of truth. Now there is one, in net/mqtt_limits.h, and this is a view of it —
    * so changing the buffer moves the transport and the test together, which is what R4.4.8 asks
-   * for. §4.4.7: a payload over this is dropped by esp-mqtt with no log and no entity in HA.
+   * for.
+   *
+   * What a message over this costs is NOT what §4.4.7 says for the call this firmware makes. This
+   * comment said such a payload "is dropped by esp-mqtt with no log", and for
+   * `esp_mqtt_client_enqueue` at the esp-mqtt this firmware links (commit bb9c8af, IDF v4.4.7) that
+   * is not so: `mqtt_msg_publish` fragments a payload larger than the buffer (lib/mqtt_msg.c:472-477)
+   * and the enqueue stores the whole packet (mqtt_client.c:1809-1815). It returns -1 only when the
+   * topic and header cannot fit (:1793-1796) or the heap cannot hold the item. Moot either way: the
+   * static_assert below keeps every message this queue can hold inside one buffer.
    */
   static constexpr int kOutBufferBytes = static_cast<int>(kMqttOutBufferSize);
 
@@ -468,14 +501,43 @@ class MqttPublisher {
    * Returns the number of successful publishes. A message is removed from the queue whether it
    * succeeded or failed: a -1 from an oversize payload is permanent, so retrying it would wedge
    * the queue behind a message that can never go out. Failures are counted and the topic recorded
-   * (R4.1.6) instead. What heals a lost message is R4.3.2's heartbeat for telemetry and R4.4.6's
-   * reconnect republish for discovery.
+   * (R4.1.6) instead, and a Discovery-class failure is counted again on its own
+   * (`discoveryPublishFailures`), because after the pop that counter is the only evidence the
+   * message ever existed. What heals a lost message is R4.3.2's heartbeat for telemetry, and for
+   * discovery `HaDiscoveryJob`'s retry, which reads that counter to know a set did not complete.
    */
   std::size_t pump(std::size_t maxMessages = kQueueCapacity);
+
+  /**
+   * Drops every queued message, of every class, without publishing any of them.
+   *
+   * For a client TEARDOWN only (`DF30`). Everything in the queue was built for the client being
+   * stopped: its base topic, and for discovery its prefix and node id. `configure()` resets the
+   * baselines and NOT the queue — deliberately, since it is also how a fresh boot is configured —
+   * so without this a settings change that moves the base topic would publish the old session's
+   * retained availability and discovery under the old topics after the new client connects, where
+   * nothing ever clears them. Not a disconnect's business: a dropped link keeps the queue, which is
+   * what R4.1.3 is for.
+   */
+  void discardQueue();
 
   // ── Observability. All of it exists because §4.4.7's failure mode is silence ─────────
 
   std::size_t queued() const { return count_; }
+
+  /** How many queued messages are of `cls`. A scan of at most `kQueueCapacity` slots. */
+  std::size_t queuedOfClass(MqttClass cls) const;
+
+  /**
+   * How many queued messages R4.1.3 forbids evicting — availability plus discovery.
+   *
+   * The number `HaDiscoveryJob`'s admission window is about. `enqueue()` cannot answer it: a full
+   * queue evicts the oldest telemetry and still returns true, so "accepted" never meant "nothing was
+   * lost". Only this count tells a caller whether the next reliable message would take a slot a
+   * telemetry set needs.
+   */
+  std::size_t queuedNeverEvicted() const;
+
   uint32_t droppedTelemetry() const { return droppedTelemetry_; }
 
   /** Messages refused outright: overlong, or the queue held nothing droppable. Never zero-cost —
@@ -484,6 +546,16 @@ class MqttPublisher {
 
   /** R4.1.6 — publishes the sink reported as -1. */
   uint32_t publishFailures() const { return publishFailures_; }
+
+  /**
+   * The Discovery-class subset of `publishFailures()`.
+   *
+   * `HaDiscoveryJob` compares it at the end of a set against its value when the set started: a
+   * change means some config was popped on a -1 and never reached esp-mqtt, so the set is NOT
+   * recorded as published and is retried. Its own counter rather than `publishFailures()`, because a
+   * failed telemetry message is healed by the next publish and must not make discovery republish.
+   */
+  uint32_t discoveryPublishFailures() const { return discoveryPublishFailures_; }
 
   /** Topic of the most recent failure, empty if there has been none. */
   const char* lastFailureTopic() const { return lastFailureTopic_; }
@@ -500,7 +572,7 @@ class MqttPublisher {
   };
 
   /** One change-detection baseline per state topic: the sensors, then total, then diagnostics. */
-  static constexpr std::size_t kSlotCount = kNumSensors + 2;
+  static constexpr std::size_t kSlotCount = kFullTelemetrySetMessages;
   static constexpr std::size_t kTotalSlot = kNumSensors;
   static constexpr std::size_t kDiagnosticsSlot = kNumSensors + 1;
 
@@ -549,6 +621,7 @@ class MqttPublisher {
   uint32_t droppedTelemetry_ = 0;
   uint32_t rejectedMessages_ = 0;
   uint32_t publishFailures_ = 0;
+  uint32_t discoveryPublishFailures_ = 0;
   uint32_t publishedMessages_ = 0;
   char lastFailureTopic_[kMaxTopicBytes] = {};
 };

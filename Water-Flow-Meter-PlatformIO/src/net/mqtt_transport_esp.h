@@ -193,15 +193,26 @@ class EspMqttTransport : public MqttSink {
    * header.
    *
    * ── What R4.1.6 rests on here, precisely ──────────────────────────────────────────
-   * §4.4.7's silent failure is a payload larger than `out_buffer_size`. The -1 the publisher counts
-   * covers it for `esp_mqtt_client_publish`, which is where that behaviour was verified. Whether
-   * `_enqueue` ALSO returns -1 in that case, rather than accepting the message and discarding it
-   * later in its own task, was NOT verified against the library.
+   * §4.4.7's silent failure is a payload larger than `out_buffer_size`. This note used to say that
+   * whether `_enqueue` returns -1 for one was NOT verified. It has since been read, for `DF30`, in
+   * the source of the esp-mqtt this firmware links: commit bb9c8af, the submodule of IDF v4.4.7,
+   * whose `mqtt_client.h` is byte-identical to the installed header. It does NOT return -1 for an
+   * oversize payload. `mqtt_msg_publish` fragments it (lib/mqtt_msg.c:472-477) and
+   * `mqtt_client_enqueue_priv` stores the whole packet in the outbox (mqtt_client.c:1809-1815). The
+   * -1 means the topic and header did not fit the buffer (mqtt_client.c:1793-1796) or the heap could
+   * not hold the item (:1806-1807, :1811-1812).
    *
-   * It does not need to be: `static_assert(kMaxPayloadBytes <= kOutBufferBytes)` in
-   * mqtt_publisher.h makes an oversize payload unreachable by construction, because the queue
-   * cannot hold one. The oversize case is closed at the queue's door rather than by the return
-   * value, and the return value is still checked for every other failure the client reports.
+   * Neither decides anything here: `static_assert(kWorstCasePublishBytes <= kOutBufferBytes)` in
+   * mqtt_publisher.h keeps every message the queue can hold inside one buffer, so the oversize case
+   * is closed at the queue's door. The -1 that stays reachable is heap exhaustion, which the publisher
+   * counts (R4.1.6), and counts again for discovery (`discoveryPublishFailures`), because `pump()`
+   * drops the message either way and `HaDiscoveryJob` must not record a set that lost one.
+   *
+   * A non-negative return means "in esp-mqtt's outbox" and nothing more. The outbox expires every
+   * item 30 s after it was enqueued, whatever its QoS and silently (lib/mqtt_outbox.c:193-207, called
+   * from mqtt_client.c:1509; no MQTT_EVENT_DELETED, because REPORT_DELETED is not configured), and
+   * `onEvent` below discards MQTT_EVENT_PUBLISHED, the only delivery signal. What that costs
+   * telemetry is `DF31`.
    */
   int publish(const char* topic, const char* payload, int qos, bool retain) override {
     if (client_ == nullptr || topic == nullptr || payload == nullptr) return -1;

@@ -199,7 +199,7 @@ downstream water twice; add up the top-level channels yourself. The full design 
 | Route | What it gives you | Status | Detail |
 | --- | --- | --- | --- |
 | **Modbus RTU over RS485** | Every reading and every setting, including the network settings. Configuration changes are staged, committed together, and confirmed. Needs no network | built | [[Modbus Registers]], [[Communications]] |
-| **MQTT** | Telemetry for each channel, the total and the device's health; Home Assistant discovery, so every entity appears without any YAML; three Home Assistant buttons: reset session, reset totals, republish discovery | built; one check waits for hardware (`N-c`) | [[MQTT]] |
+| **MQTT** | Telemetry for each channel, the total and the device's health; Home Assistant discovery, which announces every entity so none needs YAML, and hands every config to the MQTT client with any number of channels (fixed on 2026-10-30, `DF30`); three Home Assistant buttons: reset session, reset totals, republish discovery | built; one check waits for hardware (`N-c`), and what the MQTT client does after the hand-over is not yet measured (`DF31`) | [[MQTT]] |
 | **WiFi** | Carries MQTT and network time. Off until enabled, joins your network with automatic retries, and offers a provisioning access point when it has no credentials | built | [[WiFi]] |
 | **Network time** (NTP, the Network Time Protocol) | Sets the clock once WiFi is connected, and again every six hours | built | — |
 | **Configuration web page** | A login-protected form for the WiFi and MQTT settings and the clock, served on the provisioning access point while it is up | built; fixed on 2026-10-29 after it had never been started (`DF28`) | [[WiFi]] |

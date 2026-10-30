@@ -612,18 +612,41 @@ device (R4.4.2):
 
 HA also offers a newer **device-based** discovery format — a single
 `homeassistant/device/<id>/config` carrying every component at once. **Rejected**, and for the
-reason R4.1.6 exists: 8 sensors × 5 metrics is 40 components in one payload, which would run to
-several kilobytes and is exactly the shape that overruns the client buffer and vanishes without a
-diagnostic. Forty small retained messages cost nothing after the first connect and each stays
-comfortably inside the buffer. `unique_id` follows the pattern the reference implementation on the
+reason R4.1.6 exists: three entities per channel, four device-wide and §4.4.1's three buttons is 31
+components in one payload with all eight channels (`kHaMaxEntities`, 3k + 7 for k channels). Built from
+the real payloads with today's keys it measured about 10.9 KB, more than five times the 2,048-byte client
+buffer: the hazard §4.4.7 is about. At the esp-mqtt this firmware links such a payload would not vanish
+inside the library — the client fragments it and stores it whole (§4.4.7) — but this firmware refuses
+any message over its publish queue's slot size at its own door, counted as a rejection, so it would
+never be sent at all and Home Assistant would show nothing. (This said
+"8 sensors × 5 metrics is 40 components" until `DF30`'s design study counted them.) Thirty-one small
+retained messages each stay comfortably inside the buffer. They are not free on a connect: `DF30` found
+that queuing all of them at once overflowed the 16-slot publish queue, which is why they are fed to it a
+few at a time (`src/net/ha_discovery_job.h`). `unique_id` follows the pattern the reference implementation on the
 live instance uses (`<device>_<metric>_<origin>`), which is what lets a user rename an entity in
 the HA UI and keep the rename across restarts (R4.4.3).
 
 #### 4.4.7. The buffer is a silent failure, so it gets a test
 
 `esp_mqtt_client_config_t.buffer_size` defaults to **1024 bytes**. A discovery payload carrying the
-full device block sits in the same order of magnitude. On overflow `esp_mqtt_client_publish`
-returns `-1` and the message is simply not sent: no entity, no log line, no clue.
+full device block sits in the same order of magnitude. On overflow the message does not reach Home
+Assistant and no entity appears, and the broker has nothing to report because it never saw it.
+
+**What overflow does, precisely** (read in the source of the esp-mqtt this firmware links, commit
+`bb9c8af`, the submodule of IDF v4.4.7; this paragraph said `esp_mqtt_client_publish` "returns `-1` and
+the message is simply not sent" until `DF30`'s study read it). The library does not drop an oversize
+payload: `mqtt_msg_publish` fragments one larger than the buffer (`lib/mqtt_msg.c:472-477`),
+`esp_mqtt_client_enqueue` stores the whole packet in the outbox (`mqtt_client.c:1809-1815`, through
+`mqtt_enqueue_oversized` at `:1092-1108`), and `esp_mqtt_client_publish` sends the fragments in a loop
+(`:1863-1899`). Its `-1` means a failed write, a topic and header that do not fit the buffer, or no heap.
+This firmware never hands it one: `MqttPublisher` refuses a payload over its slot size,
+`kMaxPayloadBytes`, at its own queue and counts the refusal as a rejection, and a `static_assert`
+(`kWorstCasePublishBytes <= kOutBufferBytes`) keeps every message the queue can hold inside one buffer —
+the comment on `kOutBufferBytes` in `src/net/mqtt_publisher.h` carries the detail. So the failure is
+still silent where it matters, at Home Assistant: a config too long for the queue is never sent — the
+discovery job reports it on the console as a truncation, and the publisher counts any other oversize
+message as a rejection that nothing displays — and its entity never appears. That is what the
+requirement below exists to make impossible.
 
 > **R4.4.8** — A **host test** serialises the worst-case discovery payload — longest sensor name,
 > longest base topic, longest `sw_version` — and asserts its length is under the configured

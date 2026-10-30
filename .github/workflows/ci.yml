@@ -287,5 +287,19 @@ jobs:
 
       # The gate that matters most. The generated UI header once could not compile at
       # all, and the export reported success anyway.
+      #
+      # -fstack-usage writes each function's frame size beside its object file, for the step
+      # below. It reports and changes no code: RAM and flash are the same with it and without it
+      # (DF30, measured in the build container). PlatformIO adds this variable to
+      # platformio.ini's build_flags rather than replacing them.
       - name: Compile
+        env:
+          PLATFORMIO_BUILD_FLAGS: -fstack-usage
         run: pio run -e m5stack-stamplc
+
+      # DF30. LogicTask's own frame is the depth every call in the logic pass starts from, in a
+      # task whose stack high-water mark has never been measured. HaDiscoveryJob::step() inlined
+      # put 1.1 KB of build buffers in it for the whole pass, and no host test can see that:
+      # behaviour is identical. The budget and its basis are in the script.
+      - name: LogicTask's stack frame stays inside its budget
+        run: tools/stack_budget/check.sh

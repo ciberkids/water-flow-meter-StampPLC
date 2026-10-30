@@ -259,6 +259,18 @@ g++ "${CXXFLAGS[@]}" -o "$OUT/ha_discovery_test" \
   src/net/ha_discovery.cpp \
   src/net/mqtt_command_router.cpp
 
+# DF30 — discovery as a job across logic passes, run in the firmware's own order. publishDiscovery() put
+# 31 messages into a 16-slot queue in one loop, and the policy then rebuilt the set on every pass; the two
+# suites above each passed throughout, because the ORDER they are called in lived in firmware.cpp. This
+# links the real publisher, builder, policy and ladder, drives the header's entry points for every k from
+# 0 to 8 on every route, and reads firmware.cpp as text to hold it to them.
+g++ "${CXXFLAGS[@]}" -o "$OUT/ha_discovery_job_test" \
+  test/host/ha_discovery_job_test.cpp \
+  src/net/mqtt_publisher.cpp \
+  src/net/ha_discovery.cpp \
+  src/net/mqtt_command_router.cpp \
+  src/net/mqtt_reconnect.cpp
+
 # N8a — the configuration portal's form generation, parsing, validation and escaping.
 g++ "${CXXFLAGS[@]}" -o "$OUT/portal_form_test" \
   test/host/portal_form_test.cpp \
@@ -359,6 +371,8 @@ echo
 "$OUT/ui_walk_test"
 echo
 "$OUT/ha_discovery_test"
+echo
+"$OUT/ha_discovery_job_test"
 echo
 "$OUT/portal_form_test"
 echo

@@ -4,14 +4,17 @@
  * `src/firmware.cpp` read as TEXT, for the host tests whose invariant is about the file rather than about
  * anything a runtime assertion can see.
  *
- * Four tests use it, for the same reason. `boot_order_test.cpp` guards the ORDER of two lines in `setup()`
+ * Five tests use it, for the same reason. `boot_order_test.cpp` guards the ORDER of two lines in `setup()`
  * (N-d2), and `portal_lifecycle_test.cpp` guards that a call EXISTS at all (`DF28`): the configuration
  * page's server was declared in `firmware.cpp` and never driven, and no test linked against the firmware
  * glue could have noticed, because no host test can link it. `board_temperature_test.cpp` guards both
  * (`DF29`): that the chip is read at all, on the logic task, through a reader whose `bool` is the bus's,
  * and that the reading is handed to the MQTT snapshot once, before it is filled, with nothing writing
  * over it. `pack_listing_test.cpp` reads `ui_pack_storage_sd.cpp` through `loadSource` (`N-g`), for the
- * same reason: that file includes `SD.h`. Moved here from `boot_order_test.cpp` when the second user
+ * same reason: that file includes `SD.h`. `ha_discovery_job_test.cpp` (`DF30`) holds firmware.cpp to the
+ * discovery job's three entry points — the latches consumed once and disconnect first, the connected
+ * pass called once after the snapshot is filled, and a single teardown that drops the old session — and
+ * to calling nothing that bypasses them. Moved here from `boot_order_test.cpp` when the second user
  * arrived, so the comment-blanking lesson below is learned once.
  *
  * A SECOND LESSON, from `DF29`'s review: a check on a call's PREFIX is a presence check on its name and

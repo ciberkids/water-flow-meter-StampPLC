@@ -410,6 +410,9 @@ std::size_t MqttPublisher::pump(std::size_t maxMessages) {
     // publish at the default QoS as a failure and R4.1.6's counter would be pure noise.
     if (result < 0) {
       ++publishFailures_;
+      // DF30. The message is popped below whatever the result, so this count is the only trace a
+      // config was lost here; HaDiscoveryJob withholds "published" from a set that saw one.
+      if (message.cls == MqttClass::Discovery) ++discoveryPublishFailures_;
       std::snprintf(lastFailureTopic_, sizeof(lastFailureTopic_), "%s", message.topic);
     } else {
       ++publishedMessages_;
@@ -421,6 +424,31 @@ std::size_t MqttPublisher::pump(std::size_t maxMessages) {
     ++attempts;
   }
   return sent;
+}
+
+void MqttPublisher::discardQueue() {
+  // Not counted as dropped telemetry or as rejections: nothing here was lost to the queue's policy.
+  // The client these messages were built for is gone, and the next connect queues its own.
+  head_ = 0;
+  count_ = 0;
+}
+
+std::size_t MqttPublisher::queuedOfClass(MqttClass cls) const {
+  std::size_t n = 0;
+  for (std::size_t position = 0; position < count_; ++position) {
+    if (queue_[(head_ + position) % kQueueCapacity].cls == cls) ++n;
+  }
+  return n;
+}
+
+std::size_t MqttPublisher::queuedNeverEvicted() const {
+  std::size_t n = 0;
+  for (std::size_t position = 0; position < count_; ++position) {
+    // The same predicate evictOldestTelemetry() uses, so the two cannot disagree about which
+    // messages are permanent.
+    if (!mqttClassIsDroppable(queue_[(head_ + position) % kQueueCapacity].cls)) ++n;
+  }
+  return n;
 }
 
 }  // namespace plc

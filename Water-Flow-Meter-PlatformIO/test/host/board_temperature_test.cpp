@@ -330,13 +330,24 @@ void firmwareReadsItAndPublishesIt() {
         "the read is inside logicTaskCode, on core 1 — never in pollingTaskCode on the sampler's core");
 
   // Inside the connected block: R2.1.6's "only as often as its purpose requires", and the purpose is
-  // the snapshot. The nearest connected() test before the fill must also precede the read.
-  const auto connectedTests = firmware_source::offsetsOf(source, "if (mqttTransport.connected()) {");
+  // the snapshot. The nearest connected() test before the fill must also precede the read. Since DF30
+  // the block's gate also asks for a session the logic task started, and waits while a CONNECTED or a
+  // DISCONNECTED is latched but unconsumed — `plc::mqttConnectedPassMayRun`, which
+  // ha_discovery_job_test holds — so it is matched by that exact text: a gate that is neither would
+  // fail here, not pass. The call spans two lines, so it is found by its opening and its whole
+  // statement is compared with the whitespace removed.
+  const auto connectedTests =
+      firmware_source::offsetsOf(source, "if (plc::mqttConnectedPassMayRun(mqttTransport.connected(),");
+  const bool wholeGate =
+      firmware_source::offsetsOf(firmware_source::withoutWhitespace(source),
+                                 "if(plc::mqttConnectedPassMayRun(mqttTransport.connected(),"
+                                 "mqttSessionStarted,mqttConnectLatched,mqttDisconnectLatched)){")
+          .size() == 1;
   std::size_t nearest = std::string::npos;
   for (std::size_t at : connectedTests) {
     if (at < fills.front()) nearest = at;
   }
-  check(nearest != std::string::npos && nearest < samples.front(),
+  check(wholeGate && nearest != std::string::npos && nearest < samples.front(),
         "and inside the MQTT connected block, so no broker means no bus time taken from the sampler");
 
   // Exactly one route onto the bus for this chip, and the library's unchecked one is not it.

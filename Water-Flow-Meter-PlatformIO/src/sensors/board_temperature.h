@@ -142,11 +142,13 @@ enum class BoardTemperatureRead : uint8_t {
  * disconnect: `pump()` does nothing while the link is down, and neither `onDisconnected()` nor
  * `onConnected()` clears the queue. So a diagnostics payload queued just before a drop is the first one
  * sent after the reconnect, carrying the reading from before the outage however long the outage was,
- * and the next diagnostics publish replaces it. That next one is normally the reconnect's own full set,
- * queued in the same pass. When `DF30`'s discovery burst has filled the queue, that full set is refused
- * and the replacement waits a publish period. Both were replayed against the real publisher; the `DF29`
- * entry in `docs/active_work/open_decisions.md` has the runs. This is the queue every telemetry field
- * shares, not a rule about this reading, and changing it is not `DF29`.
+ * and the next diagnostics publish replaces it. That next one is the reconnect's own full set. Until
+ * `DF30` was fixed, a discovery burst that filled the queue got that full set refused and the
+ * replacement waited a publish period; now the set is held only while the connect's discovery is queued
+ * — a bounded number of passes, `HaDiscoveryJob::kConnectHoldPassLimit` at most — and is never refused
+ * (net/ha_discovery_job.h). Both behaviours were replayed against the real publisher; the `DF29` and
+ * `DF30` entries in `docs/active_work/open_decisions.md` have the runs. This is the queue every
+ * telemetry field shares, not a rule about this reading, and changing it is not `DF29`.
  *
  * `nowMs` is `millis()`. Every age is `now - then`, which survives the ~49-day rollover.
  */
